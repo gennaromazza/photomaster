@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // User Schema
 export const users = pgTable("users", {
@@ -49,6 +50,12 @@ export const insertClientSchema = createInsertSchema(clients).pick({
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 
+export const clientsRelations = relations(clients, ({ many }) => ({
+  events: many(events),
+  contracts: many(contracts),
+  quotes: many(quotes),
+}));
+
 // Event Schema
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
@@ -80,6 +87,17 @@ export const insertEventSchema = createInsertSchema(events).pick({
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Event = typeof events.$inferSelect;
 
+export const eventsRelations = relations(events, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [events.clientId],
+    references: [clients.id],
+  }),
+  tasks: many(tasks),
+  contracts: many(contracts),
+  quotes: many(quotes),
+  eventCollaborators: many(eventCollaborators),
+}));
+
 // Task Schema
 export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
@@ -104,6 +122,13 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
+
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  event: one(events, {
+    fields: [tasks.eventId],
+    references: [events.id],
+  }),
+}));
 
 // Collaborator Schema
 export const collaborators = pgTable("collaborators", {
@@ -130,6 +155,10 @@ export const insertCollaboratorSchema = createInsertSchema(collaborators).pick({
 export type InsertCollaborator = z.infer<typeof insertCollaboratorSchema>;
 export type Collaborator = typeof collaborators.$inferSelect;
 
+export const collaboratorsRelations = relations(collaborators, ({ many }) => ({
+  eventCollaborators: many(eventCollaborators),
+}));
+
 // Event Collaborator Schema (join table)
 export const eventCollaborators = pgTable("event_collaborators", {
   id: serial("id").primaryKey(),
@@ -146,6 +175,17 @@ export const insertEventCollaboratorSchema = createInsertSchema(eventCollaborato
 
 export type InsertEventCollaborator = z.infer<typeof insertEventCollaboratorSchema>;
 export type EventCollaborator = typeof eventCollaborators.$inferSelect;
+
+export const eventCollaboratorsRelations = relations(eventCollaborators, ({ one }) => ({
+  event: one(events, {
+    fields: [eventCollaborators.eventId],
+    references: [events.id],
+  }),
+  collaborator: one(collaborators, {
+    fields: [eventCollaborators.collaboratorId],
+    references: [collaborators.id],
+  }),
+}));
 
 // Contract Schema
 export const contracts = pgTable("contracts", {
@@ -177,6 +217,17 @@ export const insertContractSchema = createInsertSchema(contracts).pick({
 export type InsertContract = z.infer<typeof insertContractSchema>;
 export type Contract = typeof contracts.$inferSelect;
 
+export const contractsRelations = relations(contracts, ({ one }) => ({
+  client: one(clients, {
+    fields: [contracts.clientId],
+    references: [clients.id],
+  }),
+  event: one(events, {
+    fields: [contracts.eventId],
+    references: [events.id],
+  }),
+}));
+
 // Product/Service Schema
 export const services = pgTable("services", {
   id: serial("id").primaryKey(),
@@ -197,6 +248,10 @@ export const insertServiceSchema = createInsertSchema(services).pick({
 
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Service = typeof services.$inferSelect;
+
+export const servicesRelations = relations(services, ({ many }) => ({
+  quoteItems: many(quoteItems),
+}));
 
 // Quote Schema
 export const quotes = pgTable("quotes", {
@@ -230,6 +285,19 @@ export const insertQuoteSchema = createInsertSchema(quotes).pick({
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;
 export type Quote = typeof quotes.$inferSelect;
 
+export const quotesRelations = relations(quotes, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [quotes.clientId],
+    references: [clients.id],
+  }),
+  event: one(events, {
+    fields: [quotes.eventId],
+    references: [events.id],
+    relationName: "eventQuotes",
+  }),
+  quoteItems: many(quoteItems),
+}));
+
 // Quote Items Schema
 export const quoteItems = pgTable("quote_items", {
   id: serial("id").primaryKey(),
@@ -250,6 +318,17 @@ export const insertQuoteItemSchema = createInsertSchema(quoteItems).pick({
 
 export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
 export type QuoteItem = typeof quoteItems.$inferSelect;
+
+export const quoteItemsRelations = relations(quoteItems, ({ one }) => ({
+  quote: one(quotes, {
+    fields: [quoteItems.quoteId],
+    references: [quotes.id],
+  }),
+  service: one(services, {
+    fields: [quoteItems.serviceId],
+    references: [services.id],
+  }),
+}));
 
 // Settings Schema
 export const settings = pgTable("settings", {

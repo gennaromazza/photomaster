@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -66,6 +66,8 @@ const NewEventPage = () => {
       status: "pending",
       location: "",
       notes: "",
+      clientId: undefined, // Added clientId
+      date: undefined, // Added date
     },
   });
   
@@ -277,7 +279,7 @@ const NewEventPage = () => {
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="Villa Principe, Roma" {...field} />
+                      <Input placeholder="Villa Principe, Roma" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -294,7 +296,8 @@ const NewEventPage = () => {
                       <Textarea 
                         placeholder="Descrivi l'evento..." 
                         className="min-h-20"
-                        {...field} 
+                        {...field}
+                        value={field.value || ''} 
                       />
                     </FormControl>
                     <FormMessage />
@@ -312,7 +315,8 @@ const NewEventPage = () => {
                       <Textarea 
                         placeholder="Note interne sull'evento..." 
                         className="min-h-20"
-                        {...field} 
+                        {...field}
+                        value={field.value || ''} 
                       />
                     </FormControl>
                     <FormMessage />

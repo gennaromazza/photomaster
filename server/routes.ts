@@ -26,30 +26,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup API routes
   const apiRouter = express.Router();
   
-  // Middleware di autenticazione per tutte le route API (tranne quelle pubbliche)
-  apiRouter.use((req, res, next) => {
-    // Eccezioni per endpoint pubblici che non richiedono autenticazione
-    const publicEndpoints = [
-      '/user', // Questo endpoint gestisce autonomamente l'autenticazione
-      '/login',
-      '/logout',
-      '/register',
-      '/forgot-password',
-      '/reset-password'
-    ];
-    
-    if (publicEndpoints.some(endpoint => req.path.startsWith(endpoint))) {
-      return next();
-    }
-    
-    // Per tutti gli altri endpoint, richiedi autenticazione
-    if (req.isAuthenticated()) {
-      return next();
-    } else {
-      return res.status(401).json({ message: "Non autenticato" });
-    }
-  });
-  
   // Client routes
   apiRouter.get("/clients", async (req, res) => {
     try {

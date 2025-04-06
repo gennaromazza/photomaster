@@ -66,6 +66,7 @@ export interface IStorage {
   // Event Collaborator operations
   getEventCollaborator(id: number): Promise<EventCollaborator | undefined>;
   getCollaboratorsByEvent(eventId: number): Promise<Collaborator[]>;
+  getEventsByCollaborator(collaboratorId: number): Promise<Event[]>;
   assignCollaboratorToEvent(eventCollaborator: InsertEventCollaborator): Promise<EventCollaborator>;
   removeCollaboratorFromEvent(eventId: number, collaboratorId: number): Promise<boolean>;
   
@@ -338,6 +339,30 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(collaborators)
         .where(eq(collaborators.id, collaboratorIds[0]));
+    }
+    
+    return [];
+  }
+  
+  async getEventsByCollaborator(collaboratorId: number): Promise<Event[]> {
+    // Trova tutti gli eventCollaborators per questo collaboratore
+    const eventCollabs = await db
+      .select()
+      .from(eventCollaborators)
+      .where(eq(eventCollaborators.collaboratorId, collaboratorId));
+    
+    if (eventCollabs.length === 0) return [];
+    
+    // Estrai tutti gli ID degli eventi
+    const eventIds = eventCollabs.map(ec => ec.eventId);
+    
+    // Se abbiamo eventIds, ottieni gli eventi
+    if (eventIds.length > 0) {
+      // Stesso approccio usato per getCollaboratorsByEvent
+      return await db
+        .select()
+        .from(events)
+        .where(eq(events.id, eventIds[0]));
     }
     
     return [];

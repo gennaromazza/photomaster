@@ -441,6 +441,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get events associated with a collaborator
+  apiRouter.get("/collaborators/:collaboratorId/events", async (req, res) => {
+    try {
+      const collaboratorId = parseInt(req.params.collaboratorId);
+      
+      // Verifica che il collaboratore esista
+      const collaborator = await storage.getCollaborator(collaboratorId);
+      if (!collaborator) {
+        return res.status(404).json({ message: "Collaborator not found" });
+      }
+      
+      // Ottieni tutti gli eventi che hanno questo collaboratore
+      const events = await storage.getEventsByCollaborator(collaboratorId);
+      res.json(events);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch collaborator events" });
+    }
+  });
+  
   apiRouter.post("/events/:eventId/collaborators", async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);

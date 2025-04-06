@@ -308,216 +308,215 @@ export default function CollaboratorDetailPage() {
                   <TabsTrigger value="details">Dettagli</TabsTrigger>
                   <TabsTrigger value="events">Eventi Assegnati</TabsTrigger>
                 </TabsList>
+                <TabsContent value="details" className="m-0 mt-6">
+                  <CardContent className="p-0">
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                          <FormField
+                            control={form.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Nome</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Nome" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Cognome</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Cognome" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input type="email" placeholder="Email" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Telefono</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Telefono" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="role"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Ruolo</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Es: Fotografo, Assistente, Videografo" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="status"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Stato</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Seleziona lo stato" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="available">Disponibile</SelectItem>
+                                    <SelectItem value="busy">Occupato</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="profileImage"
+                            render={({ field }) => (
+                              <FormItem className="col-span-2">
+                                <FormLabel>Immagine Profilo (URL)</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="URL immagine profilo" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button 
+                            type="submit" 
+                            disabled={updateCollaboratorMutation.isPending}
+                          >
+                            {updateCollaboratorMutation.isPending && (
+                              <i className="ri-loader-4-line animate-spin mr-2"></i>
+                            )}
+                            Salva Modifiche
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </CardContent>
+                </TabsContent>
+
+                <TabsContent value="events" className="m-0">
+                  <CardContent className="p-6">
+                    <div className="mb-4 flex justify-between items-center">
+                      <h3 className="text-lg font-medium">Eventi Assegnati</h3>
+                      <div className="text-sm text-gray-500">
+                        Totale: {collaboratorEvents.length} evento/i
+                      </div>
+                    </div>
+                    
+                    {isLoadingEvents ? (
+                      <div className="flex justify-center py-8">
+                        <div className="animate-pulse text-gray-500">Caricamento eventi...</div>
+                      </div>
+                    ) : collaboratorEvents.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <div className="text-4xl text-gray-300 mb-2">
+                          <i className="ri-calendar-line"></i>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">Nessun evento assegnato</h3>
+                        <p className="text-gray-500 mb-4">Questo collaboratore non è attualmente assegnato a nessun evento</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-hidden border rounded-md">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Evento</TableHead>
+                              <TableHead>Data</TableHead>
+                              <TableHead>Stato</TableHead>
+                              <TableHead>Ruolo</TableHead>
+                              <TableHead className="text-right">Azioni</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {collaboratorEvents.map((event) => {
+                              // Cerca il ruolo del collaboratore per questo specifico evento
+                              const eventCollaborator = { role: "N/A" }; // Placeholder, sarà sostituito con i dati reali quando implementeremo l'API
+                              
+                              return (
+                                <TableRow key={event.id}>
+                                  <TableCell className="font-medium">{event.title}</TableCell>
+                                  <TableCell>
+                                    {event.eventDate ? (
+                                      format(new Date(event.eventDate), "d MMMM yyyy", { locale: it })
+                                    ) : "Data non specificata"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant={
+                                      event.status === "upcoming" ? "gray" :
+                                      event.status === "in-progress" ? "blue" :
+                                      event.status === "completed" ? "green" : "red"
+                                    }>
+                                      {event.status === "upcoming" ? "Prossimo" :
+                                       event.status === "in-progress" ? "In Corso" :
+                                       event.status === "completed" ? "Completato" : "Annullato"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>{eventCollaborator.role}</TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end space-x-2">
+                                      <Link href={`/events/${event.id}`}>
+                                        <Button variant="ghost" size="sm" className="h-8 px-2">
+                                          <i className="ri-eye-line"></i>
+                                        </Button>
+                                      </Link>
+                                      <Button variant="ghost" size="sm" className="h-8 px-2 text-red-600 hover:text-red-800 hover:bg-red-50">
+                                        <i className="ri-delete-bin-line"></i>
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </TabsContent>
               </Tabs>
             </CardHeader>
-
-            <TabsContent value="details" className="m-0">
-              <CardContent className="p-6">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Nome" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Cognome</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Cognome" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="Email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Telefono</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Telefono" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="role"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Ruolo</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Es: Fotografo, Assistente, Videografo" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="status"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Stato</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleziona lo stato" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="available">Disponibile</SelectItem>
-                                <SelectItem value="busy">Occupato</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="profileImage"
-                        render={({ field }) => (
-                          <FormItem className="col-span-2">
-                            <FormLabel>Immagine Profilo (URL)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="URL immagine profilo" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="flex justify-end">
-                      <Button 
-                        type="submit" 
-                        disabled={updateCollaboratorMutation.isPending}
-                      >
-                        {updateCollaboratorMutation.isPending && (
-                          <i className="ri-loader-4-line animate-spin mr-2"></i>
-                        )}
-                        Salva Modifiche
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </TabsContent>
-
-            <TabsContent value="events" className="m-0">
-              <CardContent className="p-6">
-                <div className="mb-4 flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Eventi Assegnati</h3>
-                  <div className="text-sm text-gray-500">
-                    Totale: {collaboratorEvents.length} evento/i
-                  </div>
-                </div>
-                
-                {isLoadingEvents ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-pulse text-gray-500">Caricamento eventi...</div>
-                  </div>
-                ) : collaboratorEvents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className="text-4xl text-gray-300 mb-2">
-                      <i className="ri-calendar-line"></i>
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">Nessun evento assegnato</h3>
-                    <p className="text-gray-500 mb-4">Questo collaboratore non è attualmente assegnato a nessun evento</p>
-                  </div>
-                ) : (
-                  <div className="overflow-hidden border rounded-md">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Evento</TableHead>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Stato</TableHead>
-                          <TableHead>Ruolo</TableHead>
-                          <TableHead className="text-right">Azioni</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {collaboratorEvents.map((event) => {
-                          // Cerca il ruolo del collaboratore per questo specifico evento
-                          const eventCollaborator = { role: "N/A" }; // Placeholder, sarà sostituito con i dati reali quando implementeremo l'API
-                          
-                          return (
-                            <TableRow key={event.id}>
-                              <TableCell className="font-medium">{event.title}</TableCell>
-                              <TableCell>
-                                {event.eventDate ? (
-                                  format(new Date(event.eventDate), "d MMMM yyyy", { locale: it })
-                                ) : "Data non specificata"}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={
-                                  event.status === "upcoming" ? "gray" :
-                                  event.status === "in-progress" ? "blue" :
-                                  event.status === "completed" ? "green" : "red"
-                                }>
-                                  {event.status === "upcoming" ? "Prossimo" :
-                                   event.status === "in-progress" ? "In Corso" :
-                                   event.status === "completed" ? "Completato" : "Annullato"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{eventCollaborator.role}</TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end space-x-2">
-                                  <Link href={`/events/${event.id}`}>
-                                    <Button variant="ghost" size="sm" className="h-8 px-2">
-                                      <i className="ri-eye-line"></i>
-                                    </Button>
-                                  </Link>
-                                  <Button variant="ghost" size="sm" className="h-8 px-2 text-red-600 hover:text-red-800 hover:bg-red-50">
-                                    <i className="ri-delete-bin-line"></i>
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </TabsContent>
           </Card>
         </div>
       </div>

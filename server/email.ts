@@ -121,3 +121,31 @@ Studio Arte
     text,
   });
 }
+
+/**
+ * Invia un'email con il link per il reset della password
+ */
+export async function sendPasswordResetEmail(user: User, token: string): Promise<boolean> {
+  const resetUrl = `${process.env.APP_URL || 'http://localhost:5000'}/reset-password/${token}`;
+  const subject = "Reset Password Studio Arte";
+  const text = `
+Ciao ${user.fullName},
+
+Hai richiesto il reset della password per il tuo account su Studio Arte.
+
+Per completare il reset della password, clicca sul seguente link:
+${resetUrl}
+
+Questo link è valido per 24 ore.
+Se non hai richiesto il reset della password, puoi ignorare questa email.
+
+Saluti,
+Studio Arte
+`;
+
+  return await sendEmail({
+    to: user.email,
+    subject,
+    text,
+  });
+}

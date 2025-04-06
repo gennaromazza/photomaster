@@ -13,6 +13,8 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("user"),
   status: text("status").notNull().default("pending"), // pending, active, disabled
   profileImage: text("profile_image"),
+  resetPasswordToken: text("reset_password_token"),
+  resetPasswordExpires: timestamp("reset_password_expires"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -24,6 +26,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   role: true,
   status: true,
   profileImage: true,
+  resetPasswordToken: true,
+  resetPasswordExpires: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

@@ -147,6 +147,11 @@ export default function AuthPage() {
                           "Accedi"
                         )}
                       </Button>
+                      <div className="text-center mt-2">
+                        <Button variant="link" size="sm" className="p-0" onClick={() => window.location.href = "/forgot-password"}>
+                          Password dimenticata?
+                        </Button>
+                      </div>
                     </form>
                   </Form>
                 </TabsContent>

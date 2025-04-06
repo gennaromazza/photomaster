@@ -10,7 +10,7 @@ import connectPg from "connect-pg-simple";
 import pkg from "pg";
 const { Pool } = pkg;
 import { z } from "zod";
-import { sendRegistrationNotification, sendApprovalNotification, sendDisabledNotification } from "./email";
+import { sendRegistrationNotification, sendApprovalNotification, sendDisabledNotification, sendPasswordResetEmail } from "./email";
 
 declare global {
   namespace Express {
@@ -213,6 +213,90 @@ export function setupAuth(app: Express) {
       res.json({ message: "Logout effettuato con successo" });
     });
   });
+  
+  // Richiesta reset password
+  app.post("/api/forgot-password", async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email richiesta" });
+      }
+      
+      // Cerca l'utente con l'email fornita
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Per ragioni di sicurezza, non rivelare se l'email esiste o meno
+        return res.status(200).json({ 
+          message: "Se l'email è presente nel sistema, riceverai un link per reimpostare la password" 
+        });
+      }
+      
+      // Genera un token di reset
+      const resetToken = generateResetToken();
+      
+      // Imposta la data di scadenza (24 ore)
+      const resetPasswordExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      
+      // Aggiorna l'utente con il token e la data di scadenza
+      await storage.updateUser(user.id, {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: resetPasswordExpires
+      });
+      
+      // Invia email con il link di reset
+      await sendPasswordResetEmail(user, resetToken);
+      
+      res.json({ 
+        message: "Se l'email è presente nel sistema, riceverai un link per reimpostare la password" 
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Verifica token reset e imposta nuova password
+  app.post("/api/reset-password", async (req, res, next) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token e password richiesti" });
+      }
+      
+      // Verifica che la password sia valida (minimo 6 caratteri)
+      if (password.length < 6) {
+        return res.status(400).json({ message: "La password deve contenere almeno 6 caratteri" });
+      }
+      
+      // Cerca l'utente con il token fornito
+      const user = await storage.getUserByResetToken(token);
+      
+      if (!user) {
+        return res.status(400).json({ message: "Token non valido o scaduto" });
+      }
+      
+      // Verifica che il token non sia scaduto
+      if (!user.resetPasswordExpires || new Date() > user.resetPasswordExpires) {
+        return res.status(400).json({ message: "Token scaduto" });
+      }
+      
+      // Hash della nuova password
+      const hashedPassword = await hashPassword(password);
+      
+      // Aggiorna l'utente con la nuova password e rimuovi il token
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null
+      });
+      
+      res.json({ message: "Password reimpostata con successo" });
+    } catch (error) {
+      next(error);
+    }
+  });
 
   // Get utente corrente
   app.get("/api/user", (req, res) => {
@@ -391,4 +475,9 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
   } else {
     res.status(403).json({ message: "Non autorizzato" });
   }
+}
+
+// Genera un token di recupero password
+export function generateResetToken(): string {
+  return randomBytes(32).toString('hex');
 }

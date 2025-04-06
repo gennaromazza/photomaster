@@ -1,6 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import React from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Loader2, LogOut } from "lucide-react";
 
 interface SidebarProps {
   className?: string;
@@ -33,6 +36,7 @@ const SidebarLink = ({ href, icon, children, active }: SidebarLinkProps) => {
 
 const Sidebar = ({ className }: SidebarProps) => {
   const [location] = useLocation();
+  const { user, logoutMutation } = useAuth();
   
   return (
     <aside className={cn("hidden lg:flex flex-col w-64 bg-white border-r border-gray-200", className)}>
@@ -109,17 +113,41 @@ const Sidebar = ({ className }: SidebarProps) => {
         </div>
       </nav>
       
-      <div className="p-4 border-t border-gray-100">
-        <div className="flex items-center">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-            <span className="font-medium">MR</span>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-gray-700">Marco Rossi</p>
-            <p className="text-xs text-gray-500">Fotografo</p>
+      {user && (
+        <div className="p-4 border-t border-gray-100">
+          <div className="flex flex-col space-y-3">
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <span className="font-medium">{getInitials(user.fullName.split(' ')[0], user.fullName.split(' ').slice(1).join(' '))}</span>
+              </div>
+              <div className="ml-3 flex-1 truncate">
+                <p className="text-sm font-medium text-gray-700">{user.fullName}</p>
+                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+              </div>
+            </div>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full" 
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+            >
+              {logoutMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Disconnessione...
+                </>
+              ) : (
+                <>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Disconnetti
+                </>
+              )}
+            </Button>
           </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 };

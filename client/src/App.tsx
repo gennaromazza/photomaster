@@ -15,21 +15,25 @@ import ContractsPage from "@/pages/contracts/index";
 import ContractViewPage from "@/pages/contracts/view";
 import QuotesPage from "@/pages/quotes/index";
 import SettingsPage from "@/pages/settings/index";
+import AuthPage from "@/pages/auth-page";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/clients" component={ClientsPage} />
-      <Route path="/clients/new" component={NewClientPage} />
-      <Route path="/events" component={EventsPage} />
-      <Route path="/events/new" component={NewEventPage} />
-      <Route path="/tasks" component={TasksPage} />
-      <Route path="/collaborators" component={CollaboratorsPage} />
-      <Route path="/contracts" component={ContractsPage} />
-      <Route path="/contracts/:id" component={ContractViewPage} />
-      <Route path="/quotes" component={QuotesPage} />
-      <Route path="/settings" component={SettingsPage} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/clients" component={ClientsPage} />
+      <ProtectedRoute path="/clients/new" component={NewClientPage} />
+      <ProtectedRoute path="/events" component={EventsPage} />
+      <ProtectedRoute path="/events/new" component={NewEventPage} />
+      <ProtectedRoute path="/tasks" component={TasksPage} />
+      <ProtectedRoute path="/collaborators" component={CollaboratorsPage} />
+      <ProtectedRoute path="/contracts" component={ContractsPage} />
+      <ProtectedRoute path="/contracts/:id" component={ContractViewPage} />
+      <ProtectedRoute path="/quotes" component={QuotesPage} />
+      <ProtectedRoute path="/settings" component={SettingsPage} />
+      <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -38,10 +42,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Layout>
+      <AuthProvider>
         <Router />
-      </Layout>
-      <Toaster />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

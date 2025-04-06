@@ -9,9 +9,11 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
-  email: text("email").notNull(),
-  role: text("role").notNull().default("admin"),
+  email: text("email").notNull().unique(),
+  role: text("role").notNull().default("user"),
+  status: text("status").notNull().default("pending"), // pending, active, disabled
   profileImage: text("profile_image"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -20,6 +22,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   fullName: true,
   email: true,
   role: true,
+  status: true,
   profileImage: true,
 });
 

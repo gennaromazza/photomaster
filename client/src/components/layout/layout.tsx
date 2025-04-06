@@ -2,6 +2,8 @@ import { useState } from "react";
 import Sidebar from "./sidebar";
 import Header from "./header";
 import MobileSidebar from "./mobile-sidebar";
+import { useAuth } from "@/hooks/use-auth";
+import { Redirect } from "wouter";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,6 +11,7 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const { user, isLoading } = useAuth();
 
   const handleOpenSidebar = () => {
     setIsMobileSidebarOpen(true);
@@ -17,6 +20,11 @@ const Layout = ({ children }: LayoutProps) => {
   const handleCloseSidebar = () => {
     setIsMobileSidebarOpen(false);
   };
+
+  // Se l'utente non è autenticato e il caricamento è completato, reindirizza alla pagina di autenticazione
+  if (!isLoading && !user) {
+    return <Redirect to="/auth" />;
+  }
 
   return (
     <div className="min-h-screen flex">

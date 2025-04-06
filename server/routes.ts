@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./auth";
 import { 
   insertClientSchema, 
   insertEventSchema, 
@@ -16,6 +17,9 @@ import {
 import { fromZodError } from "zod-validation-error";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
+  
   // Setup API routes
   const apiRouter = express.Router();
   
@@ -916,6 +920,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Register all API routes
+  // Apply authentication middleware to all API routes except auth routes
+  apiRouter.use((req, res, next) => {
+    // Skip authentication for login and register endpoints
+    if (req.path === '/login' || req.path === '/register' || req.path === '/user') {
+      return next();
+    }
+    
+    // Require authentication for all other endpoints
+    isAuthenticated(req, res, next);
+  });
+  
   app.use("/api", apiRouter);
   
   const httpServer = createServer(app);

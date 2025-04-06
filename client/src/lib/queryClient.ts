@@ -12,11 +12,27 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Controlla se c'è un token JWT nel localStorage
+  const token = localStorage.getItem("auth_token");
+  
+  // Prepara gli headers di base
+  const headers: Record<string, string> = {};
+  
+  // Aggiungi Content-Type se c'è un body
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  // Aggiungi il token all'header Authorization se presente
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    credentials: "include", // Manteniamo per compatibilità con sessioni
   });
 
   await throwIfResNotOk(res);
@@ -29,8 +45,20 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Controlla se c'è un token JWT nel localStorage
+    const token = localStorage.getItem("auth_token");
+    
+    // Prepara gli headers
+    const headers: Record<string, string> = {};
+    
+    // Aggiungi il token all'header Authorization se presente
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    
     const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
+      headers,
+      credentials: "include", // Manteniamo per compatibilità con sessioni
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

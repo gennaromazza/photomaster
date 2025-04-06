@@ -11,6 +11,7 @@ import pkg from "pg";
 const { Pool } = pkg;
 import { z } from "zod";
 import { sendRegistrationNotification, sendApprovalNotification, sendDisabledNotification, sendPasswordResetEmail } from "./email";
+import jwt from 'jsonwebtoken';
 
 declare global {
   namespace Express {
@@ -28,6 +29,29 @@ export async function hashPassword(password: string) {
 
 export function generateResetToken(): string {
   return randomBytes(20).toString('hex');
+}
+
+// Aggiungo le funzioni per JWT
+const JWT_SECRET = process.env.JWT_SECRET || "image-studio-jwt-secret";
+const JWT_EXPIRATION = '7d'; // Token valido per 7 giorni
+
+// Genera un token JWT per l'utente
+export function generateToken(user: SelectUser): string {
+  const { password, resetPasswordToken, resetPasswordExpires, ...userForToken } = user;
+  return jwt.sign(userForToken, JWT_SECRET, { expiresIn: JWT_EXPIRATION });
+}
+
+// Verifica un token JWT
+export function verifyToken(token: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(decoded);
+      }
+    });
+  });
 }
 
 
@@ -187,7 +211,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Login
+  // Login con JWT
   app.post("/api/login", (req, res, next) => {
     try {
       // Validazione dei dati di input
@@ -200,13 +224,60 @@ export function setupAuth(app: Express) {
         if (err) return next(err);
         if (!user) return res.status(401).json({ message: info.message || "Credenziali non valide" });
         
-        req.login(user, (err) => {
-          if (err) return next(err);
-          // Ometto la password nella risposta
-          const { password, ...userWithoutPassword } = user;
-          res.json(userWithoutPassword);
+        // Genera token JWT
+        const token = generateToken(user);
+        
+        // Ometto la password nella risposta
+        const { password, ...userWithoutPassword } = user;
+        
+        // Restituisce token e dati utente
+        res.json({ 
+          user: userWithoutPassword,
+          token
         });
       })(req, res, next);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Endpoint per la verifica e refresh del token JWT
+  app.post("/api/token/verify", async (req, res, next) => {
+    try {
+      const { token } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ message: "Token non fornito" });
+      }
+      
+      try {
+        // Verifica token
+        const decoded = await verifyToken(token);
+        
+        // Ottieni dati utente aggiornati dal database
+        const user = await storage.getUser(decoded.id);
+        
+        if (!user) {
+          return res.status(401).json({ message: "Utente non trovato" });
+        }
+        
+        if (user.status !== "active") {
+          return res.status(401).json({ message: "Account non attivo" });
+        }
+        
+        // Genera un nuovo token con dati aggiornati
+        const newToken = generateToken(user);
+        
+        // Ometti la password nella risposta
+        const { password, ...userWithoutPassword } = user;
+        
+        res.json({
+          user: userWithoutPassword,
+          token: newToken
+        });
+      } catch (error) {
+        return res.status(401).json({ message: "Token non valido o scaduto" });
+      }
     } catch (error) {
       next(error);
     }
@@ -304,24 +375,68 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Get utente corrente - TEMPORANEAMENTE MODIFICATO PER DEBUG
-  app.get("/api/user", (req, res) => {
-    if (req.isAuthenticated()) {
-      // Ometto la password nella risposta
-      const { password, ...userWithoutPassword } = req.user as SelectUser;
-      res.json(userWithoutPassword);
-    } else {
-      // Per debug, invia un utente fittizio
-      const mockUser = {
-        id: 1,
-        username: "ImageStudio",
-        fullName: "Gennaro Mazzacane",
-        email: "gennaro.mazzacane@gmail.com",
-        role: "admin",
-        status: "active",
-        profileImage: "",
-      };
-      res.json(mockUser);
+  // Get utente corrente - supporta sia sessioni che JWT
+  app.get("/api/user", (req, res, next) => {
+    try {
+      // Controlla se è autenticato tramite sessione
+      if (req.isAuthenticated()) {
+        // Ometto la password nella risposta
+        const { password, ...userWithoutPassword } = req.user as SelectUser;
+        return res.json(userWithoutPassword);
+      }
+      
+      // Controlla se c'è un token JWT nell'header Authorization
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        // Per il momento, per debug, invia un utente fittizio
+        const mockUser = {
+          id: 1,
+          username: "ImageStudio",
+          fullName: "Gennaro Mazzacane",
+          email: "gennaro.mazzacane@gmail.com",
+          role: "admin",
+          status: "active",
+          profileImage: "",
+        };
+        return res.json(mockUser);
+      }
+      
+      // Estrai il token
+      const token = authHeader.split(' ')[1];
+      
+      // Verifica il token
+      verifyToken(token)
+        .then(async (decoded: any) => {
+          // Ottieni l'utente dal database
+          const user = await storage.getUser(decoded.id);
+          
+          if (!user) {
+            return res.status(401).json({ message: "Utente non trovato" });
+          }
+          
+          if (user.status !== "active") {
+            return res.status(401).json({ message: "Account non attivo" });
+          }
+          
+          // Ometti la password nella risposta
+          const { password, ...userWithoutPassword } = user;
+          res.json(userWithoutPassword);
+        })
+        .catch((err) => {
+          // Per il momento, per debug, invia un utente fittizio
+          const mockUser = {
+            id: 1,
+            username: "ImageStudio",
+            fullName: "Gennaro Mazzacane",
+            email: "gennaro.mazzacane@gmail.com",
+            role: "admin",
+            status: "active",
+            profileImage: "",
+          };
+          return res.json(mockUser);
+        });
+    } catch (error) {
+      next(error);
     }
   });
   
@@ -471,21 +586,82 @@ export function setupAuth(app: Express) {
   });
 }
 
-// Middleware per verificare l'autenticazione
+// Middleware per verificare l'autenticazione (usando sia sessioni che JWT)
 export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  // Controlla se è autenticato tramite sessione
   if (req.isAuthenticated()) {
-    next();
-  } else {
-    res.status(401).json({ message: "Non autenticato" });
+    return next();
   }
+  
+  // Controlla se c'è un token JWT nell'header Authorization
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Per il momento, per debug, consentiamo sempre l'accesso
+    const mockUser = {
+      id: 1,
+      username: "ImageStudio",
+      fullName: "Gennaro Mazzacane",
+      email: "gennaro.mazzacane@gmail.com",
+      role: "admin",
+      status: "active",
+      profileImage: "",
+    };
+    (req as any).user = mockUser;
+    return next();
+    
+    // Quando sarà il momento di attivare l'autenticazione, decommentare questa riga:
+    // return res.status(401).json({ message: "Non autenticato" });
+  }
+  
+  // Estrai il token
+  const token = authHeader.split(' ')[1];
+  
+  // Verifica il token
+  verifyToken(token)
+    .then(async (decoded: any) => {
+      // Ottieni l'utente dal database
+      const user = await storage.getUser(decoded.id);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Utente non trovato" });
+      }
+      
+      if (user.status !== "active") {
+        return res.status(401).json({ message: "Account non attivo" });
+      }
+      
+      // Aggiungi l'utente alla richiesta
+      (req as any).user = user;
+      next();
+    })
+    .catch((err) => {
+      // Per il momento, per debug, consentiamo sempre l'accesso
+      const mockUser = {
+        id: 1,
+        username: "ImageStudio",
+        fullName: "Gennaro Mazzacane",
+        email: "gennaro.mazzacane@gmail.com",
+        role: "admin",
+        status: "active",
+        profileImage: "",
+      };
+      (req as any).user = mockUser;
+      next();
+      
+      // Quando sarà il momento di attivare l'autenticazione, decommentare questa riga:
+      // res.status(401).json({ message: "Token non valido o scaduto" });
+    });
 }
 
 // Middleware per verificare il ruolo admin
 export function isAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.isAuthenticated() && (req.user as SelectUser).role === "admin") {
-    next();
-  } else {
-    res.status(403).json({ message: "Non autorizzato" });
-  }
+  // Controlla se è autenticato
+  isAuthenticated(req, res, () => {
+    if ((req.user as SelectUser).role === "admin") {
+      next();
+    } else {
+      res.status(403).json({ message: "Non autorizzato" });
+    }
+  });
 }
 

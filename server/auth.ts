@@ -20,11 +20,16 @@ declare global {
 
 const scryptAsync = promisify(scrypt);
 
-async function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
+
+export function generateResetToken(): string {
+  return randomBytes(20).toString('hex');
+}
+
 
 async function comparePasswords(supplied: string, stored: string) {
   const [hashed, salt] = stored.split(".");
@@ -477,7 +482,3 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-// Genera un token di recupero password
-export function generateResetToken(): string {
-  return randomBytes(32).toString('hex');
-}

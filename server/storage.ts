@@ -2,7 +2,7 @@ import { db } from "./db";
 import { eq, and, gt, gte } from "drizzle-orm";
 import {
   users, clients, events, tasks, collaborators, eventCollaborators,
-  contracts, services, quotes, quoteItems, settings,
+  contracts, services, quotes, quoteItems, settings, serviceCategories, leadSources,
   type User, type InsertUser, 
   type Client, type InsertClient,
   type Event, type InsertEvent,
@@ -13,7 +13,9 @@ import {
   type Service, type InsertService,
   type Quote, type InsertQuote,
   type QuoteItem, type InsertQuoteItem,
-  type Settings, type InsertSettings
+  type Settings, type InsertSettings,
+  type ServiceCategory, type InsertServiceCategory,
+  type LeadSource, type InsertLeadSource
 } from "../shared/schema";
 
 export interface IStorage {
@@ -79,6 +81,7 @@ export interface IStorage {
   // Service operations
   getService(id: number): Promise<Service | undefined>;
   getAllServices(): Promise<Service[]>;
+  getServicesByCategory(categoryId: number): Promise<Service[]>;
   createService(service: InsertService): Promise<Service>;
   updateService(id: number, service: Partial<InsertService>): Promise<Service | undefined>;
   deleteService(id: number): Promise<boolean>;
@@ -97,6 +100,22 @@ export interface IStorage {
   createQuoteItem(quoteItem: InsertQuoteItem): Promise<QuoteItem>;
   updateQuoteItem(id: number, quoteItem: Partial<InsertQuoteItem>): Promise<QuoteItem | undefined>;
   deleteQuoteItem(id: number): Promise<boolean>;
+  
+  // Service Category operations
+  getServiceCategory(id: number): Promise<ServiceCategory | undefined>;
+  getAllServiceCategories(): Promise<ServiceCategory[]>;
+  getActiveServiceCategories(): Promise<ServiceCategory[]>;
+  createServiceCategory(category: InsertServiceCategory): Promise<ServiceCategory>;
+  updateServiceCategory(id: number, category: Partial<InsertServiceCategory>): Promise<ServiceCategory | undefined>;
+  deleteServiceCategory(id: number): Promise<boolean>;
+  
+  // Lead Source operations
+  getLeadSource(id: number): Promise<LeadSource | undefined>;
+  getAllLeadSources(): Promise<LeadSource[]>;
+  getActiveLeadSources(): Promise<LeadSource[]>;
+  createLeadSource(source: InsertLeadSource): Promise<LeadSource>;
+  updateLeadSource(id: number, source: Partial<InsertLeadSource>): Promise<LeadSource | undefined>;
+  deleteLeadSource(id: number): Promise<boolean>;
   
   // Settings operations
   getSettings(): Promise<Settings | undefined>;
@@ -388,6 +407,10 @@ export class DatabaseStorage implements IStorage {
   async getAllServices(): Promise<Service[]> {
     return await db.select().from(services);
   }
+  
+  async getServicesByCategory(categoryId: number): Promise<Service[]> {
+    return await db.select().from(services).where(eq(services.categoryId, categoryId));
+  }
 
   async createService(service: InsertService): Promise<Service> {
     const [newService] = await db.insert(services).values(service).returning();
@@ -468,6 +491,70 @@ export class DatabaseStorage implements IStorage {
     return result !== undefined;
   }
 
+  async getServiceCategory(id: number): Promise<ServiceCategory | undefined> {
+    const [category] = await db.select().from(serviceCategories).where(eq(serviceCategories.id, id));
+    return category || undefined;
+  }
+  
+  async getAllServiceCategories(): Promise<ServiceCategory[]> {
+    return await db.select().from(serviceCategories);
+  }
+  
+  async getActiveServiceCategories(): Promise<ServiceCategory[]> {
+    return await db.select().from(serviceCategories).where(eq(serviceCategories.isActive, true));
+  }
+  
+  async createServiceCategory(category: InsertServiceCategory): Promise<ServiceCategory> {
+    const [newCategory] = await db.insert(serviceCategories).values(category).returning();
+    return newCategory;
+  }
+  
+  async updateServiceCategory(id: number, category: Partial<InsertServiceCategory>): Promise<ServiceCategory | undefined> {
+    const [updatedCategory] = await db
+      .update(serviceCategories)
+      .set(category)
+      .where(eq(serviceCategories.id, id))
+      .returning();
+    return updatedCategory || undefined;
+  }
+  
+  async deleteServiceCategory(id: number): Promise<boolean> {
+    const result = await db.delete(serviceCategories).where(eq(serviceCategories.id, id));
+    return result !== undefined;
+  }
+  
+  async getLeadSource(id: number): Promise<LeadSource | undefined> {
+    const [source] = await db.select().from(leadSources).where(eq(leadSources.id, id));
+    return source || undefined;
+  }
+  
+  async getAllLeadSources(): Promise<LeadSource[]> {
+    return await db.select().from(leadSources);
+  }
+  
+  async getActiveLeadSources(): Promise<LeadSource[]> {
+    return await db.select().from(leadSources).where(eq(leadSources.isActive, true));
+  }
+  
+  async createLeadSource(source: InsertLeadSource): Promise<LeadSource> {
+    const [newSource] = await db.insert(leadSources).values(source).returning();
+    return newSource;
+  }
+  
+  async updateLeadSource(id: number, source: Partial<InsertLeadSource>): Promise<LeadSource | undefined> {
+    const [updatedSource] = await db
+      .update(leadSources)
+      .set(source)
+      .where(eq(leadSources.id, id))
+      .returning();
+    return updatedSource || undefined;
+  }
+  
+  async deleteLeadSource(id: number): Promise<boolean> {
+    const result = await db.delete(leadSources).where(eq(leadSources.id, id));
+    return result !== undefined;
+  }
+  
   async getSettings(): Promise<Settings | undefined> {
     const allSettings = await db.select().from(settings);
     const [settingsData] = allSettings;

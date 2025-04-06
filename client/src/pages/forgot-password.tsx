@@ -1,42 +1,38 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { useLocation } from "wouter";
+import { Mail } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
-import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/use-auth";
 
-// Schema di validazione per il recupero password
+// Schema di validazione per il form
 const forgotPasswordSchema = z.object({
-  email: z.string().email("Email non valida"),
+  email: z.string().email({ message: "Inserisci un indirizzo email valido" }),
 });
 
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  
+  // Se l'utente è già autenticato, reindirizza alla dashboard
+  if (user) {
+    setLocation("/");
+    return null;
+  }
 
-  // Form per il recupero password
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
@@ -46,76 +42,94 @@ export default function ForgotPasswordPage() {
 
   const forgotPasswordMutation = useMutation({
     mutationFn: async (data: ForgotPasswordFormValues) => {
-      const res = await apiRequest("POST", "/api/forgot-password", data);
-      return await res.json();
+      const response = await apiRequest("POST", "/api/forgot-password", data);
+      return await response.json();
     },
-    onSuccess: () => {
-      setIsSuccess(true);
+    onSuccess: (data) => {
+      setSuccessMessage(data.message || "Email di recupero password inviata. Controlla la tua casella di posta.");
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Si è verificato un errore durante l'invio dell'email",
+        variant: "destructive",
+      });
     },
   });
 
-  // Funzione per gestire l'invio del form
-  const onSubmit = (data: ForgotPasswordFormValues) => {
+  function onSubmit(data: ForgotPasswordFormValues) {
     forgotPasswordMutation.mutate(data);
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-background flex items-center">
-      <div className="container flex justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl font-playfair">Recupero password</CardTitle>
-            <CardDescription>
-              Inserisci la tua email per ricevere le istruzioni per reimpostare la password
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isSuccess ? (
-              <Alert className="mb-4">
-                <AlertTitle>Email inviata</AlertTitle>
-                <AlertDescription>
-                  Se l'indirizzo email è associato a un account, riceverai a breve le istruzioni per reimpostare la password.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="esempio@email.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={forgotPasswordMutation.isPending}>
-                    {forgotPasswordMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Invio in corso...
-                      </>
-                    ) : (
-                      "Invia istruzioni"
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            )}
-          </CardContent>
-          <CardFooter className="text-center">
-            <Link href="/auth" className="w-full">
-              <Button variant="link" className="w-full">
-                Torna alla pagina di accesso
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-      </div>
+    <div className="h-screen w-full flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-3xl font-serif">Recupero Password</CardTitle>
+          <CardDescription>
+            Inserisci la tua email per ricevere un link di reset della password
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {successMessage ? (
+            <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
+              <AlertDescription>
+                {successMessage}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="nome@esempio.com"
+                          {...field}
+                          disabled={forgotPasswordMutation.isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={forgotPasswordMutation.isPending}
+                >
+                  {forgotPasswordMutation.isPending ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-foreground" />
+                      Invio in corso...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" /> Invia istruzioni
+                    </span>
+                  )}
+                </Button>
+              </form>
+            </Form>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col space-y-2">
+          <div className="text-center text-sm">
+            <Button
+              variant="link"
+              className="px-0"
+              onClick={() => setLocation("/auth")}
+            >
+              Torna al login
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

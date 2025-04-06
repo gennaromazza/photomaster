@@ -1,7 +1,8 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./auth";
+import { setupAuth, isAuthenticated, hashPassword } from "./auth";
+import { sendPasswordResetEmail } from "./email";
 import { 
   insertClientSchema, 
   insertEventSchema, 
@@ -12,7 +13,9 @@ import {
   insertServiceSchema,
   insertQuoteSchema,
   insertQuoteItemSchema,
-  insertSettingsSchema
+  insertSettingsSchema,
+  insertServiceCategorySchema,
+  insertLeadSourceSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
@@ -893,6 +896,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Service Category routes
+  apiRouter.get("/service-categories", async (req, res) => {
+    try {
+      const categories = await storage.getAllServiceCategories();
+      res.json(categories);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch service categories" });
+    }
+  });
+  
+  apiRouter.get("/service-categories/active", async (req, res) => {
+    try {
+      const categories = await storage.getActiveServiceCategories();
+      res.json(categories);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch active service categories" });
+    }
+  });
+  
+  apiRouter.get("/service-categories/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const category = await storage.getServiceCategory(id);
+      
+      if (!category) {
+        return res.status(404).json({ message: "Service category not found" });
+      }
+      
+      res.json(category);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch service category" });
+    }
+  });
+  
+  apiRouter.post("/service-categories", async (req, res) => {
+    try {
+      const parseResult = insertServiceCategorySchema.safeParse(req.body);
+      
+      if (!parseResult.success) {
+        const errorMessage = fromZodError(parseResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      const category = await storage.createServiceCategory(parseResult.data);
+      res.status(201).json(category);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create service category" });
+    }
+  });
+  
+  apiRouter.put("/service-categories/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const parseResult = insertServiceCategorySchema.partial().safeParse(req.body);
+      
+      if (!parseResult.success) {
+        const errorMessage = fromZodError(parseResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      const updatedCategory = await storage.updateServiceCategory(id, parseResult.data);
+      
+      if (!updatedCategory) {
+        return res.status(404).json({ message: "Service category not found" });
+      }
+      
+      res.json(updatedCategory);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update service category" });
+    }
+  });
+  
+  apiRouter.delete("/service-categories/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteServiceCategory(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Service category not found" });
+      }
+      
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete service category" });
+    }
+  });
+  
+  // Lead Source routes
+  apiRouter.get("/lead-sources", async (req, res) => {
+    try {
+      const sources = await storage.getAllLeadSources();
+      res.json(sources);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch lead sources" });
+    }
+  });
+  
+  apiRouter.get("/lead-sources/active", async (req, res) => {
+    try {
+      const sources = await storage.getActiveLeadSources();
+      res.json(sources);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch active lead sources" });
+    }
+  });
+  
+  apiRouter.get("/lead-sources/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const source = await storage.getLeadSource(id);
+      
+      if (!source) {
+        return res.status(404).json({ message: "Lead source not found" });
+      }
+      
+      res.json(source);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch lead source" });
+    }
+  });
+  
+  apiRouter.post("/lead-sources", async (req, res) => {
+    try {
+      const parseResult = insertLeadSourceSchema.safeParse(req.body);
+      
+      if (!parseResult.success) {
+        const errorMessage = fromZodError(parseResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      const source = await storage.createLeadSource(parseResult.data);
+      res.status(201).json(source);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create lead source" });
+    }
+  });
+  
+  apiRouter.put("/lead-sources/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const parseResult = insertLeadSourceSchema.partial().safeParse(req.body);
+      
+      if (!parseResult.success) {
+        const errorMessage = fromZodError(parseResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      const updatedSource = await storage.updateLeadSource(id, parseResult.data);
+      
+      if (!updatedSource) {
+        return res.status(404).json({ message: "Lead source not found" });
+      }
+      
+      res.json(updatedSource);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update lead source" });
+    }
+  });
+  
+  apiRouter.delete("/lead-sources/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteLeadSource(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Lead source not found" });
+      }
+      
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete lead source" });
+    }
+  });
+  
   // Settings routes
   apiRouter.get("/settings", async (req, res) => {
     try {
@@ -919,11 +1096,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+    // Reset Password routes
+  apiRouter.post("/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email richiesta" });
+      }
+      
+      // Cerca l'utente per email
+      const user = await storage.getUserByEmail(email);
+      
+      // Non rivelare se l'email esiste o meno per motivi di sicurezza
+      if (!user) {
+        // Simuliamo una risposta positiva anche se l'utente non esiste
+        return res.status(200).json({ message: "Se l'indirizzo email è valido, riceverai istruzioni per reimpostare la password" });
+      }
+      
+      // Genera un token e imposta la scadenza (4 ore)
+      const token = require('crypto').randomBytes(20).toString('hex');
+      const expires = new Date();
+      expires.setHours(expires.getHours() + 4);
+      
+      // Aggiorna l'utente con il token di reset
+      await storage.updateUser(user.id, {
+        resetPasswordToken: token,
+        resetPasswordExpires: expires
+      });
+      
+      // Invia l'email con il token di reset
+      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${token}`;
+      const emailSent = await sendPasswordResetEmail(user, resetUrl);
+      
+      if (!emailSent) {
+        return res.status(500).json({ message: "Impossibile inviare l'email di reset" });
+      }
+      
+      res.status(200).json({ message: "Email di reset inviata" });
+    } catch (err) {
+      res.status(500).json({ message: "Errore durante l'invio dell'email di reset" });
+    }
+  });
+  
+  apiRouter.post("/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token e password richiesti" });
+      }
+      
+      // Trova l'utente con questo token
+      const user = await storage.getUserByResetToken(token);
+      
+      if (!user) {
+        return res.status(400).json({ message: "Token non valido o scaduto" });
+      }
+      
+      // Verifica che il token non sia scaduto
+      if (user.resetPasswordExpires && new Date(user.resetPasswordExpires) < new Date()) {
+        return res.status(400).json({ message: "Token scaduto" });
+      }
+      
+      // Hash della nuova password
+      const hashedPassword = await hashPassword(password);
+      
+      // Aggiorna l'utente con la nuova password e cancella il token
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null
+      });
+      
+      res.status(200).json({ message: "Password aggiornata con successo" });
+    } catch (err) {
+      res.status(500).json({ message: "Errore durante il reset della password" });
+    }
+  });
+
   // Register all API routes
   // Apply authentication middleware to all API routes except auth routes
   apiRouter.use((req, res, next) => {
     // Skip authentication for login and register endpoints
-    if (req.path === '/login' || req.path === '/register') {
+    if (req.path === '/login' || req.path === '/register' || 
+        req.path === '/forgot-password' || req.path === '/reset-password') {
       return next();
     }
     

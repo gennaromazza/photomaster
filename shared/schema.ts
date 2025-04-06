@@ -70,8 +70,12 @@ export const events = pgTable("events", {
   description: text("description"),
   eventType: text("event_type").notNull(),
   clientId: integer("client_id").notNull(),
+  secondClientId: integer("second_client_id"), // per sposo/sposa o secondo cliente
+  categoryId: integer("category_id"),
+  leadSourceId: integer("lead_source_id"),
   date: timestamp("date").notNull(),
   endDate: timestamp("end_date"),
+  duration: integer("duration"), // durata in minuti
   location: text("location"),
   status: text("status").notNull().default("pending"),
   notes: text("notes"),
@@ -83,8 +87,12 @@ export const insertEventSchema = createInsertSchema(events).pick({
   description: true,
   eventType: true,
   clientId: true,
+  secondClientId: true,
+  categoryId: true,
+  leadSourceId: true,
   date: true,
   endDate: true,
+  duration: true,
   location: true,
   status: true,
   notes: true,
@@ -98,6 +106,19 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   client: one(clients, {
     fields: [events.clientId],
     references: [clients.id],
+  }),
+  secondClient: one(clients, {
+    fields: [events.secondClientId],
+    references: [clients.id],
+    relationName: "secondClientEvents",
+  }),
+  category: one(serviceCategories, {
+    fields: [events.categoryId],
+    references: [serviceCategories.id],
+  }),
+  leadSource: one(leadSources, {
+    fields: [events.leadSourceId],
+    references: [leadSources.id],
   }),
   tasks: many(tasks),
   contracts: many(contracts),
@@ -242,6 +263,8 @@ export const services = pgTable("services", {
   description: text("description"),
   price: integer("price").notNull(),
   type: text("type").notNull(),
+  categoryId: integer("category_id"),
+  isActive: boolean("is_active").default(true).notNull(),
   image: text("image"),
 });
 
@@ -250,13 +273,19 @@ export const insertServiceSchema = createInsertSchema(services).pick({
   description: true,
   price: true,
   type: true,
+  categoryId: true,
+  isActive: true,
   image: true,
 });
 
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Service = typeof services.$inferSelect;
 
-export const servicesRelations = relations(services, ({ many }) => ({
+export const servicesRelations = relations(services, ({ one, many }) => ({
+  category: one(serviceCategories, {
+    fields: [services.categoryId],
+    references: [serviceCategories.id],
+  }),
   quoteItems: many(quoteItems),
 }));
 
@@ -265,7 +294,11 @@ export const quotes = pgTable("quotes", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   clientId: integer("client_id").notNull(),
+  secondClientId: integer("second_client_id"), // per sposo/sposa o secondo cliente
   eventId: integer("event_id"),
+  categoryId: integer("category_id"),
+  leadSourceId: integer("lead_source_id"),
+  eventDate: timestamp("event_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiryDate: timestamp("expiry_date"),
   status: text("status").default("draft").notNull(),
@@ -279,7 +312,11 @@ export const quotes = pgTable("quotes", {
 export const insertQuoteSchema = createInsertSchema(quotes).pick({
   title: true,
   clientId: true,
+  secondClientId: true,
   eventId: true,
+  categoryId: true,
+  leadSourceId: true,
+  eventDate: true,
   expiryDate: true,
   status: true,
   subtotal: true,
@@ -297,10 +334,23 @@ export const quotesRelations = relations(quotes, ({ one, many }) => ({
     fields: [quotes.clientId],
     references: [clients.id],
   }),
+  secondClient: one(clients, {
+    fields: [quotes.secondClientId],
+    references: [clients.id],
+    relationName: "secondClientQuotes",
+  }),
   event: one(events, {
     fields: [quotes.eventId],
     references: [events.id],
     relationName: "eventQuotes",
+  }),
+  category: one(serviceCategories, {
+    fields: [quotes.categoryId],
+    references: [serviceCategories.id],
+  }),
+  leadSource: one(leadSources, {
+    fields: [quotes.leadSourceId],
+    references: [leadSources.id],
   }),
   quoteItems: many(quoteItems),
 }));
@@ -335,6 +385,54 @@ export const quoteItemsRelations = relations(quoteItems, ({ one }) => ({
     fields: [quoteItems.serviceId],
     references: [services.id],
   }),
+}));
+
+// Service Category Schema
+export const serviceCategories = pgTable("service_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  color: text("color").default("#3b82f6"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertServiceCategorySchema = createInsertSchema(serviceCategories).pick({
+  name: true,
+  description: true,
+  color: true,
+  isActive: true,
+});
+
+export type InsertServiceCategory = z.infer<typeof insertServiceCategorySchema>;
+export type ServiceCategory = typeof serviceCategories.$inferSelect;
+
+export const serviceCategoriesRelations = relations(serviceCategories, ({ many }) => ({
+  services: many(services),
+  events: many(events),
+}));
+
+// Lead Source Schema (Provenienze)
+export const leadSources = pgTable("lead_sources", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertLeadSourceSchema = createInsertSchema(leadSources).pick({
+  name: true,
+  description: true,
+  isActive: true,
+});
+
+export type InsertLeadSource = z.infer<typeof insertLeadSourceSchema>;
+export type LeadSource = typeof leadSources.$inferSelect;
+
+export const leadSourcesRelations = relations(leadSources, ({ many }) => ({
+  events: many(events),
+  quotes: many(quotes),
 }));
 
 // Settings Schema

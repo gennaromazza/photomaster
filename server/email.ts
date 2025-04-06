@@ -125,8 +125,7 @@ Studio Arte
 /**
  * Invia un'email con il link per il reset della password
  */
-export async function sendPasswordResetEmail(user: User, token: string): Promise<boolean> {
-  const resetUrl = `${process.env.APP_URL || 'http://localhost:5000'}/reset-password/${token}`;
+export async function sendPasswordResetEmail(user: User, resetUrl: string): Promise<boolean> {
   const subject = "Reset Password Studio Arte";
   const text = `
 Ciao ${user.fullName},

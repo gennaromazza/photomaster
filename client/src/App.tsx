@@ -16,6 +16,8 @@ import {
   NewEventPage,
   TasksPage,
   CollaboratorsPage,
+  NewCollaboratorPage,
+  CollaboratorDetailPage,
   ContractsPage,
   ContractViewPage,
   QuotesPage,
@@ -35,8 +37,11 @@ function Router() {
       <ProtectedRoute path="/clients/new" component={NewClientPage} />
       <ProtectedRoute path="/events" component={EventsPage} />
       <ProtectedRoute path="/events/new" component={NewEventPage} />
+      {/* <ProtectedRoute path="/events/:id" component={EventDetailPage} /> */}
       <ProtectedRoute path="/tasks" component={TasksPage} />
       <ProtectedRoute path="/collaborators" component={CollaboratorsPage} />
+      <ProtectedRoute path="/collaborators/new" component={NewCollaboratorPage} />
+      <ProtectedRoute path="/collaborators/:id" component={CollaboratorDetailPage} />
       <ProtectedRoute path="/contracts" component={ContractsPage} />
       <ProtectedRoute path="/contracts/:id" component={ContractViewPage} />
       <ProtectedRoute path="/quotes" component={QuotesPage} />

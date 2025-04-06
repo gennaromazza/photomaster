@@ -7,13 +7,16 @@ import { useForm } from "react-hook-form";
 import { 
   Card, 
   CardContent, 
-  CardHeader, Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger,
+  CardHeader, 
   CardTitle, 
   CardDescription 
 } from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";

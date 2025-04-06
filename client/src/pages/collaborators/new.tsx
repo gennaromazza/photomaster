@@ -144,7 +144,15 @@ export default function NewCollaboratorPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Email" {...field} />
+                        <Input 
+                          type="email" 
+                          placeholder="Email" 
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -158,7 +166,14 @@ export default function NewCollaboratorPage() {
                     <FormItem>
                       <FormLabel>Telefono</FormLabel>
                       <FormControl>
-                        <Input placeholder="Telefono" {...field} />
+                        <Input 
+                          placeholder="Telefono" 
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -208,7 +223,14 @@ export default function NewCollaboratorPage() {
                     <FormItem className="col-span-2">
                       <FormLabel>Immagine Profilo (URL)</FormLabel>
                       <FormControl>
-                        <Input placeholder="URL immagine profilo" {...field} />
+                        <Input 
+                          placeholder="URL immagine profilo" 
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

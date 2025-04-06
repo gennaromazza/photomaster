@@ -96,6 +96,7 @@ const SettingsPage = () => {
           <TabsTrigger value="general">Generali</TabsTrigger>
           <TabsTrigger value="templates">Template</TabsTrigger>
           <TabsTrigger value="services">Servizi & Prodotti</TabsTrigger>
+          <TabsTrigger value="config">Configurazioni</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
         
@@ -339,6 +340,61 @@ const SettingsPage = () => {
               <Button>Salva Modifiche</Button>
             </CardFooter>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="config">
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Categorie Servizi</CardTitle>
+                <CardDescription>
+                  Gestione delle categorie per servizi ed eventi
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="prose">
+                <p>
+                  Crea e gestisci le categorie che verranno utilizzate per classificare i tuoi servizi.
+                  Le categorie possono essere utilizzate per organizzare i servizi, filtrare gli eventi e
+                  generare statistiche.
+                </p>
+                <ul className="mt-4">
+                  <li>Assegna colori personalizzati</li>
+                  <li>Imposta lo stato attivo/inattivo</li>
+                  <li>Aggiungi descrizioni dettagliate</li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button asChild className="w-full">
+                  <a href="/settings/categories">Gestisci Categorie</a>
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Origini Lead</CardTitle>
+                <CardDescription>
+                  Gestione delle fonti di acquisizione clienti
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="prose">
+                <p>
+                  Configura le diverse origini da cui provengono i tuoi clienti e lead.
+                  Traccia l'efficacia dei tuoi canali di marketing e ottimizza la tua strategia commerciale.
+                </p>
+                <ul className="mt-4">
+                  <li>Social media, fiere, passaparola</li>
+                  <li>Imposta lo stato attivo/inattivo</li>
+                  <li>Monitora le conversioni per origine</li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button asChild className="w-full">
+                  <a href="/settings/origins">Gestisci Origini</a>
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
         </TabsContent>
         
         <TabsContent value="account">

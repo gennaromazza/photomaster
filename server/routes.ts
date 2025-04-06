@@ -923,7 +923,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply authentication middleware to all API routes except auth routes
   apiRouter.use((req, res, next) => {
     // Skip authentication for login and register endpoints
-    if (req.path === '/login' || req.path === '/register' || req.path === '/user') {
+    if (req.path === '/login' || req.path === '/register') {
+      return next();
+    }
+    
+    // For /user endpoint, always let it through since the handler will check auth
+    if (req.path === '/user') {
       return next();
     }
     

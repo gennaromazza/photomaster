@@ -216,13 +216,17 @@ export function setupAuth(app: Express) {
 
   // Get utente corrente
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Non autenticato" });
+    // Questo endpoint è già gestito nel middleware delle routes.ts
+    // Qui dobbiamo solo fornire i dati dell'utente
+    if (req.isAuthenticated()) {
+      // Ometto la password nella risposta
+      const { password, ...userWithoutPassword } = req.user as SelectUser;
+      res.json(userWithoutPassword);
+    } else {
+      // Se non autenticato, il middleware in routes.ts si è già occupato della risposta 401
+      // ma per sicurezza rispondiamo anche qui
+      res.status(401).json({ message: "Non autenticato" });
     }
-    
-    // Ometto la password nella risposta
-    const { password, ...userWithoutPassword } = req.user as SelectUser;
-    res.json(userWithoutPassword);
   });
   
   // Approvazione di un utente (solo per admin)

@@ -21,9 +21,9 @@ interface MobileSidebarLinkProps {
 const MobileSidebarLink = ({ href, icon, children, active, onClick }: MobileSidebarLinkProps) => {
   return (
     <Link href={href}>
-      <a
+      <div
         className={cn(
-          "flex items-center px-4 py-2.5 text-sm font-medium rounded-md",
+          "flex items-center px-4 py-2.5 text-sm font-medium rounded-md cursor-pointer",
           active 
             ? "bg-background text-primary" 
             : "text-gray-600 hover:bg-background hover:text-primary"
@@ -32,7 +32,7 @@ const MobileSidebarLink = ({ href, icon, children, active, onClick }: MobileSide
       >
         <span className="text-lg mr-3">{icon}</span>
         {children}
-      </a>
+      </div>
     </Link>
   );
 };

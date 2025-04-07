@@ -124,7 +124,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  apiRouter.get("/events/client/:clientId", async (req, res) => {
+  // Get all events
+apiRouter.get("/events", async (req, res) => {
+    try {
+      const events = await storage.getAllEvents();
+      res.json(events);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+
+apiRouter.get("/events/client/:clientId", async (req, res) => {
     try {
       const clientId = parseInt(req.params.clientId);
       const events = await storage.getEventsByClient(clientId);

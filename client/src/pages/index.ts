@@ -14,6 +14,9 @@ export { default as OriginsPage } from './settings/origins';
 export { default as ClientsPage } from './clients/index';
 export { default as NewClientPage } from './clients/new';
 
+// Calendar
+export { default as CalendarPage } from './calendar';
+
 // Events
 export { default as EventsPage } from './events/index';
 export { default as NewEventPage } from './events/new';

@@ -102,8 +102,17 @@ const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
           </MobileSidebarLink>
           
           <MobileSidebarLink 
+            href="/calendar" 
+            icon={<i className="ri-calendar-2-line" />} 
+            active={location.startsWith("/calendar")}
+            onClick={onClose}
+          >
+            Calendario
+          </MobileSidebarLink>
+          
+          <MobileSidebarLink 
             href="/events" 
-            icon={<i className="ri-calendar-line" />} 
+            icon={<i className="ri-calendar-event-line" />} 
             active={location.startsWith("/events")}
             onClick={onClose}
           >

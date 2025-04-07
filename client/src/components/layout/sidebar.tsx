@@ -63,8 +63,16 @@ const Sidebar = ({ className }: SidebarProps) => {
         </SidebarLink>
         
         <SidebarLink 
+          href="/calendar" 
+          icon={<i className="ri-calendar-2-line" />} 
+          active={location.startsWith("/calendar")}
+        >
+          Calendario
+        </SidebarLink>
+        
+        <SidebarLink 
           href="/events" 
-          icon={<i className="ri-calendar-line" />} 
+          icon={<i className="ri-calendar-event-line" />} 
           active={location.startsWith("/events")}
         >
           Eventi

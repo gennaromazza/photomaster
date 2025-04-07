@@ -154,10 +154,14 @@ const CalendarPage = () => {
                   key={index}
                   onClick={() => handleDayClick(day)} 
                   className={cn(
-                    "min-h-[80px] p-1 border border-gray-100 rounded-md cursor-pointer transition-colors hover:bg-gray-50",
-                    isSelected && "bg-primary-light/5"
+                    "min-h-[80px] p-1 border border-gray-100 rounded-md cursor-pointer transition-colors hover:bg-gray-50 relative group",
+                    isSelected && "bg-primary-light/5",
+                    isCurrentMonth ? "bg-white" : "bg-gray-50/50"
                   )}
                 >
+                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center cursor-pointer transition-opacity">
+                    <i className="ri-add-line text-xs"></i>
+                  </div>
                   <div className={cn(
                     "text-xs",
                     !isCurrentMonth && "text-gray-400",

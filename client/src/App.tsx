@@ -6,6 +6,12 @@ import Layout from "@/components/layout/layout";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
+// Importa calendario
+import Calendar from "@/pages/calendar";
+
+// Importa dettaglio evento 
+import EventDetail from "@/pages/events/[id]";
+
 // Importa tutte le pagine dal barrel file
 import {
   NotFound,
@@ -35,9 +41,10 @@ function Router() {
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/clients" component={ClientsPage} />
       <ProtectedRoute path="/clients/new" component={NewClientPage} />
+      <ProtectedRoute path="/calendar" component={Calendar} />
       <ProtectedRoute path="/events" component={EventsPage} />
       <ProtectedRoute path="/events/new" component={NewEventPage} />
-      {/* <ProtectedRoute path="/events/:id" component={EventDetailPage} /> */}
+      <ProtectedRoute path="/events/:id" component={EventDetail} />
       <ProtectedRoute path="/tasks" component={TasksPage} />
       <ProtectedRoute path="/collaborators" component={CollaboratorsPage} />
       <ProtectedRoute path="/collaborators/new" component={NewCollaboratorPage} />

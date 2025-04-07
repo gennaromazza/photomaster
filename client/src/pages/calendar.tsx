@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Event, Client, Collaborator, insertEventSchema } from "@shared/schema";
-import { CreateEventForm } from "@/components/calendar";
+import { Event, Client, Collaborator, Quote, insertEventSchema } from "@shared/schema";
+import { CreateEventForm, CreateAppointmentForm } from "@/components/calendar";
 import { Link } from "wouter";
 
 const weekdays = ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"];
@@ -33,6 +34,10 @@ const CalendarPage = () => {
   
   const { data: collaborators = [], isLoading: isLoadingCollaborators } = useQuery<Collaborator[]>({
     queryKey: ["/api/collaborators"],
+  });
+  
+  const { data: quotes = [], isLoading: isLoadingQuotes } = useQuery<Quote[]>({
+    queryKey: ["/api/quotes"],
   });
   
   const handlePreviousMonth = () => {
@@ -175,7 +180,9 @@ const CalendarPage = () => {
                       <div 
                         className={cn(
                           "mt-1 p-1 text-xs rounded truncate",
-                          event.eventType === "wedding" ? "bg-accent-light text-accent-dark" : "bg-blue-100 text-blue-800"
+                          event.eventType === "wedding" ? "bg-accent-light text-accent-dark" : 
+                          event.eventType === "appointment" ? "bg-blue-100 text-blue-800" : 
+                          "bg-green-100 text-green-800"
                         )}
                       >
                         {event.title}
@@ -199,20 +206,39 @@ const CalendarPage = () => {
       <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">Nuovo Evento</DialogTitle>
+            <DialogTitle className="text-xl">Nuovo Elemento Calendario</DialogTitle>
             <DialogDescription>
               {selectedDate && (
-                <span>Crea un nuovo evento per il {format(selectedDate, "d MMMM yyyy", { locale: it })}</span>
+                <span>Data selezionata: {format(selectedDate, "d MMMM yyyy", { locale: it })}</span>
               )}
             </DialogDescription>
           </DialogHeader>
+          
           {selectedDate && (
-            <CreateEventForm 
-              selectedDate={selectedDate} 
-              clients={clients} 
-              collaborators={collaborators}
-              onSuccess={handleCreateEventSuccess}
-            />
+            <Tabs defaultValue="appointment" className="mt-2">
+              <TabsList className="grid grid-cols-2">
+                <TabsTrigger value="appointment">Appuntamento</TabsTrigger>
+                <TabsTrigger value="event">Evento Completo</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="appointment" className="pt-4">
+                <CreateAppointmentForm 
+                  selectedDate={selectedDate} 
+                  clients={clients} 
+                  collaborators={collaborators}
+                  onSuccess={handleCreateEventSuccess}
+                />
+              </TabsContent>
+              
+              <TabsContent value="event" className="pt-4">
+                <CreateEventForm 
+                  selectedDate={selectedDate} 
+                  clients={clients} 
+                  collaborators={collaborators}
+                  onSuccess={handleCreateEventSuccess}
+                />
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>

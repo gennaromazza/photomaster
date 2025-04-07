@@ -71,6 +71,7 @@ export const events = pgTable("events", {
   eventType: text("event_type").notNull(),
   clientId: integer("client_id").notNull(),
   secondClientId: integer("second_client_id"), // per sposo/sposa o secondo cliente
+  quoteId: integer("quote_id"), // Relazione con i preventivi
   categoryId: integer("category_id"),
   leadSourceId: integer("lead_source_id"),
   date: timestamp("date").notNull(),
@@ -89,6 +90,7 @@ const baseEventInsertSchema = createInsertSchema(events).pick({
   eventType: true,
   clientId: true,
   secondClientId: true,
+  quoteId: true,
   categoryId: true,
   leadSourceId: true,
   date: true,
@@ -122,6 +124,10 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
     fields: [events.secondClientId],
     references: [clients.id],
     relationName: "secondClientEvents",
+  }),
+  quote: one(quotes, {
+    fields: [events.quoteId],
+    references: [quotes.id],
   }),
   category: one(serviceCategories, {
     fields: [events.categoryId],

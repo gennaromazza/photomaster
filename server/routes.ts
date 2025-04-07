@@ -5,7 +5,8 @@ import { setupAuth, isAuthenticated, hashPassword } from "./auth";
 import { sendPasswordResetEmail } from "./email";
 import { 
   insertClientSchema, 
-  insertEventSchema, 
+  insertEventSchema,
+  partialEventSchema, 
   insertTaskSchema, 
   insertCollaboratorSchema,
   insertEventCollaboratorSchema,
@@ -150,7 +151,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   apiRouter.post("/events", async (req, res) => {
     try {
-      const parseResult = insertEventSchema.safeParse(req.body);
+      // Estrai collaborators dalla richiesta e rimuovilo prima della validazione
+      const { collaborators, ...eventData } = req.body;
+      
+      const parseResult = insertEventSchema.safeParse(eventData);
       
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
@@ -163,9 +167,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Client not found" });
       }
       
+      // Crea l'evento
       const event = await storage.createEvent(parseResult.data);
+      
+      // Se ci sono collaboratori, assegnali all'evento
+      if (collaborators && Array.isArray(collaborators) && collaborators.length > 0) {
+        for (const collaborator of collaborators) {
+          // Verifica che il collaboratore esista
+          const collaboratorExists = await storage.getCollaborator(collaborator.id);
+          if (collaboratorExists) {
+            await storage.assignCollaboratorToEvent({
+              eventId: event.id,
+              collaboratorId: collaborator.id,
+              role: collaborator.role
+            });
+          }
+        }
+      }
+      
       res.status(201).json(event);
     } catch (err) {
+      console.error("Error creating event:", err);
       res.status(500).json({ message: "Failed to create event" });
     }
   });
@@ -173,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.put("/events/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const parseResult = insertEventSchema.partial().safeParse(req.body);
+      const parseResult = partialEventSchema.safeParse(req.body);
       
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;

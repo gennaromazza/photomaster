@@ -20,17 +20,26 @@ import { z } from "zod";
 import { Client } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
-const formSchema = insertEventSchema.extend({
+// Creiamo uno schema personalizzato per il form
+const formSchema = z.object({
   title: z.string().min(1, "Il titolo è obbligatorio"),
+  description: z.string().optional(),
   eventType: z.string().min(1, "Il tipo di evento è obbligatorio"),
   clientId: z.number({
     required_error: "Il cliente è obbligatorio",
     invalid_type_error: "Seleziona un cliente",
   }),
+  secondClientId: z.number().optional().nullable(),
   date: z.date({
     required_error: "La data è obbligatoria",
     invalid_type_error: "Data non valida",
   }),
+  endDate: z.date().optional().nullable(),
+  duration: z.number().optional().nullable(),
+  location: z.string().optional(),
+  status: z.string().default("upcoming"),
+  notes: z.string().optional(),
+  coverImage: z.string().optional(),
 });
 
 const NewEventPage = () => {

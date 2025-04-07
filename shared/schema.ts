@@ -77,12 +77,13 @@ export const events = pgTable("events", {
   endDate: timestamp("end_date"),
   duration: integer("duration"), // durata in minuti
   location: text("location"),
-  status: text("status").notNull().default("pending"),
+  status: text("status").notNull().default("upcoming"),
   notes: text("notes"),
   coverImage: text("cover_image"),
 });
 
-export const insertEventSchema = createInsertSchema(events).pick({
+// Base insert schema senza transform per poter usare .partial()
+const baseEventInsertSchema = createInsertSchema(events).pick({
   title: true,
   description: true,
   eventType: true,
@@ -98,6 +99,16 @@ export const insertEventSchema = createInsertSchema(events).pick({
   notes: true,
   coverImage: true,
 });
+
+// Schema per insert con transform delle date
+export const insertEventSchema = baseEventInsertSchema.transform((event) => ({
+  ...event,
+  date: typeof event.date === 'string' ? new Date(event.date) : event.date,
+  endDate: event.endDate && typeof event.endDate === 'string' ? new Date(event.endDate) : event.endDate
+}));
+
+// Schema che può essere usato per chiamare .partial()
+export const partialEventSchema = baseEventInsertSchema.partial();
 
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Event = typeof events.$inferSelect;

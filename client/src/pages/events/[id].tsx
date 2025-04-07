@@ -40,14 +40,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { insertEventSchema, Event, Client } from "@shared/schema";
+import { Event, Client } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import CollaboratorsCard from "@/components/events/collaborators-card";
 
-const formSchema = insertEventSchema.extend({
+const formSchema = z.object({
+  title: z.string().min(1, "Il titolo è obbligatorio"),
+  description: z.string().optional(),
+  eventType: z.string().min(1, "Il tipo di evento è obbligatorio"),
+  clientId: z.number({
+    required_error: "Il cliente è obbligatorio",
+    invalid_type_error: "Seleziona un cliente",
+  }),
+  location: z.string().optional(),
+  status: z.string().min(1, "Lo stato è obbligatorio"),
   eventDate: z.string().optional(),
+  coverImage: z.string().optional(),
 });
 
 export default function EventDetailPage() {

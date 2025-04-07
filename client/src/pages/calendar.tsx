@@ -226,6 +226,7 @@ const CalendarPage = () => {
                   selectedDate={selectedDate} 
                   clients={clients} 
                   collaborators={collaborators}
+                  quotes={quotes}
                   onSuccess={handleCreateEventSuccess}
                 />
               </TabsContent>

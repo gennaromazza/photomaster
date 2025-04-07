@@ -58,6 +58,7 @@ interface CreateAppointmentFormProps {
   selectedDate: Date;
   clients: Client[];
   collaborators: Collaborator[];
+  quotes?: Quote[];
   onSuccess?: () => void;
 }
 
@@ -65,17 +66,22 @@ export function CreateAppointmentForm({
   selectedDate, 
   clients, 
   collaborators,
+  quotes = [],
   onSuccess 
 }: CreateAppointmentFormProps) {
   const { toast } = useToast();
   
-  // Ottieni i preventivi
-  const { data: quotes = [] } = useQuery<Quote[]>({
+  // Usa i preventivi forniti o caricali dal server
+  const { data: fetchedQuotes = [] } = useQuery<Quote[]>({
     queryKey: ["/api/quotes"],
+    enabled: quotes.length === 0, // Carica solo se non sono stati forniti
   });
   
+  // Combina entrambe le fonti di preventivi
+  const allQuotes = [...quotes, ...fetchedQuotes];
+  
   // Solo preventivi approvati o firmati
-  const approvedQuotes = quotes.filter(quote => 
+  const approvedQuotes = allQuotes.filter(quote => 
     quote.status === "approved" || quote.status === "signed"
   );
   
@@ -258,9 +264,9 @@ export function CreateAppointmentForm({
                           if (quoteId) {
                             form.setValue("quoteId", null);
                           }
-                          field.onChange(value ? parseInt(value) : null);
+                          field.onChange(value === "null" ? null : parseInt(value));
                         }}
-                        value={field.value?.toString() || ""}
+                        value={field.value?.toString() || "null"}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -268,7 +274,7 @@ export function CreateAppointmentForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nessuno</SelectItem>
+                          <SelectItem value="null">Nessuno</SelectItem>
                           {clients.map((client) => (
                             <SelectItem key={client.id} value={client.id.toString()}>
                               {client.firstName} {client.lastName}
@@ -288,8 +294,8 @@ export function CreateAppointmentForm({
                     <FormItem>
                       <FormLabel>Preventivo</FormLabel>
                       <Select 
-                        onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
-                        value={field.value?.toString() || ""}
+                        onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))}
+                        value={field.value?.toString() || "null"}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -297,7 +303,7 @@ export function CreateAppointmentForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nessuno</SelectItem>
+                          <SelectItem value="null">Nessuno</SelectItem>
                           {approvedQuotes.map((quote) => {
                             // Trova il cliente associato
                             const client = clients.find(c => c.id === quote.clientId);

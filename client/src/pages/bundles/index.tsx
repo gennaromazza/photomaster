@@ -273,6 +273,12 @@ const ServiceBundlesPage = () => {
       
       setSelectedItems(itemsWithServices);
       
+      // Reset dell'immagine selezionata, usiamo quella esistente
+      setSelectedImageFile(null);
+      
+      // Stampa di debug per verificare il percorso dell'immagine
+      console.log('Percorso immagine pacchetto:', bundle.imagePath);
+      
       form.reset({
         name: bundle.name,
         description: bundle.description || '',
@@ -626,7 +632,8 @@ const ServiceBundlesPage = () => {
                         onImageChange={(file) => {
                           setSelectedImageFile(file);
                         }}
-                        currentImageUrl={editingBundle?.imagePath || undefined}
+                        initialImage={form.getValues('imagePath')}
+                        currentImageUrl={editingBundle?.imagePath}
                       />
                     </FormControl>
                     <FormMessage />

@@ -111,6 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const events = await storage.getAllEvents();
       res.json(events);
     } catch (err) {
+      console.error("Error fetching events:", err);
       res.status(500).json({ message: "Failed to fetch events" });
     }
   });
@@ -121,16 +122,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(events);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch upcoming events" });
-    }
-  });
-  
-  // Get all events
-apiRouter.get("/events", async (req, res) => {
-    try {
-      const events = await storage.getAllEvents();
-      res.json(events);
-    } catch (err) {
-      res.status(500).json({ message: "Failed to fetch events" });
     }
   });
 
@@ -164,21 +155,28 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Estrai collaborators dalla richiesta e rimuovilo prima della validazione
       const { collaborators, ...eventData } = req.body;
       
+      console.log("Ricevuti dati evento:", eventData);
+      
       const parseResult = insertEventSchema.safeParse(eventData);
       
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
+        console.error("Error parsing event data:", errorMessage);
         return res.status(400).json({ message: errorMessage });
       }
       
-      // Verify client exists
-      const client = await storage.getClient(parseResult.data.clientId);
-      if (!client) {
-        return res.status(400).json({ message: "Client not found" });
+      // Verifica che il cliente esista solo se l'ID del cliente è maggiore di 0
+      if (parseResult.data.clientId > 0) {
+        const client = await storage.getClient(parseResult.data.clientId);
+        if (!client) {
+          console.error("Client not found with ID:", parseResult.data.clientId);
+          return res.status(400).json({ message: "Client not found" });
+        }
       }
       
       // Crea l'evento
       const event = await storage.createEvent(parseResult.data);
+      console.log("Evento creato:", event);
       
       // Se ci sono collaboratori, assegnali all'evento
       if (collaborators && Array.isArray(collaborators) && collaborators.length > 0) {

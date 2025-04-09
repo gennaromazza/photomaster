@@ -279,13 +279,22 @@ const ServiceBundlesPage = () => {
       // Stampa di debug per verificare il percorso dell'immagine
       console.log('Percorso immagine pacchetto da modificare:', bundle.imagePath);
       
+      // Verifica esplicita che il percorso dell'immagine sia una stringa valida
+      let imagePath = bundle.imagePath;
+      if (imagePath && typeof imagePath === 'string' && imagePath.startsWith('/uploads/')) {
+        console.log('Percorso immagine valido:', imagePath);
+      } else {
+        console.log('Percorso immagine non valido o non presente, verrà impostato come vuoto');
+        imagePath = '';
+      }
+      
       // Utilizziamo un breve timeout per assicurarci che il form sia completamente renderizzato
       // prima di impostare i valori
       setTimeout(() => {
         form.reset({
           name: bundle.name,
           description: bundle.description || '',
-          imagePath: bundle.imagePath || '',
+          imagePath: imagePath,
           totalPrice: bundle.totalPrice,
           discountedPrice: bundle.discountedPrice,
           discountType: bundle.discountType as 'percentage' | 'fixed',
@@ -294,7 +303,11 @@ const ServiceBundlesPage = () => {
           categoryId: bundle.categoryId || undefined,
         });
         
-        setEditingBundle(bundle);
+        setEditingBundle({
+          ...bundle,
+          imagePath: imagePath,  // Aggiorniamo anche l'oggetto bundle per sicurezza
+        });
+        
         setIsOpen(true);
       }, 0);
     } catch (error) {

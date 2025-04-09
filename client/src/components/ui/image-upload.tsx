@@ -23,9 +23,13 @@ export const ImageUpload = forwardRef<HTMLDivElement, ImageUploadProps>(
     // Effect per impostare l'URL di anteprima quando cambiano le props
     useEffect(() => {
       console.log("ImageUpload props changed:", { initialImage, currentImageUrl });
-      if (initialImage) {
+      
+      // Verifica il percorso dell'immagine e lo imposta come anteprima
+      if (initialImage && initialImage !== 'null' && initialImage !== 'undefined') {
+        console.log("Using initialImage:", initialImage);
         setPreviewUrl(initialImage);
-      } else if (currentImageUrl) {
+      } else if (currentImageUrl && currentImageUrl !== 'null' && currentImageUrl !== 'undefined') {
+        console.log("Using currentImageUrl:", currentImageUrl);
         setPreviewUrl(currentImageUrl);
       }
     }, [initialImage, currentImageUrl]);

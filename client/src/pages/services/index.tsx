@@ -758,8 +758,11 @@ const ServicesPage = () => {
                     <FormItem>
                       <FormLabel>Categoria</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        value={field.value?.toString()}
+                        onValueChange={(value) => {
+                          const parsedValue = parseInt(value);
+                          field.onChange(parsedValue === 0 ? null : parsedValue);
+                        }}
+                        value={(field.value || "0").toString()}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -767,7 +770,7 @@ const ServicesPage = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nessuna categoria</SelectItem>
+                          <SelectItem value="0">Nessuna categoria</SelectItem>
                           {categoriesQuery.data?.map(category => (
                             <SelectItem key={category.id} value={category.id.toString()}>
                               {category.name}

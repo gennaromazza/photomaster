@@ -279,10 +279,20 @@ export const services = pgTable("services", {
   name: text("name").notNull(),
   description: text("description"),
   price: integer("price").notNull(),
-  type: text("type").notNull(),
+  type: text("type").notNull(), // 'product' o 'service'
   categoryId: integer("category_id"),
   isActive: boolean("is_active").default(true).notNull(),
   image: text("image"),
+  // Campi per gestione sconti
+  hasDiscount: boolean("has_discount").default(false).notNull(),
+  discountType: text("discount_type"), // 'percentage' o 'fixed'
+  discountValue: integer("discount_value"), // Valore dello sconto (percentuale o fisso)
+  discountedPrice: integer("discounted_price"), // Prezzo scontato calcolato
+  // Gestione del prodotto
+  sku: text("sku"), // Codice prodotto
+  stock: integer("stock"), // Disponibilità in magazzino (per prodotti fisici)
+  unit: text("unit"), // Unità di misura (es. "pz", "ore", "giorni")
+  taxable: boolean("taxable").default(true).notNull(), // Se soggetto a tassazione
 });
 
 export const insertServiceSchema = createInsertSchema(services).pick({
@@ -293,6 +303,14 @@ export const insertServiceSchema = createInsertSchema(services).pick({
   categoryId: true,
   isActive: true,
   image: true,
+  hasDiscount: true,
+  discountType: true,
+  discountValue: true,
+  discountedPrice: true,
+  sku: true,
+  stock: true,
+  unit: true,
+  taxable: true,
 });
 
 export type InsertService = z.infer<typeof insertServiceSchema>;
@@ -377,17 +395,32 @@ export const quoteItems = pgTable("quote_items", {
   id: serial("id").primaryKey(),
   quoteId: integer("quote_id").notNull(),
   serviceId: integer("service_id").notNull(),
+  bundleId: integer("bundle_id"), // Se questo elemento fa parte di un pacchetto
   quantity: integer("quantity").default(1).notNull(),
   unitPrice: integer("unit_price").notNull(),
+  // Sconto specifico per l'elemento nel preventivo
+  hasDiscount: boolean("has_discount").default(false).notNull(),
+  discountType: text("discount_type"), // 'percentage' o 'fixed'
+  discountValue: integer("discount_value"), // Valore dello sconto (percentuale o fisso)
+  discountedPrice: integer("discounted_price"), // Prezzo unitario scontato
+  // Totale calcolato (quantity * unitPrice o quantity * discountedPrice se scontato)
   total: integer("total").notNull(),
+  // Note specifiche per l'elemento
+  notes: text("notes"),
 });
 
 export const insertQuoteItemSchema = createInsertSchema(quoteItems).pick({
   quoteId: true,
   serviceId: true,
+  bundleId: true,
   quantity: true,
   unitPrice: true,
+  hasDiscount: true,
+  discountType: true,
+  discountValue: true,
+  discountedPrice: true,
   total: true,
+  notes: true,
 });
 
 export type InsertQuoteItem = z.infer<typeof insertQuoteItemSchema>;
@@ -400,6 +433,76 @@ export const quoteItemsRelations = relations(quoteItems, ({ one }) => ({
   }),
   service: one(services, {
     fields: [quoteItems.serviceId],
+    references: [services.id],
+  }),
+  bundle: one(serviceBundles, {
+    fields: [quoteItems.bundleId],
+    references: [serviceBundles.id],
+  }),
+}));
+
+// Pacchetti (Bundle) Schema - Raggruppamenti di servizi e prodotti
+export const serviceBundles = pgTable("service_bundles", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  image: text("image"),
+  totalPrice: integer("total_price").notNull(), // Prezzo totale reale
+  discountedPrice: integer("discounted_price").notNull(), // Prezzo scontato del pacchetto
+  discountType: text("discount_type").notNull(), // 'percentage' o 'fixed'
+  discountValue: integer("discount_value").notNull(), // Valore dello sconto
+  isActive: boolean("is_active").default(true).notNull(),
+  categoryId: integer("category_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertServiceBundleSchema = createInsertSchema(serviceBundles).pick({
+  name: true,
+  description: true,
+  image: true,
+  totalPrice: true,
+  discountedPrice: true,
+  discountType: true,
+  discountValue: true,
+  isActive: true,
+  categoryId: true,
+});
+
+export type InsertServiceBundle = z.infer<typeof insertServiceBundleSchema>;
+export type ServiceBundle = typeof serviceBundles.$inferSelect;
+
+export const serviceBundlesRelations = relations(serviceBundles, ({ one, many }) => ({
+  category: one(serviceCategories, {
+    fields: [serviceBundles.categoryId],
+    references: [serviceCategories.id],
+  }),
+  items: many(serviceBundleItems),
+}));
+
+// Service Bundle Items Schema - Elementi all'interno dei pacchetti
+export const serviceBundleItems = pgTable("service_bundle_items", {
+  id: serial("id").primaryKey(),
+  bundleId: integer("bundle_id").notNull(),
+  serviceId: integer("service_id").notNull(),
+  quantity: integer("quantity").default(1).notNull(),
+});
+
+export const insertServiceBundleItemSchema = createInsertSchema(serviceBundleItems).pick({
+  bundleId: true,
+  serviceId: true,
+  quantity: true,
+});
+
+export type InsertServiceBundleItem = z.infer<typeof insertServiceBundleItemSchema>;
+export type ServiceBundleItem = typeof serviceBundleItems.$inferSelect;
+
+export const serviceBundleItemsRelations = relations(serviceBundleItems, ({ one }) => ({
+  bundle: one(serviceBundles, {
+    fields: [serviceBundleItems.bundleId],
+    references: [serviceBundles.id],
+  }),
+  service: one(services, {
+    fields: [serviceBundleItems.serviceId],
     references: [services.id],
   }),
 }));

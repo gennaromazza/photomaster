@@ -155,6 +155,15 @@ const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
             Preventivi
           </MobileSidebarLink>
           
+          <MobileSidebarLink 
+            href="/services" 
+            icon={<i className="ri-price-tag-3-line" />} 
+            active={location.startsWith("/services") || location.startsWith("/bundles")}
+            onClick={onClose}
+          >
+            Servizi e Prodotti
+          </MobileSidebarLink>
+          
           <div className="pt-4 mt-4 border-t border-gray-100">
             <MobileSidebarLink 
               href="/settings" 

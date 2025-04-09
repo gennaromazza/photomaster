@@ -110,6 +110,14 @@ const Sidebar = ({ className }: SidebarProps) => {
           Preventivi
         </SidebarLink>
         
+        <SidebarLink 
+          href="/services" 
+          icon={<i className="ri-price-tag-3-line" />} 
+          active={location.startsWith("/services") || location.startsWith("/bundles")}
+        >
+          Servizi e Prodotti
+        </SidebarLink>
+        
         <div className="pt-4 mt-4 border-t border-gray-100">
           <SidebarLink 
             href="/settings" 

@@ -36,3 +36,7 @@ export { default as ContractViewPage } from './contracts/view';
 
 // Quotes
 export { default as QuotesPage } from './quotes/index';
+
+// Services and Bundles
+export { default as ServicesPage } from './services/index';
+export { default as ServiceBundlesPage } from './bundles/index';

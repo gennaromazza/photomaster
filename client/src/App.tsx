@@ -35,6 +35,10 @@ import {
   ResetPasswordPage
 } from "@/pages";
 
+// Importa le pagine dei servizi e pacchetti
+import ServicesPage from "@/pages/services";
+import ServiceBundlesPage from "@/pages/bundles";
+
 function Router() {
   return (
     <Switch>
@@ -52,6 +56,8 @@ function Router() {
       <ProtectedRoute path="/contracts" component={ContractsPage} />
       <ProtectedRoute path="/contracts/:id" component={ContractViewPage} />
       <ProtectedRoute path="/quotes" component={QuotesPage} />
+      <ProtectedRoute path="/services" component={ServicesPage} />
+      <ProtectedRoute path="/bundles" component={ServiceBundlesPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/settings/categories" component={CategoriesPage} />
       <ProtectedRoute path="/settings/origins" component={OriginsPage} />

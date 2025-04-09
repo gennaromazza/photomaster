@@ -3,6 +3,7 @@ import { eq, and, gt, gte } from "drizzle-orm";
 import {
   users, clients, events, tasks, collaborators, eventCollaborators,
   contracts, services, quotes, quoteItems, settings, serviceCategories, leadSources,
+  serviceBundles, serviceBundleItems,
   type User, type InsertUser, 
   type Client, type InsertClient,
   type Event, type InsertEvent,
@@ -13,6 +14,8 @@ import {
   type Service, type InsertService,
   type Quote, type InsertQuote,
   type QuoteItem, type InsertQuoteItem,
+  type ServiceBundle, type InsertServiceBundle,
+  type ServiceBundleItem, type InsertServiceBundleItem,
   type Settings, type InsertSettings,
   type ServiceCategory, type InsertServiceCategory,
   type LeadSource, type InsertLeadSource
@@ -86,6 +89,20 @@ export interface IStorage {
   createService(service: InsertService): Promise<Service>;
   updateService(id: number, service: Partial<InsertService>): Promise<Service | undefined>;
   deleteService(id: number): Promise<boolean>;
+  
+  // Service Bundle operations
+  getServiceBundle(id: number): Promise<ServiceBundle | undefined>;
+  getAllServiceBundles(): Promise<ServiceBundle[]>;
+  getServiceBundlesByCategory(categoryId: number): Promise<ServiceBundle[]>;
+  createServiceBundle(bundle: InsertServiceBundle): Promise<ServiceBundle>;
+  updateServiceBundle(id: number, bundle: Partial<InsertServiceBundle>): Promise<ServiceBundle | undefined>;
+  deleteServiceBundle(id: number): Promise<boolean>;
+  
+  // Service Bundle Items operations
+  getServiceBundleItems(bundleId: number): Promise<ServiceBundleItem[]>;
+  createServiceBundleItem(item: InsertServiceBundleItem): Promise<ServiceBundleItem>;
+  updateServiceBundleItem(id: number, item: Partial<InsertServiceBundleItem>): Promise<ServiceBundleItem | undefined>;
+  deleteServiceBundleItem(id: number): Promise<boolean>;
   
   // Quote operations
   getQuote(id: number): Promise<Quote | undefined>;
@@ -453,6 +470,63 @@ export class DatabaseStorage implements IStorage {
 
   async deleteService(id: number): Promise<boolean> {
     const result = await db.delete(services).where(eq(services.id, id));
+    return result !== undefined;
+  }
+  
+  // Service Bundle methods
+  async getServiceBundle(id: number): Promise<ServiceBundle | undefined> {
+    const [bundle] = await db.select().from(serviceBundles).where(eq(serviceBundles.id, id));
+    return bundle || undefined;
+  }
+
+  async getAllServiceBundles(): Promise<ServiceBundle[]> {
+    return await db.select().from(serviceBundles);
+  }
+  
+  async getServiceBundlesByCategory(categoryId: number): Promise<ServiceBundle[]> {
+    return await db.select().from(serviceBundles).where(eq(serviceBundles.categoryId, categoryId));
+  }
+
+  async createServiceBundle(bundle: InsertServiceBundle): Promise<ServiceBundle> {
+    const [newBundle] = await db.insert(serviceBundles).values(bundle).returning();
+    return newBundle;
+  }
+
+  async updateServiceBundle(id: number, bundle: Partial<InsertServiceBundle>): Promise<ServiceBundle | undefined> {
+    const [updatedBundle] = await db
+      .update(serviceBundles)
+      .set(bundle)
+      .where(eq(serviceBundles.id, id))
+      .returning();
+    return updatedBundle || undefined;
+  }
+
+  async deleteServiceBundle(id: number): Promise<boolean> {
+    const result = await db.delete(serviceBundles).where(eq(serviceBundles.id, id));
+    return result !== undefined;
+  }
+  
+  // Service Bundle Items methods
+  async getServiceBundleItems(bundleId: number): Promise<ServiceBundleItem[]> {
+    return await db.select().from(serviceBundleItems).where(eq(serviceBundleItems.bundleId, bundleId));
+  }
+
+  async createServiceBundleItem(item: InsertServiceBundleItem): Promise<ServiceBundleItem> {
+    const [newItem] = await db.insert(serviceBundleItems).values(item).returning();
+    return newItem;
+  }
+
+  async updateServiceBundleItem(id: number, item: Partial<InsertServiceBundleItem>): Promise<ServiceBundleItem | undefined> {
+    const [updatedItem] = await db
+      .update(serviceBundleItems)
+      .set(item)
+      .where(eq(serviceBundleItems.id, id))
+      .returning();
+    return updatedItem || undefined;
+  }
+
+  async deleteServiceBundleItem(id: number): Promise<boolean> {
+    const result = await db.delete(serviceBundleItems).where(eq(serviceBundleItems.id, id));
     return result !== undefined;
   }
 

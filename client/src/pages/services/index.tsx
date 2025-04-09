@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Service } from '@shared/schema';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import Layout from '@/components/layout/layout';
 import { Plus, Edit, Trash2, Tag, Package, Image } from 'lucide-react';
 import { ImageUpload } from '@/components/ui/image-upload';
 import ServiceItemsManager from '@/components/services/service-items-manager';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +65,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { useLocation, Link } from 'wouter';
+import { Link } from 'wouter';
 
 // Formattazione prezzo in Euro
 const formatPrice = (price: number) => {
@@ -88,6 +90,8 @@ const serviceFormSchema = z.object({
   stock: z.coerce.number().optional(),
   unit: z.string().optional(),
   taxable: z.boolean().default(true),
+  isComposite: z.boolean().default(false),
+  productIds: z.array(z.number()).optional(),
   image: z.any().optional(), // File di immagine
   imagePath: z.string().optional(), // Percorso dell'immagine salvata
 });
@@ -879,6 +883,72 @@ const ServicesPage = () => {
                 </div>
               )}
               
+              {form.getValues('type') === 'service' && (
+                <FormField
+                  control={form.control}
+                  name="isComposite"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Servizio composito</FormLabel>
+                        <FormDescription>
+                          Questo servizio include prodotti
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {form.watch('isComposite') && form.getValues('type') === 'service' && (
+                <div>
+                  <FormLabel>Seleziona i prodotti da includere nel servizio</FormLabel>
+                  <FormDescription className="mb-3">
+                    Puoi selezionare più prodotti per creare un servizio composito
+                  </FormDescription>
+                  
+                  <div className="border rounded-md p-4 space-y-4">
+                    {products.length > 0 ? (
+                      <div className="grid gap-2">
+                        {products.map(product => (
+                          <div key={product.id} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`product-${product.id}`}
+                              checked={form.watch('productIds')?.includes(product.id)}
+                              onCheckedChange={(checked) => {
+                                const currentProductIds = form.watch('productIds') || [];
+                                if (checked) {
+                                  form.setValue('productIds', [...currentProductIds, product.id]);
+                                } else {
+                                  form.setValue('productIds', currentProductIds.filter(id => id !== product.id));
+                                }
+                              }}
+                            />
+                            <label 
+                              htmlFor={`product-${product.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex justify-between w-full"
+                            >
+                              <span>{product.name}</span>
+                              <span className="text-muted-foreground">{formatPrice(product.price)}</span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-4">
+                        Non ci sono prodotti disponibili. Devi prima creare dei prodotti.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+                
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

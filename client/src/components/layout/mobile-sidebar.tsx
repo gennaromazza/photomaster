@@ -20,20 +20,22 @@ interface MobileSidebarLinkProps {
 
 const MobileSidebarLink = ({ href, icon, children, active, onClick }: MobileSidebarLinkProps) => {
   return (
-    <Link href={href}>
-      <div
-        className={cn(
-          "flex items-center px-4 py-2.5 text-sm font-medium rounded-md cursor-pointer",
-          active 
-            ? "bg-background text-primary" 
-            : "text-gray-600 hover:bg-background hover:text-primary"
-        )}
-        onClick={onClick}
-      >
-        <span className="text-lg mr-3">{icon}</span>
-        {children}
-      </div>
-    </Link>
+    <div
+      className={cn(
+        "flex items-center px-4 py-2.5 text-sm font-medium rounded-md cursor-pointer",
+        active 
+          ? "bg-background text-primary" 
+          : "text-gray-600 hover:bg-background hover:text-primary"
+      )}
+      onClick={() => {
+        onClick();
+        // Utilizziamo la navigazione programmatica invece di Link annidati
+        window.location.href = href;
+      }}
+    >
+      <span className="text-lg mr-3">{icon}</span>
+      {children}
+    </div>
   );
 };
 

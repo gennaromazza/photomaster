@@ -261,25 +261,35 @@ export function CreateAppointmentForm({
                       <FormLabel>Cliente</FormLabel>
                       <div className="relative">
                         <Command className="border rounded-md">
-                          <div className="flex items-center border-b px-3">
+                          <div className="flex items-center px-3">
                             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                            <CommandInput placeholder="Cerca cliente..." />
+                            <CommandInput 
+                              placeholder="Cerca cliente..." 
+                              className="flex-1"
+                              onValueChange={(search) => {
+                                // La lista si mostrerà solo quando l'utente inizia a cercare
+                                if (search) {
+                                  return;
+                                }
+                              }}
+                            />
                           </div>
-                          <CommandList>
-                            <CommandEmpty>Nessun cliente trovato</CommandEmpty>
-                            <CommandGroup>
-                              <CommandItem
-                                value="null"
-                                onSelect={() => {
-                                  if (quoteId) {
-                                    form.setValue("quoteId", null);
-                                  }
-                                  field.onChange(null);
-                                }}
-                              >
-                                Nessuno
-                              </CommandItem>
-                              {clients.map((client) => (
+                          {clients.length > 0 && (
+                            <CommandList>
+                              <CommandEmpty>Nessun cliente trovato</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem
+                                  value="null"
+                                  onSelect={() => {
+                                    if (quoteId) {
+                                      form.setValue("quoteId", null);
+                                    }
+                                    field.onChange(null);
+                                  }}
+                                >
+                                  Nessuno
+                                </CommandItem>
+                                {clients.map((client) => (
                                 <CommandItem
                                   key={client.id}
                                   value={`${client.firstName} ${client.lastName}`.toLowerCase()}
@@ -325,18 +335,31 @@ export function CreateAppointmentForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Preventivo</FormLabel>
-                      <Select 
-                        onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))}
-                        value={field.value?.toString() || "null"}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona un preventivo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="null">Nessuno</SelectItem>
-                          {approvedQuotes.map((quote) => {
+                      <Command className="border rounded-md w-full">
+                        <div className="flex items-center px-3">
+                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                          <CommandInput 
+                            placeholder="Cerca preventivo..." 
+                            className="flex-1"
+                            onValueChange={(search) => {
+                              // La lista si mostrerà solo quando l'utente inizia a cercare
+                              if (search) {
+                                return;
+                              }
+                            }}
+                          />
+                        </div>
+                        {approvedQuotes.length > 0 && (
+                          <CommandList>
+                            <CommandEmpty>Nessun preventivo trovato</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value="null"
+                                onSelect={() => field.onChange(null)}
+                              >
+                                Nessuno
+                              </CommandItem>
+                              {approvedQuotes.map((quote) => {
                             // Trova il cliente associato
                             const client = clients.find(c => c.id === quote.clientId);
                             return (
@@ -358,11 +381,12 @@ export function CreateAppointmentForm({
                                     {client.firstName} {client.lastName}
                                   </p>
                                 )}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
+                              </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        )}
+                      </Command>
                       <FormMessage />
                     </FormItem>
                   )}

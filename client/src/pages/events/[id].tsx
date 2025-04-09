@@ -345,15 +345,14 @@ export default function EventDetailPage() {
         {/* Colonna destra */}
         <div className="lg:col-span-2">
           <Card>
-            <CardHeader className="px-6 pb-0">
-              <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
+            <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
+              <CardHeader className="px-6 pb-0">
                 <TabsList className="grid grid-cols-3">
                   <TabsTrigger value="details">Dettagli</TabsTrigger>
                   <TabsTrigger value="tasks">Attività</TabsTrigger>
                   <TabsTrigger value="contracts">Contratti</TabsTrigger>
                 </TabsList>
-              </Tabs>
-            </CardHeader>
+              </CardHeader>
 
             <TabsContent value="details" className="m-0">
               <CardContent className="p-6">
@@ -586,6 +585,7 @@ export default function EventDetailPage() {
                 </div>
               </CardContent>
             </TabsContent>
+            </Tabs>
           </Card>
         </div>
       </div>

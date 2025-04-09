@@ -684,7 +684,7 @@ const ServicesPage = () => {
       
       {/* Dialog per aggiungere/modificare un servizio o prodotto */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="md:max-w-[700px] w-[95%]">
           <DialogHeader>
             <DialogTitle>
               {editingService ? 'Modifica' : 'Aggiungi nuovo'} {form.getValues('type') === 'service' ? 'servizio' : 'prodotto'}
@@ -724,7 +724,7 @@ const ServicesPage = () => {
                 )}
               />
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="type"
@@ -806,7 +806,7 @@ const ServicesPage = () => {
               </div>
               
               {form.watch('type') === 'product' && (
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="sku"
@@ -997,7 +997,7 @@ const ServicesPage = () => {
               />
               
               {form.watch('hasDiscount') && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="discountType"
@@ -1062,7 +1062,7 @@ const ServicesPage = () => {
                 </div>
               )}
                 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="taxable"

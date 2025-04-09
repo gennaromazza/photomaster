@@ -335,58 +335,62 @@ export function CreateAppointmentForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Preventivo</FormLabel>
-                      <Command className="border rounded-md w-full">
-                        <div className="flex items-center px-3">
-                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                          <CommandInput 
-                            placeholder="Cerca preventivo..." 
-                            className="flex-1"
-                            onValueChange={(search) => {
-                              // La lista si mostrerà solo quando l'utente inizia a cercare
-                              if (search) {
-                                return;
-                              }
-                            }}
-                          />
-                        </div>
-                        {approvedQuotes.length > 0 && (
-                          <CommandList>
-                            <CommandEmpty>Nessun preventivo trovato</CommandEmpty>
-                            <CommandGroup>
-                              <CommandItem
-                                value="null"
-                                onSelect={() => field.onChange(null)}
-                              >
-                                Nessuno
-                              </CommandItem>
-                              {approvedQuotes.map((quote) => {
-                            // Trova il cliente associato
-                            const client = clients.find(c => c.id === quote.clientId);
-                            return (
-                              <SelectItem 
-                                key={quote.id} 
-                                value={quote.id.toString()}
-                              >
-                                <div className="flex items-center">
-                                  <span>{quote.title}</span>
-                                  {quote.status === "approved" && (
-                                    <CheckCircle2 className="ml-2 h-4 w-4 text-green-500" />
-                                  )}
-                                  {quote.status === "signed" && (
-                                    <CheckCircle2 className="ml-2 h-4 w-4 text-blue-500" />
-                                  )}
-                                </div>
-                                {client && (
-                                  <p className="text-xs text-gray-500">
-                                    {client.firstName} {client.lastName}
-                                  </p>
-                                )}
-                              </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        )}
-                      </Command>
+                      <>
+                        <Command className="border rounded-md w-full">
+                          <div className="flex items-center px-3">
+                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                            <CommandInput 
+                              placeholder="Cerca preventivo..." 
+                              className="flex-1"
+                              onValueChange={(search) => {
+                                // La lista si mostrerà solo quando l'utente inizia a cercare
+                                if (search) {
+                                  return;
+                                }
+                              }}
+                            />
+                          </div>
+                          {approvedQuotes.length > 0 && (
+                            <CommandList>
+                              <CommandEmpty>Nessun preventivo trovato</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem
+                                  value="null"
+                                  onSelect={() => field.onChange(null)}
+                                >
+                                  Nessuno
+                                </CommandItem>
+                                {approvedQuotes.map((quote) => {
+                                  // Trova il cliente associato
+                                  const client = clients.find(c => c.id === quote.clientId);
+                                  return (
+                                    <SelectItem 
+                                      key={quote.id} 
+                                      value={quote.id.toString()}
+                                    >
+                                      <div className="flex items-center">
+                                        <span>{quote.title}</span>
+                                        {quote.status === "approved" && (
+                                          <CheckCircle2 className="ml-2 h-4 w-4 text-green-500" />
+                                        )}
+                                        {quote.status === "signed" && (
+                                          <CheckCircle2 className="ml-2 h-4 w-4 text-blue-500" />
+                                        )}
+                                      </div>
+                                      {client && (
+                                        <p className="text-xs text-gray-500">
+                                          {client.firstName} {client.lastName}
+                                        </p>
+                                      )}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          )}
+                        </Command>
+                        <FormMessage />
+                      </>
                       <FormMessage />
                     </FormItem>
                   )}

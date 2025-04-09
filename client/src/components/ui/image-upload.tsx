@@ -8,15 +8,17 @@ import { useToast } from '@/hooks/use-toast';
 interface ImageUploadProps {
   onImageChange: (file: File | null) => void;
   initialImage?: string;
+  currentImageUrl?: string;
   className?: string;
 }
 
 export function ImageUpload({ 
   onImageChange, 
   initialImage, 
+  currentImageUrl,
   className = ''
 }: ImageUploadProps) {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(initialImage || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialImage || currentImageUrl || null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -25,8 +27,10 @@ export function ImageUpload({
   useEffect(() => {
     if (initialImage) {
       setPreviewUrl(initialImage);
+    } else if (currentImageUrl) {
+      setPreviewUrl(currentImageUrl);
     }
-  }, [initialImage]);
+  }, [initialImage, currentImageUrl]);
 
   const validateImage = (file: File): boolean => {
     // Verifica il tipo di file

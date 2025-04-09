@@ -277,7 +277,6 @@ const ServicesPage = () => {
     form.setValue('price', totalPrice);
   };
   
-  // Gestione dell'upload dell'immagine
   const handleImageUpload = async (file: File | null): Promise<string | undefined> => {
     if (!file) return undefined;
     
@@ -455,10 +454,6 @@ const ServicesPage = () => {
                             <Edit className="mr-2 h-4 w-4" />
                             Modifica
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/services/${service.id}`)}>
-                            <Tag className="mr-2 h-4 w-4" />
-                            Visualizza dettagli
-                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDelete(service.id)}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Elimina
@@ -492,7 +487,7 @@ const ServicesPage = () => {
                             {formatPrice(calculateDiscountedPrice(
                               service.price,
                               service.hasDiscount,
-                              service.discountType || 'percentage',
+                              service.discountType,
                               service.discountValue
                             ))}
                           </p>
@@ -628,7 +623,7 @@ const ServicesPage = () => {
                             {formatPrice(calculateDiscountedPrice(
                               product.price,
                               product.hasDiscount,
-                              product.discountType || 'percentage',
+                              product.discountType,
                               product.discountValue
                             ))}
                           </p>
@@ -649,7 +644,7 @@ const ServicesPage = () => {
                   </CardContent>
                   <CardFooter className="flex justify-between pt-2">
                     <div className="flex items-center">
-                      {product.stock !== null && product.stock !== undefined && (
+                      {product.stock !== null && (
                         <Badge variant="secondary">
                           Disponibilità: {product.stock}
                         </Badge>
@@ -687,7 +682,7 @@ const ServicesPage = () => {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>
-              {editingService ? 'Modifica' : 'Aggiungi nuovo'} {form.getValues('type') === 'service' ? 'servizio' : 'prodotto'}
+              {editingService ? 'Modifica' : 'Aggiungi'} {form.getValues('type') === 'service' ? 'Servizio' : 'Prodotto'}
             </DialogTitle>
             <DialogDescription>
               Compila i campi per {editingService ? 'modificare' : 'aggiungere'} un {form.getValues('type') === 'service' ? 'servizio' : 'prodotto'}.
@@ -717,8 +712,58 @@ const ServicesPage = () => {
                   <FormItem>
                     <FormLabel>Descrizione</FormLabel>
                     <FormControl>
-                      <Textarea {...field} className="resize-none" />
+                      <Textarea {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Upload immagine */}
+              <FormField
+                control={form.control}
+                name="image"
+                render={({ field: { value, onChange, ...field } }) => (
+                  <FormItem>
+                    <FormLabel>Immagine</FormLabel>
+                    <FormControl>
+                      <ImageUpload
+                        onImageChange={onChange}
+                        initialImage={editingService?.imagePath}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Carica un'immagine rappresentativa (max 5MB)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value) || undefined)}
+                      defaultValue={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona una categoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="0">Nessuna categoria</SelectItem>
+                        {categoriesQuery.data?.map((category) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -727,97 +772,25 @@ const ServicesPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="type"
+                  name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo *</FormLabel>
-                      <Select
-                        disabled={!!editingService}
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona il tipo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="service">Servizio</SelectItem>
-                          <SelectItem value="product">Prodotto</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Prezzo (€) *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value) * 100)}
+                          value={field.value / 100}
+                        />
+                      </FormControl>
+                      <FormDescription>Il prezzo in Euro</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 
-                <FormField
-                  control={form.control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        value={field.value?.toString()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona una categoria" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="">Nessuna categoria</SelectItem>
-                          {categoriesQuery.data?.map(category => (
-                            <SelectItem key={category.id} value={category.id.toString()}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div>
-                <FormField
-                  control={form.control}
-                  name="image"
-                  render={({ field: { value, onChange, ...fieldProps } }) => (
-                    <FormItem>
-                      <FormLabel>Immagine</FormLabel>
-                      <FormControl>
-                        <ImageUpload
-                          {...fieldProps}
-                          onImageChange={onChange}
-                          currentImageUrl={editingService?.imagePath || undefined}
-                          className="h-48"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              {form.watch('type') === 'product' && (
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="sku"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SKU</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
+                {form.getValues('type') === 'product' && (
                   <FormField
                     control={form.control}
                     name="stock"
@@ -825,8 +798,90 @@ const ServicesPage = () => {
                       <FormItem>
                         <FormLabel>Disponibilità</FormLabel>
                         <FormControl>
-                          <Input {...field} type="number" />
+                          <Input type="number" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {form.getValues('type') === 'product' && (
+                  <FormField
+                    control={form.control}
+                    name="sku"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Codice prodotto (SKU)</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unità di misura</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="pz, ore, giorni, ..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="hasDiscount"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Applica Sconto</FormLabel>
+                      <FormDescription>
+                        Attiva per applicare uno sconto a questo {form.getValues('type') === 'service' ? 'servizio' : 'prodotto'}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              {form.watch('hasDiscount') && (
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="discountType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo di sconto</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona tipo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="percentage">Percentuale (%)</SelectItem>
+                            <SelectItem value="fixed">Importo fisso (€)</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -834,12 +889,28 @@ const ServicesPage = () => {
                   
                   <FormField
                     control={form.control}
-                    name="unit"
+                    name="discountValue"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Unità di misura</FormLabel>
+                        <FormLabel>Valore dello sconto</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          {form.watch('discountType') === 'percentage' ? (
+                            <Input
+                              type="number"
+                              {...field}
+                              min={0}
+                              max={100}
+                            />
+                          ) : (
+                            <Input
+                              type="number"
+                              {...field}
+                              min={0}
+                              max={form.watch('price')}
+                              onChange={(e) => field.onChange(Number(e.target.value) * 100)}
+                              value={field.value ? field.value / 100 : 0}
+                            />
+                          )}
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -848,7 +919,7 @@ const ServicesPage = () => {
                 </div>
               )}
               
-              {form.watch('type') === 'service' && (
+              {form.getValues('type') === 'service' && (
                 <FormField
                   control={form.control}
                   name="isComposite"
@@ -873,27 +944,9 @@ const ServicesPage = () => {
               
               {form.watch('isComposite') && form.getValues('type') === 'service' && (
                 <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <FormLabel>Seleziona i prodotti da includere nel servizio</FormLabel>
-                    <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem className="flex items-center space-x-2">
-                          <FormLabel>Calcolo automatico</FormLabel>
-                          <FormControl>
-                            <Switch
-                              checked={autoCalculatePrice}
-                              onCheckedChange={setAutoCalculatePrice}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormLabel>Seleziona i prodotti da includere nel servizio</FormLabel>
                   <FormDescription className="mb-3">
-                    Puoi selezionare più prodotti per creare un servizio composito. 
-                    {autoCalculatePrice ? ' Il prezzo verrà calcolato automaticamente.' : ' Il prezzo può essere impostato manualmente.'}
+                    Puoi selezionare più prodotti per creare un servizio composito
                   </FormDescription>
                   
                   <div className="border rounded-md p-4 space-y-4">
@@ -939,123 +992,6 @@ const ServicesPage = () => {
                       </p>
                     )}
                   </div>
-                </div>
-              )}
-              
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prezzo (€) *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        type="number" 
-                        step="0.01"
-                        disabled={form.watch('isComposite') && autoCalculatePrice}
-                        onChange={(e) => {
-                          // Converte il valore in centesimi
-                          const valueInCents = Math.round(parseFloat(e.target.value) * 100);
-                          field.onChange(valueInCents);
-                        }}
-                        value={field.value / 100} // Mostra il valore in euro
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {form.watch('isComposite') && autoCalculatePrice
-                        ? 'Il prezzo è calcolato automaticamente in base ai prodotti selezionati'
-                        : 'Inserisci il prezzo in euro (es. 129.99)'}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="hasDiscount"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Applica sconto</FormLabel>
-                      <FormDescription>
-                        Questo {form.getValues('type') === 'service' ? 'servizio' : 'prodotto'} ha uno sconto
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              {form.watch('hasDiscount') && (
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="discountType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tipo di sconto</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleziona il tipo di sconto" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="percentage">Percentuale (%)</SelectItem>
-                            <SelectItem value="fixed">Importo fisso (€)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="discountValue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Valore sconto</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="number" 
-                            step={form.watch('discountType') === 'fixed' ? "0.01" : "1"}
-                            onChange={(e) => {
-                              // Per gli sconti fissi, converte in centesimi
-                              if (form.watch('discountType') === 'fixed') {
-                                const valueInCents = Math.round(parseFloat(e.target.value) * 100);
-                                field.onChange(valueInCents);
-                              } else {
-                                field.onChange(parseInt(e.target.value));
-                              }
-                            }}
-                            value={
-                              form.watch('discountType') === 'fixed' 
-                                ? (field.value || 0) / 100 
-                                : field.value
-                            }
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          {form.watch('discountType') === 'percentage' 
-                            ? 'Inserisci la percentuale di sconto (es. 10 per 10%)' 
-                            : 'Inserisci l\'importo dello sconto in euro (es. 25.50)'}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
               )}
                 

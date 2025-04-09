@@ -37,6 +37,7 @@ import {
 
 // Importa le pagine dei servizi e pacchetti
 import ServicesPage from "@/pages/services";
+import ServiceDetailPage from "@/pages/services/[id]";
 import ServiceBundlesPage from "@/pages/bundles";
 
 function Router() {
@@ -57,6 +58,7 @@ function Router() {
       <ProtectedRoute path="/contracts/:id" component={ContractViewPage} />
       <ProtectedRoute path="/quotes" component={QuotesPage} />
       <ProtectedRoute path="/services" component={ServicesPage} />
+      <ProtectedRoute path="/services/:id" component={ServiceDetailPage} />
       <ProtectedRoute path="/bundles" component={ServiceBundlesPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/settings/categories" component={CategoriesPage} />

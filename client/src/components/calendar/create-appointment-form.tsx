@@ -23,7 +23,8 @@ import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, AlertCircle, Clock, MapPin } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, MapPin, Search, User, Mail, Phone } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 // Schema zod per il form di appuntamento
 const formSchema = z.object({
@@ -70,21 +71,21 @@ export function CreateAppointmentForm({
   onSuccess 
 }: CreateAppointmentFormProps) {
   const { toast } = useToast();
-  
+
   // Usa i preventivi forniti o caricali dal server
   const { data: fetchedQuotes = [] } = useQuery<Quote[]>({
     queryKey: ["/api/quotes"],
     enabled: quotes.length === 0, // Carica solo se non sono stati forniti
   });
-  
+
   // Combina entrambe le fonti di preventivi
   const allQuotes = [...quotes, ...fetchedQuotes];
-  
+
   // Solo preventivi approvati o firmati
   const approvedQuotes = allQuotes.filter(quote => 
     quote.status === "approved" || quote.status === "signed"
   );
-  
+
   // Setup del form con valori predefiniti
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -99,25 +100,25 @@ export function CreateAppointmentForm({
       sendNotification: false,
     },
   });
-  
+
   // Ottieni valori correnti del form
   const clientId = form.watch("clientId");
   const quoteId = form.watch("quoteId");
   const sendNotification = form.watch("sendNotification");
   const notificationType = form.watch("notificationType");
-  
+
   // Se è selezionato un preventivo, aggiorna automaticamente il cliente
   const selectedQuote = quoteId 
     ? approvedQuotes.find(q => q.id === quoteId)
     : null;
-  
+
   // Effetto per aggiornare il clientId quando cambia il preventivo selezionato
   useEffect(() => {
     if (selectedQuote && selectedQuote.clientId) {
       form.setValue("clientId", selectedQuote.clientId);
     }
   }, [quoteId, selectedQuote, form]);
-  
+
   // Mutation per creare un nuovo evento
   const createEventMutation = useMutation({
     mutationFn: async (data: FormValues) => {
@@ -127,10 +128,10 @@ export function CreateAppointmentForm({
         const [hours, minutes] = data.time.split(":").map(Number);
         eventDate = set(data.date, { hours, minutes, seconds: 0 });
       }
-      
+
       // Calcola la data di fine in base alla durata
       const endDate = new Date(eventDate.getTime() + data.duration * 60000);
-      
+
       // Costruisci i dati da inviare all'API
       const eventData: Partial<InsertEvent> & { 
         notificationType?: string; 
@@ -151,14 +152,14 @@ export function CreateAppointmentForm({
         sendNotification: data.sendNotification,
         notificationType: data.notificationType,
       };
-      
+
       const res = await apiRequest("POST", "/api/events", eventData);
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Errore durante la creazione dell'appuntamento");
       }
-      
+
       return await res.json();
     },
     onSuccess: () => {
@@ -169,7 +170,7 @@ export function CreateAppointmentForm({
           ? `L'appuntamento è stato creato e una notifica è stata inviata via ${notificationType === "email" ? "email" : "WhatsApp"}`
           : "L'appuntamento è stato creato con successo",
       });
-      
+
       if (onSuccess) {
         onSuccess();
       }
@@ -182,18 +183,18 @@ export function CreateAppointmentForm({
       });
     },
   });
-  
+
   const onSubmit = (data: FormValues) => {
     createEventMutation.mutate(data);
   };
-  
+
   const appointmentTypes = [
     { value: "meeting", label: "Incontro" },
     { value: "consultation", label: "Consulenza" },
     { value: "photoshoot", label: "Servizio Fotografico" },
     { value: "other", label: "Altro" },
   ];
-  
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
@@ -202,7 +203,7 @@ export function CreateAppointmentForm({
             <TabsTrigger value="details">Dettagli</TabsTrigger>
             <TabsTrigger value="notification">Notifica</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="details" className="space-y-4 py-4">
             <div className="grid grid-cols-1 gap-4">
               <FormField
@@ -218,7 +219,7 @@ export function CreateAppointmentForm({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="appointmentType"
@@ -243,7 +244,7 @@ export function CreateAppointmentForm({
                   </FormItem>
                 )}
               />
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
                 <div className="col-span-1 md:col-span-2">
                   <h3 className="text-sm font-medium mb-2">Associa a</h3>
@@ -251,42 +252,73 @@ export function CreateAppointmentForm({
                     Puoi associare l'appuntamento a un cliente o direttamente a un preventivo approvato
                   </p>
                 </div>
-                
+
                 <FormField
                   control={form.control}
                   name="clientId"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex-1">
                       <FormLabel>Cliente</FormLabel>
-                      <Select 
-                        onValueChange={(value) => {
-                          // Se si seleziona direttamente un cliente, resetta il preventivo
-                          if (quoteId) {
-                            form.setValue("quoteId", null);
-                          }
-                          field.onChange(value === "null" ? null : parseInt(value));
-                        }}
-                        value={field.value?.toString() || "null"}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona un cliente" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="null">Nessuno</SelectItem>
-                          {clients.map((client) => (
-                            <SelectItem key={client.id} value={client.id.toString()}>
-                              {client.firstName} {client.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Command className="border rounded-md">
+                          <div className="flex items-center border-b px-3">
+                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                            <CommandInput placeholder="Cerca cliente..." />
+                          </div>
+                          <CommandList>
+                            <CommandEmpty>Nessun cliente trovato</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value="null"
+                                onSelect={() => {
+                                  if (quoteId) {
+                                    form.setValue("quoteId", null);
+                                  }
+                                  field.onChange(null);
+                                }}
+                              >
+                                Nessuno
+                              </CommandItem>
+                              {clients.map((client) => (
+                                <CommandItem
+                                  key={client.id}
+                                  value={`${client.firstName} ${client.lastName}`.toLowerCase()}
+                                  onSelect={() => {
+                                    if (quoteId) {
+                                      form.setValue("quoteId", null);
+                                    }
+                                    field.onChange(client.id);
+                                  }}
+                                >
+                                  <div className="flex items-center">
+                                    <User className="mr-2 h-4 w-4" />
+                                    <span>{client.firstName} {client.lastName}</span>
+                                  </div>
+                                  <div className="ml-2 flex items-center text-xs text-muted-foreground">
+                                    {client.email && (
+                                      <div className="mr-4 flex items-center">
+                                        <Mail className="mr-1 h-3 w-3" />
+                                        {client.email}
+                                      </div>
+                                    )}
+                                    {client.phone && (
+                                      <div className="flex items-center">
+                                        <Phone className="mr-1 h-3 w-3" />
+                                        {client.phone}
+                                      </div>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="quoteId"
@@ -336,7 +368,7 @@ export function CreateAppointmentForm({
                   )}
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
@@ -376,7 +408,7 @@ export function CreateAppointmentForm({
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="time"
@@ -390,7 +422,7 @@ export function CreateAppointmentForm({
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="duration"
@@ -409,7 +441,7 @@ export function CreateAppointmentForm({
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="location"
@@ -423,7 +455,7 @@ export function CreateAppointmentForm({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="description"
@@ -443,7 +475,7 @@ export function CreateAppointmentForm({
               />
             </div>
           </TabsContent>
-          
+
           <TabsContent value="notification" className="space-y-4 py-4">
             <div className="flex flex-col space-y-6">
               <Card>
@@ -453,7 +485,7 @@ export function CreateAppointmentForm({
                     <p className="text-sm text-gray-500">
                       Invia una notifica al cliente selezionato per informarlo dell'appuntamento
                     </p>
-                    
+
                     <FormField
                       control={form.control}
                       name="sendNotification"
@@ -477,7 +509,7 @@ export function CreateAppointmentForm({
                         </FormItem>
                       )}
                     />
-                    
+
                     {sendNotification && (
                       <FormField
                         control={form.control}
@@ -517,14 +549,14 @@ export function CreateAppointmentForm({
                   </div>
                 </CardContent>
               </Card>
-              
+
               {clientId && sendNotification && (
                 <div className="rounded-lg border p-4 bg-blue-50/50">
                   <h3 className="text-sm font-medium mb-2">Anteprima Notifica</h3>
                   <p className="text-xs text-gray-600 mb-4">
                     Ecco come apparirà la notifica al cliente
                   </p>
-                  
+
                   <div className="bg-white rounded-lg p-4 shadow-sm border">
                     <h4 className="text-base font-medium mb-2">
                       {form.getValues("title") || "Nuovo appuntamento"}
@@ -551,7 +583,7 @@ export function CreateAppointmentForm({
                   </div>
                 </div>
               )}
-              
+
               {!clientId && sendNotification && (
                 <div className="rounded-lg border p-4 bg-yellow-50/50">
                   <div className="flex items-start">
@@ -568,7 +600,7 @@ export function CreateAppointmentForm({
             </div>
           </TabsContent>
         </Tabs>
-        
+
         <div className="flex justify-end space-x-3 pt-2">
           <Button
             type="button"

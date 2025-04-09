@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, hashPassword } from "./auth";
 import { sendPasswordResetEmail } from "./email";
 import { setupUploadRoutes } from "./upload";
+import bundleLeadsRouter from "./routes/bundle-leads";
+import settingsRouter from "./routes/settings";
 import { 
   insertClientSchema, 
   insertEventSchema,
@@ -1639,6 +1641,10 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   });
   
   // Register all API routes
+  // Registrazione dei router modulari
+  app.use("/api/bundle-leads", bundleLeadsRouter);
+  app.use("/api/settings", settingsRouter);
+  
   app.use("/api", apiRouter);
   
   // Setup upload routes

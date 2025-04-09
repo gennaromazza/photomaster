@@ -627,3 +627,48 @@ export const insertSettingsSchema = createInsertSchema(settings).pick({
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
+
+// Schema per lead generati dalle pagine dei pacchetti
+export const bundleLeads = pgTable("bundle_leads", {
+  id: serial("id").primaryKey(),
+  bundleId: integer("bundle_id").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  message: text("message"),
+  status: text("status").default("new").notNull(), // new, contacted, converted, archived
+  quoteId: integer("quote_id"), // ID del preventivo generato automaticamente
+  clientId: integer("client_id"), // ID del cliente creato o associato
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertBundleLeadSchema = createInsertSchema(bundleLeads).pick({
+  bundleId: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  phone: true,
+  message: true,
+  status: true,
+  quoteId: true,
+  clientId: true,
+});
+
+export type InsertBundleLead = z.infer<typeof insertBundleLeadSchema>;
+export type BundleLead = typeof bundleLeads.$inferSelect;
+
+export const bundleLeadsRelations = relations(bundleLeads, ({ one }) => ({
+  bundle: one(serviceBundles, {
+    fields: [bundleLeads.bundleId],
+    references: [serviceBundles.id],
+  }),
+  quote: one(quotes, {
+    fields: [bundleLeads.quoteId],
+    references: [quotes.id],
+  }),
+  client: one(clients, {
+    fields: [bundleLeads.clientId],
+    references: [clients.id],
+  }),
+}));

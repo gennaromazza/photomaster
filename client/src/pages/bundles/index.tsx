@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { ServiceBundle, Service } from '@shared/schema';
 import { Button } from '@/components/ui/button';
+import { TemplatePreviews } from '@/components/bundles/template-preview';
 import {
   Card,
   CardContent,
@@ -12,7 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import Layout from '@/components/layout/layout';
-import { Plus, Edit, Trash2, Tag, Package, Gift, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Tag, Package, Gift, ArrowLeft, Eye } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +80,7 @@ const bundleFormSchema = z.object({
   discountValue: z.coerce.number().min(0),
   isActive: z.boolean().default(true),
   categoryId: z.coerce.number().optional(),
+  templateStyle: z.enum(['elegant', 'modern', 'minimal', 'bold']).default('elegant'),
 });
 
 // Schema per gli elementi del pacchetto
@@ -96,6 +98,7 @@ const ServiceBundlesPage = () => {
   const [selectedItems, setSelectedItems] = useState<(BundleItemValues & { service: Service })[]>([]);
   const [tempItem, setTempItem] = useState<BundleItemValues>({ serviceId: 0, quantity: 1 });
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedTemplateStyle, setSelectedTemplateStyle] = useState<'elegant' | 'modern' | 'minimal' | 'bold'>('elegant');
   
   const [, navigate] = useLocation();
   
@@ -242,6 +245,7 @@ const ServiceBundlesPage = () => {
   
   // Gestione apertura del form per creazione nuovo pacchetto
   const handleAddNew = () => {
+    setSelectedTemplateStyle('elegant');
     form.reset({
       name: '',
       description: '',
@@ -250,6 +254,7 @@ const ServiceBundlesPage = () => {
       discountType: 'percentage',
       discountValue: 10,
       isActive: true,
+      templateStyle: 'elegant',
     });
     setEditingBundle(null);
     setSelectedItems([]);
@@ -291,6 +296,9 @@ const ServiceBundlesPage = () => {
       // Utilizziamo un breve timeout per assicurarci che il form sia completamente renderizzato
       // prima di impostare i valori
       setTimeout(() => {
+        const templateStyle = bundle.templateStyle || 'elegant';
+        setSelectedTemplateStyle(templateStyle as 'elegant' | 'modern' | 'minimal' | 'bold');
+        
         form.reset({
           name: bundle.name,
           description: bundle.description || '',
@@ -301,6 +309,7 @@ const ServiceBundlesPage = () => {
           discountValue: bundle.discountValue,
           isActive: bundle.isActive,
           categoryId: bundle.categoryId || undefined,
+          templateStyle: templateStyle as 'elegant' | 'modern' | 'minimal' | 'bold',
         });
         
         setEditingBundle({
@@ -576,6 +585,16 @@ const ServiceBundlesPage = () => {
                   ) : (
                     <Badge variant="destructive">Disattivato</Badge>
                   )}
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.open(`/bundles/detail/${bundle.id}`, '_blank')}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Anteprima
+                  </Button>
                 </div>
               </CardFooter>
             </Card>
@@ -877,6 +896,54 @@ const ServiceBundlesPage = () => {
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              {/* Template Style Selection */}
+              <FormField
+                control={form.control}
+                name="templateStyle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stile Template</FormLabel>
+                    <FormDescription>
+                      Scegli lo stile grafico per la pagina di dettaglio del pacchetto
+                    </FormDescription>
+                    <FormControl>
+                      <div className="space-y-4">
+                        <div className="hidden">
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setSelectedTemplateStyle(value as 'elegant' | 'modern' | 'minimal' | 'bold');
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona uno stile" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="elegant">Elegante</SelectItem>
+                              <SelectItem value="modern">Moderno</SelectItem>
+                              <SelectItem value="minimal">Minimalista</SelectItem>
+                              <SelectItem value="bold">Audace</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <TemplatePreviews
+                          bundleName={form.watch('name') || "Pacchetto Fotografico"}
+                          bundleImagePath={form.watch('imagePath')}
+                          selectedStyle={field.value as 'elegant' | 'modern' | 'minimal' | 'bold'}
+                          onSelectStyle={(style) => {
+                            field.onChange(style);
+                            setSelectedTemplateStyle(style);
+                          }}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />

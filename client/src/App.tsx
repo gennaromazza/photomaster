@@ -39,6 +39,7 @@ import {
 import ServicesPage from "@/pages/services";
 import ServiceDetailPage from "@/pages/services/[id]";
 import ServiceBundlesPage from "@/pages/bundles";
+import BundleDetailPage from "@/pages/bundles/detail/[id]";
 
 function Router() {
   return (
@@ -60,6 +61,7 @@ function Router() {
       <ProtectedRoute path="/services" component={ServicesPage} />
       <ProtectedRoute path="/services/:id" component={ServiceDetailPage} />
       <ProtectedRoute path="/bundles" component={ServiceBundlesPage} />
+      <Route path="/bundles/detail/:id" component={BundleDetailPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/settings/categories" component={CategoriesPage} />
       <ProtectedRoute path="/settings/origins" component={OriginsPage} />

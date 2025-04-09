@@ -277,22 +277,26 @@ const ServiceBundlesPage = () => {
       setSelectedImageFile(null);
       
       // Stampa di debug per verificare il percorso dell'immagine
-      console.log('Percorso immagine pacchetto:', bundle.imagePath);
+      console.log('Percorso immagine pacchetto da modificare:', bundle.imagePath);
       
-      form.reset({
-        name: bundle.name,
-        description: bundle.description || '',
-        imagePath: bundle.imagePath || undefined,
-        totalPrice: bundle.totalPrice,
-        discountedPrice: bundle.discountedPrice,
-        discountType: bundle.discountType as 'percentage' | 'fixed',
-        discountValue: bundle.discountValue,
-        isActive: bundle.isActive,
-        categoryId: bundle.categoryId || undefined,
-      });
-      
-      setEditingBundle(bundle);
-      setIsOpen(true);
+      // Utilizziamo un breve timeout per assicurarci che il form sia completamente renderizzato
+      // prima di impostare i valori
+      setTimeout(() => {
+        form.reset({
+          name: bundle.name,
+          description: bundle.description || '',
+          imagePath: bundle.imagePath || '',
+          totalPrice: bundle.totalPrice,
+          discountedPrice: bundle.discountedPrice,
+          discountType: bundle.discountType as 'percentage' | 'fixed',
+          discountValue: bundle.discountValue,
+          isActive: bundle.isActive,
+          categoryId: bundle.categoryId || undefined,
+        });
+        
+        setEditingBundle(bundle);
+        setIsOpen(true);
+      }, 0);
     } catch (error) {
       console.error('Errore durante il recupero degli elementi del pacchetto:', error);
       toast({
@@ -633,7 +637,7 @@ const ServiceBundlesPage = () => {
                           setSelectedImageFile(file);
                         }}
                         initialImage={form.getValues('imagePath')}
-                        currentImageUrl={editingBundle?.imagePath}
+                        currentImageUrl={typeof editingBundle?.imagePath === 'string' ? editingBundle.imagePath : undefined}
                       />
                     </FormControl>
                     <FormMessage />

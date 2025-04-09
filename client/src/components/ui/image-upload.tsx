@@ -14,13 +14,15 @@ interface ImageUploadProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export const ImageUpload = forwardRef<HTMLDivElement, ImageUploadProps>(
   ({ onImageChange, initialImage, currentImageUrl, className = '', ...props }, ref) => {
-    const [previewUrl, setPreviewUrl] = useState<string | null>(initialImage || currentImageUrl || null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
+    // Effect per impostare l'URL di anteprima quando cambiano le props
     useEffect(() => {
+      console.log("ImageUpload props changed:", { initialImage, currentImageUrl });
       if (initialImage) {
         setPreviewUrl(initialImage);
       } else if (currentImageUrl) {

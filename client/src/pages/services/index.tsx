@@ -18,7 +18,9 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import Layout from '@/components/layout/layout';
-import { Plus, Edit, Trash2, Tag, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Tag, Package, Image } from 'lucide-react';
+import { ImageUpload } from '@/components/ui/image-upload';
+import ServiceItemsManager from '@/components/services/service-items-manager';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,6 +88,8 @@ const serviceFormSchema = z.object({
   stock: z.coerce.number().optional(),
   unit: z.string().optional(),
   taxable: z.boolean().default(true),
+  image: z.any().optional(), // File di immagine
+  imagePath: z.string().optional(), // Percorso dell'immagine salvata
 });
 
 type ServiceFormValues = z.infer<typeof serviceFormSchema>;
@@ -242,15 +246,69 @@ const ServicesPage = () => {
     setIsOpen(true);
   };
   
-  // Invio del form per creazione/modifica
-  const onSubmit = (data: ServiceFormValues) => {
-    if (editingService) {
-      updateServiceMutation.mutate({
-        ...data,
-        id: editingService.id,
+  // Gestione dell'upload dell'immagine
+  const [uploadingImage, setUploadingImage] = useState(false);
+  
+  const handleImageUpload = async (file: File | null): Promise<string | undefined> => {
+    if (!file) return undefined;
+    
+    setUploadingImage(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData,
       });
-    } else {
-      createServiceMutation.mutate(data);
+      
+      if (!response.ok) {
+        throw new Error('Errore durante l\'upload dell\'immagine');
+      }
+      
+      const result = await response.json();
+      return result.imagePath;
+    } catch (error) {
+      toast({
+        title: 'Errore',
+        description: 'Non è stato possibile caricare l\'immagine',
+        variant: 'destructive',
+      });
+      return undefined;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Invio del form per creazione/modifica
+  const onSubmit = async (data: ServiceFormValues) => {
+    try {
+      // Se c'è un'immagine da caricare, esegue l'upload
+      if (data.image && data.image instanceof File) {
+        const imagePath = await handleImageUpload(data.image);
+        if (imagePath) {
+          data.imagePath = imagePath;
+        }
+      }
+      
+      // Rimuove il campo image perché non fa parte del modello di dati
+      const { image, ...submitData } = data;
+      
+      if (editingService) {
+        updateServiceMutation.mutate({
+          ...submitData,
+          id: editingService.id,
+        });
+      } else {
+        createServiceMutation.mutate(submitData);
+      }
+    } catch (error) {
+      toast({
+        title: 'Errore',
+        description: 'Si è verificato un errore durante il salvataggio',
+        variant: 'destructive',
+      });
     }
   };
   
@@ -365,6 +423,16 @@ const ServicesPage = () => {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-grow">
+                    {service.imagePath && (
+                      <div className="mb-4">
+                        <img 
+                          src={service.imagePath} 
+                          alt={service.name}
+                          className="w-full h-32 object-cover rounded-md mb-2"
+                        />
+                      </div>
+                    )}
+                    
                     <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
                       {service.description || 'Nessuna descrizione'}
                     </p>
@@ -478,6 +546,16 @@ const ServicesPage = () => {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-grow">
+                    {product.imagePath && (
+                      <div className="mb-4">
+                        <img 
+                          src={product.imagePath} 
+                          alt={product.name}
+                          className="w-full h-32 object-cover rounded-md mb-2"
+                        />
+                      </div>
+                    )}
+                    
                     <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
                       {product.description || 'Nessuna descrizione'}
                     </p>
@@ -596,6 +674,27 @@ const ServicesPage = () => {
                     <FormControl>
                       <Textarea {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Upload immagine */}
+              <FormField
+                control={form.control}
+                name="image"
+                render={({ field: { value, onChange, ...field } }) => (
+                  <FormItem>
+                    <FormLabel>Immagine</FormLabel>
+                    <FormControl>
+                      <ImageUpload
+                        onImageChange={onChange}
+                        initialImage={editingService?.imagePath}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Carica un'immagine rappresentativa (max 5MB)
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -830,9 +929,9 @@ const ServicesPage = () => {
                 </Button>
                 <Button 
                   type="submit"
-                  disabled={createServiceMutation.isPending || updateServiceMutation.isPending}
+                  disabled={createServiceMutation.isPending || updateServiceMutation.isPending || uploadingImage}
                 >
-                  {createServiceMutation.isPending || updateServiceMutation.isPending ? (
+                  {(createServiceMutation.isPending || updateServiceMutation.isPending || uploadingImage) ? (
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>

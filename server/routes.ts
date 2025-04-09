@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, hashPassword } from "./auth";
 import { sendPasswordResetEmail } from "./email";
+import { setupUploadRoutes } from "./upload";
 import { 
   insertClientSchema, 
   insertEventSchema,
@@ -18,7 +19,8 @@ import {
   insertServiceCategorySchema,
   insertLeadSourceSchema,
   insertServiceBundleSchema,
-  insertServiceBundleItemSchema
+  insertServiceBundleItemSchema,
+  insertServiceItemSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
@@ -1502,9 +1504,89 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     }
   });
 
-  // Register all API routes
+  // Add new routes for service items
+  apiRouter.get("/service-items/:serviceId", async (req, res) => {
+    try {
+      const serviceId = parseInt(req.params.serviceId);
+      const items = await storage.getServiceItems(serviceId);
+      res.json(items);
+    } catch (err) {
+      console.error("Error fetching service items:", err);
+      res.status(500).json({ message: "Failed to fetch service items" });
+    }
+  });
   
+  apiRouter.post("/service-items", async (req, res) => {
+    try {
+      const parseResult = insertServiceItemSchema.safeParse(req.body);
+      
+      if (!parseResult.success) {
+        const errorMessage = fromZodError(parseResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      // Verifica che il servizio esista
+      const service = await storage.getService(parseResult.data.serviceId);
+      if (!service) {
+        return res.status(400).json({ message: "Service not found" });
+      }
+      
+      // Verifica che il prodotto esista
+      const product = await storage.getService(parseResult.data.productId);
+      if (!product) {
+        return res.status(400).json({ message: "Product not found" });
+      }
+      
+      const item = await storage.createServiceItem(parseResult.data);
+      res.status(201).json(item);
+    } catch (err) {
+      console.error("Error creating service item:", err);
+      res.status(500).json({ message: "Failed to create service item" });
+    }
+  });
+  
+  apiRouter.put("/service-items/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const parseResult = insertServiceItemSchema.partial().safeParse(req.body);
+      
+      if (!parseResult.success) {
+        const errorMessage = fromZodError(parseResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      const updatedItem = await storage.updateServiceItem(id, parseResult.data);
+      
+      if (!updatedItem) {
+        return res.status(404).json({ message: "Service item not found" });
+      }
+      
+      res.json(updatedItem);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update service item" });
+    }
+  });
+  
+  apiRouter.delete("/service-items/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteServiceItem(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Service item not found" });
+      }
+      
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete service item" });
+    }
+  });
+  
+  // Register all API routes
   app.use("/api", apiRouter);
+  
+  // Setup upload routes
+  setupUploadRoutes(app);
   
   const httpServer = createServer(app);
   

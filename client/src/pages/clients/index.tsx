@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { getInitials } from "@/lib/utils";
 
 const ClientsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [, navigate] = useLocation();
   
   const { data: clients = [], isLoading } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
@@ -76,8 +77,7 @@ const ClientsPage = () => {
           ) : (
             <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {filteredClients.map((client) => (
-                <Link key={client.id} href={`/clients/${client.id}`}>
-                  <a className="block p-4 border rounded-lg hover:border-primary hover:shadow-sm transition-all">
+                <div key={client.id} className="block p-4 border rounded-lg hover:border-primary hover:shadow-sm transition-all cursor-pointer" onClick={() => navigate(`/clients/${client.id}`)}>
                     <div className="flex items-center">
                       <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary">
                         <span className="font-medium">
@@ -100,8 +100,7 @@ const ClientsPage = () => {
                         </div>
                       </div>
                     </div>
-                  </a>
-                </Link>
+                </div>
               ))}
             </div>
           )}

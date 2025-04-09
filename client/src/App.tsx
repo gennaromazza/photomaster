@@ -12,6 +12,10 @@ import Calendar from "@/pages/calendar";
 // Importa dettaglio evento 
 import EventDetail from "@/pages/events/[id]";
 
+// Importa dettaglio e modifica cliente
+import ClientDetail from "@/pages/clients/[id]";
+import EditClientPage from "@/pages/clients/edit/[id]";
+
 // Importa tutte le pagine dal barrel file
 import {
   NotFound,
@@ -47,6 +51,8 @@ function Router() {
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/clients" component={ClientsPage} />
       <ProtectedRoute path="/clients/new" component={NewClientPage} />
+      <ProtectedRoute path="/clients/edit/:id" component={EditClientPage} />
+      <ProtectedRoute path="/clients/:id" component={ClientDetail} />
       <ProtectedRoute path="/calendar" component={Calendar} />
       <ProtectedRoute path="/events" component={EventsPage} />
       <ProtectedRoute path="/events/new" component={NewEventPage} />

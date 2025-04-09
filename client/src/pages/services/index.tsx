@@ -617,7 +617,7 @@ const ServicesPage = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Nessuna categoria</SelectItem>
+                        <SelectItem value="0">Nessuna categoria</SelectItem>
                         {categoriesQuery.data?.map((category) => (
                           <SelectItem key={category.id} value={category.id.toString()}>
                             {category.name}

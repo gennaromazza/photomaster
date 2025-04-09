@@ -483,12 +483,14 @@ export const serviceBundles = pgTable("service_bundles", {
   name: text("name").notNull(),
   description: text("description"),
   image: text("image"),
+  imagePath: text("image_path"), // Percorso dell'immagine ottimizzata
   totalPrice: integer("total_price").notNull(), // Prezzo totale reale
   discountedPrice: integer("discounted_price").notNull(), // Prezzo scontato del pacchetto
   discountType: text("discount_type").notNull(), // 'percentage' o 'fixed'
   discountValue: integer("discount_value").notNull(), // Valore dello sconto
   isActive: boolean("is_active").default(true).notNull(),
   categoryId: integer("category_id"),
+  templateStyle: text("template_style").default("elegant").notNull(), // Stile di template per la visualizzazione
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -496,12 +498,14 @@ export const insertServiceBundleSchema = createInsertSchema(serviceBundles).pick
   name: true,
   description: true,
   image: true,
+  imagePath: true,
   totalPrice: true,
   discountedPrice: true,
   discountType: true,
   discountValue: true,
   isActive: true,
   categoryId: true,
+  templateStyle: true,
 });
 
 export type InsertServiceBundle = z.infer<typeof insertServiceBundleSchema>;

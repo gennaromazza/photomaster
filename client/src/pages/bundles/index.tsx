@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { ServiceBundle, Service } from '@shared/schema';
@@ -56,6 +56,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useLocation, Link } from 'wouter';
+import { ImageUpload } from '@/components/ui/image-upload';
 
 // Formattazione prezzo in Euro
 const formatPrice = (price: number) => {
@@ -70,6 +71,7 @@ const bundleFormSchema = z.object({
   name: z.string().min(1, 'Il nome è obbligatorio'),
   description: z.string().optional(),
   image: z.string().optional(),
+  imagePath: z.string().optional(),
   // I prezzi totali e scontati verranno calcolati in base ai servizi inclusi
   totalPrice: z.coerce.number().min(0),
   discountedPrice: z.coerce.number().min(0),
@@ -93,6 +95,7 @@ const ServiceBundlesPage = () => {
   const [editingBundle, setEditingBundle] = useState<ServiceBundle | null>(null);
   const [selectedItems, setSelectedItems] = useState<(BundleItemValues & { service: Service })[]>([]);
   const [tempItem, setTempItem] = useState<BundleItemValues>({ serviceId: 0, quantity: 1 });
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   
   const [, navigate] = useLocation();
   
@@ -273,6 +276,7 @@ const ServiceBundlesPage = () => {
       form.reset({
         name: bundle.name,
         description: bundle.description || '',
+        imagePath: bundle.imagePath || undefined,
         totalPrice: bundle.totalPrice,
         discountedPrice: bundle.discountedPrice,
         discountType: bundle.discountType as 'percentage' | 'fixed',
@@ -370,8 +374,38 @@ const ServiceBundlesPage = () => {
     form.setValue('discountedPrice', discountedPrice);
   };
   
+  // Funzione per caricare l'immagine del pacchetto
+  const uploadImage = async (): Promise<string | undefined> => {
+    if (!selectedImageFile) return undefined;
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', selectedImageFile);
+      
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Errore durante il caricamento dell\'immagine');
+      }
+      
+      const data = await response.json();
+      return data.imagePath;
+    } catch (error) {
+      console.error('Errore upload immagine:', error);
+      toast({
+        title: 'Errore',
+        description: 'Si è verificato un errore durante il caricamento dell\'immagine',
+        variant: 'destructive',
+      });
+      return undefined;
+    }
+  };
+
   // Invio del form
-  const onSubmit = (data: BundleFormValues) => {
+  const onSubmit = async (data: BundleFormValues) => {
     if (selectedItems.length === 0) {
       toast({
         title: 'Errore',
@@ -381,20 +415,39 @@ const ServiceBundlesPage = () => {
       return;
     }
     
-    if (editingBundle) {
-      updateBundleMutation.mutate({
-        ...data,
-        id: editingBundle.id,
+    try {
+      // Se c'è un'immagine selezionata, caricala
+      let updatedData = { ...data };
+      
+      if (selectedImageFile) {
+        const imagePath = await uploadImage();
+        if (imagePath) {
+          updatedData.imagePath = imagePath;
+        }
+      }
+      
+      if (editingBundle) {
+        updateBundleMutation.mutate({
+          ...updatedData,
+          id: editingBundle.id,
+        });
+      } else {
+        createBundleMutation.mutate(updatedData);
+      }
+    } catch (error) {
+      console.error('Errore durante il salvataggio del pacchetto:', error);
+      toast({
+        title: 'Errore',
+        description: 'Si è verificato un errore durante il salvataggio del pacchetto',
+        variant: 'destructive',
       });
-    } else {
-      createBundleMutation.mutate(data);
     }
   };
   
   // Helper per ottenere il nome della categoria
   const getCategoryName = (categoryId?: number) => {
     if (!categoryId) return 'Nessuna categoria';
-    const category = categoriesQuery.data?.find(c => c.id === categoryId);
+    const category = categoriesQuery.data?.find((c: any) => c.id === categoryId);
     return category ? category.name : 'Categoria sconosciuta';
   };
   
@@ -423,7 +476,7 @@ const ServiceBundlesPage = () => {
                   <div>
                     <CardTitle className="mb-1">{bundle.name}</CardTitle>
                     <CardDescription>
-                      {getCategoryName(bundle.categoryId)}
+                      {getCategoryName(bundle.categoryId || undefined)}
                     </CardDescription>
                   </div>
                   <DropdownMenu>
@@ -461,6 +514,16 @@ const ServiceBundlesPage = () => {
                 </div>
               </CardHeader>
               <CardContent className="flex-grow">
+                {bundle.imagePath && (
+                  <div className="w-full h-32 mb-4 overflow-hidden rounded-md">
+                    <img 
+                      src={bundle.imagePath} 
+                      alt={bundle.name} 
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    />
+                  </div>
+                )}
+                
                 <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
                   {bundle.description || 'Nessuna descrizione'}
                 </p>
@@ -551,6 +614,26 @@ const ServiceBundlesPage = () => {
                 )}
               />
               
+              {/* Campo per il caricamento dell'immagine */}
+              <FormField
+                control={form.control}
+                name="imagePath"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Immagine del Pacchetto</FormLabel>
+                    <FormControl>
+                      <ImageUpload
+                        onImageChange={(file) => {
+                          setSelectedImageFile(file);
+                        }}
+                        currentImageUrl={editingBundle?.imagePath || undefined}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               <FormField
                 control={form.control}
                 name="categoryId"
@@ -568,7 +651,7 @@ const ServiceBundlesPage = () => {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="0">Nessuna categoria</SelectItem>
-                        {categoriesQuery.data?.map((category) => (
+                        {categoriesQuery.data?.map((category: any) => (
                           <SelectItem key={category.id} value={category.id.toString()}>
                             {category.name}
                           </SelectItem>

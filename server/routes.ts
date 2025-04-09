@@ -934,16 +934,24 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   
   apiRouter.post("/service-bundles", async (req, res) => {
     try {
+      console.log("Creating new service bundle with data:", req.body);
+      
       const parseResult = insertServiceBundleSchema.safeParse(req.body);
       
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
+        console.error("Validation error:", parseResult.error);
         return res.status(400).json({ message: errorMessage });
       }
       
+      console.log("Validated data:", parseResult.data);
+      
       const bundle = await storage.createServiceBundle(parseResult.data);
+      console.log("Service bundle created successfully:", bundle);
+      
       res.status(201).json(bundle);
     } catch (err) {
+      console.error("Error creating service bundle:", err);
       res.status(500).json({ message: "Failed to create service bundle" });
     }
   });
@@ -951,21 +959,41 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.put("/service-bundles/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      console.log(`Updating service bundle ${id} with data:`, req.body);
+      
       const parseResult = insertServiceBundleSchema.partial().safeParse(req.body);
       
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
+        console.error("Validation error:", parseResult.error);
         return res.status(400).json({ message: errorMessage });
       }
       
-      const updatedBundle = await storage.updateServiceBundle(id, parseResult.data);
+      console.log("Validated data:", parseResult.data);
+      
+      // Get the current bundle to check for image path
+      const currentBundle = await storage.getServiceBundle(id);
+      if (!currentBundle) {
+        return res.status(404).json({ message: "Service bundle not found" });
+      }
+      
+      // Ensure imagePath is preserved if not explicitly updated
+      const dataToUpdate = { ...parseResult.data };
+      if (!dataToUpdate.imagePath && currentBundle.imagePath) {
+        console.log("Preserving existing image path:", currentBundle.imagePath);
+        dataToUpdate.imagePath = currentBundle.imagePath;
+      }
+      
+      const updatedBundle = await storage.updateServiceBundle(id, dataToUpdate);
       
       if (!updatedBundle) {
         return res.status(404).json({ message: "Service bundle not found" });
       }
       
+      console.log("Service bundle updated successfully:", updatedBundle);
       res.json(updatedBundle);
     } catch (err) {
+      console.error("Error updating service bundle:", err);
       res.status(500).json({ message: "Failed to update service bundle" });
     }
   });

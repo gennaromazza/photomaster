@@ -1218,7 +1218,10 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         }
       }
       
-      const updatedQuote = await storage.updateQuote(id, parseResult.data);
+      // Conserva la firma se è fornita
+      const dataToUpdate = { ...parseResult.data };
+      
+      const updatedQuote = await storage.updateQuote(id, dataToUpdate);
       
       if (!updatedQuote) {
         return res.status(404).json({ message: "Quote not found" });
@@ -1227,6 +1230,61 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.json(updatedQuote);
     } catch (err) {
       res.status(500).json({ message: "Failed to update quote" });
+    }
+  });
+  
+  // API per inviare il preventivo via email
+  apiRouter.post("/quotes/:id/send", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { emailTo, message } = req.body;
+      
+      if (!emailTo) {
+        return res.status(400).json({ message: "Email required" });
+      }
+      
+      // Recupera il preventivo
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ message: "Quote not found" });
+      }
+      
+      // Recupera il cliente associato
+      const client = await storage.getClient(quote.clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Recupera gli elementi del preventivo
+      const quoteItems = await storage.getQuoteItemsByQuote(id);
+      
+      // Invia l'email utilizzando SendGrid
+      const emailParams = {
+        to: emailTo,
+        subject: `Preventivo: ${quote.title}`,
+        text: message || `Gentile ${client.firstName},\n\nIn allegato trovi il preventivo richiesto.\n\nCordiali saluti`,
+        html: `
+          <h2>Preventivo: ${quote.title}</h2>
+          <p>${message || `Gentile ${client.firstName},<br><br>In allegato trovi il preventivo richiesto.<br><br>Cordiali saluti`}</p>
+          <hr>
+          <h3>Dettagli Preventivo</h3>
+          <p><strong>Totale:</strong> €${(quote.total / 100).toFixed(2)}</p>
+          <p>Per visualizzare il preventivo completo e firmarlo, clicca <a href="${process.env.BASE_URL || 'http://localhost:3000'}/quotes/public/${id}">qui</a>.</p>
+        `
+      };
+      
+      // Importa la funzione sendEmail
+      const { sendEmail } = require('./email');
+      const emailSent = await sendEmail(emailParams);
+      
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send email" });
+      }
+      
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Email error:", err);
+      res.status(500).json({ message: "Failed to send quote" });
     }
   });
   

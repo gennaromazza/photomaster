@@ -165,8 +165,17 @@ export function CreateAppointmentForm({
   useEffect(() => {
     if (selectedQuote && selectedQuote.clientId) {
       form.setValue("clientId", selectedQuote.clientId);
+      
+      // Se c'è un titolo nel preventivo, suggeriamo un titolo per l'evento
+      if (selectedQuote.title) {
+        const suggestedTitle = selectedQuote.title.includes("Matrimonio") 
+          ? `Matrimonio: ${clients.find(c => c.id === selectedQuote.clientId)?.lastName || 'Cliente'}`
+          : `Evento: ${selectedQuote.title}`;
+        
+        form.setValue("title", suggestedTitle);
+      }
     }
-  }, [quoteId, selectedQuote, form]);
+  }, [quoteId, selectedQuote, clients, form]);
 
   // Mutation per creare un nuovo evento
   const createEventMutation = useMutation({

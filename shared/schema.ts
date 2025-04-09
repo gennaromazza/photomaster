@@ -371,6 +371,7 @@ export const quotes = pgTable("quotes", {
   leadSourceId: integer("lead_source_id"),
   eventDate: timestamp("event_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at"),
   expiryDate: timestamp("expiry_date"),
   status: text("status").default("draft").notNull(),
   subtotal: integer("subtotal").notNull(),
@@ -378,6 +379,7 @@ export const quotes = pgTable("quotes", {
   discount: integer("discount").default(0).notNull(),
   total: integer("total").notNull(),
   notes: text("notes"),
+  signature: text("signature"), // Firma del cliente per l'approvazione
 });
 
 export const insertQuoteSchema = createInsertSchema(quotes).pick({
@@ -395,6 +397,8 @@ export const insertQuoteSchema = createInsertSchema(quotes).pick({
   discount: true,
   total: true,
   notes: true,
+  signature: true,
+  updatedAt: true,
 });
 
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;

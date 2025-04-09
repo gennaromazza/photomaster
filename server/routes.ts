@@ -675,9 +675,12 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Service routes
   apiRouter.get("/services", async (req, res) => {
     try {
+      console.log("Fetching all services...");
       const services = await storage.getAllServices();
+      console.log("Services fetched:", services);
       res.json(services);
     } catch (err) {
+      console.error("Error fetching services:", err);
       res.status(500).json({ message: "Failed to fetch services" });
     }
   });
@@ -747,6 +750,120 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete service" });
+    }
+  });
+
+  // Service Items routes - per servizi compositi
+  apiRouter.get("/service-items/:serviceId", async (req, res) => {
+    try {
+      const serviceId = parseInt(req.params.serviceId);
+      const items = await storage.getServiceItems(serviceId);
+      res.json(items);
+    } catch (err) {
+      console.error("Error fetching service items:", err);
+      res.status(500).json({ message: "Failed to fetch service items" });
+    }
+  });
+
+  apiRouter.post("/service-items", async (req, res) => {
+    try {
+      const parseResult = insertServiceItemSchema.safeParse(req.body);
+      
+      if (!parseResult.success) {
+        const errorMessage = fromZodError(parseResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      // Verifica che esistano sia il servizio che il prodotto
+      const service = await storage.getService(parseResult.data.serviceId);
+      if (!service) {
+        return res.status(400).json({ message: "Service not found" });
+      }
+      
+      const product = await storage.getService(parseResult.data.productId);
+      if (!product) {
+        return res.status(400).json({ message: "Product not found" });
+      }
+      
+      // Verifica che il prodotto sia di tipo 'product'
+      if (product.type !== 'product') {
+        return res.status(400).json({ message: "Selected item is not a product" });
+      }
+      
+      // Imposta il servizio come composito se non lo è già
+      if (!service.isComposite) {
+        await storage.updateService(service.id, { isComposite: true });
+      }
+      
+      const item = await storage.createServiceItem(parseResult.data);
+      res.status(201).json(item);
+    } catch (err) {
+      console.error("Error creating service item:", err);
+      res.status(500).json({ message: "Failed to create service item" });
+    }
+  });
+
+  apiRouter.put("/service-items/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const parseResult = insertServiceItemSchema.partial().safeParse(req.body);
+      
+      if (!parseResult.success) {
+        const errorMessage = fromZodError(parseResult.error).message;
+        return res.status(400).json({ message: errorMessage });
+      }
+      
+      // Se viene aggiornato productId, verifica che il prodotto esista
+      if (parseResult.data.productId) {
+        const product = await storage.getService(parseResult.data.productId);
+        if (!product) {
+          return res.status(400).json({ message: "Product not found" });
+        }
+        
+        // Verifica che il prodotto sia di tipo 'product'
+        if (product.type !== 'product') {
+          return res.status(400).json({ message: "Selected item is not a product" });
+        }
+      }
+      
+      const updatedItem = await storage.updateServiceItem(id, parseResult.data);
+      
+      if (!updatedItem) {
+        return res.status(404).json({ message: "Service item not found" });
+      }
+      
+      res.json(updatedItem);
+    } catch (err) {
+      console.error("Error updating service item:", err);
+      res.status(500).json({ message: "Failed to update service item" });
+    }
+  });
+
+  apiRouter.delete("/service-items/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getServiceItem(id);
+      
+      if (!item) {
+        return res.status(404).json({ message: "Service item not found" });
+      }
+      
+      const success = await storage.deleteServiceItem(id);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete service item" });
+      }
+      
+      // Controlla se il servizio ha ancora elementi, se no, imposta isComposite a false
+      const remainingItems = await storage.getServiceItems(item.serviceId);
+      if (remainingItems.length === 0) {
+        await storage.updateService(item.serviceId, { isComposite: false });
+      }
+      
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting service item:", err);
+      res.status(500).json({ message: "Failed to delete service item" });
     }
   });
   

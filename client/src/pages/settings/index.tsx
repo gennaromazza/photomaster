@@ -95,7 +95,6 @@ const SettingsPage = () => {
         <TabsList className="mb-8">
           <TabsTrigger value="general">Generali</TabsTrigger>
           <TabsTrigger value="templates">Template</TabsTrigger>
-          <TabsTrigger value="services">Servizi & Prodotti</TabsTrigger>
           <TabsTrigger value="config">Configurazioni</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
@@ -275,72 +274,7 @@ const SettingsPage = () => {
           </Card>
         </TabsContent>
         
-        <TabsContent value="services">
-          <Card>
-            <CardHeader>
-              <CardTitle>Servizi e Prodotti</CardTitle>
-              <CardDescription>
-                Gestisci i servizi e prodotti che offri ai clienti.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between mb-4">
-                <h3 className="text-lg font-medium">Servizi</h3>
-                <Button variant="outline">
-                  <i className="ri-add-line mr-2"></i>
-                  Nuovo Servizio
-                </Button>
-              </div>
-              
-              <div className="border rounded-md">
-                <div className="p-4 border-b">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Pacchetto Matrimonio Standard</h4>
-                      <p className="text-sm text-gray-500">Servizio fotografico completo per matrimonio, 8 ore di copertura</p>
-                    </div>
-                    <div className="font-medium">€1.800,00</div>
-                  </div>
-                </div>
-                
-                <div className="p-4 border-b">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Pacchetto Matrimonio Premium</h4>
-                      <p className="text-sm text-gray-500">Servizio fotografico e video completo per matrimonio, 12 ore di copertura</p>
-                    </div>
-                    <div className="font-medium">€2.800,00</div>
-                  </div>
-                </div>
-                
-                <div className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Album Fotografico 30x30</h4>
-                      <p className="text-sm text-gray-500">Album fotografico di alta qualità, 30 pagine</p>
-                    </div>
-                    <div className="font-medium">€350,00</div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-6">
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="taxRate">Aliquota IVA (%)</Label>
-                  <Input 
-                    id="taxRate" 
-                    className="w-20" 
-                    type="number" 
-                    defaultValue={settings?.taxRate || 22} 
-                  />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button>Salva Modifiche</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
+
         
         <TabsContent value="config">
           <div className="grid md:grid-cols-2 gap-8">

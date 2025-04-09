@@ -293,6 +293,8 @@ export const services = pgTable("services", {
   stock: integer("stock"), // Disponibilità in magazzino (per prodotti fisici)
   unit: text("unit"), // Unità di misura (es. "pz", "ore", "giorni")
   taxable: boolean("taxable").default(true).notNull(), // Se soggetto a tassazione
+  // Composizione servizio
+  isComposite: boolean("is_composite").default(false).notNull(), // Indica se il servizio è composto da più prodotti
 });
 
 export const insertServiceSchema = createInsertSchema(services).pick({
@@ -311,10 +313,40 @@ export const insertServiceSchema = createInsertSchema(services).pick({
   stock: true,
   unit: true,
   taxable: true,
+  isComposite: true,
 });
 
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type Service = typeof services.$inferSelect;
+
+// Service Items Schema - Elementi di prodotti all'interno di un servizio composto
+export const serviceItems = pgTable("service_items", {
+  id: serial("id").primaryKey(),
+  serviceId: integer("service_id").notNull(),
+  productId: integer("product_id").notNull(), // ID del prodotto (un altro service di tipo 'product')
+  quantity: integer("quantity").default(1).notNull(),
+});
+
+export const insertServiceItemSchema = createInsertSchema(serviceItems).pick({
+  serviceId: true,
+  productId: true,
+  quantity: true,
+});
+
+export type InsertServiceItem = z.infer<typeof insertServiceItemSchema>;
+export type ServiceItem = typeof serviceItems.$inferSelect;
+
+export const serviceItemsRelations = relations(serviceItems, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceItems.serviceId],
+    references: [services.id],
+  }),
+  product: one(services, {
+    fields: [serviceItems.productId],
+    references: [services.id],
+    relationName: "productItems",
+  }),
+}));
 
 export const servicesRelations = relations(services, ({ one, many }) => ({
   category: one(serviceCategories, {
@@ -322,6 +354,8 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
     references: [serviceCategories.id],
   }),
   quoteItems: many(quoteItems),
+  serviceItems: many(serviceItems, { relationName: "serviceItems" }),
+  productItems: many(serviceItems, { relationName: "productItems" }),
 }));
 
 // Quote Schema

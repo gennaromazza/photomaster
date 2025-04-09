@@ -73,8 +73,18 @@ const ClientDetailPage = () => {
   // Rendi cliccabili i numeri di telefono per WhatsApp
   const formatPhoneLink = (phone: string) => {
     if (!phone) return null;
-    // Rimuovi spazi e caratteri speciali
-    const formattedPhone = phone.replace(/\s+/g, '').replace(/[^0-9+]/g, '');
+    // Rimuovi spazi e caratteri speciali e assicurati che inizi con +39 per l'Italia se non presente
+    let formattedPhone = phone.replace(/\s+/g, '').replace(/[^0-9+]/g, '');
+    
+    // Se non inizia con un +, aggiungi il prefisso italiano
+    if (!formattedPhone.startsWith('+')) {
+      // Se inizia con uno 0, rimuovilo prima di aggiungere il prefisso
+      if (formattedPhone.startsWith('0')) {
+        formattedPhone = formattedPhone.substring(1);
+      }
+      formattedPhone = `+39${formattedPhone}`;
+    }
+    
     return (
       <a 
         href={`https://wa.me/${formattedPhone}`} 
@@ -285,30 +295,32 @@ const ClientDetailPage = () => {
                   ) : (
                     <div className="space-y-4">
                       {quotes.map((quote) => (
-                        <Link key={quote.id} href={`/quotes/${quote.id}`}>
-                          <a className="block border rounded-lg p-4 hover:border-primary hover:shadow-sm transition-all">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h3 className="font-medium">{quote.title}</h3>
-                                <div className="mt-1 text-sm text-gray-500 space-y-1">
-                                  <div className="flex items-center">
-                                    <i className="ri-calendar-line mr-1"></i>
-                                    <span>
-                                      {formatDate(new Date(quote.createdAt))}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <i className="ri-price-tag-3-line mr-1"></i>
-                                    <span>{formatCurrency(quote.total)}</span>
-                                  </div>
+                        <div 
+                          key={quote.id} 
+                          className="block border rounded-lg p-4 hover:border-primary hover:shadow-sm transition-all cursor-pointer"
+                          onClick={() => navigate(`/quotes/${quote.id}`)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-medium">{quote.title}</h3>
+                              <div className="mt-1 text-sm text-gray-500 space-y-1">
+                                <div className="flex items-center">
+                                  <i className="ri-calendar-line mr-1"></i>
+                                  <span>
+                                    {formatDate(new Date(quote.createdAt))}
+                                  </span>
+                                </div>
+                                <div className="flex items-center">
+                                  <i className="ri-price-tag-3-line mr-1"></i>
+                                  <span>{formatCurrency(quote.total)}</span>
                                 </div>
                               </div>
-                              <Badge className="capitalize">
-                                {quote.status}
-                              </Badge>
                             </div>
-                          </a>
-                        </Link>
+                            <Badge className="capitalize">
+                              {quote.status}
+                            </Badge>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -357,36 +369,38 @@ const ClientDetailPage = () => {
                   ) : (
                     <div className="space-y-4">
                       {events.map((event) => (
-                        <Link key={event.id} href={`/events/${event.id}`}>
-                          <a className="block border rounded-lg p-4 hover:border-primary hover:shadow-sm transition-all">
-                            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start">
-                              <div>
-                                <h3 className="font-medium">{event.title}</h3>
-                                <div className="mt-1 text-sm text-gray-500 space-y-1">
-                                  <div className="flex items-center">
-                                    <i className="ri-calendar-line mr-1"></i>
-                                    <span>
-                                      {formatDate(new Date(event.date))}
-                                      {event.endDate && ` - ${formatDate(new Date(event.endDate))}`}
-                                    </span>
-                                  </div>
-                                  {event.location && (
-                                    <div className="flex items-center">
-                                      <i className="ri-map-pin-line mr-1"></i>
-                                      <span>{event.location}</span>
-                                    </div>
-                                  )}
+                        <div 
+                          key={event.id}
+                          className="block border rounded-lg p-4 hover:border-primary hover:shadow-sm transition-all cursor-pointer"
+                          onClick={() => navigate(`/events/${event.id}`)}
+                        >
+                          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start">
+                            <div>
+                              <h3 className="font-medium">{event.title}</h3>
+                              <div className="mt-1 text-sm text-gray-500 space-y-1">
+                                <div className="flex items-center">
+                                  <i className="ri-calendar-line mr-1"></i>
+                                  <span>
+                                    {formatDate(new Date(event.date))}
+                                    {event.endDate && ` - ${formatDate(new Date(event.endDate))}`}
+                                  </span>
                                 </div>
+                                {event.location && (
+                                  <div className="flex items-center">
+                                    <i className="ri-map-pin-line mr-1"></i>
+                                    <span>{event.location}</span>
+                                  </div>
+                                )}
                               </div>
-                              <Badge className={`capitalize mt-2 lg:mt-0 ${
-                                event.status === 'confirmed' ? 'bg-green-500' : 
-                                event.status === 'cancelled' ? 'bg-red-500' : ''
-                              }`}>
-                                {event.status}
-                              </Badge>
                             </div>
-                          </a>
-                        </Link>
+                            <Badge className={`capitalize mt-2 lg:mt-0 ${
+                              event.status === 'confirmed' ? 'bg-green-500' : 
+                              event.status === 'cancelled' ? 'bg-red-500' : ''
+                            }`}>
+                              {event.status}
+                            </Badge>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}

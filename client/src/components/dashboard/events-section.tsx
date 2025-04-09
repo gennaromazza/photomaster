@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { formatDate, getStatusBadge, getStatusText } from "@/lib/utils";
 import { Event } from "@shared/schema";
 
 const EventsSection = () => {
+  const [, navigate] = useLocation();
   const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
   });
@@ -35,45 +36,54 @@ const EventsSection = () => {
           </div>
         ) : (
           events.slice(0, 3).map((event) => (
-            <Link key={event.id} href={`/events/${event.id}`}>
-              <a className="block p-5 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      {event.coverImage ? (
-                        <div 
-                          className="w-12 h-12 rounded-lg bg-cover bg-center"
-                          style={{ backgroundImage: `url(${event.coverImage})` }}
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary-light/10 text-primary">
-                          <i className={event.eventType === "wedding" ? "ri-heart-line" : "ri-camera-line"}></i>
-                        </div>
-                      )}
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-900">{event.title}</h3>
-                      <div className="flex items-center mt-1">
-                        <i className="ri-calendar-line text-sm text-gray-400 mr-1.5"></i>
-                        <span className="text-xs text-gray-500">{formatDate(event.date)}</span>
-                        <span className="mx-2 text-gray-300">•</span>
-                        <i className="ri-map-pin-line text-sm text-gray-400 mr-1.5"></i>
-                        <span className="text-xs text-gray-500 truncate max-w-[150px]">{event.location || "Nessuna location"}</span>
+            <div 
+              key={event.id} 
+              className="block p-5 hover:bg-gray-50 transition-colors cursor-pointer"
+              onClick={() => navigate(`/events/${event.id}`)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    {event.coverImage ? (
+                      <div 
+                        className="w-12 h-12 rounded-lg bg-cover bg-center"
+                        style={{ backgroundImage: `url(${event.coverImage})` }}
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary-light/10 text-primary">
+                        <i className={event.eventType === "wedding" ? "ri-heart-line" : "ri-camera-line"}></i>
                       </div>
-                    </div>
+                    )}
                   </div>
-                  
-                  <div className="flex items-center">
-                    <Badge variant={getStatusBadge(event.status)} className="mr-2">
-                      {getStatusText(event.status)}
-                    </Badge>
-                    <Button variant="ghost" size="icon" className="p-1.5 text-gray-400 hover:text-gray-500">
-                      <i className="ri-more-2-fill"></i>
-                    </Button>
+                  <div className="ml-4">
+                    <h3 className="text-sm font-medium text-gray-900">{event.title}</h3>
+                    <div className="flex items-center mt-1">
+                      <i className="ri-calendar-line text-sm text-gray-400 mr-1.5"></i>
+                      <span className="text-xs text-gray-500">{formatDate(event.date)}</span>
+                      <span className="mx-2 text-gray-300">•</span>
+                      <i className="ri-map-pin-line text-sm text-gray-400 mr-1.5"></i>
+                      <span className="text-xs text-gray-500 truncate max-w-[150px]">{event.location || "Nessuna location"}</span>
+                    </div>
                   </div>
                 </div>
-              </a>
-            </Link>
+                
+                <div className="flex items-center">
+                  <Badge variant={getStatusBadge(event.status)} className="mr-2">
+                    {getStatusText(event.status)}
+                  </Badge>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="p-1.5 text-gray-400 hover:text-gray-500"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Evita che il click sul pulsante attivi il navigate
+                    }}
+                  >
+                    <i className="ri-more-2-fill"></i>
+                  </Button>
+                </div>
+              </div>
+            </div>
           ))
         )}
       </div>

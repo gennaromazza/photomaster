@@ -973,17 +973,24 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       
       console.log("Validated data:", parseResult.data);
       
-      // Get the current bundle to check for image path
+      // Get the current bundle to check for image path and template style
       const currentBundle = await storage.getServiceBundle(id);
       if (!currentBundle) {
         return res.status(404).json({ message: "Service bundle not found" });
       }
       
-      // Ensure imagePath is preserved if not explicitly updated
+      // Ensure imagePath and templateStyle are preserved if not explicitly updated
       const dataToUpdate = { ...parseResult.data };
+      
       if (!dataToUpdate.imagePath && currentBundle.imagePath) {
         console.log("Preserving existing image path:", currentBundle.imagePath);
         dataToUpdate.imagePath = currentBundle.imagePath;
+      }
+      
+      // Assicurati che templateStyle sia preservato se non esplicitamente aggiornato
+      if (!dataToUpdate.templateStyle && currentBundle.templateStyle) {
+        console.log("Preserving existing template style:", currentBundle.templateStyle);
+        dataToUpdate.templateStyle = currentBundle.templateStyle;
       }
       
       const updatedBundle = await storage.updateServiceBundle(id, dataToUpdate);

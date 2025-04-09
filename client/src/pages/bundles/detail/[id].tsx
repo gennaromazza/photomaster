@@ -54,6 +54,19 @@ const requestBundleSchema = z.object({
 
 type RequestBundleValues = z.infer<typeof requestBundleSchema>;
 
+// Funzione per creare URL di WhatsApp
+const getWhatsAppUrl = (phone: string, message: string = "Ciao, vorrei informazioni sul vostro pacchetto fotografico.") => {
+  // Rimuovi spazi e caratteri speciali dal numero
+  const cleanPhone = phone.replace(/\s+/g, '').replace(/[^\d+]/g, '');
+  // Prepara l'URL per WhatsApp
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+};
+
+// Funzione per creare URL di Email
+const getEmailUrl = (email: string, subject: string = "Richiesta informazioni pacchetto fotografico", body: string = "Buongiorno,\n\nvorrei ricevere maggiori informazioni sul vostro pacchetto fotografico.\n\nGrazie") => {
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+};
+
 // Componente di dettaglio template Elegante
 const ElegantTemplate: React.FC<{
   bundle: ServiceBundle & { items?: { service: Service; quantity: number }[] };
@@ -97,20 +110,33 @@ const ElegantTemplate: React.FC<{
               <h3 className="text-2xl font-serif text-gray-800 mt-10 mb-4">Servizi Inclusi</h3>
               <div className="space-y-4 mb-10">
                 {bundle.items?.map((item, index) => (
-                  <div key={index} className="flex items-start p-4 border border-gray-100 rounded-lg shadow-sm bg-white hover:shadow-md transition-shadow duration-300">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-4 mt-1">
-                      <Check className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-medium text-gray-900 mb-1">{item.service.name}</h4>
-                      <p className="text-gray-600 mb-1">
-                        {item.service.description || 'Servizio professionale di alta qualità.'}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="mt-1 text-xs">
-                          {item.quantity > 1 ? `${item.quantity}x` : ''}
-                          {' '}{formatPrice(item.service.price)}
-                        </Badge>
+                  <div key={index} className="flex flex-col md:flex-row items-start p-4 border border-gray-100 rounded-lg shadow-sm bg-white hover:shadow-md transition-shadow duration-300">
+                    {item.service.imagePath && (
+                      <div className="w-full md:w-1/4 h-48 md:h-32 mb-4 md:mb-0 md:mr-4 overflow-hidden rounded-md">
+                        <img 
+                          src={item.service.imagePath} 
+                          alt={item.service.name} 
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        />
+                      </div>
+                    )}
+                    <div className={`${item.service.imagePath ? 'md:w-3/4' : 'w-full'}`}>
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-4 mt-1">
+                          <Check className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-grow">
+                          <h4 className="text-lg font-medium text-gray-900 mb-1">{item.service.name}</h4>
+                          <p className="text-gray-600 mb-1">
+                            {item.service.description || 'Servizio professionale di alta qualità.'}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {item.quantity > 1 ? `${item.quantity}x` : ''}
+                              {' '}{formatPrice(item.service.price)}
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -190,14 +216,18 @@ const ElegantTemplate: React.FC<{
             Specializzati in fotografia artistica di altissima qualità, catturiamo i tuoi momenti speciali con uno stile unico e sofisticato.
           </p>
           <div className="flex justify-center space-x-4">
-            <Button variant="outline" size="sm">
-              <Mail className="mr-2 h-4 w-4" />
-              Contattaci
-            </Button>
-            <Button variant="outline" size="sm">
-              <Phone className="mr-2 h-4 w-4" />
-              Chiamaci
-            </Button>
+            <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">
+                <Mail className="mr-2 h-4 w-4" />
+                Contattaci
+              </Button>
+            </a>
+            <a href={getWhatsAppUrl(settings.companyPhone || '+39123456789')} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">
+                <Phone className="mr-2 h-4 w-4" />
+                WhatsApp
+              </Button>
+            </a>
           </div>
         </div>
       </footer>
@@ -704,9 +734,14 @@ const BundleDetailPage: React.FC = () => {
   const bundleQuery = useQuery({
     queryKey: [`/api/service-bundles/${id}`],
     queryFn: async () => {
-      const res = await fetch(`/api/service-bundles/${id}`);
-      if (!res.ok) throw new Error('Errore nel caricamento del pacchetto');
-      return await res.json();
+      try {
+        const res = await fetch(`/api/service-bundles/${id}`);
+        if (!res.ok) throw new Error('Errore nel caricamento del pacchetto');
+        return await res.json();
+      } catch (error) {
+        console.error('Errore durante il recupero del pacchetto:', error);
+        throw new Error('Errore nel caricamento del pacchetto');
+      }
     }
   });
   
@@ -714,22 +749,41 @@ const BundleDetailPage: React.FC = () => {
   const bundleItemsQuery = useQuery({
     queryKey: [`/api/service-bundles/${id}/items`],
     queryFn: async () => {
-      const res = await fetch(`/api/service-bundles/${id}/items`);
-      if (!res.ok) throw new Error('Errore nel caricamento degli elementi del pacchetto');
-      const items = await res.json();
-      
-      // Recuperare i dettagli completi di ogni servizio incluso nel pacchetto
-      const itemsWithServices = await Promise.all(items.map(async (item: any) => {
-        const serviceRes = await fetch(`/api/services/${item.serviceId}`);
-        if (!serviceRes.ok) throw new Error(`Errore nel caricamento del servizio ${item.serviceId}`);
-        const service = await serviceRes.json();
-        return {
-          ...item,
-          service,
-        };
-      }));
-      
-      return itemsWithServices;
+      try {
+        const res = await fetch(`/api/service-bundles/${id}/items`);
+        if (!res.ok) throw new Error('Errore nel caricamento degli elementi del pacchetto');
+        const items = await res.json();
+        
+        // Recuperare i dettagli completi di ogni servizio incluso nel pacchetto
+        const itemsWithServices = await Promise.all(items.map(async (item: any) => {
+          try {
+            const serviceRes = await fetch(`/api/services/${item.serviceId}`);
+            if (!serviceRes.ok) throw new Error(`Errore nel caricamento del servizio ${item.serviceId}`);
+            const service = await serviceRes.json();
+            return {
+              ...item,
+              service,
+            };
+          } catch (error) {
+            console.error(`Errore durante il recupero del servizio ${item.serviceId}:`, error);
+            // Restituisci un servizio di fallback in caso di errore
+            return {
+              ...item,
+              service: {
+                id: item.serviceId,
+                name: "Servizio non disponibile",
+                price: 0,
+                description: "",
+              },
+            };
+          }
+        }));
+        
+        return itemsWithServices;
+      } catch (error) {
+        console.error('Errore durante il recupero degli elementi del pacchetto:', error);
+        throw new Error('Errore nel caricamento degli elementi del pacchetto');
+      }
     },
     enabled: !!bundleQuery.data,
   });

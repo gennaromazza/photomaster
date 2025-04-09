@@ -126,7 +126,7 @@ router.post("/", async (req, res) => {
           serviceId: item.serviceId,
           quantity: item.quantity,
           unitPrice: item.service.price,
-          bundleId: bundle.id,
+          // Rimuoviamo il riferimento a bundleId poiché la colonna non esiste nel database
           total: item.quantity * item.service.price,
           // Non aggiungiamo sconti a livello di elemento poiché lo sconto è sul pacchetto completo
         });

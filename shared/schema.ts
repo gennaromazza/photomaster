@@ -283,6 +283,7 @@ export const services = pgTable("services", {
   categoryId: integer("category_id"),
   isActive: boolean("is_active").default(true).notNull(),
   image: text("image"),
+  imagePath: text("image_path"), // Percorso dell'immagine salvata
   // Campi per gestione sconti
   hasDiscount: boolean("has_discount").default(false).notNull(),
   discountType: text("discount_type"), // 'percentage' o 'fixed'
@@ -305,6 +306,7 @@ export const insertServiceSchema = createInsertSchema(services).pick({
   categoryId: true,
   isActive: true,
   image: true,
+  imagePath: true,
   hasDiscount: true,
   discountType: true,
   discountValue: true,

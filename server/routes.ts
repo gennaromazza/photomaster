@@ -704,16 +704,24 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   
   apiRouter.post("/services", async (req, res) => {
     try {
+      console.log("Creating new service with data:", req.body);
+      
       const parseResult = insertServiceSchema.safeParse(req.body);
       
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
+        console.error("Validation error:", parseResult.error);
         return res.status(400).json({ message: errorMessage });
       }
       
+      console.log("Validated data:", parseResult.data);
+      
       const service = await storage.createService(parseResult.data);
+      console.log("Service created successfully:", service);
+      
       res.status(201).json(service);
     } catch (err) {
+      console.error("Error creating service:", err);
       res.status(500).json({ message: "Failed to create service" });
     }
   });
@@ -721,21 +729,41 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.put("/services/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      console.log(`Updating service ${id} with data:`, req.body);
+      
       const parseResult = insertServiceSchema.partial().safeParse(req.body);
       
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
+        console.error("Validation error:", parseResult.error);
         return res.status(400).json({ message: errorMessage });
       }
       
-      const updatedService = await storage.updateService(id, parseResult.data);
+      console.log("Validated data:", parseResult.data);
+      
+      // Get the current service to check for image path
+      const currentService = await storage.getService(id);
+      if (!currentService) {
+        return res.status(404).json({ message: "Service not found" });
+      }
+      
+      // Ensure imagePath is preserved if not explicitly updated
+      const dataToUpdate = { ...parseResult.data };
+      if (!dataToUpdate.imagePath && currentService.imagePath) {
+        console.log("Preserving existing image path:", currentService.imagePath);
+        dataToUpdate.imagePath = currentService.imagePath;
+      }
+      
+      const updatedService = await storage.updateService(id, dataToUpdate);
       
       if (!updatedService) {
         return res.status(404).json({ message: "Service not found" });
       }
       
+      console.log("Service updated successfully:", updatedService);
       res.json(updatedService);
     } catch (err) {
+      console.error("Error updating service:", err);
       res.status(500).json({ message: "Failed to update service" });
     }
   });

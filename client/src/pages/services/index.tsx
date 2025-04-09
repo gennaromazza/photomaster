@@ -288,16 +288,27 @@ const ServicesPage = () => {
   // Invio del form per creazione/modifica
   const onSubmit = async (data: ServiceFormValues) => {
     try {
+      console.log("Submitting form with data:", data);
+      
       // Se c'è un'immagine da caricare, esegue l'upload
       if (data.image && data.image instanceof File) {
+        console.log("Uploading image file:", data.image.name);
         const imagePath = await handleImageUpload(data.image);
         if (imagePath) {
+          console.log("Image uploaded successfully, path:", imagePath);
           data.imagePath = imagePath;
         }
+      } else if (editingService?.imagePath) {
+        // Mantieni l'immagine esistente se non ne è stata caricata una nuova
+        console.log("Keeping existing image path:", editingService.imagePath);
+        data.imagePath = editingService.imagePath;
       }
       
       // Rimuove il campo image perché non fa parte del modello di dati
       const { image, ...submitData } = data;
+      
+      // Log dei dati che verranno inviati all'API
+      console.log("Final data to submit:", submitData);
       
       if (editingService) {
         updateServiceMutation.mutate({
@@ -308,6 +319,7 @@ const ServicesPage = () => {
         createServiceMutation.mutate(submitData);
       }
     } catch (error) {
+      console.error("Form submission error:", error);
       toast({
         title: 'Errore',
         description: 'Si è verificato un errore durante il salvataggio',

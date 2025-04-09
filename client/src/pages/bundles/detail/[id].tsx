@@ -293,6 +293,15 @@ const ModernTemplate: React.FC<{
           {bundle.items?.map((item, index) => (
             <Card key={index} className="overflow-hidden border-none shadow-lg hover:shadow-xl transition-shadow duration-300">
               <div className="h-2 bg-primary"></div>
+              {item.service.imagePath && (
+                <div className="w-full h-48 overflow-hidden">
+                  <img 
+                    src={item.service.imagePath} 
+                    alt={item.service.name} 
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                  />
+                </div>
+              )}
               <CardContent className="p-6">
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   {item.service.type === 'service' ? (
@@ -389,10 +398,19 @@ const ModernTemplate: React.FC<{
               <h2 className="text-xl font-bold mb-2">{settings.companyName}</h2>
               <p className="text-gray-400">Fotografia professionale di alta qualità</p>
             </div>
-            <div className="mt-6 md:mt-0">
-              <Button variant="outline" className="border-white text-white hover:text-black">
-                Contattaci
-              </Button>
+            <div className="mt-6 md:mt-0 flex space-x-4">
+              <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" className="border-white text-white hover:text-black">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Email
+                </Button>
+              </a>
+              <a href={getWhatsAppUrl(settings.companyPhone || '+39123456789')} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" className="border-white text-white hover:text-black">
+                  <Phone className="mr-2 h-4 w-4" />
+                  WhatsApp
+                </Button>
+              </a>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
@@ -472,6 +490,15 @@ const MinimalTemplate: React.FC<{
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {bundle.items?.map((item, index) => (
               <div key={index} className="border p-4 space-y-2">
+                {item.service.imagePath && (
+                  <div className="w-full h-48 mb-3 overflow-hidden">
+                    <img 
+                      src={item.service.imagePath} 
+                      alt={item.service.name} 
+                      className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500 ease-in-out"
+                    />
+                  </div>
+                )}
                 <h4 className="font-medium">{item.service.name}</h4>
                 <p className="text-gray-600 text-sm">
                   {item.service.description || 'Servizio fotografico professionale.'}
@@ -491,7 +518,7 @@ const MinimalTemplate: React.FC<{
 
         <div className="text-center mb-16">
           <h3 className="text-2xl font-medium mb-8">Contatti</h3>
-          <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-12">
+          <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-12 mb-8">
             <div className="flex items-center justify-center">
               <Phone className="h-4 w-4 mr-2 text-gray-500" />
               <span>{settings.companyPhone || '+39 123 456 7890'}</span>
@@ -506,6 +533,21 @@ const MinimalTemplate: React.FC<{
                 <span>{settings.companyAddress}</span>
               </div>
             )}
+          </div>
+          
+          <div className="flex justify-center space-x-4">
+            <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">
+                <Mail className="mr-2 h-4 w-4" />
+                Email
+              </Button>
+            </a>
+            <a href={getWhatsAppUrl(settings.companyPhone || '+39123456789')} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">
+                <Phone className="mr-2 h-4 w-4" />
+                WhatsApp
+              </Button>
+            </a>
           </div>
         </div>
       </main>
@@ -590,28 +632,39 @@ const BoldTemplate: React.FC<{
             {bundle.items?.map((item, index) => (
               <div 
                 key={index} 
-                className="p-8 rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/10 hover:shadow-lg transition-all duration-300"
+                className="overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/10 hover:shadow-lg transition-all duration-300"
               >
-                <div className="bg-primary w-12 h-12 rounded-lg flex items-center justify-center mb-6">
-                  {item.service.type === 'service' ? (
-                    <Camera className="h-6 w-6 text-white" />
-                  ) : (
-                    <Video className="h-6 w-6 text-white" />
-                  )}
-                </div>
-                <h3 className="text-xl font-bold mb-3">{item.service.name}</h3>
-                <p className="text-gray-600 mb-6">
-                  {item.service.description || 'Servizio di alta qualità con attenzione ai dettagli.'}
-                </p>
-                <div className="flex justify-between items-center">
-                  <Badge className="bg-primary/10 text-primary border-none hover:bg-primary/20">
-                    {formatPrice(item.service.price)}
-                  </Badge>
-                  {item.quantity > 1 && (
-                    <Badge variant="outline">
-                      Quantità: {item.quantity}
+                {item.service.imagePath && (
+                  <div className="w-full h-48 overflow-hidden">
+                    <img 
+                      src={item.service.imagePath} 
+                      alt={item.service.name} 
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    />
+                  </div>
+                )}
+                <div className="p-8">
+                  <div className="bg-primary w-12 h-12 rounded-lg flex items-center justify-center mb-6">
+                    {item.service.type === 'service' ? (
+                      <Camera className="h-6 w-6 text-white" />
+                    ) : (
+                      <Video className="h-6 w-6 text-white" />
+                    )}
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">{item.service.name}</h3>
+                  <p className="text-gray-600 mb-6">
+                    {item.service.description || 'Servizio di alta qualità con attenzione ai dettagli.'}
+                  </p>
+                  <div className="flex justify-between items-center">
+                    <Badge className="bg-primary/10 text-primary border-none hover:bg-primary/20">
+                      {formatPrice(item.service.price)}
                     </Badge>
-                  )}
+                    {item.quantity > 1 && (
+                      <Badge variant="outline">
+                        Quantità: {item.quantity}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -694,6 +747,20 @@ const BoldTemplate: React.FC<{
                     <span>{settings.companyAddress}</span>
                   </div>
                 )}
+                <div className="flex space-x-3 pt-3">
+                  <a href={getWhatsAppUrl(settings.companyPhone || '+39123456789')} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm" className="bg-white/10 border-white/20 hover:bg-white/20">
+                      <Phone className="mr-2 h-4 w-4" />
+                      WhatsApp
+                    </Button>
+                  </a>
+                  <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm" className="bg-white/10 border-white/20 hover:bg-white/20">
+                      <Mail className="mr-2 h-4 w-4" />
+                      Email
+                    </Button>
+                  </a>
+                </div>
               </div>
             </div>
             <div>

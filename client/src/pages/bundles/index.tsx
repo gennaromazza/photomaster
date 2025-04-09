@@ -411,6 +411,7 @@ const ServiceBundlesPage = () => {
     if (!selectedImageFile) return undefined;
     
     try {
+      console.log("Iniziando upload dell'immagine del pacchetto...");
       const formData = new FormData();
       formData.append('image', selectedImageFile);
       
@@ -424,6 +425,7 @@ const ServiceBundlesPage = () => {
       }
       
       const data = await response.json();
+      console.log("Immagine caricata con successo:", data.imagePath);
       return data.imagePath;
     } catch (error) {
       console.error('Errore upload immagine:', error);
@@ -448,15 +450,30 @@ const ServiceBundlesPage = () => {
     }
     
     try {
+      console.log("Form submission data:", data);
+      console.log("Selected template style:", selectedTemplateStyle);
+      
       // Se c'è un'immagine selezionata, caricala
-      let updatedData = { ...data };
+      let updatedData = { 
+        ...data,
+        templateStyle: selectedTemplateStyle || 'elegant' // Assicurati che templateStyle sia sempre definito
+      };
+      
+      console.log("Selected image file present:", !!selectedImageFile);
       
       if (selectedImageFile) {
         const imagePath = await uploadImage();
+        console.log("Uploaded image path:", imagePath);
         if (imagePath) {
           updatedData.imagePath = imagePath;
         }
+      } else if (editingBundle?.imagePath) {
+        // Mantieni l'immagine esistente se non viene caricata una nuova
+        console.log("Preserving existing image path:", editingBundle.imagePath);
+        updatedData.imagePath = editingBundle.imagePath;
       }
+      
+      console.log("Final data to submit:", updatedData);
       
       if (editingBundle) {
         updateBundleMutation.mutate({

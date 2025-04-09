@@ -53,6 +53,7 @@ import {
   User,
   Mail,
   Phone,
+  ChevronsUpDown,
 } from "lucide-react";
 import {
   Command,
@@ -308,102 +309,161 @@ export function CreateAppointmentForm({
 
                 {/* Associa a: Cliente e Preventivo */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-                  {/* Cliente */}
+                  {/* Cliente con ricerca */}
                   <FormField
                     control={form.control}
                     name="clientId"
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormLabel>Cliente</FormLabel>
-                        <Select
-                          onValueChange={(value) => {
-                            // Azzera il preventivo se cambiamo cliente
-                            if (quoteId) {
-                              form.setValue("quoteId", null);
-                            }
-                            field.onChange(value === "null" ? null : parseInt(value));
-                          }}
-                          value={field.value?.toString() || "null"}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleziona un cliente" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="null">Nessuno</SelectItem>
-                            {clients.map((client) => (
-                              <SelectItem 
-                                key={client.id} 
-                                value={client.id.toString()}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "justify-between",
+                                  !field.value && "text-muted-foreground"
+                                )}
                               >
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {client.firstName} {client.lastName}
-                                  </span>
-                                  {client.email && (
-                                    <span className="text-xs text-muted-foreground flex items-center">
-                                      <Mail className="mr-1 h-3 w-3" />
-                                      {client.email}
-                                    </span>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                                {field.value ? (
+                                  clients.find((client) => client.id === field.value)
+                                    ? `${clients.find((client) => client.id === field.value)?.firstName} ${
+                                        clients.find((client) => client.id === field.value)?.lastName
+                                      }`
+                                    : "Seleziona un cliente"
+                                ) : (
+                                  "Seleziona un cliente"
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="p-0 w-[300px]">
+                            <Command>
+                              <CommandInput placeholder="Cerca cliente..." />
+                              <CommandEmpty>Nessun cliente trovato.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem
+                                  onSelect={() => {
+                                    field.onChange(null);
+                                    if (quoteId) {
+                                      form.setValue("quoteId", null);
+                                    }
+                                  }}
+                                  className="text-muted-foreground"
+                                >
+                                  Nessuno
+                                </CommandItem>
+                                {clients.map((client) => (
+                                  <CommandItem
+                                    key={client.id}
+                                    onSelect={() => {
+                                      field.onChange(client.id);
+                                      if (quoteId) {
+                                        form.setValue("quoteId", null);
+                                      }
+                                    }}
+                                    className="flex flex-col items-start"
+                                  >
+                                    <div className="font-medium">
+                                      {client.firstName} {client.lastName}
+                                    </div>
+                                    {client.email && (
+                                      <div className="text-xs text-muted-foreground flex items-center">
+                                        <Mail className="mr-1 h-3 w-3" />
+                                        {client.email}
+                                      </div>
+                                    )}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {/* Preventivo */}
+                  {/* Preventivo con ricerca */}
                   <FormField
                     control={form.control}
                     name="quoteId"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Preventivo</FormLabel>
-                        <Select 
-                          onValueChange={(value) => {
-                            field.onChange(value === "null" ? null : parseInt(value));
-                          }}
-                          value={field.value?.toString() || "null"}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleziona un preventivo" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="null">Nessuno</SelectItem>
-                            {approvedQuotes.map((quote) => {
-                              // Trova il cliente associato
-                              const client = clients.find(c => c.id === quote.clientId);
-                              return (
-                                <SelectItem 
-                                  key={quote.id} 
-                                  value={quote.id.toString()}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "justify-between",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                disabled={!clientId} // Disabilita se non è selezionato un cliente
+                              >
+                                {field.value
+                                  ? approvedQuotes.find((quote) => quote.id === field.value)?.title || "Seleziona un preventivo"
+                                  : "Seleziona un preventivo"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="p-0 w-[300px]">
+                            <Command>
+                              <CommandInput placeholder="Cerca preventivo..." />
+                              <CommandEmpty>Nessun preventivo trovato.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem
+                                  onSelect={() => {
+                                    field.onChange(null);
+                                  }}
+                                  className="text-muted-foreground"
                                 >
-                                  <div className="flex items-center">
-                                    <span>{quote.title}</span>
-                                    {quote.status === "approved" && (
-                                      <CheckCircle2 className="ml-2 h-4 w-4 text-green-500" />
-                                    )}
-                                    {quote.status === "signed" && (
-                                      <CheckCircle2 className="ml-2 h-4 w-4 text-blue-500" />
-                                    )}
-                                  </div>
-                                  {client && (
-                                    <p className="text-xs text-gray-500">
-                                      {client.firstName} {client.lastName}
-                                    </p>
-                                  )}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
+                                  Nessuno
+                                </CommandItem>
+                                {approvedQuotes
+                                  .filter(quote => !clientId || quote.clientId === clientId)
+                                  .map((quote) => {
+                                    // Trova il cliente associato
+                                    const client = clients.find(c => c.id === quote.clientId);
+                                    return (
+                                      <CommandItem
+                                        key={quote.id}
+                                        onSelect={() => {
+                                          field.onChange(quote.id);
+                                          if (client && client.id !== clientId) {
+                                            form.setValue("clientId", client.id);
+                                          }
+                                        }}
+                                      >
+                                        <div className="flex flex-col">
+                                          <div className="flex items-center">
+                                            <span>{quote.title}</span>
+                                            {quote.status === "approved" && (
+                                              <CheckCircle2 className="ml-2 h-4 w-4 text-green-500" />
+                                            )}
+                                            {quote.status === "signed" && (
+                                              <CheckCircle2 className="ml-2 h-4 w-4 text-blue-500" />
+                                            )}
+                                          </div>
+                                          {client && (
+                                            <p className="text-xs text-gray-500">
+                                              {client.firstName} {client.lastName}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </CommandItem>
+                                    );
+                                })}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}

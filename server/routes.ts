@@ -157,7 +157,14 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       
       console.log("Ricevuti dati evento:", eventData);
       
-      const parseResult = insertEventSchema.safeParse(eventData);
+      // Converti manualmente le date in oggetti Date
+      const processedData = {
+        ...eventData,
+        date: eventData.date ? new Date(eventData.date) : undefined,
+        endDate: eventData.endDate ? new Date(eventData.endDate) : undefined
+      };
+      
+      const parseResult = insertEventSchema.safeParse(processedData);
       
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;

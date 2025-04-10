@@ -575,34 +575,6 @@ export default function NewQuotePage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                   <FormField
                     control={form.control}
-                    name="eventType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tipo Lavoro</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleziona tipo lavoro" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="wedding">Wedding</SelectItem>
-                            <SelectItem value="baptism">Battesimo</SelectItem>
-                            <SelectItem value="communion">Comunione</SelectItem>
-                            <SelectItem value="portrait">Ritratto</SelectItem>
-                            <SelectItem value="event">Evento</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name="workflow"
                     render={({ field }) => (
                       <FormItem>
@@ -656,23 +628,20 @@ export default function NewQuotePage() {
                       </FormItem>
                     )}
                   />
-                </div>
 
-                {/* Seconda riga di selezioni */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="categoryId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Settore</FormLabel>
+                        <FormLabel>Tipo Lavoro</FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(value !== "0" ? parseInt(value) : undefined)}
                           value={field.value?.toString() || "0"}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Seleziona settore" />
+                              <SelectValue placeholder="Seleziona tipo lavoro" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -688,6 +657,7 @@ export default function NewQuotePage() {
                       </FormItem>
                     )}
                   />
+                </div>
 
                   <FormField
                     control={form.control}

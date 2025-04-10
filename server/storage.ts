@@ -568,71 +568,99 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuote(id: number): Promise<any> {
-    // Carica il preventivo base
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.id, id));
-    
-    if (!quote) return undefined;
-    
-    // Carica il cliente principale
-    const [client] = await db
-      .select()
-      .from(clients)
-      .where(eq(clients.id, quote.clientId));
-    
-    // Carica il secondo cliente se presente
-    let secondClient = null;
-    if (quote.secondClientId) {
-      const [secondClientData] = await db
+    try {
+      // Carica il preventivo base
+      const [quote] = await db
         .select()
-        .from(clients)
-        .where(eq(clients.id, quote.secondClientId));
-      secondClient = secondClientData;
-    }
-    
-    // Carica la categoria se presente
-    let category = null;
-    if (quote.categoryId) {
-      const [categoryData] = await db
+        .from(quotes)
+        .where(eq(quotes.id, id));
+      
+      if (!quote) return undefined;
+      
+      // Inizializza i campi calcolati se non esistono
+      if (quote.subtotal === undefined) quote.subtotal = 0;
+      if (quote.total === undefined) quote.total = 0;
+      if (quote.discount === undefined) quote.discount = 0;
+      
+      // Carica il cliente principale
+      let client = null;
+      if (quote.clientId) {
+        const [clientData] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.id, quote.clientId));
+        client = clientData;
+      }
+      
+      // Carica il secondo cliente se presente
+      let secondClient = null;
+      if (quote.secondClientId) {
+        const [secondClientData] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.id, quote.secondClientId));
+        secondClient = secondClientData;
+      }
+      
+      // Carica la categoria se presente
+      let category = null;
+      if (quote.categoryId) {
+        const [categoryData] = await db
+          .select()
+          .from(serviceCategories)
+          .where(eq(serviceCategories.id, quote.categoryId));
+        category = categoryData;
+      }
+      
+      // Carica la provenienza se presente
+      let leadSource = null;
+      if (quote.leadSourceId) {
+        const [leadSourceData] = await db
+          .select()
+          .from(leadSources)
+          .where(eq(leadSources.id, quote.leadSourceId));
+        leadSource = leadSourceData;
+      }
+      
+      // Carica gli elementi del preventivo con i relativi servizi
+      const quoteItemsWithServices = await db
         .select()
-        .from(serviceCategories)
-        .where(eq(serviceCategories.id, quote.categoryId));
-      category = categoryData;
+        .from(quoteItems)
+        .where(eq(quoteItems.quoteId, id))
+        .leftJoin(services, eq(quoteItems.serviceId, services.id));
+      
+      // Formatta gli elementi del preventivo
+      const formattedItems = quoteItemsWithServices.map(item => ({
+        id: item.quote_items.id,
+        quoteId: item.quote_items.quoteId,
+        serviceId: item.quote_items.serviceId,
+        quantity: item.quote_items.quantity || 1,
+        unitPrice: item.quote_items.unitPrice || 0,
+        total: item.quote_items.total || 0,
+        hasDiscount: item.quote_items.hasDiscount || false,
+        discountType: item.quote_items.discountType,
+        discountValue: item.quote_items.discountValue,
+        notes: item.quote_items.notes,
+        createdAt: item.quote_items.createdAt,
+        updatedAt: item.quote_items.updatedAt,
+        service: item.services
+      }));
+      
+      // Formatta il risultato completo
+      const formattedQuote = {
+        ...quote,
+        client: client,
+        secondClient: secondClient,
+        category: category,
+        leadSource: leadSource,
+        quoteItems: formattedItems
+      };
+      
+      return formattedQuote;
+    } catch (error) {
+      console.error("Error in getQuote:", error);
+      throw error;
     }
-    
-    // Carica la provenienza se presente
-    let leadSource = null;
-    if (quote.leadSourceId) {
-      const [leadSourceData] = await db
-        .select()
-        .from(leadSources)
-        .where(eq(leadSources.id, quote.leadSourceId));
-      leadSource = leadSourceData;
-    }
-    
-    // Carica gli elementi del preventivo con i relativi servizi
-    const quoteItemsWithServices = await db
-      .select()
-      .from(quoteItems)
-      .where(eq(quoteItems.quoteId, id))
-      .leftJoin(services, eq(quoteItems.serviceId, services.id));
-    
-    // Formatta il risultato
-    const formattedQuote = {
-      ...quote,
-      client: client || null,
-      secondClient: secondClient,
-      category: category,
-      leadSource: leadSource,
-      quoteItems: quoteItemsWithServices.map(item => ({
-        ...item.quote_items,
-        service: item.services || null
-      }))
-    };
-    
-    return formattedQuote;
   }
 
   async getQuotesByClient(clientId: number): Promise<Quote[]> {

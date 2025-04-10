@@ -972,7 +972,7 @@ export default function NewQuotePage() {
                               }
                             }}
                           />
-                          <label htmlFor={collaborator-${collaborator.id}} className="text-sm">
+                          <label htmlFor={`collaborator-${collaborator.id}`} className="text-sm">
                             {collaborator.firstName} {collaborator.lastName} ({collaborator.role})
                           </label>
                         </div>

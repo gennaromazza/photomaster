@@ -63,16 +63,6 @@ export default function QuoteDetailPage() {
   const [shareUrl, setShareUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Carica i dati del preventivo
-  const { data: quote, isLoading: isLoadingQuote } = useQuery({
-    queryKey: ["/api/quotes", parseInt(id)],
-    queryFn: async () => {
-      const res = await fetch(`/api/quotes/${id}`);
-      if (!res.ok) throw new Error("Errore nel caricamento del preventivo");
-      return res.json();
-    },
-  });
-
   // Stato per gestire le fasi del workflow
   const [workflowSteps, setWorkflowSteps] = useState([
     { id: 1, name: "Data di creazione", date: "", completed: true, current: false },
@@ -85,6 +75,16 @@ export default function QuoteDetailPage() {
     { id: 8, name: "Lavoro Completo", date: "", completed: false, current: false },
     { id: 9, name: "App. Consegna/Archivio", date: "", completed: false, current: false },
   ]);
+  
+  // Carica i dati del preventivo
+  const { data: quote, isLoading: isLoadingQuote } = useQuery({
+    queryKey: ["/api/quotes", parseInt(id)],
+    queryFn: async () => {
+      const res = await fetch(`/api/quotes/${id}`);
+      if (!res.ok) throw new Error("Errore nel caricamento del preventivo");
+      return res.json();
+    },
+  });
 
   // Imposta le date del workflow quando il preventivo è caricato
   useEffect(() => {

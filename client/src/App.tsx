@@ -46,6 +46,7 @@ import ServiceBundlesPage from "@/pages/bundles";
 import BundleDetailPage from "@/pages/bundles/detail/[id]";
 import NewQuotePage from "@/pages/quotes/new-redesign";
 import QuoteDetailPage from "@/pages/quotes/[id]";
+import QuotePublicPage from "@/pages/quotes/public/[id]";
 
 function Router() {
   return (

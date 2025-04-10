@@ -1133,7 +1133,11 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   
   apiRouter.post("/quotes", async (req, res) => {
     try {
-      const parseResult = insertQuoteSchema.safeParse(req.body);
+      const { eventDate, ...rest } = req.body;
+      const parseResult = insertQuoteSchema.safeParse({
+        ...rest,
+        eventDate: eventDate ? new Date(eventDate) : undefined
+      });
       
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;

@@ -318,8 +318,24 @@ export default function NewQuotePage() {
   });
 
   // Gestisci il submit del form preventivo
-  const onSubmit = (data: QuoteFormValues) => {
-    createQuoteMutation.mutate(data);
+  const onSubmit = async (data: QuoteFormValues) => {
+    try {
+      // Ensure dates are properly formatted
+      const formattedData = {
+        ...data,
+        eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : undefined,
+        eventTime: data.eventTime ? data.eventTime : undefined,
+        eventEndTime: data.eventEndTime ? data.eventEndTime : undefined,
+      };
+      createQuoteMutation.mutate(formattedData);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'invio del modulo.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Gestisci il submit del form cliente principale
@@ -949,7 +965,7 @@ export default function NewQuotePage() {
                               <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
                             </div>
                             <FormMessage />
-                          </FormItem>
+                          </</FormItem>
                         )}
                       />
                     </div>

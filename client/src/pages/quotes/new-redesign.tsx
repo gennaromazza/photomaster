@@ -402,33 +402,50 @@ export default function NewQuotePage() {
                           <FormLabel>Cliente Principale</FormLabel>
                           <div className="flex items-center space-x-2">
                             <div className="relative flex-1">
-                              <Command className="border rounded-md">
-                                <div className="flex items-center border-b px-3">
-                                  <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                                  <CommandInput 
-                                    placeholder="Cerca cliente..." 
-                                    value={mainClientSearch}
-                                    onValueChange={(value) => {
-                                      setMainClientSearch(value);
-                                    }}
-                                    className="flex-1"
-                                  />
-                                </div>
-                                <CommandList>
-                                  <CommandEmpty>Nessun cliente trovato</CommandEmpty>
-                                  <CommandGroup>
-                                    {filteredMainClients.map((client) => (
-                                      <CommandItem
-                                        key={client.id}
-                                        value={client.id.toString()}
-                                        onSelect={() => handleClientSelect(client.id)}
-                                      >
-                                        {client.firstName} {client.lastName}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant="outline"
+                                      role="combobox"
+                                      className={cn(
+                                        "w-full justify-between",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      {field.value ? (
+                                        clients.find((client) => client.id === field.value)
+                                          ? `${clients.find((client) => client.id === field.value)?.firstName} ${
+                                              clients.find((client) => client.id === field.value)?.lastName
+                                            }`
+                                          : "Seleziona un cliente"
+                                      ) : (
+                                        "Seleziona un cliente"
+                                      )}
+                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                  <Command>
+                                    <CommandInput placeholder="Cerca cliente..." />
+                                    <CommandEmpty>Nessun cliente trovato</CommandEmpty>
+                                    <CommandGroup>
+                                      {clients.map((client) => (
+                                        <CommandItem
+                                          key={client.id}
+                                          value={`${client.firstName} ${client.lastName}`}
+                                          onSelect={() => {
+                                            form.setValue("clientId", client.id);
+                                          }}
+                                        >
+                                          {client.firstName} {client.lastName}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                               <FormMessage />
                             </div>
                             <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
@@ -554,33 +571,50 @@ export default function NewQuotePage() {
                           <FormLabel>Secondo Cliente (opzionale)</FormLabel>
                           <div className="flex items-center space-x-2">
                             <div className="relative flex-1">
-                              <Command className="border rounded-md">
-                                <div className="flex items-center border-b px-3">
-                                  <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                                  <CommandInput 
-                                    placeholder="Cerca secondo cliente..." 
-                                    value={secondClientSearch}
-                                    onValueChange={(value) => {
-                                      setSecondClientSearch(value);
-                                    }}
-                                    className="flex-1"
-                                  />
-                                </div>
-                                <CommandList>
-                                  <CommandEmpty>Nessun cliente trovato</CommandEmpty>
-                                  <CommandGroup>
-                                    {filteredSecondClients.map((client) => (
-                                      <CommandItem
-                                        key={client.id}
-                                        value={client.id.toString()}
-                                        onSelect={() => handleClientSelect(client.id, true)}
-                                      >
-                                        {client.firstName} {client.lastName}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button
+                                      variant="outline"
+                                      role="combobox"
+                                      className={cn(
+                                        "w-full justify-between",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      {field.value ? (
+                                        clients.find((client) => client.id === field.value)
+                                          ? `${clients.find((client) => client.id === field.value)?.firstName} ${
+                                              clients.find((client) => client.id === field.value)?.lastName
+                                            }`
+                                          : "Seleziona un cliente"
+                                      ) : (
+                                        "Seleziona un cliente"
+                                      )}
+                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                  <Command>
+                                    <CommandInput placeholder="Cerca secondo cliente..." />
+                                    <CommandEmpty>Nessun cliente trovato</CommandEmpty>
+                                    <CommandGroup>
+                                      {clients.map((client) => (
+                                        <CommandItem
+                                          key={client.id}
+                                          value={`${client.firstName} ${client.lastName}`}
+                                          onSelect={() => {
+                                            form.setValue("secondClientId", client.id);
+                                          }}
+                                        >
+                                          {client.firstName} {client.lastName}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                               <FormMessage />
                             </div>
                             <Dialog open={isSecondClientDialogOpen} onOpenChange={(open) => {

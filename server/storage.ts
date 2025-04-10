@@ -632,11 +632,6 @@ export class DatabaseStorage implements IStorage {
             quantity: quoteItems.quantity,
             unitPrice: quoteItems.unitPrice,
             total: quoteItems.total,
-            hasDiscount: quoteItems.hasDiscount,
-            discountType: quoteItems.discountType,
-            discountValue: quoteItems.discountValue,
-            discountedPrice: quoteItems.discountedPrice,
-            notes: quoteItems.notes,
           },
           services: services
         })
@@ -652,10 +647,12 @@ export class DatabaseStorage implements IStorage {
         quantity: item.quote_items.quantity || 1,
         unitPrice: item.quote_items.unitPrice || 0,
         total: item.quote_items.total || 0,
-        hasDiscount: item.quote_items.hasDiscount || false,
-        discountType: item.quote_items.discountType,
-        discountValue: item.quote_items.discountValue,
-        notes: item.quote_items.notes,
+        // Imposta valori di default per i campi non presenti nel DB
+        hasDiscount: false,
+        discountType: null,
+        discountValue: null,
+        discountedPrice: null,
+        notes: null,
         service: item.services
       }));
       

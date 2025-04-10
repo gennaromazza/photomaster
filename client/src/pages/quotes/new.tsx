@@ -427,8 +427,8 @@ export default function NewQuotePage() {
                       <FormItem className="flex-1">
                         <FormLabel>Evento (opzionale)</FormLabel>
                         <Select
-                          onValueChange={(value) => field.onChange(value !== "" ? parseInt(value) : undefined)}
-                          value={field.value?.toString() || ""}
+                          onValueChange={(value) => field.onChange(value !== "0" ? parseInt(value) : undefined)}
+                          value={field.value?.toString() || "0"}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -436,7 +436,7 @@ export default function NewQuotePage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Nessun evento</SelectItem>
+                            <SelectItem value="0">Nessun evento</SelectItem>
                             {events.map((event: any) => (
                               <SelectItem key={event.id} value={event.id.toString()}>
                                 {event.title}

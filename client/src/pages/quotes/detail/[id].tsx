@@ -55,9 +55,12 @@ import {
 } from "lucide-react";
 
 export default function QuoteDetailPage() {
+  // Hooks di base
   const { id } = useParams();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  
+  // Hooks per gli stati
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
@@ -85,42 +88,8 @@ export default function QuoteDetailPage() {
       return res.json();
     },
   });
-
-  // Imposta le date del workflow quando il preventivo è caricato
-  useEffect(() => {
-    if (quote) {
-      try {
-        // Aggiorna la data di creazione nel workflow
-        const updatedSteps = [...workflowSteps];
-        
-        // Data di creazione
-        if (quote.createdAt) {
-          updatedSteps[0].date = format(new Date(quote.createdAt), "dd/MM/yyyy HH:mm", { locale: it });
-        }
-        
-        // Data evento
-        if (quote.eventDate) {
-          updatedSteps[4].date = format(new Date(quote.eventDate), "dd/MM/yyyy", { locale: it });
-          if (quote.eventTime) {
-            updatedSteps[4].date += ` ${quote.eventTime}`;
-          }
-        }
-        
-        // Se lo stato è confermato, aggiorna anche la fase 4
-        if (quote.status === "approved" || quote.status === "confermato") {
-          updatedSteps[3].completed = true;
-          updatedSteps[3].current = false;
-          updatedSteps[4].current = true;
-        }
-        
-        setWorkflowSteps(updatedSteps);
-      } catch (error) {
-        console.error("Errore nell'aggiornamento del workflow:", error);
-      }
-    }
-  }, [quote]);
-
-  // Mutation per eliminare il preventivo
+  
+  // Mutations
   const deleteQuoteMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("DELETE", `/api/quotes/${id}`);
@@ -144,7 +113,6 @@ export default function QuoteDetailPage() {
     },
   });
 
-  // Mutation per aggiornare uno step del workflow
   const updateWorkflowStepMutation = useMutation({
     mutationFn: async ({ stepId, completed }: { stepId: number, completed: boolean }) => {
       // Esempio: in un'implementazione reale, salverebbe lo stato dello step nel DB
@@ -178,7 +146,120 @@ export default function QuoteDetailPage() {
       });
     },
   });
+  
+  const generateShareLinkMutation = useMutation({
+    mutationFn: async () => {
+      setIsLoading(true);
+      const res = await apiRequest("POST", `/api/quotes/${id}/share`);
+      if (!res.ok) throw new Error("Errore nella generazione del link di condivisione");
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      setShareUrl(`${window.location.origin}/quotes/public/${data.token}`);
+      setIsShareDialogOpen(true);
+      setIsLoading(false);
+      toast({
+        title: "Link di condivisione generato",
+        description: "Ora puoi condividere il preventivo con il cliente",
+      });
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const disableShareMutation = useMutation({
+    mutationFn: async () => {
+      setIsLoading(true);
+      const res = await apiRequest("DELETE", `/api/quotes/${id}/share`);
+      if (!res.ok) throw new Error("Errore nella disattivazione della condivisione");
+      return await res.json();
+    },
+    onSuccess: () => {
+      setIsLoading(false);
+      setIsShareDialogOpen(false);
+      setShareUrl('');
+      toast({
+        title: "Condivisione disattivata",
+        description: "Il preventivo non è più condivisibile",
+      });
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Effetti
+  useEffect(() => {
+    if (quote) {
+      try {
+        // Aggiorna la data di creazione nel workflow
+        const updatedSteps = [...workflowSteps];
+        
+        // Data di creazione
+        if (quote.createdAt) {
+          updatedSteps[0].date = format(new Date(quote.createdAt), "dd/MM/yyyy HH:mm", { locale: it });
+        }
+        
+        // Data evento
+        if (quote.eventDate) {
+          updatedSteps[4].date = format(new Date(quote.eventDate), "dd/MM/yyyy", { locale: it });
+          if (quote.eventTime) {
+            updatedSteps[4].date += ` ${quote.eventTime}`;
+          }
+        }
+        
+        // Se lo stato è confermato, aggiorna anche la fase 4
+        if (quote.status === "approved" || quote.status === "confermato") {
+          updatedSteps[3].completed = true;
+          updatedSteps[3].current = false;
+          updatedSteps[4].current = true;
+        }
+        
+        setWorkflowSteps(updatedSteps);
+      } catch (error) {
+        console.error("Errore nell'aggiornamento del workflow:", error);
+      }
+    }
+  }, [quote]);
+  
+  // Handler di eventi
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const confirmDelete = () => {
+    deleteQuoteMutation.mutate();
+    setIsDeleteDialogOpen(false);
+  };
 
+  const completeWorkflowStep = (stepId: number) => {
+    updateWorkflowStepMutation.mutate({ stepId, completed: true });
+  };
+  
+  const handleShareClick = () => {
+    generateShareLinkMutation.mutate();
+  };
+  
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast({
+      title: "Link copiato",
+      description: "Il link è stato copiato negli appunti",
+    });
+  };
+  
+  // Rendering condizionale per stati di caricamento o assenza di dati
   if (isLoadingQuote) {
     return (
       <Layout>
@@ -213,85 +294,6 @@ export default function QuoteDetailPage() {
       </Layout>
     );
   }
-
-  const handleDeleteClick = () => {
-    setIsDeleteDialogOpen(true);
-  };
-  
-  const confirmDelete = () => {
-    deleteQuoteMutation.mutate();
-    setIsDeleteDialogOpen(false);
-  };
-
-  const completeWorkflowStep = (stepId: number) => {
-    updateWorkflowStepMutation.mutate({ stepId, completed: true });
-  };
-  
-  // Mutation per generare il link di condivisione
-  const generateShareLinkMutation = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
-      const res = await apiRequest("POST", `/api/quotes/${id}/share`);
-      if (!res.ok) throw new Error("Errore nella generazione del link di condivisione");
-      return await res.json();
-    },
-    onSuccess: (data) => {
-      setShareUrl(`${window.location.origin}/quotes/public/${data.token}`);
-      setIsShareDialogOpen(true);
-      setIsLoading(false);
-      toast({
-        title: "Link di condivisione generato",
-        description: "Ora puoi condividere il preventivo con il cliente",
-      });
-    },
-    onError: (error) => {
-      setIsLoading(false);
-      toast({
-        title: "Errore",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Mutation per disattivare la condivisione
-  const disableShareMutation = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
-      const res = await apiRequest("DELETE", `/api/quotes/${id}/share`);
-      if (!res.ok) throw new Error("Errore nella disattivazione della condivisione");
-      return await res.json();
-    },
-    onSuccess: () => {
-      setIsLoading(false);
-      setIsShareDialogOpen(false);
-      setShareUrl('');
-      toast({
-        title: "Condivisione disattivata",
-        description: "Il preventivo non è più condivisibile",
-      });
-    },
-    onError: (error) => {
-      setIsLoading(false);
-      toast({
-        title: "Errore",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-  
-  const handleShareClick = () => {
-    generateShareLinkMutation.mutate();
-  };
-  
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(shareUrl);
-    toast({
-      title: "Link copiato",
-      description: "Il link è stato copiato negli appunti",
-    });
-  };
 
   return (
     <Layout>

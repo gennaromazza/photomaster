@@ -384,6 +384,10 @@ export const quotes = pgTable("quotes", {
   signature: text("signature"), // Firma del cliente per l'approvazione
   isShared: boolean("is_shared").default(false), // Indica se il preventivo è condiviso pubblicamente
   shareToken: text("share_token"), // Token univoco per l'URL di condivisione
+  shareExpiry: timestamp("share_expiry"), // Data di scadenza del link di condivisione
+  subtotal: integer("subtotal").default(0), // Subtotale (somma dei servizi/prodotti prima degli sconti)
+  total: integer("total").default(0), // Totale (subtotale - sconti)
+  discount: integer("discount").default(0), // Sconto applicato al preventivo
 });
 
 export const insertQuoteSchema = createInsertSchema(quotes).pick({
@@ -407,6 +411,10 @@ export const insertQuoteSchema = createInsertSchema(quotes).pick({
   updatedAt: true,
   isShared: true,
   shareToken: true,
+  shareExpiry: true,
+  subtotal: true,
+  total: true,
+  discount: true,
 });
 
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;

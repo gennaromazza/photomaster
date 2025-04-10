@@ -45,7 +45,7 @@ import ServiceDetailPage from "@/pages/services/[id]";
 import ServiceBundlesPage from "@/pages/bundles";
 import BundleDetailPage from "@/pages/bundles/detail/[id]";
 import NewQuotePage from "@/pages/quotes/new-redesign";
-import QuoteDetailPage from "@/pages/quotes/[id]";
+import QuoteDetailPage from "@/pages/quotes/detail/[id]";
 import QuotePublicPage from "@/pages/quotes/public/[id]";
 
 function Router() {
@@ -68,7 +68,7 @@ function Router() {
       <ProtectedRoute path="/contracts/:id" component={ContractViewPage} />
       <ProtectedRoute path="/quotes" component={QuotesPage} />
       <ProtectedRoute path="/quotes/new" component={NewQuotePage} />
-      <ProtectedRoute path="/quotes/:id" component={QuoteDetailPage} />
+      <ProtectedRoute path="/quotes/detail/:id" component={QuoteDetailPage} />
       <ProtectedRoute path="/services" component={ServicesPage} />
       <ProtectedRoute path="/services/:id" component={ServiceDetailPage} />
       <ProtectedRoute path="/bundles" component={ServiceBundlesPage} />

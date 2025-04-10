@@ -106,7 +106,7 @@ export default function NewQuotePage() {
   const [clientSearchQuery, setClientSearchQuery] = useState("");
   const [showClientSuccess, setShowClientSuccess] = useState(false);
   const [filteredClients, setFilteredClients] = useState<any[]>([]);
-  
+
   // Variabili per i controlli selezionati
   const [assignPhotographers, setAssignPhotographers] = useState(false);
 
@@ -119,17 +119,17 @@ export default function NewQuotePage() {
   const { data: events = [], isLoading: isLoadingEvents } = useQuery<any[]>({
     queryKey: ["/api/events"],
   });
-  
+
   // Query per ottenere le categorie di servizi
   const { data: categories = [], isLoading: isLoadingCategories } = useQuery<any[]>({
     queryKey: ["/api/service-categories"],
   });
-  
+
   // Query per ottenere le fonti di lead
   const { data: leadSources = [], isLoading: isLoadingLeadSources } = useQuery<any[]>({
     queryKey: ["/api/lead-sources"],
   });
-  
+
   // Query per ottenere i collaboratori
   const { data: collaborators = [], isLoading: isLoadingCollaborators } = useQuery<any[]>({
     queryKey: ["/api/collaborators"],
@@ -186,7 +186,7 @@ export default function NewQuotePage() {
 
   // Gestione dello stato per l'opzione "Evento tutto il giorno"
   const [isFullDayEvent, setIsFullDayEvent] = useState(false);
-  
+
   // Disabilita o abilita i campi di orario in base all'opzione "tutto il giorno"
   useEffect(() => {
     if (isFullDayEvent) {
@@ -349,26 +349,29 @@ export default function NewQuotePage() {
                                           }}
                                           className="flex items-center justify-between"
                                         >
-                                          <div className="flex items-center">
-                                            <User className="mr-2 h-4 w-4" />
-                                            <span>
-                                              {client.firstName} {client.lastName}
-                                            </span>
+                                          <div className="flex flex-col space-y-1">
+                                            <div className="flex items-center">
+                                              <User className="mr-2 h-4 w-4" />
+                                              <span className="font-medium">
+                                                {client.firstName} {client.lastName}
+                                              </span>
+                                            </div>
+                                            <div className="flex flex-col space-y-1 pl-6">
+                                              {client.email && (
+                                                <div className="flex items-center text-sm text-muted-foreground">
+                                                  <Mail className="mr-2 h-3 w-3" />
+                                                  <span>{client.email}</span>
+                                                </div>
+                                              )}
+                                              {client.phone && (
+                                                <div className="flex items-center text-sm text-muted-foreground">
+                                                  <Phone className="mr-2 h-3 w-3" />
+                                                  <span>{client.phone}</span>
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
-                                          <div className="flex items-center text-xs text-muted-foreground">
-                                            {client.email && (
-                                              <div className="mr-4 flex items-center">
-                                                <Mail className="mr-1 h-3 w-3" />
-                                                {client.email}
-                                              </div>
-                                            )}
-                                            {client.phone && (
-                                              <div className="flex items-center">
-                                                <Phone className="mr-1 h-3 w-3" />
-                                                {client.phone}
-                                              </div>
-                                            )}
-                                          </div>
+                                          
                                         </CommandItem>
                                       ))}
                                     </CommandGroup>
@@ -489,7 +492,7 @@ export default function NewQuotePage() {
                       )}
                     />
                   </div>
-                  
+
                   {/* Secondo cliente */}
                   <div className="flex-1">
                     <FormField
@@ -531,25 +534,27 @@ export default function NewQuotePage() {
                                           }}
                                           className="flex items-center justify-between"
                                         >
-                                          <div className="flex items-center">
-                                            <User className="mr-2 h-4 w-4" />
-                                            <span>
-                                              {client.firstName} {client.lastName}
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center text-xs text-muted-foreground">
-                                            {client.email && (
-                                              <div className="mr-4 flex items-center">
-                                                <Mail className="mr-1 h-3 w-3" />
-                                                {client.email}
-                                              </div>
-                                            )}
-                                            {client.phone && (
-                                              <div className="flex items-center">
-                                                <Phone className="mr-1 h-3 w-3" />
-                                                {client.phone}
-                                              </div>
-                                            )}
+                                          <div className="flex flex-col space-y-1">
+                                            <div className="flex items-center">
+                                              <User className="mr-2 h-4 w-4" />
+                                              <span className="font-medium">
+                                                {client.firstName} {client.lastName}
+                                              </span>
+                                            </div>
+                                            <div className="flex flex-col space-y-1 pl-6">
+                                              {client.email && (
+                                                <div className="flex items-center text-sm text-muted-foreground">
+                                                  <Mail className="mr-2 h-3 w-3" />
+                                                  <span>{client.email}</span>
+                                                </div>
+                                              )}
+                                              {client.phone && (
+                                                <div className="flex items-center text-sm text-muted-foreground">
+                                                  <Phone className="mr-2 h-3 w-3" />
+                                                  <span>{client.phone}</span>
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
                                         </CommandItem>
                                       ))}
@@ -707,7 +712,7 @@ export default function NewQuotePage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="leadSourceId"
@@ -737,7 +742,7 @@ export default function NewQuotePage() {
                     )}
                   />
                 </div>
-                
+
                 {/* Seconda riga di selezioni */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
@@ -768,7 +773,7 @@ export default function NewQuotePage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="eventId"
@@ -798,9 +803,9 @@ export default function NewQuotePage() {
                     )}
                   />
                 </div>
-                
+
                 <Separator className="my-4" />
-                
+
                 {/* Date e orari */}
                 <h3 className="text-lg font-medium mb-2">Data e Orari Evento</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -840,7 +845,7 @@ export default function NewQuotePage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   {/* Opzione "Tutto il giorno" */}
                   <div className="flex items-end pb-2">
                     <FormField
@@ -862,7 +867,7 @@ export default function NewQuotePage() {
                       )}
                     />
                   </div>
-                  
+
                   <div className={isFullDayEvent ? "opacity-50" : ""}>
                     <div className="grid grid-cols-2 gap-2">
                       <FormField
@@ -885,7 +890,7 @@ export default function NewQuotePage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="eventEndTime"
@@ -909,7 +914,7 @@ export default function NewQuotePage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <FormField
                   control={form.control}
                   name="location"
@@ -926,9 +931,9 @@ export default function NewQuotePage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <Separator className="my-4" />
-                
+
                 {/* Opzioni assistenti */}
                 <div className="flex items-center space-x-2 mt-4 mb-2">
                   <Switch 
@@ -940,7 +945,7 @@ export default function NewQuotePage() {
                     Assegna fotografi, videografi, assistenti
                   </label>
                 </div>
-                
+
                 {assignPhotographers && (
                   <div className="bg-muted/30 p-4 rounded-md">
                     <h3 className="text-sm font-medium mb-2">Seleziona collaboratori</h3>
@@ -970,9 +975,9 @@ export default function NewQuotePage() {
                     </div>
                   </div>
                 )}
-                
+
                 <Separator className="my-4" />
-                
+
                 {/* Note di lavoro */}
                 <h3 className="text-lg font-medium mb-2">Note di Lavoro</h3>
                 <FormField
@@ -991,7 +996,7 @@ export default function NewQuotePage() {
                     </FormItem>
                   )}
                 />
-                
+
                 {/* Rimossa la sezione "Dati Preventivo" come richiesto */}
               </CardContent>
               <CardFooter className="flex justify-end">

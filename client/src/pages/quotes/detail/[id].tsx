@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { 
@@ -48,9 +49,9 @@ import {
   ClipboardCheck,
   Info,
   Plus,
-  Check,
+  Link,
   Loader2,
-  Link
+  Check
 } from "lucide-react";
 
 export default function QuoteDetailPage() {
@@ -673,6 +674,65 @@ export default function QuoteDetailPage() {
                   Elimina Preventivo
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog per la condivisione */}
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Condividi preventivo</DialogTitle>
+            <DialogDescription>
+              Puoi condividere questo preventivo con il cliente utilizzando il link qui sotto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium">Link di condivisione:</p>
+              <div className="flex items-center">
+                <Input
+                  value={shareUrl}
+                  readOnly
+                  className="flex-1 mr-2"
+                  onClick={(e) => e.currentTarget.select()}
+                />
+                <Button size="icon" variant="outline" onClick={copyToClipboard}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Il cliente potrà visualizzare il preventivo senza necessità di accesso.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Link className="h-4 w-4 text-primary" />
+                <p className="text-sm font-medium">Opzioni di condivisione</p>
+              </div>
+              <div className="ml-6">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Il link di condivisione resterà attivo fino a quando non viene disabilitato.
+                </p>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => disableShareMutation.mutate()}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  ) : null}
+                  Disattiva condivisione
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsShareDialogOpen(false)}>
+              Chiudi
             </Button>
           </DialogFooter>
         </DialogContent>

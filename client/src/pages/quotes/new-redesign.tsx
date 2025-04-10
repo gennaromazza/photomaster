@@ -305,8 +305,8 @@ export default function NewQuotePage() {
         description: "Il preventivo è stato creato con successo",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-      // Reindirizza alla pagina di dettaglio del preventivo appena creato
-      setLocation(`/quotes/${newQuote.id}`);
+      // Reindirizza alla lista dei preventivi dopo la creazione
+      setLocation("/quotes");
     },
     onError: (error) => {
       toast({
@@ -361,7 +361,10 @@ export default function NewQuotePage() {
 
   return (
     <Layout>
-      <div className="container py-6">
+      <div className="container mx-auto py-6 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Colonna sinistra - 8/12 */}
+          <div className="lg:col-span-8 space-y-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-playfair font-bold">Nuovo Preventivo</h1>
@@ -1082,7 +1085,44 @@ export default function NewQuotePage() {
             </Card>
           </form>
         </Form>
+        </div>
+          
+        {/* Colonna destra - 4/12 */}
+        <div className="lg:col-span-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Workflow</CardTitle>
+              <CardDescription>Stato avanzamento preventivo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">1</div>
+                  <div className="flex-1">
+                    <p className="font-medium">Creazione Preventivo</p>
+                    <p className="text-sm text-muted-foreground">In corso...</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4 opacity-50">
+                  <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center">2</div>
+                  <div className="flex-1">
+                    <p className="font-medium">Invio al Cliente</p>
+                    <p className="text-sm text-muted-foreground">In attesa</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4 opacity-50">
+                  <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center">3</div>
+                  <div className="flex-1">
+                    <p className="font-medium">Conferma Cliente</p>
+                    <p className="text-sm text-muted-foreground">In attesa</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+    </div>
     </Layout>
   );
 }

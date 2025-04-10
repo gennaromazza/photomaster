@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Layout from "@/components/layout/layout";
@@ -8,608 +8,465 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ChevronLeft, Share, Send, FileCheck, FileEdit, Mail, Phone, Calendar } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { 
+  User, 
+  Calendar, 
+  MapPin, 
+  Clock, 
+  Mail, 
+  Phone, 
+  FileText, 
+  CheckCircle2, 
+  Circle, 
+  Edit, 
+  Trash, 
+  Download, 
+  Send, 
+  Share2,
+  Copy,
+  ArrowLeft,
+  WholeWord,
+  Euro
+} from "lucide-react";
 
-const statusColorMap: Record<string, string> = {
-  draft: "bg-gray-200 text-gray-800",
-  sent: "bg-blue-100 text-blue-800",
-  approved: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
-};
-
-const QuoteDetailPage: React.FC = () => {
+export default function QuoteDetailPage() {
   const { id } = useParams();
-  const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
-  const [isSignDialogOpen, setIsSignDialogOpen] = useState(false);
-  const [signature, setSignature] = useState("");
-  const [shareMethod, setShareMethod] = useState<"email" | "whatsapp">("email");
-  const [shareEmail, setShareEmail] = useState("");
-  const [sharePhone, setSharePhone] = useState("");
-  const [shareMessage, setShareMessage] = useState("");
+  const [, setLocation] = useLocation();
   
-  // Recupera i dettagli del preventivo
-  const quoteQuery = useQuery({
-    queryKey: [`/api/quotes/${id}`],
+  // Carica i dati del preventivo
+  const { data: quote, isLoading: isLoadingQuote } = useQuery({
+    queryKey: ["/api/quotes", parseInt(id)],
     queryFn: async () => {
       const res = await fetch(`/api/quotes/${id}`);
-      if (!res.ok) throw new Error('Errore nel caricamento del preventivo');
-      return await res.json();
-    }
-  });
-  
-  // Recupera i dettagli del cliente
-  const clientQuery = useQuery({
-    queryKey: [`/api/clients/${quoteQuery.data?.clientId}`],
-    queryFn: async () => {
-      const res = await fetch(`/api/clients/${quoteQuery.data?.clientId}`);
-      if (!res.ok) throw new Error('Errore nel caricamento del cliente');
-      return await res.json();
-    },
-    enabled: !!quoteQuery.data?.clientId,
-  });
-  
-  // Recupera gli elementi del preventivo
-  const quoteItemsQuery = useQuery({
-    queryKey: [`/api/quotes/${id}/items`],
-    queryFn: async () => {
-      const res = await fetch(`/api/quotes/${id}/items`);
-      if (!res.ok) throw new Error('Errore nel caricamento degli elementi del preventivo');
-      return await res.json();
-    },
-    enabled: !!id,
-  });
-  
-  // Mutation per aggiornare lo stato del preventivo
-  const updateQuoteMutation = useMutation({
-    mutationFn: async (data: { status: string, signature?: string }) => {
-      const res = await apiRequest("PUT", `/api/quotes/${id}`, data);
+      if (!res.ok) throw new Error("Errore nel caricamento del preventivo");
       return res.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Preventivo aggiornato",
-        description: "Lo stato del preventivo è stato aggiornato con successo",
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/quotes/${id}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/quotes'] });
-      setIsSignDialogOpen(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'aggiornamento del preventivo",
-        variant: "destructive",
-      });
-    },
   });
-  
-  // Mutation per inviare il preventivo via email
-  const sendQuoteEmailMutation = useMutation({
-    mutationFn: async (data: { emailTo: string, message: string }) => {
-      const res = await apiRequest("POST", `/api/quotes/${id}/send`, data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Preventivo inviato",
-        description: "Il preventivo è stato inviato con successo via email",
-      });
-      // Aggiorna lo stato del preventivo a "sent"
-      updateQuoteMutation.mutate({ status: "sent" });
-      setIsShareDialogOpen(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'invio del preventivo",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Gestisci l'approvazione del preventivo
-  const handleApproveQuote = () => {
-    setIsSignDialogOpen(true);
-  };
-  
-  // Gestisci la firma del preventivo
-  const handleSign = () => {
-    if (!signature.trim()) {
-      toast({
-        title: "Firma richiesta",
-        description: "Inserisci la tua firma per approvare il preventivo",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    updateQuoteMutation.mutate({ 
-      status: "approved",
-      signature: signature,
-      updatedAt: new Date().toISOString()
-    });
-  };
-  
-  // Gestisci la condivisione del preventivo
-  const handleShare = () => {
-    if (shareMethod === "email") {
-      if (!shareEmail) {
-        toast({
-          title: "Email richiesta",
-          description: "Inserisci un indirizzo email valido",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      sendQuoteEmailMutation.mutate({
-        emailTo: shareEmail,
-        message: shareMessage
-      });
-    } else {
-      // WhatsApp
-      if (!sharePhone) {
-        toast({
-          title: "Numero di telefono richiesto",
-          description: "Inserisci un numero di telefono valido",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Crea e apri l'URL di WhatsApp con il link al preventivo
-      const cleanPhone = sharePhone.replace(/\s+/g, '').replace(/[^\d+]/g, '');
-      // Aggiungi prefisso +39 se non presente
-      const formattedPhone = cleanPhone.startsWith('+') ? cleanPhone : `+39${cleanPhone}`;
-      const quoteUrl = `${window.location.origin}/quotes/public/${id}`;
-      const message = shareMessage || "Ecco il tuo preventivo";
-      const whatsappUrl = `https://wa.me/${formattedPhone.replace('+', '')}?text=${encodeURIComponent(message + '\n\n' + quoteUrl)}`;
-      
-      window.open(whatsappUrl, '_blank');
-      
-      // Aggiorna lo stato del preventivo a "sent"
-      updateQuoteMutation.mutate({ status: "sent" });
-      setIsShareDialogOpen(false);
-    }
-  };
-  
-  // Crea un nuovo evento da questo preventivo
-  const createEventFromQuote = () => {
-    navigate(`/calendar?quoteId=${id}`);
-  };
-  
-  // Imposta i valori predefiniti per la condivisione
+
+  // Stato per gestire le fasi del workflow
+  const [workflowSteps, setWorkflowSteps] = useState([
+    { id: 1, name: "Data di creazione", date: "", completed: true, current: false },
+    { id: 2, name: "Primo appuntamento", date: "", completed: false, current: true },
+    { id: 3, name: "Modulo di prenotazione", date: "", completed: false, current: false },
+    { id: 4, name: "Lavoro confermato", date: "", completed: false, current: false },
+    { id: 5, name: "Data del lavoro", date: "", completed: false, current: false },
+    { id: 6, name: "Inizio lavorazione", date: "", completed: false, current: false },
+    { id: 7, name: "Appuntamento visione file", date: "", completed: false, current: false },
+    { id: 8, name: "Lavoro Completo", date: "", completed: false, current: false },
+    { id: 9, name: "App. Consegna/Archivio", date: "", completed: false, current: false },
+  ]);
+
+  // Imposta le date del workflow quando il preventivo è caricato
   useEffect(() => {
-    if (clientQuery.data) {
-      setShareEmail(clientQuery.data.email || '');
-      setSharePhone(clientQuery.data.phone || '');
-      setShareMessage(`Gentile ${clientQuery.data.firstName},\n\nGrazie per averci scelto. In allegato trovi il preventivo richiesto.\n\nPer qualsiasi domanda, non esitare a contattarci.\n\nCordiali saluti.`);
+    if (quote) {
+      // Aggiorna la data di creazione nel workflow
+      const updatedSteps = [...workflowSteps];
+      updatedSteps[0].date = new Date(quote.createdAt).toLocaleDateString();
+      setWorkflowSteps(updatedSteps);
     }
-  }, [clientQuery.data]);
-  
-  // Loading state
-  if (quoteQuery.isLoading) {
+  }, [quote]);
+
+  // Mutation per eliminare il preventivo
+  const deleteQuoteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", `/api/quotes/${id}`);
+      if (!res.ok) throw new Error("Errore nell'eliminazione del preventivo");
+      return true;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Preventivo eliminato",
+        description: "Il preventivo è stato eliminato con successo",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      setLocation("/quotes");
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (isLoadingQuote) {
     return (
       <Layout>
-        <div className="container py-8 flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="container py-6">
+          <div className="flex justify-center items-center min-h-[60vh]">
+            <div className="animate-pulse text-center">
+              <div className="h-8 w-64 bg-gray-200 rounded mb-4 mx-auto"></div>
+              <div className="h-4 w-40 bg-gray-200 rounded mb-8 mx-auto"></div>
+              <div className="h-32 w-full max-w-3xl bg-gray-200 rounded mx-auto"></div>
+            </div>
+          </div>
         </div>
       </Layout>
     );
   }
-  
-  // Error state
-  if (quoteQuery.isError || !quoteQuery.data) {
+
+  if (!quote) {
     return (
       <Layout>
-        <div className="container py-8">
-          <Button variant="ghost" onClick={() => navigate('/quotes')} className="mb-6">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Torna ai preventivi
-          </Button>
-          
-          <Card className="text-center p-8">
-            <CardTitle className="mb-4">Preventivo non trovato</CardTitle>
-            <CardDescription>
+        <div className="container py-6">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-2">Preventivo non trovato</h2>
+            <p className="text-muted-foreground mb-4">
               Il preventivo richiesto non esiste o è stato eliminato.
-            </CardDescription>
-            <CardFooter className="justify-center mt-6">
-              <Button onClick={() => navigate('/quotes')}>
-                Torna alla lista dei preventivi
-              </Button>
-            </CardFooter>
-          </Card>
+            </p>
+            <Button onClick={() => setLocation("/quotes")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Torna ai preventivi
+            </Button>
+          </div>
         </div>
       </Layout>
     );
   }
-  
-  const quote = quoteQuery.data;
-  const client = clientQuery.data;
-  const quoteItems = quoteItemsQuery.data || [];
-  const isApproved = quote.status === "approved";
-  
+
+  const handleDeleteClick = () => {
+    if (window.confirm("Sei sicuro di voler eliminare questo preventivo?")) {
+      deleteQuoteMutation.mutate();
+    }
+  };
+
   return (
     <Layout>
       <div className="container py-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-          <div>
-            <div className="flex items-center mb-2">
-              <Button variant="ghost" onClick={() => navigate('/quotes')} className="mr-2 p-2">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <h1 className="text-2xl lg:text-3xl font-playfair font-bold">{quote.title}</h1>
-              <Badge className={`ml-4 ${statusColorMap[quote.status] || 'bg-gray-200'}`}>
-                {quote.status === "draft" ? "Bozza" : 
-                 quote.status === "sent" ? "Inviato" : 
-                 quote.status === "approved" ? "Approvato" : 
-                 quote.status === "rejected" ? "Rifiutato" : quote.status}
-              </Badge>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <Button 
+              variant="outline" 
+              onClick={() => setLocation("/quotes")} 
+              className="mr-4"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Indietro
+            </Button>
+            <div>
+              <h1 className="text-3xl font-playfair font-bold">{quote.title}</h1>
+              <div className="flex items-center mt-1">
+                <Badge 
+                  variant={quote.status === "confermato" ? "success" : 
+                           quote.status === "in attesa" ? "warning" : 
+                           "default"}
+                  className="mr-2"
+                >
+                  {quote.status === "draft" ? "Bozza" : 
+                   quote.status === "pending" ? "In attesa" : 
+                   quote.status === "approved" ? "Confermato" : 
+                   quote.status === "rejected" ? "Rifiutato" : 
+                   quote.status}
+                </Badge>
+                <p className="text-muted-foreground">
+                  Creato il {new Date(quote.createdAt).toLocaleDateString()}
+                </p>
+              </div>
             </div>
-            <p className="text-muted-foreground">
-              Creato il {formatDate(new Date(quote.createdAt))}
-              {quote.expiryDate && ` · Scade il ${formatDate(new Date(quote.expiryDate))}`}
-            </p>
           </div>
           
-          <div className="flex flex-wrap gap-2 mt-4 lg:mt-0">
-            {quote.status === "draft" && (
-              <>
-                <Button 
-                  variant="outline" 
-                  className="flex items-center" 
-                  onClick={() => setIsShareDialogOpen(true)}
-                >
-                  <Share className="mr-2 h-4 w-4" />
-                  Condividi
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex items-center" 
-                  onClick={() => navigate(`/quotes/edit/${id}`)}
-                >
-                  <FileEdit className="mr-2 h-4 w-4" />
-                  Modifica
-                </Button>
-              </>
-            )}
-            
-            {quote.status === "sent" && (
-              <>
-                <Button 
-                  variant="outline" 
-                  className="flex items-center" 
-                  onClick={handleApproveQuote}
-                >
-                  <FileCheck className="mr-2 h-4 w-4" />
-                  Firma
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="flex items-center" 
-                  onClick={() => setIsShareDialogOpen(true)}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Invia di nuovo
-                </Button>
-              </>
-            )}
-            
-            {quote.status === "approved" && (
-              <Button 
-                variant="default" 
-                className="flex items-center" 
-                onClick={createEventFromQuote}
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                Crea Evento
-              </Button>
-            )}
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => setLocation(`/quotes/edit/${id}`)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Modifica
+            </Button>
+            <Button variant="outline" onClick={() => {/* TODO: implement share */}}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Condividi
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteClick}>
+              <Trash className="mr-2 h-4 w-4" />
+              Elimina
+            </Button>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Dettagli del cliente */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Cliente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {clientQuery.isLoading ? (
-                <div className="animate-pulse space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ) : client ? (
-                <div className="space-y-2">
-                  <div className="font-medium">{client.firstName} {client.lastName}</div>
-                  {client.email && (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Mail className="mr-2 h-4 w-4" />
-                      <a href={`mailto:${client.email}`} className="hover:underline">
-                        {client.email}
-                      </a>
+          {/* Colonna principale con informazioni preventivo */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Sezione Clienti */}
+            <Tabs defaultValue="client1" className="w-full">
+              <TabsList className="w-full">
+                <TabsTrigger value="client1" className="flex-1">Cliente Principale</TabsTrigger>
+                <TabsTrigger value="client2" className="flex-1">Secondo Cliente</TabsTrigger>
+              </TabsList>
+              <TabsContent value="client1" className="mt-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start">
+                      <div className="bg-gray-200 rounded-full h-20 w-20 flex items-center justify-center">
+                        <User className="h-10 w-10 text-gray-500" />
+                      </div>
+                      <div className="ml-6">
+                        <h3 className="text-xl font-semibold">
+                          {quote.client?.firstName} {quote.client?.lastName}
+                        </h3>
+                        <div className="mt-2 space-y-1">
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Phone className="mr-2 h-4 w-4" />
+                            {quote.client?.phone || "Nessun telefono"}
+                          </div>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Mail className="mr-2 h-4 w-4" />
+                            {quote.client?.email || "Nessuna email"}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  {client.phone && (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Phone className="mr-2 h-4 w-4" />
-                      <a 
-                        href={`https://wa.me/${client.phone.replace(/\s+/g, '').replace(/[^\d+]/g, '').startsWith('+') ? client.phone.replace(/\s+/g, '').replace(/[^\d+]/g, '').substring(1) : '39' + client.phone.replace(/\s+/g, '').replace(/[^\d+]/g, '')}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        {client.phone}
-                      </a>
+                    <div className="flex justify-end mt-4 space-x-2">
+                      <Button size="sm" variant="ghost" className="text-xs">
+                        <Copy className="mr-1 h-3 w-3" />
+                        Copia Cliente
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-xs">
+                        Modifica Cliente
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-xs">
+                        <Send className="mr-1 h-3 w-3" />
+                        Invia Email
+                      </Button>
                     </div>
-                  )}
-                  {client.address && (
-                    <div className="text-sm text-gray-500 mt-2">
-                      {client.address}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="client2" className="mt-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    {quote.secondClient ? (
+                      <div className="flex items-start">
+                        <div className="bg-gray-200 rounded-full h-20 w-20 flex items-center justify-center">
+                          <User className="h-10 w-10 text-gray-500" />
+                        </div>
+                        <div className="ml-6">
+                          <h3 className="text-xl font-semibold">
+                            {quote.secondClient.firstName} {quote.secondClient.lastName}
+                          </h3>
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Phone className="mr-2 h-4 w-4" />
+                              {quote.secondClient.phone || "Nessun telefono"}
+                            </div>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Mail className="mr-2 h-4 w-4" />
+                              {quote.secondClient.email || "Nessuna email"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <User className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                        <h3 className="text-muted-foreground">Nessun secondo cliente associato</h3>
+                        <Button variant="outline" size="sm" className="mt-2">
+                          <User className="mr-2 h-4 w-4" />
+                          Aggiungi secondo cliente
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            {/* Dettagli servizio */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Servizio</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Tipo Lavoro</h4>
+                    <p className="font-medium">{quote.eventType || "Non specificato"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Workflow</h4>
+                    <p className="font-medium">{quote.workflow || "Default"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Data Evento</h4>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
+                      <p className="font-medium">
+                        {quote.eventDate ? new Date(quote.eventDate).toLocaleDateString() : "Non specificata"}
+                      </p>
                     </div>
-                  )}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Orario</h4>
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                      <p className="font-medium">
+                        {quote.eventTime ? quote.eventTime : "Non specificato"}
+                        {quote.eventEndTime ? ` - ${quote.eventEndTime}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Location</h4>
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                      <p className="font-medium">{quote.location || "Non specificata"}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Provenienza</h4>
+                    <p className="font-medium">{quote.leadSource?.name || "Non specificata"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Settore</h4>
+                    <p className="font-medium">{quote.category?.name || "Non specificato"}</p>
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Operatori</h4>
+                    <p className="font-medium">{quote.assignedCollaborators?.length ? "Assegnati" : "Nessun operatore assegnato"}</p>
+                  </div>
                 </div>
-              ) : (
-                <div className="text-gray-500">Cliente non trovato</div>
-              )}
-            </CardContent>
-          </Card>
-          
-          {/* Riepilogo */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Riepilogo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between border-b pb-2">
-                  <span>Subtotale</span>
-                  <span>{formatCurrency(quote.subtotal)}</span>
-                </div>
-                {quote.discount > 0 && (
-                  <div className="flex justify-between text-green-600 border-b pb-2">
-                    <span>Sconto</span>
-                    <span>-{formatCurrency(quote.discount)}</span>
+              </CardContent>
+            </Card>
+
+            {/* Moduli e prodotti */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Moduli</CardTitle>
+                <Button variant="outline" size="sm">
+                  Aggiungi Modulo
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {quote.quoteItems && quote.quoteItems.length > 0 ? (
+                  <div className="space-y-4">
+                    {quote.quoteItems.map((item: any) => (
+                      <div key={item.id} className="border rounded-md p-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium">{item.service?.name || "Servizio"}</h4>
+                          <Badge variant="outline">€ {item.total.toLocaleString()}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {item.quantity} x €{item.unitPrice.toLocaleString()}
+                          {item.hasDiscount && (
+                            <span> (-{item.discountType === 'percentage' ? `${item.discountValue}%` : `€${item.discountValue}`})</span>
+                          )}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded-md">
+                    <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-muted-foreground">Nessun modulo aggiunto</p>
+                    <Button variant="outline" size="sm" className="mt-2">
+                      Aggiungi primo modulo
+                    </Button>
                   </div>
                 )}
-                {quote.tax > 0 && (
-                  <div className="flex justify-between border-b pb-2">
-                    <span>IVA</span>
-                    <span>{formatCurrency(quote.tax)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-lg pt-2">
-                  <span>Totale</span>
-                  <span>{formatCurrency(quote.total)}</span>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Totale Moduli</p>
+                  <p className="font-medium text-xl">€ {quote.subtotal.toLocaleString()}</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Elementi del preventivo */}
-          <Card className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Servizi e Prodotti</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {quoteItemsQuery.isLoading ? (
-                <div className="animate-pulse space-y-4">
-                  <div className="h-12 bg-gray-200 rounded"></div>
-                  <div className="h-12 bg-gray-200 rounded"></div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Totale Preventivo</p>
+                  <p className="font-medium text-xl">€ {quote.total.toLocaleString()}</p>
                 </div>
-              ) : quoteItems.length === 0 ? (
-                <div className="text-center py-6 text-gray-500">
-                  Nessun prodotto o servizio aggiunto al preventivo
+              </CardFooter>
+            </Card>
+
+            {/* Acconti */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Acconti</CardTitle>
+                <Button variant="outline" size="sm">
+                  Registra Acconto
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 border rounded-md">
+                  <Euro className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-muted-foreground">Nessun acconto registrato</p>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4">Servizio/Prodotto</th>
-                        <th className="text-right py-3 px-4">Quantità</th>
-                        <th className="text-right py-3 px-4">Prezzo Unitario</th>
-                        <th className="text-right py-3 px-4">Sconto</th>
-                        <th className="text-right py-3 px-4">Totale</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {quoteItems.map((item: any) => (
-                        <tr key={item.id} className="border-b">
-                          <td className="py-3 px-4">
-                            <div className="font-medium">{item.serviceName || "Servizio"}</div>
-                            {item.notes && (
-                              <div className="text-sm text-gray-500 mt-1">{item.notes}</div>
-                            )}
-                          </td>
-                          <td className="text-right py-3 px-4">{item.quantity}</td>
-                          <td className="text-right py-3 px-4">{formatCurrency(item.unitPrice)}</td>
-                          <td className="text-right py-3 px-4">
-                            {item.hasDiscount && item.discountValue ? (
-                              item.discountType === "percentage" ? 
-                                `${item.discountValue}%` : 
-                                formatCurrency(item.discountValue)
-                            ) : "-"}
-                          </td>
-                          <td className="text-right py-3 px-4 font-medium">{formatCurrency(item.total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          {/* Note */}
-          {quote.notes && (
-            <Card className="lg:col-span-3">
+              </CardContent>
+            </Card>
+
+            {/* Note */}
+            <Card>
               <CardHeader>
                 <CardTitle>Note</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="whitespace-pre-wrap">{quote.notes}</div>
+                {quote.notes ? (
+                  <p className="text-sm">{quote.notes}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Nessuna nota</p>
+                )}
               </CardContent>
             </Card>
-          )}
-          
-          {/* Firma (se approvato) */}
-          {isApproved && (
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle>Firma Cliente</CardTitle>
+          </div>
+
+          {/* Colonna laterale con timeline del workflow */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-20">
+              <CardHeader className="bg-primary text-primary-foreground">
+                <CardTitle>Workflow</CardTitle>
+                <CardDescription className="text-primary-foreground/80">
+                  Stato del preventivo
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="border p-4 rounded-md">
-                  <div className="font-italic text-gray-600 mb-2">
-                    Firmato digitalmente da:
-                  </div>
-                  <div className="font-medium text-lg font-playfair">
-                    {quote.signature || client?.firstName + ' ' + client?.lastName}
-                  </div>
-                  <div className="text-sm text-gray-500 mt-2">
-                    Data: {formatDate(new Date(quote.updatedAt || quote.createdAt))}
+              <CardContent className="pt-6">
+                <div className="relative">
+                  {/* Linea verticale */}
+                  <div className="absolute left-3 top-0 h-full w-0.5 bg-gray-200"></div>
+                  
+                  {/* Steps */}
+                  <div className="space-y-6">
+                    {workflowSteps.map((step) => (
+                      <div key={step.id} className="relative flex items-start pl-10">
+                        <div className="absolute left-0 flex items-center justify-center w-7 h-7">
+                          <div className={`absolute w-7 h-7 rounded-full 
+                            ${step.completed ? 'bg-primary text-primary-foreground' : 
+                              step.current ? 'border-2 border-primary bg-white' : 
+                              'bg-gray-200'}`}>
+                            {step.completed && <CheckCircle2 className="w-7 h-7" />}
+                          </div>
+                        </div>
+                        <div className={`flex-1 pb-2 ${step.current ? 'text-primary font-medium' : ''}`}>
+                          <h4 className={`text-sm font-medium ${step.current ? 'text-primary' : ''}`}>
+                            {step.name}
+                          </h4>
+                          {step.date && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {step.date}
+                            </p>
+                          )}
+                          
+                          {step.current && (
+                            <div className="mt-2">
+                              <Button size="sm" variant="outline" className="text-xs">
+                                Completa fase
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </CardContent>
             </Card>
-          )}
+          </div>
         </div>
       </div>
-      
-      {/* Dialog per la condivisione */}
-      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Condividi Preventivo</DialogTitle>
-            <DialogDescription>
-              Invia il preventivo al cliente via email o WhatsApp
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Tabs defaultValue="email" className="w-full" onValueChange={(v) => setShareMethod(v as "email" | "whatsapp")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="email">Email</TabsTrigger>
-              <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="email" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  value={shareEmail}
-                  onChange={(e) => setShareEmail(e.target.value)}
-                  placeholder="email@esempio.com"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="message">Messaggio</Label>
-                <Textarea
-                  id="message"
-                  value={shareMessage}
-                  onChange={(e) => setShareMessage(e.target.value)}
-                  rows={4}
-                />
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="whatsapp" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Numero di telefono</Label>
-                <Input
-                  id="phone"
-                  value={sharePhone}
-                  onChange={(e) => setSharePhone(e.target.value)}
-                  placeholder="+39 123 456 7890"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp-message">Messaggio</Label>
-                <Textarea
-                  id="whatsapp-message"
-                  value={shareMessage}
-                  onChange={(e) => setShareMessage(e.target.value)}
-                  rows={4}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
-          
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setIsShareDialogOpen(false)}>
-              Annulla
-            </Button>
-            <Button type="submit" onClick={handleShare}>
-              Invia
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Dialog per la firma */}
-      <Dialog open={isSignDialogOpen} onOpenChange={setIsSignDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Firma Preventivo</DialogTitle>
-            <DialogDescription>
-              Inserisci la tua firma per approvare il preventivo
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="signature">La tua firma</Label>
-              <Input
-                id="signature"
-                value={signature}
-                onChange={(e) => setSignature(e.target.value)}
-                placeholder="Inserisci il tuo nome e cognome"
-              />
-            </div>
-            
-            <div className="text-sm text-gray-500">
-              Approvando questo preventivo, accetti di procedere con i servizi descritti ai prezzi indicati.
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSignDialogOpen(false)}>
-              Annulla
-            </Button>
-            <Button type="submit" onClick={handleSign}>
-              Approva e Firma
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
-};
-
-export default QuoteDetailPage;
+}

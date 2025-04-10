@@ -231,13 +231,14 @@ export default function NewQuotePage() {
       const res = await apiRequest("POST", "/api/quotes", data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newQuote) => {
       toast({
         title: "Preventivo creato",
         description: "Il preventivo è stato creato con successo",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-      setLocation("/quotes");
+      // Reindirizza alla pagina di dettaglio del preventivo appena creato
+      setLocation(`/quotes/${newQuote.id}`);
     },
     onError: (error) => {
       toast({

@@ -305,8 +305,8 @@ export default function NewQuotePage() {
         description: "Il preventivo è stato creato con successo",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-      // Reindirizza alla lista dei preventivi dopo la creazione
-      setLocation("/quotes");
+      // Reindirizza alla pagina di dettaglio del preventivo appena creato
+      setLocation(`/quotes/detail/${newQuote.id}`);
     },
     onError: (error) => {
       toast({

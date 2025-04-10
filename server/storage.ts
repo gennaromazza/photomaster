@@ -567,9 +567,40 @@ export class DatabaseStorage implements IStorage {
     return result !== undefined;
   }
 
-  async getQuote(id: number): Promise<Quote | undefined> {
-    const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
-    return quote || undefined;
+  async getQuote(id: number): Promise<any> {
+    // Carica il preventivo con tutte le relazioni
+    const [quote] = await db
+      .select()
+      .from(quotes)
+      .where(eq(quotes.id, id))
+      .leftJoin(clients, eq(quotes.clientId, clients.id))
+      .leftJoin(clients, eq(quotes.secondClientId, clients.id), { alias: "secondClient" })
+      .leftJoin(serviceCategories, eq(quotes.categoryId, serviceCategories.id))
+      .leftJoin(leadSources, eq(quotes.leadSourceId, leadSources.id));
+    
+    if (!quote) return undefined;
+    
+    // Carica gli elementi del preventivo con i relativi servizi
+    const quoteItemsWithServices = await db
+      .select()
+      .from(quoteItems)
+      .where(eq(quoteItems.quoteId, id))
+      .leftJoin(services, eq(quoteItems.serviceId, services.id));
+    
+    // Formatta il risultato
+    const formattedQuote = {
+      ...quote.quotes,
+      client: quote.clients || null,
+      secondClient: quote.secondClient || null,
+      category: quote.service_categories || null,
+      leadSource: quote.lead_sources || null,
+      quoteItems: quoteItemsWithServices.map(item => ({
+        ...item.quote_items,
+        service: item.services || null
+      }))
+    };
+    
+    return formattedQuote;
   }
 
   async getQuotesByClient(clientId: number): Promise<Quote[]> {

@@ -247,7 +247,7 @@ export default function QuoteDetailPage() {
           </div>
           
           <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => setLocation(`/quotes/edit/${id}`)}>
+            <Button variant="outline" onClick={() => setLocation(`/quotes/new-redesign?edit=${id}`)}>
               <Edit className="mr-2 h-4 w-4" />
               Modifica
             </Button>

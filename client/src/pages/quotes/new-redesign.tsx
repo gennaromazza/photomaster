@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { insertQuoteSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -111,6 +111,11 @@ type ClientFormValues = z.infer<typeof clientFormSchema>;
 export default function NewQuotePage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const editId = params.get('edit');
+  const isEditMode = !!editId;
+  
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
   const [isSecondClientDialogOpen, setIsSecondClientDialogOpen] = useState(false);
   const [mainClientSearch, setMainClientSearch] = useState("");
@@ -146,6 +151,12 @@ export default function NewQuotePage() {
   // Query per ottenere i collaboratori
   const { data: collaborators = [], isLoading: isLoadingCollaborators } = useQuery<any[]>({
     queryKey: ["/api/collaborators"],
+  });
+  
+  // Query per ottenere il preventivo in modalità modifica
+  const { data: quoteToEdit, isLoading: isLoadingQuote } = useQuery<any>({
+    queryKey: ["/api/quotes", editId],
+    enabled: !!editId,
   });
 
   // Form per il preventivo

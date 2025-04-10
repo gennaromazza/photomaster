@@ -324,59 +324,16 @@ export default function NewQuotePage() {
                                   <CommandInput 
                                     placeholder="Cerca cliente..." 
                                     value={clientSearchQuery}
-                                    onValueChange={setClientSearchQuery}
+                                    onValueChange={(value) => {
+                                      setClientSearchQuery(value);
+                                      if (filteredClients.length === 1) {
+                                        const client = filteredClients[0];
+                                        form.setValue("clientId", client.id);
+                                      }
+                                    }}
                                     className="flex-1"
                                   />
                                 </div>
-                                <CommandList>
-                                  {isLoadingClients ? (
-                                    <div className="py-6 text-center text-sm">
-                                      <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                                      Caricamento clienti...
-                                    </div>
-                                  ) : filteredClients.length === 0 ? (
-                                    <p className="py-6 text-center text-sm">
-                                      Nessun cliente trovato. Aggiungine uno nuovo.
-                                    </p>
-                                  ) : (
-                                    <CommandGroup>
-                                      {filteredClients.map((client: any) => (
-                                        <CommandItem
-                                          key={client.id}
-                                          value={client.id.toString()}
-                                          onSelect={() => {
-                                            form.setValue("clientId", client.id);
-                                          }}
-                                          className="flex items-center justify-between"
-                                        >
-                                          <div className="flex flex-col space-y-1">
-                                            <div className="flex items-center">
-                                              <User className="mr-2 h-4 w-4" />
-                                              <span className="font-medium">
-                                                {client.firstName} {client.lastName}
-                                              </span>
-                                            </div>
-                                            <div className="flex flex-col space-y-1 pl-6">
-                                              {client.email && (
-                                                <div className="flex items-center text-sm text-muted-foreground">
-                                                  <Mail className="mr-2 h-3 w-3" />
-                                                  <span>{client.email}</span>
-                                                </div>
-                                              )}
-                                              {client.phone && (
-                                                <div className="flex items-center text-sm text-muted-foreground">
-                                                  <Phone className="mr-2 h-3 w-3" />
-                                                  <span>{client.phone}</span>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                          
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  )}
-                                </CommandList>
                               </Command>
                               <FormMessage />
                             </div>
@@ -509,58 +466,16 @@ export default function NewQuotePage() {
                                   <CommandInput 
                                     placeholder="Cerca secondo cliente..." 
                                     value={clientSearchQuery}
-                                    onValueChange={setClientSearchQuery}
+                                    onValueChange={(value) => {
+                                      setClientSearchQuery(value);
+                                      if (filteredClients.length === 1) {
+                                        const client = filteredClients[0];
+                                        form.setValue("secondClientId", client.id);
+                                      }
+                                    }}
                                     className="flex-1"
                                   />
                                 </div>
-                                <CommandList>
-                                  {isLoadingClients ? (
-                                    <div className="py-6 text-center text-sm">
-                                      <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                                      Caricamento clienti...
-                                    </div>
-                                  ) : filteredClients.length === 0 ? (
-                                    <p className="py-6 text-center text-sm">
-                                      Nessun cliente trovato. Aggiungine uno nuovo.
-                                    </p>
-                                  ) : (
-                                    <CommandGroup>
-                                      {filteredClients.map((client: any) => (
-                                        <CommandItem
-                                          key={client.id}
-                                          value={client.id.toString()}
-                                          onSelect={() => {
-                                            form.setValue("secondClientId", client.id);
-                                          }}
-                                          className="flex items-center justify-between"
-                                        >
-                                          <div className="flex flex-col space-y-1">
-                                            <div className="flex items-center">
-                                              <User className="mr-2 h-4 w-4" />
-                                              <span className="font-medium">
-                                                {client.firstName} {client.lastName}
-                                              </span>
-                                            </div>
-                                            <div className="flex flex-col space-y-1 pl-6">
-                                              {client.email && (
-                                                <div className="flex items-center text-sm text-muted-foreground">
-                                                  <Mail className="mr-2 h-3 w-3" />
-                                                  <span>{client.email}</span>
-                                                </div>
-                                              )}
-                                              {client.phone && (
-                                                <div className="flex items-center text-sm text-muted-foreground">
-                                                  <Phone className="mr-2 h-3 w-3" />
-                                                  <span>{client.phone}</span>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  )}
-                                </CommandList>
                               </Command>
                               <FormMessage />
                             </div>

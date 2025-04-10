@@ -701,39 +701,70 @@ export class DatabaseStorage implements IStorage {
     return result !== undefined;
   }
   
+
+  
   async generateShareToken(id: number): Promise<string | undefined> {
-    // Genera un token casuale
-    const token = crypto.randomUUID();
-    
-    // Aggiorna il preventivo con il token e imposta isShared a true
-    const [updatedQuote] = await db
-      .update(quotes)
-      .set({ isShared: true, shareToken: token })
-      .where(eq(quotes.id, id))
-      .returning();
+    try {
+      // Genera un token casuale
+      const token = crypto.randomBytes(16).toString('hex');
       
-    if (!updatedQuote) return undefined;
-    return token;
+      // Imposta la data di scadenza (30 giorni da oggi)
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + 30);
+      
+      // Aggiorna il preventivo con il token e la scadenza
+      const [updatedQuote] = await db
+        .update(quotes)
+        .set({
+          isShared: true,
+          shareToken: token,
+          shareExpiry: expiry
+        })
+        .where(eq(quotes.id, id))
+        .returning();
+      
+      if (!updatedQuote) return undefined;
+      
+      return token;
+    } catch (error) {
+      console.error("Errore nella generazione del token di condivisione:", error);
+      return undefined;
+    }
   }
   
   async disableSharing(id: number): Promise<boolean> {
-    const [updatedQuote] = await db
-      .update(quotes)
-      .set({ isShared: false, shareToken: null })
-      .where(eq(quotes.id, id))
-      .returning();
+    try {
+      const [updatedQuote] = await db
+        .update(quotes)
+        .set({
+          isShared: false,
+          shareToken: null,
+          shareExpiry: null
+        })
+        .where(eq(quotes.id, id))
+        .returning();
       
-    return !!updatedQuote;
+      return !!updatedQuote;
+    } catch (error) {
+      console.error("Errore nella disattivazione della condivisione:", error);
+      return false;
+    }
   }
   
   async getQuoteByShareToken(token: string): Promise<Quote | undefined> {
-    const [result] = await db
+    const [quote] = await db
       .select()
       .from(quotes)
-      .where(eq(quotes.shareToken, token))
-      .limit(1);
-      
-    return result;
+      .where(eq(quotes.shareToken, token));
+    
+    if (!quote) return undefined;
+    
+    // Verifica se il token è scaduto
+    if (quote.shareExpiry && new Date(quote.shareExpiry) < new Date()) {
+      return undefined;
+    }
+    
+    return quote;
   }
 
   async getQuoteItem(id: number): Promise<QuoteItem | undefined> {

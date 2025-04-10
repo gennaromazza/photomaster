@@ -142,7 +142,8 @@ const QuotesPage = () => {
                   {filteredQuotes.map((quote) => (
                     <tr 
                       key={quote.id} 
-                      className="border-b border-gray-100 hover:bg-gray-50"
+                      className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => window.location.href = `/quotes/detail/${quote.id}`}
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center">
@@ -162,7 +163,7 @@ const QuotesPage = () => {
                         {formatDate(quote.createdAt, "dd/MM/yyyy")}
                       </td>
                       <td className="py-3 px-4 text-gray-700 text-right">
-                        {formatCurrency(quote.total)}
+                        {quote.total ? formatCurrency(quote.total) : "€ 0,00"}
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant={getStatusBadge(quote.status)}>
@@ -172,7 +173,7 @@ const QuotesPage = () => {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Link href={`/quotes/${quote.id}`}>
+                        <Link href={`/quotes/detail/${quote.id}`}>
                           <Button variant="ghost" size="sm">Visualizza</Button>
                         </Link>
                       </td>

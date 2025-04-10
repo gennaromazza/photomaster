@@ -72,6 +72,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format, parse } from "date-fns";
 import { it } from "date-fns/locale";
+import { ChevronsUpDown } from "lucide-react";
+import cn from 'classnames';
 
 // Estensione dello schema di validazione per il preventivo
 const quoteFormSchema = insertQuoteSchema.extend({

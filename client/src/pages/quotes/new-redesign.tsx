@@ -60,7 +60,7 @@ import {
   Paperclip,
   Save
 } from "lucide-react";
-import { CommandInput, CommandList, CommandItem, CommandGroup, Command } from "@/components/ui/command";
+import { CommandInput, CommandList, CommandItem, CommandGroup, Command, CommandEmpty } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parse } from "date-fns";
@@ -277,6 +277,17 @@ export default function NewQuotePage() {
   const onClientSubmit = (data: ClientFormValues) => {
     createClientMutation.mutate(data);
   };
+  
+  // Gestione della selezione dei clienti
+  const handleClientSelect = (clientId: number, isSecondClient = false) => {
+    if (isSecondClient) {
+      form.setValue("secondClientId", clientId);
+      setSecondClientSearch("");
+    } else {
+      form.setValue("clientId", clientId);
+      setMainClientSearch("");
+    }
+  };
 
   return (
     <Layout>
@@ -344,17 +355,25 @@ export default function NewQuotePage() {
                                   <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                                   <CommandInput 
                                     placeholder="Cerca cliente..." 
-                                    value={clientSearchQuery}
+                                    value={mainClientSearch}
                                     onValueChange={(value) => {
-                                      setClientSearchQuery(value);
-                                      if (filteredClients.length === 1) {
-                                        const client = filteredClients[0];
-                                        form.setValue("clientId", client.id);
-                                      }
+                                      setMainClientSearch(value);
                                     }}
                                     className="flex-1"
                                   />
                                 </div>
+                                <CommandEmpty>Nessun cliente trovato</CommandEmpty>
+                                <CommandGroup>
+                                  {filteredMainClients.map((client) => (
+                                    <CommandItem
+                                      key={client.id}
+                                      value={client.id.toString()}
+                                      onSelect={() => handleClientSelect(client.id)}
+                                    >
+                                      {client.firstName} {client.lastName}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
                               </Command>
                               <FormMessage />
                             </div>
@@ -486,17 +505,25 @@ export default function NewQuotePage() {
                                   <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                                   <CommandInput 
                                     placeholder="Cerca secondo cliente..." 
-                                    value={clientSearchQuery}
+                                    value={secondClientSearch}
                                     onValueChange={(value) => {
-                                      setClientSearchQuery(value);
-                                      if (filteredClients.length === 1) {
-                                        const client = filteredClients[0];
-                                        form.setValue("secondClientId", client.id);
-                                      }
+                                      setSecondClientSearch(value);
                                     }}
                                     className="flex-1"
                                   />
                                 </div>
+                                <CommandEmpty>Nessun cliente trovato</CommandEmpty>
+                                <CommandGroup>
+                                  {filteredSecondClients.map((client) => (
+                                    <CommandItem
+                                      key={client.id}
+                                      value={client.id.toString()}
+                                      onSelect={() => handleClientSelect(client.id, true)}
+                                    >
+                                      {client.firstName} {client.lastName}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
                               </Command>
                               <FormMessage />
                             </div>

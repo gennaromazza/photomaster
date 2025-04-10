@@ -659,6 +659,7 @@ export default function NewQuotePage() {
                   />
                 </div>
 
+                <div className="mt-4">
                   <FormField
                     control={form.control}
                     name="eventId"

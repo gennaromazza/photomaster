@@ -33,9 +33,13 @@ import {
   Share2,
   Copy,
   ArrowLeft,
-  WholeWord,
-  Euro
+  Euro,
+  Camera,
+  ClipboardCheck,
+  Info
 } from "lucide-react";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
 export default function QuoteDetailPage() {
   const { id } = useParams();
@@ -68,10 +72,34 @@ export default function QuoteDetailPage() {
   // Imposta le date del workflow quando il preventivo è caricato
   useEffect(() => {
     if (quote) {
-      // Aggiorna la data di creazione nel workflow
-      const updatedSteps = [...workflowSteps];
-      updatedSteps[0].date = new Date(quote.createdAt).toLocaleDateString();
-      setWorkflowSteps(updatedSteps);
+      try {
+        // Aggiorna la data di creazione nel workflow
+        const updatedSteps = [...workflowSteps];
+        
+        // Data di creazione
+        if (quote.createdAt) {
+          updatedSteps[0].date = format(new Date(quote.createdAt), "dd/MM/yyyy HH:mm", { locale: it });
+        }
+        
+        // Data evento
+        if (quote.eventDate) {
+          updatedSteps[4].date = format(new Date(quote.eventDate), "dd/MM/yyyy", { locale: it });
+          if (quote.eventTime) {
+            updatedSteps[4].date += ` ${quote.eventTime}`;
+          }
+        }
+        
+        // Se lo stato è confermato, aggiorna anche la fase 4
+        if (quote.status === "approved" || quote.status === "confermato") {
+          updatedSteps[3].completed = true;
+          updatedSteps[3].current = false;
+          updatedSteps[4].current = true;
+        }
+        
+        setWorkflowSteps(updatedSteps);
+      } catch (error) {
+        console.error("Errore nell'aggiornamento del workflow:", error);
+      }
     }
   }, [quote]);
 
@@ -157,20 +185,21 @@ export default function QuoteDetailPage() {
               <h1 className="text-3xl font-playfair font-bold">{quote.title}</h1>
               <div className="flex items-center mt-1">
                 <Badge 
-                  variant={quote.status === "confermato" ? "success" : 
-                           quote.status === "in attesa" ? "warning" : 
+                  variant={quote.status === "confermato" || quote.status === "approved" ? "success" : 
+                           quote.status === "in attesa" || quote.status === "pending" ? "warning" : 
                            "default"}
                   className="mr-2"
                 >
                   {quote.status === "draft" ? "Bozza" : 
-                   quote.status === "pending" ? "In attesa" : 
-                   quote.status === "approved" ? "Confermato" : 
-                   quote.status === "rejected" ? "Rifiutato" : 
-                   quote.status}
+                   quote.status === "pending" || quote.status === "in attesa" ? "In attesa" : 
+                   quote.status === "approved" || quote.status === "confermato" ? "Confermato" : 
+                   quote.status === "rejected" || quote.status === "rifiutato" ? "Rifiutato" : 
+                   quote.status || "Preventivo"}
                 </Badge>
-                <p className="text-muted-foreground">
-                  Creato il {new Date(quote.createdAt).toLocaleDateString()}
-                </p>
+                <div className="flex items-center text-muted-foreground">
+                  <Info className="h-4 w-4 mr-1" />
+                  <p>Creato il {new Date(quote.createdAt).toLocaleDateString('it-IT')}</p>
+                </div>
               </div>
             </div>
           </div>

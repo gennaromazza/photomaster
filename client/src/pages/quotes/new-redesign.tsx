@@ -809,7 +809,7 @@ export default function NewQuotePage() {
                     name="eventDate"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Data</FormLabel>
+                        <FormLabel>Data Evento</FormLabel>
                         <Popover>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -841,39 +841,73 @@ export default function NewQuotePage() {
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="eventTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Orario Inizio</FormLabel>
-                        <div className="flex items-center">
+                  {/* Opzione "Tutto il giorno" */}
+                  <div className="flex items-end pb-2">
+                    <FormField
+                      control={form.control}
+                      name="isFullDay"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-start space-x-3 space-y-0">
                           <FormControl>
-                            <Input type="time" {...field} />
+                            <Switch
+                              checked={isFullDayEvent}
+                              onCheckedChange={(checked) => {
+                                setIsFullDayEvent(checked);
+                                field.onChange(checked);
+                              }}
+                            />
                           </FormControl>
-                          <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormLabel className="font-normal">Evento tutto il giorno</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   
-                  <FormField
-                    control={form.control}
-                    name="eventEndTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Orario Fine</FormLabel>
-                        <div className="flex items-center">
-                          <FormControl>
-                            <Input type="time" {...field} />
-                          </FormControl>
-                          <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className={isFullDayEvent ? "opacity-50" : ""}>
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormField
+                        control={form.control}
+                        name="eventTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Orario Inizio</FormLabel>
+                            <div className="flex items-center">
+                              <FormControl>
+                                <Input 
+                                  type="time" 
+                                  {...field} 
+                                  disabled={isFullDayEvent}
+                                />
+                              </FormControl>
+                              <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="eventEndTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Orario Fine</FormLabel>
+                            <div className="flex items-center">
+                              <FormControl>
+                                <Input 
+                                  type="time" 
+                                  {...field} 
+                                  disabled={isFullDayEvent}
+                                />
+                              </FormControl>
+                              <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 <FormField
@@ -958,64 +992,7 @@ export default function NewQuotePage() {
                   )}
                 />
                 
-                <Separator className="my-4" />
-                
-                {/* Dati finanziari */}
-                <h3 className="text-lg font-medium mb-2">Dati Preventivo</h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="subtotal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Subtotale (€)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="0" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="tax"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>IVA (%)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="22" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="discount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Sconto (€)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="0" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="total"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Totale (€)</FormLabel>
-                        <FormControl>
-                          <Input type="number" readOnly className="bg-muted" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                {/* Rimossa la sezione "Dati Preventivo" come richiesto */}
               </CardContent>
               <CardFooter className="flex justify-end">
                 <Button 

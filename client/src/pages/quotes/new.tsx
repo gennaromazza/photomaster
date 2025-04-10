@@ -44,8 +44,27 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Search, Plus, User, Mail, Phone } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Loader2, 
+  Search, 
+  Plus, 
+  User, 
+  Mail, 
+  Phone, 
+  CalendarIcon, 
+  Clock, 
+  MapPin,
+  Calendar as CalendarIcon2,
+  Paperclip,
+  Save
+} from "lucide-react";
 import { CommandInput, CommandList, CommandItem, CommandGroup, Command } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parse } from "date-fns";
+import { it } from "date-fns/locale";
 
 // Estensione dello schema di validazione per il preventivo
 const quoteFormSchema = insertQuoteSchema.extend({
@@ -57,6 +76,15 @@ const quoteFormSchema = insertQuoteSchema.extend({
   total: z.coerce.number().min(0, "Inserisci un totale valido"),
   notes: z.string().optional(),
   eventId: z.coerce.number().optional(),
+  eventDate: z.date().optional(),
+  eventTime: z.string().optional(),
+  eventEndTime: z.string().optional(),
+  location: z.string().optional(),
+  eventType: z.string().optional(),
+  workflow: z.string().optional().default("default"),
+  categoryId: z.coerce.number().optional(),
+  leadSourceId: z.coerce.number().optional(),
+  assignedCollaborators: z.array(z.number()).optional().default([]),
 });
 
 type QuoteFormValues = z.infer<typeof quoteFormSchema>;
@@ -92,7 +120,25 @@ export default function NewQuotePage() {
   const { data: events = [], isLoading: isLoadingEvents } = useQuery<any[]>({
     queryKey: ["/api/events"],
   });
+  
+  // Query per ottenere le categorie di servizi
+  const { data: categories = [], isLoading: isLoadingCategories } = useQuery<any[]>({
+    queryKey: ["/api/service-categories"],
+  });
+  
+  // Query per ottenere le fonti di lead
+  const { data: leadSources = [], isLoading: isLoadingLeadSources } = useQuery<any[]>({
+    queryKey: ["/api/lead-sources"],
+  });
 
+  // Query per ottenere i collaboratori
+  const { data: collaborators = [], isLoading: isLoadingCollaborators } = useQuery<any[]>({
+    queryKey: ["/api/collaborators"],
+  });
+
+  // Variabili per i controlli selezionati
+  const [assignPhotographers, setAssignPhotographers] = useState(false);
+  
   // Form per il preventivo
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteFormSchema),
@@ -105,6 +151,12 @@ export default function NewQuotePage() {
       discount: 0,
       total: 0,
       notes: "",
+      eventType: "",
+      workflow: "default",
+      eventTime: "",
+      eventEndTime: "",
+      location: "",
+      assignedCollaborators: [],
     },
   });
 

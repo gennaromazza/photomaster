@@ -1337,6 +1337,80 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     }
   });
   
+  // API per la condivisione del preventivo
+  apiRouter.post("/quotes/:id/share", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verifica se il preventivo esiste
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato" });
+      }
+      
+      // Genera un token di condivisione
+      const token = await storage.generateShareToken(id);
+      if (!token) {
+        return res.status(500).json({ message: "Impossibile generare il link di condivisione" });
+      }
+      
+      res.json({ 
+        success: true, 
+        token,
+        shareUrl: `/quotes/public/${token}`
+      });
+    } catch (err) {
+      console.error("Errore nella condivisione del preventivo:", err);
+      res.status(500).json({ message: "Errore nella condivisione del preventivo" });
+    }
+  });
+  
+  // API per disattivare la condivisione
+  apiRouter.delete("/quotes/:id/share", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Verifica se il preventivo esiste
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato" });
+      }
+      
+      const success = await storage.disableSharing(id);
+      if (!success) {
+        return res.status(500).json({ message: "Impossibile disattivare la condivisione" });
+      }
+      
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Errore nella disattivazione della condivisione:", err);
+      res.status(500).json({ message: "Errore nella disattivazione della condivisione" });
+    }
+  });
+  
+  // API per recuperare un preventivo tramite token di condivisione
+  apiRouter.get("/quotes/share/:token", async (req, res) => {
+    try {
+      const token = req.params.token;
+      
+      // Recupera il preventivo tramite token
+      const quote = await storage.getQuoteByShareToken(token);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato o link non più valido" });
+      }
+      
+      // Se il preventivo non è condivisibile, restituisci un errore
+      if (!quote.isShared) {
+        return res.status(403).json({ message: "Questo preventivo non è più condivisibile" });
+      }
+      
+      res.json(quote);
+    } catch (err) {
+      console.error("Errore nel recupero del preventivo condiviso:", err);
+      res.status(500).json({ message: "Errore nel recupero del preventivo" });
+    }
+  });
+  
   apiRouter.delete("/quotes/:quoteId/items/:itemId", async (req, res) => {
     try {
       const itemId = parseInt(req.params.itemId);

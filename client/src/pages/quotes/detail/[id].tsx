@@ -49,7 +49,8 @@ import {
   Info,
   Plus,
   Check,
-  Loader2
+  Loader2,
+  Link
 } from "lucide-react";
 
 export default function QuoteDetailPage() {
@@ -57,6 +58,9 @@ export default function QuoteDetailPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   // Carica i dati del preventivo
   const { data: quote, isLoading: isLoadingQuote } = useQuery({
@@ -221,6 +225,72 @@ export default function QuoteDetailPage() {
   const completeWorkflowStep = (stepId: number) => {
     updateWorkflowStepMutation.mutate({ stepId, completed: true });
   };
+  
+  // Mutation per generare il link di condivisione
+  const generateShareLinkMutation = useMutation({
+    mutationFn: async () => {
+      setIsLoading(true);
+      const res = await apiRequest("POST", `/api/quotes/${id}/share`);
+      if (!res.ok) throw new Error("Errore nella generazione del link di condivisione");
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      setShareUrl(`${window.location.origin}/quotes/public/${data.token}`);
+      setIsShareDialogOpen(true);
+      setIsLoading(false);
+      toast({
+        title: "Link di condivisione generato",
+        description: "Ora puoi condividere il preventivo con il cliente",
+      });
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation per disattivare la condivisione
+  const disableShareMutation = useMutation({
+    mutationFn: async () => {
+      setIsLoading(true);
+      const res = await apiRequest("DELETE", `/api/quotes/${id}/share`);
+      if (!res.ok) throw new Error("Errore nella disattivazione della condivisione");
+      return await res.json();
+    },
+    onSuccess: () => {
+      setIsLoading(false);
+      setIsShareDialogOpen(false);
+      setShareUrl('');
+      toast({
+        title: "Condivisione disattivata",
+        description: "Il preventivo non è più condivisibile",
+      });
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleShareClick = () => {
+    generateShareLinkMutation.mutate();
+  };
+  
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast({
+      title: "Link copiato",
+      description: "Il link è stato copiato negli appunti",
+    });
+  };
 
   return (
     <Layout>
@@ -264,8 +334,16 @@ export default function QuoteDetailPage() {
               <Edit className="mr-2 h-4 w-4" />
               Modifica
             </Button>
-            <Button variant="outline" onClick={() => {/* TODO: implement share */}}>
-              <Share2 className="mr-2 h-4 w-4" />
+            <Button 
+              variant="outline" 
+              onClick={handleShareClick}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Share2 className="mr-2 h-4 w-4" />
+              )}
               Condividi
             </Button>
             <Button variant="destructive" onClick={handleDeleteClick}>

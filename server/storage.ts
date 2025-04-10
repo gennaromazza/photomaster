@@ -578,10 +578,20 @@ export class DatabaseStorage implements IStorage {
       
       if (!quote) return undefined;
       
-      // Inizializza i campi calcolati se non esistono
-      if (quote.subtotal === undefined) quote.subtotal = 0;
-      if (quote.total === undefined) quote.total = 0;
-      if (quote.discount === undefined) quote.discount = 0;
+      // Creiamo un oggetto con valori predefiniti per tutti i campi che potrebbero mancare
+      const quoteWithDefaults = {
+        ...quote,
+        subtotal: 0,
+        total: 0,
+        discount: 0,
+        shareExpiry: null
+      };
+      
+      // Sostituiamo con i valori reali se esistono
+      if (quote.subtotal !== undefined) quoteWithDefaults.subtotal = quote.subtotal;
+      if (quote.total !== undefined) quoteWithDefaults.total = quote.total;
+      if (quote.discount !== undefined) quoteWithDefaults.discount = quote.discount;
+      if (quote.shareExpiry !== undefined) quoteWithDefaults.shareExpiry = quote.shareExpiry;
       
       // Carica il cliente principale
       let client = null;
@@ -659,7 +669,7 @@ export class DatabaseStorage implements IStorage {
       
       // Formatta il risultato completo
       const formattedQuote = {
-        ...quote,
+        ...quoteWithDefaults,
         client: client,
         secondClient: secondClient,
         category: category,
@@ -675,11 +685,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuotesByClient(clientId: number): Promise<Quote[]> {
-    return await db.select().from(quotes).where(eq(quotes.clientId, clientId));
+    try {
+      const quotesList = await db.select().from(quotes).where(eq(quotes.clientId, clientId));
+      
+      // Aggiungiamo i campi mancanti con valori predefiniti a tutti i preventivi
+      return quotesList.map(quote => ({
+        ...quote,
+        subtotal: quote.subtotal !== undefined ? quote.subtotal : 0,
+        total: quote.total !== undefined ? quote.total : 0,
+        discount: quote.discount !== undefined ? quote.discount : 0,
+        shareExpiry: quote.shareExpiry !== undefined ? quote.shareExpiry : null
+      }));
+    } catch (error) {
+      console.error("Error in getQuotesByClient:", error);
+      return [];
+    }
   }
 
   async getAllQuotes(): Promise<Quote[]> {
-    return await db.select().from(quotes);
+    try {
+      const quotesList = await db.select().from(quotes);
+      
+      // Aggiungiamo i campi mancanti con valori predefiniti a tutti i preventivi
+      return quotesList.map(quote => ({
+        ...quote,
+        subtotal: quote.subtotal !== undefined ? quote.subtotal : 0,
+        total: quote.total !== undefined ? quote.total : 0,
+        discount: quote.discount !== undefined ? quote.discount : 0,
+        shareExpiry: quote.shareExpiry !== undefined ? quote.shareExpiry : null
+      }));
+    } catch (error) {
+      console.error("Error in getAllQuotes:", error);
+      return [];
+    }
   }
 
   async createQuote(quote: InsertQuote): Promise<Quote> {
@@ -752,19 +790,43 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getQuoteByShareToken(token: string): Promise<Quote | undefined> {
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.shareToken, token));
-    
-    if (!quote) return undefined;
-    
-    // Verifica se il token è scaduto
-    if (quote.shareExpiry && new Date(quote.shareExpiry) < new Date()) {
+    try {
+      const [quote] = await db
+        .select()
+        .from(quotes)
+        .where(eq(quotes.shareToken, token));
+      
+      if (!quote) return undefined;
+      
+      // Gestisci il caso in cui shareExpiry non è presente nei record esistenti
+      // In questo caso, consideriamo il token come non scaduto
+      if (quote.shareExpiry === undefined) {
+        // Trasforma il preventivo aggiungendo i campi mancanti
+        return {
+          ...quote,
+          subtotal: quote.subtotal !== undefined ? quote.subtotal : 0,
+          total: quote.total !== undefined ? quote.total : 0,
+          discount: quote.discount !== undefined ? quote.discount : 0,
+          shareExpiry: null // Consideriamo un token senza scadenza
+        };
+      }
+      
+      // Se il token ha una data di scadenza, verifica se è scaduto
+      if (quote.shareExpiry && new Date(quote.shareExpiry) < new Date()) {
+        return undefined;
+      }
+      
+      // Aggiungi i campi mancanti anche per questo caso
+      return {
+        ...quote,
+        subtotal: quote.subtotal !== undefined ? quote.subtotal : 0,
+        total: quote.total !== undefined ? quote.total : 0,
+        discount: quote.discount !== undefined ? quote.discount : 0
+      };
+    } catch (error) {
+      console.error("Error in getQuoteByShareToken:", error);
       return undefined;
     }
-    
-    return quote;
   }
 
   async getQuoteItem(id: number): Promise<QuoteItem | undefined> {

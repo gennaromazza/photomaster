@@ -624,7 +624,22 @@ export class DatabaseStorage implements IStorage {
       
       // Carica gli elementi del preventivo con i relativi servizi
       const quoteItemsWithServices = await db
-        .select()
+        .select({
+          quote_items: {
+            id: quoteItems.id,
+            quoteId: quoteItems.quoteId,
+            serviceId: quoteItems.serviceId,
+            quantity: quoteItems.quantity,
+            unitPrice: quoteItems.unitPrice,
+            total: quoteItems.total,
+            hasDiscount: quoteItems.hasDiscount,
+            discountType: quoteItems.discountType,
+            discountValue: quoteItems.discountValue,
+            discountedPrice: quoteItems.discountedPrice,
+            notes: quoteItems.notes,
+          },
+          services: services
+        })
         .from(quoteItems)
         .where(eq(quoteItems.quoteId, id))
         .leftJoin(services, eq(quoteItems.serviceId, services.id));
@@ -641,8 +656,6 @@ export class DatabaseStorage implements IStorage {
         discountType: item.quote_items.discountType,
         discountValue: item.quote_items.discountValue,
         notes: item.quote_items.notes,
-        createdAt: item.quote_items.createdAt,
-        updatedAt: item.quote_items.updatedAt,
         service: item.services
       }));
       

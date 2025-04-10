@@ -103,9 +103,13 @@ export default function NewQuotePage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
-  const [clientSearchQuery, setClientSearchQuery] = useState("");
+  const [isSecondClientDialogOpen, setIsSecondClientDialogOpen] = useState(false);
+  const [mainClientSearch, setMainClientSearch] = useState("");
+  const [secondClientSearch, setSecondClientSearch] = useState("");
   const [showClientSuccess, setShowClientSuccess] = useState(false);
-  const [filteredClients, setFilteredClients] = useState<any[]>([]);
+  const [showSecondClientSuccess, setShowSecondClientSuccess] = useState(false);
+  const [filteredMainClients, setFilteredMainClients] = useState<any[]>([]);
+  const [filteredSecondClients, setFilteredSecondClients] = useState<any[]>([]);
 
   // Variabili per i controlli selezionati
   const [assignPhotographers, setAssignPhotographers] = useState(false);
@@ -167,10 +171,10 @@ export default function NewQuotePage() {
     },
   });
 
-  // Filtraggio clienti basato sulla ricerca
+  // Filtraggio clienti principali basato sulla ricerca
   useEffect(() => {
-    if (clients.length > 0 && clientSearchQuery) {
-      const query = clientSearchQuery.toLowerCase();
+    if (clients.length > 0 && mainClientSearch) {
+      const query = mainClientSearch.toLowerCase();
       const filtered = clients.filter(
         (client: any) =>
           client.firstName.toLowerCase().includes(query) ||
@@ -178,11 +182,28 @@ export default function NewQuotePage() {
           client.email.toLowerCase().includes(query) ||
           (client.phone && client.phone.includes(query))
       );
-      setFilteredClients(filtered);
+      setFilteredMainClients(filtered);
     } else {
-      setFilteredClients(clients);
+      setFilteredMainClients(clients);
     }
-  }, [clientSearchQuery, clients]);
+  }, [mainClientSearch, clients]);
+  
+  // Filtraggio clienti secondari basato sulla ricerca
+  useEffect(() => {
+    if (clients.length > 0 && secondClientSearch) {
+      const query = secondClientSearch.toLowerCase();
+      const filtered = clients.filter(
+        (client: any) =>
+          client.firstName.toLowerCase().includes(query) ||
+          client.lastName.toLowerCase().includes(query) ||
+          client.email.toLowerCase().includes(query) ||
+          (client.phone && client.phone.includes(query))
+      );
+      setFilteredSecondClients(filtered);
+    } else {
+      setFilteredSecondClients(clients);
+    }
+  }, [secondClientSearch, clients]);
 
   // Gestione dello stato per l'opzione "Evento tutto il giorno"
   const [isFullDayEvent, setIsFullDayEvent] = useState(false);

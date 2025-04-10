@@ -382,6 +382,8 @@ export const quotes = pgTable("quotes", {
   status: text("status").default("draft").notNull(),
   notes: text("notes"),
   signature: text("signature"), // Firma del cliente per l'approvazione
+  isShared: boolean("is_shared").default(false), // Indica se il preventivo è condiviso pubblicamente
+  shareToken: text("share_token"), // Token univoco per l'URL di condivisione
 });
 
 export const insertQuoteSchema = createInsertSchema(quotes).pick({
@@ -403,6 +405,8 @@ export const insertQuoteSchema = createInsertSchema(quotes).pick({
   notes: true,
   signature: true,
   updatedAt: true,
+  isShared: true,
+  shareToken: true,
 });
 
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;

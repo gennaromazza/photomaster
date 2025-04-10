@@ -249,6 +249,34 @@ export default function NewQuotePage() {
     }
     form.setValue("isFullDay", isFullDayEvent);
   }, [isFullDayEvent, form]);
+  
+  // Effetto per popolare il form con i dati del preventivo esistente in modalità modifica
+  useEffect(() => {
+    if (quoteToEdit && !isLoadingQuote) {
+      // Imposta tutti i valori del form
+      form.reset({
+        title: quoteToEdit.title || "",
+        clientId: quoteToEdit.clientId,
+        secondClientId: quoteToEdit.secondClientId || undefined,
+        eventId: quoteToEdit.eventId || undefined,
+        notes: quoteToEdit.notes || "",
+        eventType: quoteToEdit.eventType || "",
+        workflow: quoteToEdit.workflow || "default",
+        eventDate: quoteToEdit.eventDate ? new Date(quoteToEdit.eventDate) : undefined,
+        eventTime: quoteToEdit.eventTime || "",
+        eventEndTime: quoteToEdit.eventEndTime || "",
+        location: quoteToEdit.location || "",
+        isFullDay: quoteToEdit.isFullDay || false,
+        categoryId: quoteToEdit.categoryId || undefined,
+        leadSourceId: quoteToEdit.leadSourceId || undefined,
+        assignedCollaborators: quoteToEdit.assignedCollaborators || [],
+        status: quoteToEdit.status || "draft"
+      });
+      
+      // Imposta anche lo stato per il toggle "tutto il giorno"
+      setIsFullDayEvent(quoteToEdit.isFullDay || false);
+    }
+  }, [quoteToEdit, isLoadingQuote, form]);
 
   // Mutation per creare un nuovo cliente principale
   const createClientMutation = useMutation({
@@ -327,6 +355,31 @@ export default function NewQuotePage() {
       });
     },
   });
+  
+  // Mutation per aggiornare un preventivo esistente
+  const updateQuoteMutation = useMutation({
+    mutationFn: async (data: QuoteFormValues) => {
+      const res = await apiRequest("PATCH", `/api/quotes/${editId}`, data);
+      return res.json();
+    },
+    onSuccess: (updatedQuote) => {
+      toast({
+        title: "Preventivo aggiornato",
+        description: "Il preventivo è stato aggiornato con successo",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", editId] });
+      // Reindirizza alla pagina di dettaglio del preventivo aggiornato
+      setLocation(`/quotes/detail/${updatedQuote.id}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'aggiornamento del preventivo",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Gestisci il submit del form preventivo
   const onSubmit = async (data: QuoteFormValues) => {
@@ -338,7 +391,13 @@ export default function NewQuotePage() {
         eventTime: data.eventTime ? data.eventTime : undefined,
         eventEndTime: data.eventEndTime ? data.eventEndTime : undefined,
       };
-      createQuoteMutation.mutate(formattedData);
+      
+      // Se siamo in modalità modifica, usiamo la mutation di aggiornamento, altrimenti quella di creazione
+      if (isEditMode) {
+        updateQuoteMutation.mutate(formattedData);
+      } else {
+        createQuoteMutation.mutate(formattedData);
+      }
     } catch (error) {
       console.error("Error submitting form:", error);
       toast({
@@ -378,23 +437,41 @@ export default function NewQuotePage() {
           <div className="lg:col-span-8 space-y-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-playfair font-bold">Nuovo Preventivo</h1>
-            <p className="text-muted-foreground">Crea un nuovo preventivo per un cliente</p>
+            <h1 className="text-3xl font-playfair font-bold">
+              {isEditMode ? "Modifica Preventivo" : "Nuovo Preventivo"}
+            </h1>
+            <p className="text-muted-foreground">
+              {isEditMode ? "Modifica i dettagli del preventivo esistente" : "Crea un nuovo preventivo per un cliente"}
+            </p>
           </div>
           <Button 
             onClick={form.handleSubmit(onSubmit)}
-            disabled={createQuoteMutation.isPending}
+            disabled={isEditMode ? updateQuoteMutation.isPending : createQuoteMutation.isPending}
           >
-            {createQuoteMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creazione...
-              </>
+            {isEditMode ? (
+              updateQuoteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Aggiornamento...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Aggiorna Preventivo
+                </>
+              )
             ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Salva Preventivo
-              </>
+              createQuoteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creazione...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Salva Preventivo
+                </>
+              )
             )}
           </Button>
         </div>

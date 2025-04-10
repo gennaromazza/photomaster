@@ -959,7 +959,7 @@ export default function NewQuotePage() {
                         <div key={collaborator.id} className="flex items-center space-x-2">
                           <input 
                             type="checkbox" 
-                            id={collaborator-${collaborator.id}}
+                            id={`collaborator-${collaborator.id}`}
                             className="rounded border-gray-300"
                             onChange={(e) => {
                               const currentCollaborators = form.getValues("assignedCollaborators") || [];

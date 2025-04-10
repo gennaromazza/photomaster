@@ -1404,7 +1404,20 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(403).json({ message: "Questo preventivo non è più condivisibile" });
       }
       
-      res.json(quote);
+      // Recupera gli elementi del preventivo (per mostrare servizi, prodotti, ecc.)
+      const quoteItems = await storage.getQuoteItemsByQuote(quote.id);
+      
+      // Recupera il cliente associato al preventivo
+      const client = await storage.getClient(quote.clientId);
+      
+      // Prepara l'oggetto completo del preventivo con tutte le informazioni
+      const completeQuote = {
+        ...quote,
+        quoteItems,
+        client: client || undefined
+      };
+      
+      res.json(completeQuote);
     } catch (err) {
       console.error("Errore nel recupero del preventivo condiviso:", err);
       res.status(500).json({ message: "Errore nel recupero del preventivo" });

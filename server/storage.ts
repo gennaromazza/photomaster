@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { eq, and, gt, gte } from "drizzle-orm";
+import crypto from "crypto";
 import {
   users, clients, events, tasks, collaborators, eventCollaborators,
   contracts, services, quotes, quoteItems, settings, serviceCategories, leadSources,
@@ -698,6 +699,41 @@ export class DatabaseStorage implements IStorage {
   async deleteQuote(id: number): Promise<boolean> {
     const result = await db.delete(quotes).where(eq(quotes.id, id));
     return result !== undefined;
+  }
+  
+  async generateShareToken(id: number): Promise<string | undefined> {
+    // Genera un token casuale
+    const token = crypto.randomUUID();
+    
+    // Aggiorna il preventivo con il token e imposta isShared a true
+    const [updatedQuote] = await db
+      .update(quotes)
+      .set({ isShared: true, shareToken: token })
+      .where(eq(quotes.id, id))
+      .returning();
+      
+    if (!updatedQuote) return undefined;
+    return token;
+  }
+  
+  async disableSharing(id: number): Promise<boolean> {
+    const [updatedQuote] = await db
+      .update(quotes)
+      .set({ isShared: false, shareToken: null })
+      .where(eq(quotes.id, id))
+      .returning();
+      
+    return !!updatedQuote;
+  }
+  
+  async getQuoteByShareToken(token: string): Promise<Quote | undefined> {
+    const [result] = await db
+      .select()
+      .from(quotes)
+      .where(eq(quotes.shareToken, token))
+      .limit(1);
+      
+    return result;
   }
 
   async getQuoteItem(id: number): Promise<QuoteItem | undefined> {

@@ -165,8 +165,21 @@ export default function NewQuotePage() {
     },
   });
 
-  // Form per il cliente
+  // Form per il cliente principale
   const clientForm = useForm<ClientFormValues>({
+    resolver: zodResolver(clientFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      address: "",
+      notes: "",
+    },
+  });
+  
+  // Form per il secondo cliente
+  const secondClientForm = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
       firstName: "",
@@ -224,7 +237,7 @@ export default function NewQuotePage() {
     form.setValue("isFullDay", isFullDayEvent);
   }, [isFullDayEvent, form]);
 
-  // Mutation per creare un nuovo cliente
+  // Mutation per creare un nuovo cliente principale
   const createClientMutation = useMutation({
     mutationFn: async (data: ClientFormValues) => {
       const res = await apiRequest("POST", "/api/clients", data);
@@ -234,7 +247,7 @@ export default function NewQuotePage() {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       clientForm.reset();
       setShowClientSuccess(true);
-      // Dopo 3 secondi, nascondi il messaggio di successo e chiudi il dialog
+      // Dopo 2 secondi, nascondi il messaggio di successo e chiudi il dialog
       setTimeout(() => {
         setShowClientSuccess(false);
         setIsClientDialogOpen(false);
@@ -246,6 +259,33 @@ export default function NewQuotePage() {
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante la creazione del cliente",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation per creare un nuovo secondo cliente
+  const createSecondClientMutation = useMutation({
+    mutationFn: async (data: ClientFormValues) => {
+      const res = await apiRequest("POST", "/api/clients", data);
+      return res.json();
+    },
+    onSuccess: (newClient) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      secondClientForm.reset();
+      setShowSecondClientSuccess(true);
+      // Dopo 2 secondi, nascondi il messaggio di successo e chiudi il dialog
+      setTimeout(() => {
+        setShowSecondClientSuccess(false);
+        setIsSecondClientDialogOpen(false);
+        // Imposta il cliente appena creato come secondo cliente
+        form.setValue("secondClientId", newClient.id);
+      }, 2000);
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante la creazione del secondo cliente",
         variant: "destructive",
       });
     },
@@ -280,9 +320,14 @@ export default function NewQuotePage() {
     createQuoteMutation.mutate(data);
   };
 
-  // Gestisci il submit del form cliente
+  // Gestisci il submit del form cliente principale
   const onClientSubmit = (data: ClientFormValues) => {
     createClientMutation.mutate(data);
+  };
+  
+  // Gestisci il submit del form secondo cliente
+  const onSecondClientSubmit = (data: ClientFormValues) => {
+    createSecondClientMutation.mutate(data);
   };
   
   // Gestione della selezione dei clienti
@@ -538,7 +583,13 @@ export default function NewQuotePage() {
                               </Command>
                               <FormMessage />
                             </div>
-                            <Dialog>
+                            <Dialog open={isSecondClientDialogOpen} onOpenChange={(open) => {
+                                setIsSecondClientDialogOpen(open);
+                                if (!open) {
+                                  secondClientForm.reset();
+                                  setShowSecondClientSuccess(false);
+                                }
+                              }}>
                               <DialogTrigger asChild>
                                 <Button variant="outline" size="icon" type="button">
                                   <Plus className="h-4 w-4" />
@@ -551,76 +602,85 @@ export default function NewQuotePage() {
                                     Inserisci i dati del secondo cliente per aggiungerlo al sistema
                                   </DialogDescription>
                                 </DialogHeader>
-                                <Form {...clientForm}>
-                                  <form onSubmit={clientForm.handleSubmit(onClientSubmit)} className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
+                                {showSecondClientSuccess ? (
+                                  <Alert className="bg-green-50 border-green-200">
+                                    <AlertTitle>Cliente aggiunto con successo!</AlertTitle>
+                                    <AlertDescription>
+                                      Il secondo cliente è stato creato e selezionato per questo preventivo.
+                                    </AlertDescription>
+                                  </Alert>
+                                ) : (
+                                  <Form {...secondClientForm}>
+                                    <form onSubmit={secondClientForm.handleSubmit(onSecondClientSubmit)} className="space-y-4">
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <FormField
+                                          control={secondClientForm.control}
+                                          name="firstName"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel>Nome</FormLabel>
+                                              <FormControl>
+                                                <Input placeholder="Mario" {...field} />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                        <FormField
+                                          control={secondClientForm.control}
+                                          name="lastName"
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel>Cognome</FormLabel>
+                                              <FormControl>
+                                                <Input placeholder="Rossi" {...field} />
+                                              </FormControl>
+                                              <FormMessage />
+                                            </FormItem>
+                                          )}
+                                        />
+                                      </div>
                                       <FormField
-                                        control={clientForm.control}
-                                        name="firstName"
+                                        control={secondClientForm.control}
+                                        name="email"
                                         render={({ field }) => (
                                           <FormItem>
-                                            <FormLabel>Nome</FormLabel>
+                                            <FormLabel>Email</FormLabel>
                                             <FormControl>
-                                              <Input placeholder="Mario" {...field} />
+                                              <Input type="email" placeholder="mario.rossi@example.com" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                           </FormItem>
                                         )}
                                       />
                                       <FormField
-                                        control={clientForm.control}
-                                        name="lastName"
+                                        control={secondClientForm.control}
+                                        name="phone"
                                         render={({ field }) => (
                                           <FormItem>
-                                            <FormLabel>Cognome</FormLabel>
+                                            <FormLabel>Telefono</FormLabel>
                                             <FormControl>
-                                              <Input placeholder="Rossi" {...field} />
+                                              <Input placeholder="+39 123 456 7890" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                           </FormItem>
                                         )}
                                       />
-                                    </div>
-                                    <FormField
-                                      control={clientForm.control}
-                                      name="email"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Email</FormLabel>
-                                          <FormControl>
-                                            <Input type="email" placeholder="mario.rossi@example.com" {...field} />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={clientForm.control}
-                                      name="phone"
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Telefono</FormLabel>
-                                          <FormControl>
-                                            <Input placeholder="+39 123 456 7890" {...field} />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <DialogFooter>
-                                      <Button type="submit" disabled={createClientMutation.isPending}>
-                                        {createClientMutation.isPending ? (
-                                          <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Salvataggio...
-                                          </>
-                                        ) : (
-                                          "Salva Cliente"
-                                        )}
-                                      </Button>
-                                    </DialogFooter>
-                                  </form>
-                                </Form>
+                                      <DialogFooter>
+                                        <Button type="submit" disabled={createSecondClientMutation.isPending}>
+                                          {createSecondClientMutation.isPending ? (
+                                            <>
+                                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                              Salvataggio...
+                                            </>
+                                          ) : (
+                                            "Salva Cliente"
+                                          )}
+                                        </Button>
+                                      </DialogFooter>
+                                    </form>
+                                  </Form>
+                                )}
                               </DialogContent>
                             </Dialog>
                           </div>

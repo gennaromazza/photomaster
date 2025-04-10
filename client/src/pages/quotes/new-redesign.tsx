@@ -965,7 +965,7 @@ export default function NewQuotePage() {
                               <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
                             </div>
                             <FormMessage />
-                          </</FormItem>
+                          </FormItem>
                         )}
                       />
                     </div>

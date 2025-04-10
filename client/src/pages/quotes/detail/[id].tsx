@@ -12,6 +12,14 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,6 +55,7 @@ export default function QuoteDetailPage() {
   const { id } = useParams();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   // Carica i dati del preventivo
   const { data: quote, isLoading: isLoadingQuote } = useQuery({
@@ -200,9 +209,12 @@ export default function QuoteDetailPage() {
   }
 
   const handleDeleteClick = () => {
-    if (window.confirm("Sei sicuro di voler eliminare questo preventivo?")) {
-      deleteQuoteMutation.mutate();
-    }
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const confirmDelete = () => {
+    deleteQuoteMutation.mutate();
+    setIsDeleteDialogOpen(false);
   };
 
   const completeWorkflowStep = (stepId: number) => {
@@ -551,6 +563,41 @@ export default function QuoteDetailPage() {
           </div>
         </div>
       </div>
+      
+      {/* Dialog di conferma per l'eliminazione */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Conferma eliminazione</DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare il preventivo "{quote?.title}"? 
+              Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={deleteQuoteMutation.isPending}
+            >
+              {deleteQuoteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Eliminazione...
+                </>
+              ) : (
+                <>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Elimina Preventivo
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

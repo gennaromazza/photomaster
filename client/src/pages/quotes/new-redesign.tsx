@@ -177,7 +177,7 @@ export default function NewQuotePage() {
       notes: "",
     },
   });
-  
+
   // Form per il secondo cliente
   const secondClientForm = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
@@ -207,7 +207,7 @@ export default function NewQuotePage() {
       setFilteredMainClients(clients);
     }
   }, [mainClientSearch, clients]);
-  
+
   // Filtraggio clienti secondari basato sulla ricerca
   useEffect(() => {
     if (clients.length > 0 && secondClientSearch) {
@@ -263,7 +263,7 @@ export default function NewQuotePage() {
       });
     },
   });
-  
+
   // Mutation per creare un nuovo secondo cliente
   const createSecondClientMutation = useMutation({
     mutationFn: async (data: ClientFormValues) => {
@@ -304,7 +304,7 @@ export default function NewQuotePage() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       // Reindirizza alla pagina di dettaglio del preventivo appena creato
-      setLocation(`/quotes/${newQuote.id}`);
+      setLocation(/quotes/${newQuote.id});
     },
     onError: (error) => {
       toast({
@@ -324,12 +324,12 @@ export default function NewQuotePage() {
   const onClientSubmit = (data: ClientFormValues) => {
     createClientMutation.mutate(data);
   };
-  
+
   // Gestisci il submit del form secondo cliente
   const onSecondClientSubmit = (data: ClientFormValues) => {
     createSecondClientMutation.mutate(data);
   };
-  
+
   // Gestione della selezione dei clienti
   const handleClientSelect = (clientId: number, isSecondClient = false) => {
     if (isSecondClient) {
@@ -825,7 +825,7 @@ export default function NewQuotePage() {
                             <FormControl>
                               <Button
                                 variant={"outline"}
-                                className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
+                                className={w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}}
                               >
                                 {field.value ? (
                                   format(field.value, "PPP", { locale: it })
@@ -959,7 +959,7 @@ export default function NewQuotePage() {
                         <div key={collaborator.id} className="flex items-center space-x-2">
                           <input 
                             type="checkbox" 
-                            id={`collaborator-${collaborator.id}`}
+                            id={collaborator-${collaborator.id}}
                             className="rounded border-gray-300"
                             onChange={(e) => {
                               const currentCollaborators = form.getValues("assignedCollaborators") || [];
@@ -972,7 +972,7 @@ export default function NewQuotePage() {
                               }
                             }}
                           />
-                          <label htmlFor={`collaborator-${collaborator.id}`} className="text-sm">
+                          <label htmlFor={collaborator-${collaborator.id}} className="text-sm">
                             {collaborator.firstName} {collaborator.lastName} ({collaborator.role})
                           </label>
                         </div>

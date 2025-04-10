@@ -370,6 +370,7 @@ export const quotes = pgTable("quotes", {
   categoryId: integer("category_id"),
   leadSourceId: integer("lead_source_id"),
   eventDate: timestamp("event_date"),
+  isFullDay: boolean("is_full_day").default(false), // Evento per tutta la giornata
   eventTime: text("event_time"), // Orario di inizio evento (formato HH:MM)
   eventEndTime: text("event_end_time"), // Orario di fine evento (formato HH:MM)
   location: text("location"), // Indirizzo/location dell'evento
@@ -379,10 +380,6 @@ export const quotes = pgTable("quotes", {
   updatedAt: timestamp("updated_at"),
   expiryDate: timestamp("expiry_date"),
   status: text("status").default("draft").notNull(),
-  subtotal: integer("subtotal").notNull(),
-  tax: integer("tax").default(0).notNull(),
-  discount: integer("discount").default(0).notNull(),
-  total: integer("total").notNull(),
   notes: text("notes"),
   signature: text("signature"), // Firma del cliente per l'approvazione
 });
@@ -395,6 +392,7 @@ export const insertQuoteSchema = createInsertSchema(quotes).pick({
   categoryId: true,
   leadSourceId: true,
   eventDate: true,
+  isFullDay: true,
   eventTime: true,
   eventEndTime: true,
   location: true,
@@ -402,10 +400,6 @@ export const insertQuoteSchema = createInsertSchema(quotes).pick({
   workflow: true,
   expiryDate: true,
   status: true,
-  subtotal: true,
-  tax: true,
-  discount: true,
-  total: true,
   notes: true,
   signature: true,
   updatedAt: true,

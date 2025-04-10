@@ -568,17 +568,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuote(id: number): Promise<any> {
-    // Carica il preventivo con tutte le relazioni
+    // Carica il preventivo base
     const [quote] = await db
       .select()
       .from(quotes)
-      .where(eq(quotes.id, id))
-      .leftJoin(clients, eq(quotes.clientId, clients.id))
-      .leftJoin(clients, eq(quotes.secondClientId, clients.id), { alias: "secondClient" })
-      .leftJoin(serviceCategories, eq(quotes.categoryId, serviceCategories.id))
-      .leftJoin(leadSources, eq(quotes.leadSourceId, leadSources.id));
+      .where(eq(quotes.id, id));
     
     if (!quote) return undefined;
+    
+    // Carica il cliente principale
+    const [client] = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.id, quote.clientId));
+    
+    // Carica il secondo cliente se presente
+    let secondClient = null;
+    if (quote.secondClientId) {
+      const [secondClientData] = await db
+        .select()
+        .from(clients)
+        .where(eq(clients.id, quote.secondClientId));
+      secondClient = secondClientData;
+    }
+    
+    // Carica la categoria se presente
+    let category = null;
+    if (quote.categoryId) {
+      const [categoryData] = await db
+        .select()
+        .from(serviceCategories)
+        .where(eq(serviceCategories.id, quote.categoryId));
+      category = categoryData;
+    }
+    
+    // Carica la provenienza se presente
+    let leadSource = null;
+    if (quote.leadSourceId) {
+      const [leadSourceData] = await db
+        .select()
+        .from(leadSources)
+        .where(eq(leadSources.id, quote.leadSourceId));
+      leadSource = leadSourceData;
+    }
     
     // Carica gli elementi del preventivo con i relativi servizi
     const quoteItemsWithServices = await db
@@ -589,11 +621,11 @@ export class DatabaseStorage implements IStorage {
     
     // Formatta il risultato
     const formattedQuote = {
-      ...quote.quotes,
-      client: quote.clients || null,
-      secondClient: quote.secondClient || null,
-      category: quote.service_categories || null,
-      leadSource: quote.lead_sources || null,
+      ...quote,
+      client: client || null,
+      secondClient: secondClient,
+      category: category,
+      leadSource: leadSource,
       quoteItems: quoteItemsWithServices.map(item => ({
         ...item.quote_items,
         service: item.services || null

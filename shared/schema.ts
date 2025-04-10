@@ -370,6 +370,11 @@ export const quotes = pgTable("quotes", {
   categoryId: integer("category_id"),
   leadSourceId: integer("lead_source_id"),
   eventDate: timestamp("event_date"),
+  eventTime: text("event_time"), // Orario di inizio evento (formato HH:MM)
+  eventEndTime: text("event_end_time"), // Orario di fine evento (formato HH:MM)
+  location: text("location"), // Indirizzo/location dell'evento
+  eventType: text("event_type"), // Tipo di lavoro/evento (wedding, baptism, ecc.)
+  workflow: text("workflow").default("default"), // Workflow da applicare
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at"),
   expiryDate: timestamp("expiry_date"),
@@ -390,6 +395,11 @@ export const insertQuoteSchema = createInsertSchema(quotes).pick({
   categoryId: true,
   leadSourceId: true,
   eventDate: true,
+  eventTime: true,
+  eventEndTime: true,
+  location: true,
+  eventType: true,
+  workflow: true,
   expiryDate: true,
   status: true,
   subtotal: true,

@@ -70,13 +70,11 @@ import { it } from "date-fns/locale";
 const quoteFormSchema = insertQuoteSchema.extend({
   title: z.string().min(1, "Il titolo è obbligatorio"),
   clientId: z.coerce.number().min(1, "Seleziona un cliente"),
-  subtotal: z.coerce.number().min(0, "Inserisci un subtotale valido"),
-  tax: z.coerce.number().optional().default(0),
-  discount: z.coerce.number().optional().default(0),
-  total: z.coerce.number().min(0, "Inserisci un totale valido"),
+  secondClientId: z.coerce.number().optional(),
   notes: z.string().optional(),
   eventId: z.coerce.number().optional(),
   eventDate: z.date().optional(),
+  isFullDay: z.boolean().optional().default(false),
   eventTime: z.string().optional(),
   eventEndTime: z.string().optional(),
   location: z.string().optional(),
@@ -143,17 +141,15 @@ export default function NewQuotePage() {
     defaultValues: {
       title: "",
       clientId: undefined,
+      secondClientId: undefined,
       eventId: undefined,
-      subtotal: 0,
-      tax: 0,
-      discount: 0,
-      total: 0,
       notes: "",
       eventType: "",
       workflow: "default",
       eventTime: "",
       eventEndTime: "",
       location: "",
+      isFullDay: false,
       assignedCollaborators: [],
     },
   });
@@ -188,15 +184,17 @@ export default function NewQuotePage() {
     }
   }, [clientSearchQuery, clients]);
 
-  // Imposta il prezzo totale quando cambia subtotale, tasse o sconto
+  // Gestione dello stato per l'opzione "Evento tutto il giorno"
+  const [isFullDayEvent, setIsFullDayEvent] = useState(false);
+  
+  // Disabilita o abilita i campi di orario in base all'opzione "tutto il giorno"
   useEffect(() => {
-    const subtotal = form.watch("subtotal") || 0;
-    const tax = form.watch("tax") || 0;
-    const discount = form.watch("discount") || 0;
-    
-    const total = subtotal + (subtotal * tax / 100) - discount;
-    form.setValue("total", total);
-  }, [form.watch("subtotal"), form.watch("tax"), form.watch("discount")]);
+    if (isFullDayEvent) {
+      form.setValue("eventTime", "");
+      form.setValue("eventEndTime", "");
+    }
+    form.setValue("isFullDay", isFullDayEvent);
+  }, [isFullDayEvent, form]);
 
   // Mutation per creare un nuovo cliente
   const createClientMutation = useMutation({
@@ -309,7 +307,7 @@ export default function NewQuotePage() {
                   )}
                 />
 
-                {/* Selezione cliente */}
+                {/* Selezione cliente principale e secondario */}
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="flex-1">
                     <FormField
@@ -317,7 +315,7 @@ export default function NewQuotePage() {
                       name="clientId"
                       render={({ field }) => (
                         <FormItem className="flex-1">
-                          <FormLabel>Cliente</FormLabel>
+                          <FormLabel>Cliente Principale</FormLabel>
                           <div className="flex items-center space-x-2">
                             <div className="relative flex-1">
                               <Command className="border rounded-md">
@@ -484,6 +482,166 @@ export default function NewQuotePage() {
                                     </form>
                                   </Form>
                                 )}
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  {/* Secondo cliente */}
+                  <div className="flex-1">
+                    <FormField
+                      control={form.control}
+                      name="secondClientId"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>Secondo Cliente (opzionale)</FormLabel>
+                          <div className="flex items-center space-x-2">
+                            <div className="relative flex-1">
+                              <Command className="border rounded-md">
+                                <div className="flex items-center border-b px-3">
+                                  <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                  <CommandInput 
+                                    placeholder="Cerca secondo cliente..." 
+                                    value={clientSearchQuery}
+                                    onValueChange={setClientSearchQuery}
+                                    className="flex-1"
+                                  />
+                                </div>
+                                <CommandList>
+                                  {isLoadingClients ? (
+                                    <div className="py-6 text-center text-sm">
+                                      <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                                      Caricamento clienti...
+                                    </div>
+                                  ) : filteredClients.length === 0 ? (
+                                    <p className="py-6 text-center text-sm">
+                                      Nessun cliente trovato. Aggiungine uno nuovo.
+                                    </p>
+                                  ) : (
+                                    <CommandGroup>
+                                      {filteredClients.map((client: any) => (
+                                        <CommandItem
+                                          key={client.id}
+                                          value={client.id.toString()}
+                                          onSelect={() => {
+                                            form.setValue("secondClientId", client.id);
+                                          }}
+                                          className="flex items-center justify-between"
+                                        >
+                                          <div className="flex items-center">
+                                            <User className="mr-2 h-4 w-4" />
+                                            <span>
+                                              {client.firstName} {client.lastName}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center text-xs text-muted-foreground">
+                                            {client.email && (
+                                              <div className="mr-4 flex items-center">
+                                                <Mail className="mr-1 h-3 w-3" />
+                                                {client.email}
+                                              </div>
+                                            )}
+                                            {client.phone && (
+                                              <div className="flex items-center">
+                                                <Phone className="mr-1 h-3 w-3" />
+                                                {client.phone}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  )}
+                                </CommandList>
+                              </Command>
+                              <FormMessage />
+                            </div>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="icon" type="button">
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Aggiungi secondo cliente</DialogTitle>
+                                  <DialogDescription>
+                                    Inserisci i dati del secondo cliente per aggiungerlo al sistema
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <Form {...clientForm}>
+                                  <form onSubmit={clientForm.handleSubmit(onClientSubmit)} className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <FormField
+                                        control={clientForm.control}
+                                        name="firstName"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Nome</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="Mario" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                      <FormField
+                                        control={clientForm.control}
+                                        name="lastName"
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>Cognome</FormLabel>
+                                            <FormControl>
+                                              <Input placeholder="Rossi" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </div>
+                                    <FormField
+                                      control={clientForm.control}
+                                      name="email"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Email</FormLabel>
+                                          <FormControl>
+                                            <Input type="email" placeholder="mario.rossi@example.com" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={clientForm.control}
+                                      name="phone"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Telefono</FormLabel>
+                                          <FormControl>
+                                            <Input placeholder="+39 123 456 7890" {...field} />
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <DialogFooter>
+                                      <Button type="submit" disabled={createClientMutation.isPending}>
+                                        {createClientMutation.isPending ? (
+                                          <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Salvataggio...
+                                          </>
+                                        ) : (
+                                          "Salva Cliente"
+                                        )}
+                                      </Button>
+                                    </DialogFooter>
+                                  </form>
+                                </Form>
                               </DialogContent>
                             </Dialog>
                           </div>

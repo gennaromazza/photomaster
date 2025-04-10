@@ -304,7 +304,7 @@ export default function NewQuotePage() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       // Reindirizza alla pagina di dettaglio del preventivo appena creato
-      setLocation(/quotes/${newQuote.id});
+      setLocation(`/quotes/${newQuote.id}`);
     },
     onError: (error) => {
       toast({

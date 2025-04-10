@@ -60,7 +60,14 @@ import {
   Paperclip,
   Save
 } from "lucide-react";
-import { CommandInput, CommandList, CommandItem, CommandGroup, Command, CommandEmpty } from "@/components/ui/command";
+import { 
+  Command, 
+  CommandInput, 
+  CommandList, 
+  CommandItem, 
+  CommandGroup, 
+  CommandEmpty 
+} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parse } from "date-fns";
@@ -362,18 +369,20 @@ export default function NewQuotePage() {
                                     className="flex-1"
                                   />
                                 </div>
-                                <CommandEmpty>Nessun cliente trovato</CommandEmpty>
-                                <CommandGroup>
-                                  {filteredMainClients.map((client) => (
-                                    <CommandItem
-                                      key={client.id}
-                                      value={client.id.toString()}
-                                      onSelect={() => handleClientSelect(client.id)}
-                                    >
-                                      {client.firstName} {client.lastName}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                                <CommandList>
+                                  <CommandEmpty>Nessun cliente trovato</CommandEmpty>
+                                  <CommandGroup>
+                                    {filteredMainClients.map((client) => (
+                                      <CommandItem
+                                        key={client.id}
+                                        value={client.id.toString()}
+                                        onSelect={() => handleClientSelect(client.id)}
+                                      >
+                                        {client.firstName} {client.lastName}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
                               </Command>
                               <FormMessage />
                             </div>
@@ -512,18 +521,20 @@ export default function NewQuotePage() {
                                     className="flex-1"
                                   />
                                 </div>
-                                <CommandEmpty>Nessun cliente trovato</CommandEmpty>
-                                <CommandGroup>
-                                  {filteredSecondClients.map((client) => (
-                                    <CommandItem
-                                      key={client.id}
-                                      value={client.id.toString()}
-                                      onSelect={() => handleClientSelect(client.id, true)}
-                                    >
-                                      {client.firstName} {client.lastName}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                                <CommandList>
+                                  <CommandEmpty>Nessun cliente trovato</CommandEmpty>
+                                  <CommandGroup>
+                                    {filteredSecondClients.map((client) => (
+                                      <CommandItem
+                                        key={client.id}
+                                        value={client.id.toString()}
+                                        onSelect={() => handleClientSelect(client.id, true)}
+                                      >
+                                        {client.firstName} {client.lastName}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
                               </Command>
                               <FormMessage />
                             </div>

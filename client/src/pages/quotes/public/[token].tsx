@@ -139,7 +139,7 @@ export default function PublicQuotePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-1">Tipo Evento</h4>
-                <p className="font-medium">{quote.eventType || "Non specificato"}</p>
+                <p className="font-medium">{quote.category?.name || "Non specificato"}</p>
               </div>
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-1">Data</h4>

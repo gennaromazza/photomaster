@@ -901,7 +901,20 @@ export default function NewQuotePage() {
                       <FormItem>
                         <FormLabel>Tipo Lavoro</FormLabel>
                         <Select
-                          onValueChange={(value) => field.onChange(value !== "0" ? parseInt(value) : undefined)}
+                          onValueChange={(value) => {
+                            // Aggiorna il valore del campo categoryId
+                            field.onChange(value !== "0" ? parseInt(value) : undefined);
+                            
+                            // Aggiorna anche eventType con il nome della categoria selezionata
+                            if (value !== "0") {
+                              const selectedCategory = categories.find(cat => cat.id.toString() === value);
+                              if (selectedCategory) {
+                                form.setValue("eventType", selectedCategory.name);
+                              }
+                            } else {
+                              form.setValue("eventType", "");
+                            }
+                          }}
                           value={field.value?.toString() || "0"}
                         >
                           <FormControl>

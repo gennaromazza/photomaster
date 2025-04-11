@@ -570,24 +570,10 @@ export class DatabaseStorage implements IStorage {
 
   async getQuote(id: number): Promise<any> {
     try {
-      // Selezioniamo esplicitamente solo le colonne che sappiamo esistere
-      const [quote] = await db.select({
-        id: quotes.id,
-        title: quotes.title,
-        clientId: quotes.clientId,
-        secondClientId: quotes.secondClientId,
-        description: quotes.description,
-        eventDate: quotes.eventDate,
-        categoryId: quotes.categoryId,
-        leadSourceId: quotes.leadSourceId,
-        status: quotes.status,
-        isShared: quotes.isShared,
-        shareToken: quotes.shareToken,
-        createdAt: quotes.createdAt,
-        updatedAt: quotes.updatedAt
-      })
-      .from(quotes)
-      .where(eq(quotes.id, id));
+      // Utilizziamo una select semplice e sicura
+      const [quote] = await db.select()
+        .from(quotes)
+        .where(eq(quotes.id, id));
       
       if (!quote) return undefined;
       
@@ -693,24 +679,10 @@ export class DatabaseStorage implements IStorage {
 
   async getQuotesByClient(clientId: number): Promise<Quote[]> {
     try {
-      // Selezioniamo esplicitamente solo le colonne che sappiamo esistere
-      const result = await db.select({
-        id: quotes.id,
-        title: quotes.title,
-        clientId: quotes.clientId,
-        secondClientId: quotes.secondClientId,
-        description: quotes.description,
-        eventDate: quotes.eventDate,
-        categoryId: quotes.categoryId,
-        leadSourceId: quotes.leadSourceId,
-        status: quotes.status,
-        isShared: quotes.isShared,
-        shareToken: quotes.shareToken,
-        createdAt: quotes.createdAt,
-        updatedAt: quotes.updatedAt
-      })
-      .from(quotes)
-      .where(eq(quotes.clientId, clientId));
+      // Utilizziamo una query più semplice e sicura
+      const result = await db.select()
+        .from(quotes)
+        .where(eq(quotes.clientId, clientId));
       
       // Aggiungiamo i campi virtuali che mancano
       return result.map(quote => {
@@ -730,22 +702,8 @@ export class DatabaseStorage implements IStorage {
 
   async getAllQuotes(): Promise<Quote[]> {
     try {
-      // Selezioniamo esplicitamente solo le colonne che sappiamo esistere
-      const result = await db.select({
-        id: quotes.id,
-        title: quotes.title,
-        clientId: quotes.clientId,
-        secondClientId: quotes.secondClientId,
-        description: quotes.description,
-        eventDate: quotes.eventDate,
-        categoryId: quotes.categoryId,
-        leadSourceId: quotes.leadSourceId,
-        status: quotes.status,
-        isShared: quotes.isShared,
-        shareToken: quotes.shareToken,
-        createdAt: quotes.createdAt,
-        updatedAt: quotes.updatedAt
-      }).from(quotes);
+      // Utilizziamo una query più semplice e sicura
+      const result = await db.select().from(quotes);
       
       // Aggiungiamo i campi virtuali che mancano
       return result.map(quote => {
@@ -765,30 +723,39 @@ export class DatabaseStorage implements IStorage {
 
   async createQuote(quote: InsertQuote): Promise<Quote> {
     try {
-      // Convertiamo in un oggetto sicuro
-      const quoteData = {...quote} as any;
-      
-      // Prepariamo un oggetto con SOLO i campi che sappiamo esistere
-      // Non includiamo assolutamente i nuovi campi (subtotal, total, discount, shareExpiry)
-      const safeQuoteData: any = {
-        title: quoteData.title || '',
-        clientId: quoteData.clientId,
-        description: quoteData.description || '',
+      // Creazione di un oggetto sicuro con solo i campi obbligatori
+      // che sappiamo esistere nella tabella
+      const safeData = {
+        title: quote.title || 'Nuovo preventivo',
+        clientId: quote.clientId
       };
       
-      // Aggiungi i campi opzionali solo se sono presenti
-      if (quoteData.secondClientId) safeQuoteData.secondClientId = quoteData.secondClientId;
-      if (quoteData.eventDate) safeQuoteData.eventDate = quoteData.eventDate;
-      if (quoteData.categoryId) safeQuoteData.categoryId = quoteData.categoryId;
-      if (quoteData.leadSourceId) safeQuoteData.leadSourceId = quoteData.leadSourceId;
-      if (quoteData.status) safeQuoteData.status = quoteData.status;
-      if ('isShared' in quoteData) safeQuoteData.isShared = quoteData.isShared;
-      if (quoteData.shareToken) safeQuoteData.shareToken = quoteData.shareToken;
+      // Lista dei campi opzionali che sappiamo esistere nella tabella
+      const allowedOptionalFields = [
+        'secondClientId', 'eventDate', 'categoryId', 
+        'leadSourceId', 'status', 'isShared', 'shareToken'
+      ];
       
-      // Inseriamo solo i campi base garantiti
-      const [newQuote] = await db.insert(quotes).values(safeQuoteData).returning();
+      // Copiamo solo i campi consentiti che sono presenti nell'input
+      // Creazione di un oggetto completo da inserire
+      const insertData: Record<string, any> = {...safeData};
       
-      // Aggiungiamo i campi virtuali per il resto dell'applicazione
+      for (const field of allowedOptionalFields) {
+        if (field in quote && (quote as any)[field] !== undefined) {
+          insertData[field] = (quote as any)[field];
+        }
+      }
+      
+      console.log("Inserting quote with data:", insertData);
+      
+      // Inseriamo i dati sicuri come array per forzare il tipo corretto
+      const [newQuote] = await db.insert(quotes).values([insertData as any]).returning();
+      
+      if (!newQuote) {
+        throw new Error("Failed to create quote");
+      }
+      
+      // Aggiungiamo i campi virtuali per l'applicazione frontend
       const result = {
         ...newQuote,
         subtotal: 0,
@@ -806,24 +773,21 @@ export class DatabaseStorage implements IStorage {
 
   async updateQuote(id: number, quote: Partial<InsertQuote>): Promise<Quote | undefined> {
     try {
-      // Convertiamo in un oggetto sicuro
-      const quoteData = {...quote} as any;
+      // Creiamo un oggetto con SOLO i campi che sappiamo esistere nel DB
+      const safeQuoteData: Record<string, any> = {};
       
-      // Creiamo un oggetto con SOLO i campi che sappiamo esistere
-      // Evitiamo qualsiasi riferimento ai nuovi campi
-      const safeQuoteData: any = {};
+      // Lista dei campi che sappiamo essere nel database (NO description)
+      const allowedFields = [
+        'title', 'clientId', 'secondClientId', 'eventDate', 
+        'categoryId', 'leadSourceId', 'status', 'isShared', 'shareToken'
+      ];
       
-      // Aggiorniamo solo i campi che sono stati specificati nell'input
-      if ('title' in quoteData) safeQuoteData.title = quoteData.title;
-      if ('clientId' in quoteData) safeQuoteData.clientId = quoteData.clientId;
-      if ('secondClientId' in quoteData) safeQuoteData.secondClientId = quoteData.secondClientId;
-      if ('description' in quoteData) safeQuoteData.description = quoteData.description;
-      if ('eventDate' in quoteData) safeQuoteData.eventDate = quoteData.eventDate;
-      if ('categoryId' in quoteData) safeQuoteData.categoryId = quoteData.categoryId;
-      if ('leadSourceId' in quoteData) safeQuoteData.leadSourceId = quoteData.leadSourceId;
-      if ('status' in quoteData) safeQuoteData.status = quoteData.status;
-      if ('isShared' in quoteData) safeQuoteData.isShared = quoteData.isShared;
-      if ('shareToken' in quoteData) safeQuoteData.shareToken = quoteData.shareToken;
+      // Aggiungiamo solo i campi consentiti che sono presenti nell'input
+      for (const field of allowedFields) {
+        if (field in quote && (quote as any)[field] !== undefined) {
+          safeQuoteData[field] = (quote as any)[field];
+        }
+      }
       
       // Rimuoviamo esplicitamente i campi che sappiamo non esistere
       delete safeQuoteData.subtotal;
@@ -949,24 +913,10 @@ export class DatabaseStorage implements IStorage {
   
   async getQuoteByShareToken(token: string): Promise<Quote | undefined> {
     try {
-      // Selezioniamo esplicitamente solo le colonne che sappiamo esistere
-      const [quote] = await db.select({
-        id: quotes.id,
-        title: quotes.title,
-        clientId: quotes.clientId,
-        secondClientId: quotes.secondClientId,
-        description: quotes.description,
-        eventDate: quotes.eventDate,
-        categoryId: quotes.categoryId,
-        leadSourceId: quotes.leadSourceId,
-        status: quotes.status,
-        isShared: quotes.isShared,
-        shareToken: quotes.shareToken,
-        createdAt: quotes.createdAt,
-        updatedAt: quotes.updatedAt
-      })
-      .from(quotes)
-      .where(eq(quotes.shareToken, token));
+      // Utilizziamo una select semplice e sicura
+      const [quote] = await db.select()
+        .from(quotes)
+        .where(eq(quotes.shareToken, token));
       
       if (!quote || !quote.shareToken || !quote.isShared) {
         return undefined;

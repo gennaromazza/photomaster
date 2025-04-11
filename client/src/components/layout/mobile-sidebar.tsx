@@ -19,6 +19,8 @@ interface MobileSidebarLinkProps {
 }
 
 const MobileSidebarLink = ({ href, icon, children, active, onClick }: MobileSidebarLinkProps) => {
+  const [, setLocation] = useLocation();
+  
   return (
     <div
       className={cn(
@@ -29,8 +31,8 @@ const MobileSidebarLink = ({ href, icon, children, active, onClick }: MobileSide
       )}
       onClick={() => {
         onClick();
-        // Utilizziamo la navigazione programmatica invece di Link annidati
-        window.location.href = href;
+        // Utilizziamo il router di wouter per la navigazione
+        setLocation(href);
       }}
     >
       <span className="text-lg mr-3">{icon}</span>

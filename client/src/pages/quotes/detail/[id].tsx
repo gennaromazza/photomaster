@@ -155,7 +155,14 @@ export default function QuoteDetailPage() {
       return await res.json();
     },
     onSuccess: (data) => {
-      setShareUrl(`${window.location.origin}/quotes/public/${data.token}`);
+      // Utilizziamo l'URL fornito dal backend oppure costruiamolo correttamente
+      if (data.shareUrl) {
+        // Rimuoviamo eventuali slash iniziali per evitare doppi slash
+        const shareUrl = data.shareUrl.startsWith('/') ? data.shareUrl.substring(1) : data.shareUrl;
+        setShareUrl(`${window.location.origin}/${shareUrl}`);
+      } else {
+        setShareUrl(`${window.location.origin}/quotes/public/${data.token}`);
+      }
       setIsShareDialogOpen(true);
       setIsLoading(false);
       toast({

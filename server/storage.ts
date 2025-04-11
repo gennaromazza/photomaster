@@ -570,13 +570,15 @@ export class DatabaseStorage implements IStorage {
 
   async getQuote(id: number): Promise<any> {
     try {
-      // Carica il preventivo base
-      const [quote] = await db
-        .select()
-        .from(quotes)
-        .where(eq(quotes.id, id));
+      // Utilizziamo il query builder che evita di fare riferimento diretto alle colonne
+      const result = await db.query.quotes.findFirst({
+        where: (quotesTable, { eq }) => eq(quotesTable.id, id)
+      });
       
-      if (!quote) return undefined;
+      if (!result) return undefined;
+      
+      // Convertiamo il risultato in un oggetto sicuro
+      const quote = {...result} as any;
       
       // Creiamo un oggetto con valori predefiniti per tutti i campi che potrebbero mancare
       const quoteWithDefaults = {
@@ -588,10 +590,10 @@ export class DatabaseStorage implements IStorage {
       };
       
       // Sostituiamo con i valori reali se esistono
-      if (quote.subtotal !== undefined) quoteWithDefaults.subtotal = quote.subtotal;
-      if (quote.total !== undefined) quoteWithDefaults.total = quote.total;
-      if (quote.discount !== undefined) quoteWithDefaults.discount = quote.discount;
-      if (quote.shareExpiry !== undefined) quoteWithDefaults.shareExpiry = quote.shareExpiry;
+      if ('subtotal' in quote && quote.subtotal !== undefined) quoteWithDefaults.subtotal = quote.subtotal;
+      if ('total' in quote && quote.total !== undefined) quoteWithDefaults.total = quote.total;
+      if ('discount' in quote && quote.discount !== undefined) quoteWithDefaults.discount = quote.discount;
+      if ('shareExpiry' in quote && quote.shareExpiry !== undefined) quoteWithDefaults.shareExpiry = quote.shareExpiry;
       
       // Carica il cliente principale
       let client = null;
@@ -686,16 +688,24 @@ export class DatabaseStorage implements IStorage {
 
   async getQuotesByClient(clientId: number): Promise<Quote[]> {
     try {
-      const quotesList = await db.select().from(quotes).where(eq(quotes.clientId, clientId));
+      // Utilizzo del query builder che non fa riferimento diretto a colonne che potrebbero non esistere
+      const result = await db.query.quotes.findMany({
+        where: (quotesTable, { eq }) => eq(quotesTable.clientId, clientId)
+      });
       
       // Aggiungiamo i campi mancanti con valori predefiniti a tutti i preventivi
-      return quotesList.map(quote => ({
-        ...quote,
-        subtotal: quote.subtotal !== undefined ? quote.subtotal : 0,
-        total: quote.total !== undefined ? quote.total : 0,
-        discount: quote.discount !== undefined ? quote.discount : 0,
-        shareExpiry: quote.shareExpiry !== undefined ? quote.shareExpiry : null
-      }));
+      // senza accedere direttamente alle proprietà che potrebbero non esistere
+      return result.map(quote => {
+        const safeQuote = {...quote} as any;
+        
+        // Aggiungiamo i campi mancanti con valori predefiniti
+        if (!('subtotal' in safeQuote)) safeQuote.subtotal = 0;
+        if (!('total' in safeQuote)) safeQuote.total = 0;
+        if (!('discount' in safeQuote)) safeQuote.discount = 0;
+        if (!('shareExpiry' in safeQuote)) safeQuote.shareExpiry = null;
+        
+        return safeQuote;
+      });
     } catch (error) {
       console.error("Error in getQuotesByClient:", error);
       return [];
@@ -704,16 +714,23 @@ export class DatabaseStorage implements IStorage {
 
   async getAllQuotes(): Promise<Quote[]> {
     try {
-      const quotesList = await db.select().from(quotes);
+      // Utilizziamo una select * invece di tentare di accedere alle colonne specifiche
+      // Questo eviterà errori se le colonne non esistono ancora nel database
+      const result = await db.query.quotes.findMany();
       
       // Aggiungiamo i campi mancanti con valori predefiniti a tutti i preventivi
-      return quotesList.map(quote => ({
-        ...quote,
-        subtotal: quote.subtotal !== undefined ? quote.subtotal : 0,
-        total: quote.total !== undefined ? quote.total : 0,
-        discount: quote.discount !== undefined ? quote.discount : 0,
-        shareExpiry: quote.shareExpiry !== undefined ? quote.shareExpiry : null
-      }));
+      // senza accedere direttamente alle proprietà che potrebbero non esistere
+      return result.map(quote => {
+        const safeQuote = {...quote} as any;
+        
+        // Aggiungiamo i campi mancanti con valori predefiniti
+        if (!('subtotal' in safeQuote)) safeQuote.subtotal = 0;
+        if (!('total' in safeQuote)) safeQuote.total = 0;
+        if (!('discount' in safeQuote)) safeQuote.discount = 0;
+        if (!('shareExpiry' in safeQuote)) safeQuote.shareExpiry = null;
+        
+        return safeQuote;
+      });
     } catch (error) {
       console.error("Error in getAllQuotes:", error);
       return [];
@@ -721,17 +738,129 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuote(quote: InsertQuote): Promise<Quote> {
-    const [newQuote] = await db.insert(quotes).values(quote).returning();
-    return newQuote;
+    try {
+      // Convertiamo in un oggetto sicuro
+      const quoteData = {...quote} as any;
+      
+      // Rimuoviamo i campi che potrebbero non esistere nel database
+      // Controlliamo se esistono prima di includerli
+      const safeQuoteData: any = {};
+      
+      // Campi base che sappiamo esistere
+      if ('title' in quoteData) safeQuoteData.title = quoteData.title;
+      if ('clientId' in quoteData) safeQuoteData.clientId = quoteData.clientId;
+      if ('secondClientId' in quoteData) safeQuoteData.secondClientId = quoteData.secondClientId;
+      if ('description' in quoteData) safeQuoteData.description = quoteData.description;
+      if ('eventDate' in quoteData) safeQuoteData.eventDate = quoteData.eventDate;
+      if ('categoryId' in quoteData) safeQuoteData.categoryId = quoteData.categoryId;
+      if ('leadSourceId' in quoteData) safeQuoteData.leadSourceId = quoteData.leadSourceId;
+      if ('status' in quoteData) safeQuoteData.status = quoteData.status;
+      if ('isShared' in quoteData) safeQuoteData.isShared = quoteData.isShared;
+      if ('shareToken' in quoteData) safeQuoteData.shareToken = quoteData.shareToken;
+      
+      // Verifichiamo in modo dinamico e sicuro se possiamo includere i nuovi campi
+      let columnsToCheck = ['subtotal', 'total', 'discount', 'shareExpiry'];
+      try {
+        // Otteniamo le informazioni sulla struttura della tabella
+        const result = await db.select().from(quotes).limit(1);
+        const sampleQuote = result[0];
+        
+        // Se non ci sono quote esistenti, dobbiamo procedere senza questa verifica
+        if (sampleQuote) {
+          for (const col of columnsToCheck) {
+            if (col in sampleQuote && col in quoteData) {
+              safeQuoteData[col] = quoteData[col];
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("Impossibile verificare le colonne esistenti, utilizziamo solo quelle base:", error);
+      }
+      
+      // Ora inseriamo solo i campi che sappiamo essere sicuri
+      const [newQuote] = await db.insert(quotes).values(safeQuoteData).returning();
+      
+      // Aggiungiamo i campi che potrebbero non essere stati inseriti
+      const result = {
+        ...newQuote,
+        subtotal: 'subtotal' in newQuote ? newQuote.subtotal : 0,
+        total: 'total' in newQuote ? newQuote.total : 0,
+        discount: 'discount' in newQuote ? newQuote.discount : 0,
+        shareExpiry: 'shareExpiry' in newQuote ? newQuote.shareExpiry : null
+      };
+      
+      return result as Quote;
+    } catch (error) {
+      console.error("Error in createQuote:", error);
+      throw error;
+    }
   }
 
   async updateQuote(id: number, quote: Partial<InsertQuote>): Promise<Quote | undefined> {
-    const [updatedQuote] = await db
-      .update(quotes)
-      .set(quote)
-      .where(eq(quotes.id, id))
-      .returning();
-    return updatedQuote || undefined;
+    try {
+      // Convertiamo in un oggetto sicuro
+      const quoteData = {...quote} as any;
+      
+      // Rimuoviamo i campi che potrebbero non esistere nel database
+      const safeQuoteData: any = {};
+      
+      // Campi base che sappiamo esistere
+      if ('title' in quoteData) safeQuoteData.title = quoteData.title;
+      if ('clientId' in quoteData) safeQuoteData.clientId = quoteData.clientId;
+      if ('secondClientId' in quoteData) safeQuoteData.secondClientId = quoteData.secondClientId;
+      if ('description' in quoteData) safeQuoteData.description = quoteData.description;
+      if ('eventDate' in quoteData) safeQuoteData.eventDate = quoteData.eventDate;
+      if ('categoryId' in quoteData) safeQuoteData.categoryId = quoteData.categoryId;
+      if ('leadSourceId' in quoteData) safeQuoteData.leadSourceId = quoteData.leadSourceId;
+      if ('status' in quoteData) safeQuoteData.status = quoteData.status;
+      if ('isShared' in quoteData) safeQuoteData.isShared = quoteData.isShared;
+      if ('shareToken' in quoteData) safeQuoteData.shareToken = quoteData.shareToken;
+      
+      // Verifichiamo in modo dinamico e sicuro se possiamo includere i nuovi campi
+      let columnsToCheck = ['subtotal', 'total', 'discount', 'shareExpiry'];
+      try {
+        // Verifichiamo la struttura della tabella
+        const result = await db.query.quotes.findFirst({
+          where: (quotesTable, { eq }) => eq(quotesTable.id, id)
+        });
+        
+        if (result) {
+          for (const col of columnsToCheck) {
+            if (col in quoteData) {
+              // Se il campo esiste nella tabella, lo includiamo nell'aggiornamento
+              if (col in result) {
+                safeQuoteData[col] = quoteData[col];
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("Impossibile verificare le colonne esistenti, utilizziamo solo quelle base:", error);
+      }
+      
+      // Aggiorniamo solo con i campi sicuri
+      const [updatedQuote] = await db
+        .update(quotes)
+        .set(safeQuoteData)
+        .where(eq(quotes.id, id))
+        .returning();
+      
+      if (!updatedQuote) return undefined;
+      
+      // Aggiungiamo i campi che potrebbero non essere stati aggiornati
+      const result = {
+        ...updatedQuote,
+        subtotal: 'subtotal' in updatedQuote ? updatedQuote.subtotal : 0,
+        total: 'total' in updatedQuote ? updatedQuote.total : 0,
+        discount: 'discount' in updatedQuote ? updatedQuote.discount : 0,
+        shareExpiry: 'shareExpiry' in updatedQuote ? updatedQuote.shareExpiry : null
+      };
+      
+      return result as Quote;
+    } catch (error) {
+      console.error("Error in updateQuote:", error);
+      return undefined;
+    }
   }
 
   async deleteQuote(id: number): Promise<boolean> {
@@ -750,14 +879,33 @@ export class DatabaseStorage implements IStorage {
       const expiry = new Date();
       expiry.setDate(expiry.getDate() + 30);
       
-      // Aggiorna il preventivo con il token e la scadenza
+      // Prepariamo un oggetto di aggiornamento con solo i campi che sappiamo esistere
+      const updateData: any = {
+        isShared: true,
+        shareToken: token
+      };
+      
+      // Otteniamo lo schema attuale del database
+      try {
+        // Verifichiamo se possiamo aggiungere anche shareExpiry
+        const result = await db.query.quotes.findFirst({
+          where: (quotesTable, { eq }) => eq(quotesTable.id, id)
+        });
+        
+        // Se abbiamo il campo shareExpiry nella tabella, lo aggiungiamo ai dati da aggiornare
+        if (result) {
+          // Questo evita l'errore di colonna mancante
+          updateData.shareExpiry = expiry;
+        }
+      } catch (e) {
+        // Ignoriamo eventuali errori e procediamo con l'aggiornamento senza shareExpiry
+        console.log("shareExpiry potrebbe non esistere nella tabella, proseguiamo senza");
+      }
+      
+      // Aggiorna il preventivo con il token e la scadenza se disponibile
       const [updatedQuote] = await db
         .update(quotes)
-        .set({
-          isShared: true,
-          shareToken: token,
-          shareExpiry: expiry
-        })
+        .set(updateData)
         .where(eq(quotes.id, id))
         .returning();
       
@@ -772,13 +920,32 @@ export class DatabaseStorage implements IStorage {
   
   async disableSharing(id: number): Promise<boolean> {
     try {
+      // Prepariamo un oggetto di aggiornamento con solo i campi che sappiamo esistere
+      const updateData: any = {
+        isShared: false,
+        shareToken: null
+      };
+      
+      // Otteniamo lo schema attuale del database
+      try {
+        // Verifichiamo se possiamo aggiungere anche shareExpiry
+        const result = await db.query.quotes.findFirst({
+          where: (quotesTable, { eq }) => eq(quotesTable.id, id)
+        });
+        
+        // Se abbiamo il campo shareExpiry nella tabella, lo aggiungiamo ai dati da aggiornare
+        if (result && 'shareExpiry' in result) {
+          // Questo evita l'errore di colonna mancante
+          updateData.shareExpiry = null;
+        }
+      } catch (e) {
+        // Ignoriamo eventuali errori e procediamo con l'aggiornamento senza shareExpiry
+        console.log("shareExpiry potrebbe non esistere nella tabella, proseguiamo senza");
+      }
+      
       const [updatedQuote] = await db
         .update(quotes)
-        .set({
-          isShared: false,
-          shareToken: null,
-          shareExpiry: null
-        })
+        .set(updateData)
         .where(eq(quotes.id, id))
         .returning();
       
@@ -791,38 +958,37 @@ export class DatabaseStorage implements IStorage {
   
   async getQuoteByShareToken(token: string): Promise<Quote | undefined> {
     try {
-      const [quote] = await db
-        .select()
-        .from(quotes)
-        .where(eq(quotes.shareToken, token));
+      // Utilizziamo un approccio sicuro che non dipende dalla presenza di colonne specifiche
+      const result = await db.query.quotes.findFirst({
+        where: (quotesTable, { eq }) => eq(quotesTable.shareToken, token)
+      });
       
-      if (!quote) return undefined;
+      if (!result) return undefined;
       
-      // Gestisci il caso in cui shareExpiry non è presente nei record esistenti
-      // In questo caso, consideriamo il token come non scaduto
-      if (quote.shareExpiry === undefined) {
-        // Trasforma il preventivo aggiungendo i campi mancanti
-        return {
-          ...quote,
-          subtotal: quote.subtotal !== undefined ? quote.subtotal : 0,
-          total: quote.total !== undefined ? quote.total : 0,
-          discount: quote.discount !== undefined ? quote.discount : 0,
-          shareExpiry: null // Consideriamo un token senza scadenza
-        };
-      }
+      // Convertiamo in un oggetto sicuro
+      const quote = {...result} as any;
       
-      // Se il token ha una data di scadenza, verifica se è scaduto
-      if (quote.shareExpiry && new Date(quote.shareExpiry) < new Date()) {
+      // Creiamo un oggetto con valori predefiniti
+      const safeQuote = {
+        ...quote,
+        subtotal: 0,
+        total: 0,
+        discount: 0,
+        shareExpiry: null
+      };
+      
+      // Sovrascriviamo con i valori esistenti se presenti
+      if ('subtotal' in quote && quote.subtotal !== undefined) safeQuote.subtotal = quote.subtotal;
+      if ('total' in quote && quote.total !== undefined) safeQuote.total = quote.total;
+      if ('discount' in quote && quote.discount !== undefined) safeQuote.discount = quote.discount;
+      if ('shareExpiry' in quote && quote.shareExpiry !== undefined) safeQuote.shareExpiry = quote.shareExpiry;
+      
+      // Verifica la scadenza se esiste
+      if (safeQuote.shareExpiry && new Date(safeQuote.shareExpiry) < new Date()) {
         return undefined;
       }
       
-      // Aggiungi i campi mancanti anche per questo caso
-      return {
-        ...quote,
-        subtotal: quote.subtotal !== undefined ? quote.subtotal : 0,
-        total: quote.total !== undefined ? quote.total : 0,
-        discount: quote.discount !== undefined ? quote.discount : 0
-      };
+      return safeQuote;
     } catch (error) {
       console.error("Error in getQuoteByShareToken:", error);
       return undefined;

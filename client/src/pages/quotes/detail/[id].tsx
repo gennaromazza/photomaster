@@ -468,10 +468,6 @@ export default function QuoteDetailPage() {
                     <p className="font-medium">{quote.category?.name || "Non specificato"}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Workflow</h4>
-                    <p className="font-medium">{quote.workflow || "Default"}</p>
-                  </div>
-                  <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Data Evento</h4>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
@@ -533,9 +529,11 @@ export default function QuoteDetailPage() {
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Provenienza</h4>
                     <p className="font-medium">{quote.leadSource?.name || "Non specificata"}</p>
                   </div>
+
+                  
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Settore</h4>
-                    <p className="font-medium">{quote.category?.name || "Non specificato"}</p>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Workflow</h4>
+                    <p className="font-medium">{quote.workflow || "Default"}</p>
                   </div>
                   <div className="col-span-1 md:col-span-2">
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Operatori</h4>

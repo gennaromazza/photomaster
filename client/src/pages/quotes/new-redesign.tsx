@@ -391,17 +391,11 @@ export default function NewQuotePage() {
 
   // Gestisci il submit del form preventivo
   const onSubmit = (data: QuoteFormValues) => {
-    const formattedData = {
-      ...data,
-      eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : undefined,
-      eventTime: data.eventTime || undefined,
-      eventEndTime: data.eventEndTime || undefined,
-    };
-    
+    // Qui usiamo direttamente i dati senza convertire la data in stringa
     if (isEditMode) {
-      updateQuoteMutation.mutate(formattedData);
+      updateQuoteMutation.mutate(data);
     } else {
-      createQuoteMutation.mutate(formattedData);
+      createQuoteMutation.mutate(data);
     }
   };
 
@@ -1077,6 +1071,16 @@ export default function NewQuotePage() {
                   )}
                 />
 
+                <Separator className="my-4" />
+                
+                {/* Dettagli rito religioso */}
+                <h3 className="text-lg font-medium mb-2 flex items-center">
+                  <Church className="h-5 w-5 mr-2" />
+                  Rito Religioso / Cerimonia
+                </h3>
+                
+                <CeremonyDetails form={form} className="my-4" />
+                
                 <Separator className="my-4" />
 
                 {/* Opzioni assistenti */}

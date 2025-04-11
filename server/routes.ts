@@ -1416,6 +1416,12 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         secondClient = await storage.getClient(quote.secondClientId);
       }
       
+      // Recupera la categoria del preventivo (tipo evento)
+      let category = undefined;
+      if (quote.categoryId) {
+        category = await storage.getServiceCategory(quote.categoryId);
+      }
+      
       // Recupera i dettagli dei servizi per ogni elemento del preventivo
       const enrichedQuoteItems = await Promise.all(
         quoteItems.map(async (item) => {
@@ -1429,7 +1435,8 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         ...quote,
         quoteItems: enrichedQuoteItems,
         client: client || undefined,
-        secondClient: secondClient || undefined
+        secondClient: secondClient || undefined,
+        category: category || undefined
       };
       
       res.json(completeQuote);

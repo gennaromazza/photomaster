@@ -1,6 +1,11 @@
 import { db } from "./db";
 import { eq, and, gt, gte } from "drizzle-orm";
 import crypto from "crypto";
+import postgres from "postgres";
+
+// Creiamo un client PostgreSQL diretto per query SQL manuali
+const connectionString = process.env.DATABASE_URL!;
+const pgClient = postgres(connectionString);
 import {
   users, clients, events, tasks, collaborators, eventCollaborators,
   contracts, services, quotes, quoteItems, settings, serviceCategories, leadSources,
@@ -702,19 +707,46 @@ export class DatabaseStorage implements IStorage {
 
   async getAllQuotes(): Promise<Quote[]> {
     try {
-      // Utilizziamo una query più semplice e sicura
-      const result = await db.select().from(quotes);
+      // Utilizziamo una query SQL grezza specificando solo le colonne che sappiamo esistere
+      const rawQuotes = await db.execute(`
+        SELECT id, title, client_id, second_client_id, event_id, category_id, lead_source_id, 
+        event_date, is_full_day, event_time, event_end_time, location, event_type, workflow, 
+        created_at, updated_at, expiry_date, status, notes, signature, is_shared, share_token
+        FROM quotes
+      `);
       
-      // Aggiungiamo i campi virtuali che mancano
-      return result.map(quote => {
-        return {
-          ...quote,
-          subtotal: 0,
-          total: 0,
-          discount: 0,
-          shareExpiry: null
-        } as unknown as Quote;
-      });
+      // Convertiamo manualmente i nomi delle colonne in camelCase e aggiungiamo campi virtuali
+      return rawQuotes.map(q => ({
+        id: q.id,
+        title: q.title,
+        clientId: q.client_id,
+        secondClientId: q.second_client_id,
+        eventId: q.event_id,
+        categoryId: q.category_id,
+        leadSourceId: q.lead_source_id,
+        eventDate: q.event_date,
+        isFullDay: q.is_full_day,
+        eventTime: q.event_time,
+        eventEndTime: q.event_end_time,
+        location: q.location,
+        eventType: q.event_type,
+        workflow: q.workflow,
+        createdAt: q.created_at,
+        updatedAt: q.updated_at,
+        expiryDate: q.expiry_date,
+        status: q.status,
+        notes: q.notes,
+        signature: q.signature,
+        isShared: q.is_shared,
+        shareToken: q.share_token,
+        // Aggiungiamo i campi virtuali necessari
+        ceremonyLocation: null, // Campo non presente nel DB
+        ceremonyTime: null,     // Campo non presente nel DB
+        subtotal: 0,
+        total: 0,
+        discount: 0,
+        shareExpiry: null
+      })) as Quote[];
     } catch (error) {
       console.error("Error in getAllQuotes:", error);
       return [];
@@ -907,13 +939,13 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log("Cerco preventivo con token:", token);
       
-      // Utilizziamo una query SQL grezza specificando solo colonne esistenti
-      const rawQuotes = await db.execute(`
+      // Utilizziamo il client postgres diretto per la query SQL grezza
+      const rawQuotes = await pgClient`
         SELECT id, title, client_id, second_client_id, event_id, category_id, lead_source_id, 
         event_date, is_full_day, event_time, event_end_time, location, event_type, workflow, 
         created_at, updated_at, expiry_date, status, notes, signature, is_shared, share_token
-        FROM quotes WHERE share_token = $1 AND is_shared = true
-      `, [token]);
+        FROM quotes WHERE share_token = ${token} AND is_shared = true
+      `;
       
       if (!rawQuotes || rawQuotes.length === 0) {
         console.log("Preventivo non trovato o non condiviso");

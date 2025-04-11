@@ -23,16 +23,31 @@ import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-primary py-4">
-        <div className="container">
-          <h1 className="text-2xl font-playfair text-primary-foreground">ImageStudio Preventivo</h1>
+    <div className="min-h-screen flex flex-col bg-background/50">
+      <header className="bg-primary py-5 shadow-md">
+        <div className="container px-4 sm:px-6 md:px-8">
+          <div className="flex items-center justify-center">
+            <div className="bg-white/10 p-1 px-3 rounded-full">
+              <h1 className="text-2xl md:text-3xl font-playfair text-primary-foreground tracking-wide">
+                <span className="font-bold">Image</span>
+                <span className="font-light">Studio</span>
+                <span className="text-lg md:text-xl ml-2 opacity-80 font-light">Preventivo</span>
+              </h1>
+            </div>
+          </div>
         </div>
       </header>
-      <main className="flex-1 container py-6">{children}</main>
-      <footer className="bg-muted py-4 border-t">
-        <div className="container text-center text-sm text-muted-foreground">
-          <p>Preventivo generato da ImageStudio. © {new Date().getFullYear()}</p>
+      <main className="flex-1 container px-4 sm:px-6 md:px-8 py-6 md:py-10">{children}</main>
+      <footer className="bg-muted py-5 border-t shadow-inner">
+        <div className="container px-4 text-center">
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <p className="text-sm md:text-base text-muted-foreground">
+              Preventivo generato da <span className="font-medium">ImageStudio</span>
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              © {new Date().getFullYear()} - Tutti i diritti riservati
+            </p>
+          </div>
         </div>
       </footer>
     </div>
@@ -103,13 +118,13 @@ export default function PublicQuotePage() {
     <PublicLayout>
       <div className="max-w-4xl mx-auto">
         {/* Intestazione preventivo */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-playfair font-bold mb-2">{quote.title}</h1>
+        <div className="text-center mb-10 bg-primary/5 py-8 px-4 rounded-lg shadow-sm border border-primary/10">
+          <h1 className="text-3xl md:text-4xl font-playfair font-bold mb-3">{quote.title}</h1>
           <Badge 
             variant={quote.status === "confermato" || quote.status === "approved" ? "success" : 
                      quote.status === "in attesa" || quote.status === "pending" ? "warning" : 
                      "default"}
-            className="mb-2"
+            className="mb-2 px-3 py-1 text-sm"
           >
             {quote.status === "draft" ? "Bozza" : 
              quote.status === "pending" || quote.status === "in attesa" ? "In attesa" : 
@@ -117,7 +132,7 @@ export default function PublicQuotePage() {
              quote.status === "rejected" || quote.status === "rifiutato" ? "Rifiutato" : 
              quote.status || "Preventivo"}
           </Badge>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-2">
             Creato il {quote.createdAt ? format(new Date(quote.createdAt), "dd/MM/yyyy", { locale: it }) : ""}
           </p>
         </div>
@@ -169,23 +184,17 @@ export default function PublicQuotePage() {
                 </div>
               </div>
               
-              {/* Dettagli del rito */}
+              {/* Utilizziamo il componente CeremonyDetails per una visualizzazione più elegante */}
               {(quote.ceremonyLocation || quote.ceremonyTime) && (
                 <div className="col-span-1 md:col-span-2">
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center">
-                    <Church className="h-4 w-4 mr-1 text-muted-foreground" />
-                    Rito / Cerimonia
-                  </h4>
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                    <p className="font-medium">{quote.ceremonyLocation || "Non specificato"}</p>
-                  </div>
-                  {quote.ceremonyTime && (
-                    <div className="flex items-center mt-1 ml-5">
-                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <p className="text-sm">{quote.ceremonyTime}</p>
-                    </div>
-                  )}
+                  <CeremonyDetails 
+                    readOnly={true}
+                    ceremony={{
+                      location: quote.ceremonyLocation,
+                      time: quote.ceremonyTime
+                    }}
+                    className="bg-muted/30 p-3 rounded-md border border-muted mt-2"
+                  />
                 </div>
               )}
             </div>
@@ -193,76 +202,88 @@ export default function PublicQuotePage() {
         </Card>
 
         {/* Servizi/Moduli */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Servizi inclusi</CardTitle>
+        <Card className="mb-6 overflow-hidden">
+          <CardHeader className="bg-primary/5 border-b">
+            <CardTitle className="flex items-center">
+              <FileText className="h-5 w-5 mr-2 text-primary" />
+              Servizi inclusi
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6">
             {quote.quoteItems && quote.quoteItems.length > 0 ? (
               <div className="space-y-4">
                 {quote.quoteItems.map((item: any) => (
-                  <div key={item.id} className="border rounded-md p-4">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-medium">{item.service?.name || "Servizio"}</h4>
-                      <Badge variant="outline">€ {(item.total || 0).toLocaleString()}</Badge>
+                  <div key={item.id} className="border rounded-md p-4 hover:border-primary/30 transition-colors duration-200 bg-background shadow-sm">
+                    <div className="flex flex-wrap justify-between items-start gap-2">
+                      <h4 className="font-medium text-base md:text-lg">{item.service?.name || "Servizio"}</h4>
+                      <Badge variant="outline" className="bg-primary/5 text-primary">€ {(item.total || 0).toLocaleString()}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-2">
                       {item.quantity || 1} x €{(item.unitPrice || 0).toLocaleString()}
                       {item.hasDiscount && (
-                        <span> (-{item.discountType === 'percentage' ? `${item.discountValue}%` : `€${item.discountValue}`})</span>
+                        <span className="text-green-600 font-medium"> (-{item.discountType === 'percentage' ? `${item.discountValue}%` : `€${item.discountValue}`})</span>
                       )}
                     </p>
                     {item.description && (
-                      <p className="text-sm mt-2 bg-muted p-2 rounded">{item.description}</p>
+                      <p className="text-sm mt-3 bg-muted p-3 rounded-md border border-border/50">{item.description}</p>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 border rounded-md">
-                <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-muted-foreground">Nessun servizio incluso</p>
+              <div className="text-center py-10 border rounded-md bg-muted/20">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <p className="text-muted-foreground">Nessun servizio incluso nel preventivo</p>
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex justify-between border-t pt-4">
-            <div>
+          <CardFooter className="flex flex-col md:flex-row md:justify-between border-t py-5 gap-4 bg-muted/10">
+            <div className="text-center md:text-left">
               <p className="text-sm text-muted-foreground">Totale Servizi</p>
               <p className="font-medium text-xl">€ {(quote.subtotal || 0).toLocaleString()}</p>
             </div>
             {quote.discount > 0 && (
-              <div>
+              <div className="text-center">
                 <p className="text-sm text-muted-foreground">Sconto</p>
                 <p className="font-medium text-xl text-green-600">- € {(quote.discount || 0).toLocaleString()}</p>
               </div>
             )}
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Totale Preventivo</p>
-              <p className="font-medium text-xl">€ {(quote.total || 0).toLocaleString()}</p>
+            <div className="text-center md:text-right bg-primary/5 px-6 py-3 rounded-md border border-primary/10">
+              <p className="text-sm font-medium text-primary">Totale Preventivo</p>
+              <p className="font-bold text-2xl">€ {(quote.total || 0).toLocaleString()}</p>
             </div>
           </CardFooter>
         </Card>
 
         {/* Note */}
         {quote.notes && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Note</CardTitle>
+          <Card className="mb-8 border-primary/20">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-primary" />
+                Note
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm whitespace-pre-line">{quote.notes}</p>
+            <CardContent className="p-5">
+              <div className="bg-muted/20 p-4 rounded-md border border-muted">
+                <p className="text-sm md:text-base whitespace-pre-line leading-relaxed">{quote.notes}</p>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {/* Informazioni di contatto dello studio */}
-        <Card className="mt-8 mb-6">
-          <CardHeader>
-            <CardTitle className="text-center">Per qualsiasi informazione</CardTitle>
+        <Card className="mt-10 mb-6 overflow-hidden shadow-md">
+          <CardHeader className="bg-primary text-primary-foreground border-b">
+            <CardTitle className="text-center font-playfair">Per qualsiasi informazione</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-center mb-4">Contattaci direttamente per confermare il tuo preventivo o per richieste personalizzate.</p>
-            <StudioInfo className="mx-auto max-w-md" />
+          <CardContent className="p-6">
+            <p className="text-center mb-6 text-muted-foreground">
+              Contattaci direttamente per confermare il tuo preventivo o per richieste personalizzate.
+            </p>
+            <div className="bg-muted/20 p-5 rounded-lg border">
+              <StudioInfo className="mx-auto max-w-md" />
+            </div>
           </CardContent>
         </Card>
       </div>

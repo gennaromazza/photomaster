@@ -788,6 +788,8 @@ export class DatabaseStorage implements IStorage {
         eventTime: quote.eventTime,
         eventEndTime: quote.eventEndTime,
         location: quote.location,
+        ceremonyLocation: quote.ceremonyLocation,
+        ceremonyTime: quote.ceremonyTime,
         eventType: quote.eventType,
         workflow: quote.workflow || 'default',
         status: quote.status || 'draft',
@@ -963,8 +965,9 @@ export class DatabaseStorage implements IStorage {
       // Utilizziamo il client postgres diretto per la query SQL grezza
       const rawQuotes = await pgClient`
         SELECT id, title, client_id, second_client_id, event_id, category_id, lead_source_id, 
-        event_date, is_full_day, event_time, event_end_time, location, event_type, workflow, 
-        created_at, updated_at, expiry_date, status, notes, signature, is_shared, share_token
+        event_date, is_full_day, event_time, event_end_time, location, ceremony_location, ceremony_time,
+        event_type, workflow, created_at, updated_at, expiry_date, status, notes, signature, 
+        is_shared, share_token
         FROM quotes WHERE share_token = ${token} AND is_shared = true
       `;
       
@@ -989,6 +992,8 @@ export class DatabaseStorage implements IStorage {
         eventTime: rawQuote.event_time,
         eventEndTime: rawQuote.event_end_time,
         location: rawQuote.location,
+        ceremonyLocation: rawQuote.ceremony_location,
+        ceremonyTime: rawQuote.ceremony_time,
         eventType: rawQuote.event_type,
         workflow: rawQuote.workflow,
         createdAt: rawQuote.created_at,

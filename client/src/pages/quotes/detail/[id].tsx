@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Layout from "@/components/layout/layout";
+import CeremonyDetails from "@/components/quotes/ceremony-details";
 import {
   Card,
   CardContent,

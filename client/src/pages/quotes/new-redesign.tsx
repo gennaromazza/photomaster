@@ -344,10 +344,10 @@ export default function NewQuotePage() {
         description: "Il preventivo è stato creato con successo",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-      // Reindirizza alla pagina di dettaglio del preventivo appena creato
       setLocation(`/quotes/detail/${newQuote.id}`);
     },
     onError: (error) => {
+      console.error("Error creating quote:", error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante la creazione del preventivo",
@@ -382,29 +382,18 @@ export default function NewQuotePage() {
   });
 
   // Gestisci il submit del form preventivo
-  const onSubmit = async (data: QuoteFormValues) => {
-    try {
-      // Ensure dates are properly formatted
-      const formattedData = {
-        ...data,
-        eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : undefined,
-        eventTime: data.eventTime ? data.eventTime : undefined,
-        eventEndTime: data.eventEndTime ? data.eventEndTime : undefined,
-      };
-      
-      // Se siamo in modalità modifica, usiamo la mutation di aggiornamento, altrimenti quella di creazione
-      if (isEditMode) {
-        updateQuoteMutation.mutate(formattedData);
-      } else {
-        createQuoteMutation.mutate(formattedData);
-      }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'invio del modulo.",
-        variant: "destructive",
-      });
+  const onSubmit = (data: QuoteFormValues) => {
+    const formattedData = {
+      ...data,
+      eventDate: data.eventDate ? new Date(data.eventDate).toISOString() : undefined,
+      eventTime: data.eventTime || undefined,
+      eventEndTime: data.eventEndTime || undefined,
+    };
+    
+    if (isEditMode) {
+      updateQuoteMutation.mutate(formattedData);
+    } else {
+      createQuoteMutation.mutate(formattedData);
     }
   };
 

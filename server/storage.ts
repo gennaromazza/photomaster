@@ -1008,9 +1008,9 @@ export class DatabaseStorage implements IStorage {
   async getQuoteItem(id: number): Promise<QuoteItem | undefined> {
     try {
       // Utilizziamo il client postgres diretto per evitare problemi con campi mancanti
+      // Selezioniamo solo le colonne che siamo sicuri esistano
       const result = await pgClient`
-        SELECT id, quote_id, service_id, quantity, unit_price, total,
-         has_discount, discount_type, discount_value, discounted_price
+        SELECT id, quote_id, service_id, quantity, unit_price, total
          FROM quote_items WHERE id = ${id}
       `;
       
@@ -1021,19 +1021,20 @@ export class DatabaseStorage implements IStorage {
       const item = result[0];
       
       // Convertiamo i nomi delle colonne in camel case per TypeScript
+      // e aggiungiamo i campi mancanti come null o valori di default
       return {
         id: item.id,
         quoteId: item.quote_id,
         serviceId: item.service_id,
-        quantity: item.quantity,
-        unitPrice: item.unit_price,
-        total: item.total,
-        notes: null, // Impostiamo notes a null se non esiste nella tabella
-        hasDiscount: item.has_discount,
-        discountType: item.discount_type,
-        discountValue: item.discount_value,
-        discountedPrice: item.discounted_price,
-        bundleId: null, // Impostiamo bundleId a null se non esiste nella tabella
+        quantity: item.quantity || 1,
+        unitPrice: item.unit_price || 0,
+        total: item.total || 0,
+        notes: null,
+        hasDiscount: false, // Impostiamo valori di default
+        discountType: null,
+        discountValue: 0,
+        discountedPrice: item.total || 0,
+        bundleId: null,
       } as QuoteItem;
     } catch (error) {
       console.error("Errore nel recupero dell'elemento del preventivo:", error);
@@ -1044,26 +1045,27 @@ export class DatabaseStorage implements IStorage {
   async getQuoteItemsByQuote(quoteId: number): Promise<QuoteItem[]> {
     try {
       // Utilizziamo il client postgres diretto per evitare problemi con campi mancanti
+      // Selezioniamo solo le colonne che siamo sicuri esistano
       const result = await pgClient`
-        SELECT id, quote_id, service_id, quantity, unit_price, total,
-         has_discount, discount_type, discount_value, discounted_price
+        SELECT id, quote_id, service_id, quantity, unit_price, total
          FROM quote_items WHERE quote_id = ${quoteId}
       `;
       
       // Convertiamo i nomi delle colonne in camel case per TypeScript
+      // e aggiungiamo i campi mancanti come null o valori di default
       return result.map(item => ({
         id: item.id,
         quoteId: item.quote_id,
         serviceId: item.service_id,
-        quantity: item.quantity,
-        unitPrice: item.unit_price,
-        total: item.total,
-        notes: null, // Impostiamo notes a null se non esiste nella tabella
-        hasDiscount: item.has_discount,
-        discountType: item.discount_type,
-        discountValue: item.discount_value,
-        discountedPrice: item.discounted_price,
-        bundleId: null, // Impostiamo bundleId a null se non esiste nella tabella
+        quantity: item.quantity || 1,
+        unitPrice: item.unit_price || 0,
+        total: item.total || 0,
+        notes: null,
+        hasDiscount: false, // Impostiamo valori di default
+        discountType: null,
+        discountValue: 0,
+        discountedPrice: item.total || 0,
+        bundleId: null,
       })) as QuoteItem[];
     } catch (error) {
       console.error("Errore nel recupero degli elementi del preventivo:", error);

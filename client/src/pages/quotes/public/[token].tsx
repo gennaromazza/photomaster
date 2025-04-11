@@ -10,11 +10,15 @@ import {
   Clock, 
   FileText, 
   Euro,
-  Loader2
+  Loader2,
+  Church
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { ClientAddressDetails } from "@/components/quotes/client-address-details";
+import { StudioInfo } from "@/components/quotes/studio-info";
+import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
@@ -119,57 +123,12 @@ export default function PublicQuotePage() {
         </div>
 
         {/* Dettagli cliente */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Dettagli Cliente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {quote.client && (
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Cliente</h4>
-                  <div className="flex items-center">
-                    <User className="h-4 w-4 mr-1 text-muted-foreground" />
-                    <p className="font-medium">
-                      {quote.client.firstName} {quote.client.lastName}
-                    </p>
-                  </div>
-                  {quote.client.email && (
-                    <p className="text-sm text-muted-foreground mt-1 ml-5">
-                      Email: {quote.client.email}
-                    </p>
-                  )}
-                  {quote.client.phone && (
-                    <p className="text-sm text-muted-foreground mt-1 ml-5">
-                      Tel: {quote.client.phone}
-                    </p>
-                  )}
-                </div>
-              )}
-              {quote.secondClient && (
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Secondo Cliente</h4>
-                  <div className="flex items-center">
-                    <User className="h-4 w-4 mr-1 text-muted-foreground" />
-                    <p className="font-medium">
-                      {quote.secondClient.firstName} {quote.secondClient.lastName}
-                    </p>
-                  </div>
-                  {quote.secondClient.email && (
-                    <p className="text-sm text-muted-foreground mt-1 ml-5">
-                      Email: {quote.secondClient.email}
-                    </p>
-                  )}
-                  {quote.secondClient.phone && (
-                    <p className="text-sm text-muted-foreground mt-1 ml-5">
-                      Tel: {quote.secondClient.phone}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <ClientAddressDetails
+          client={quote.client}
+          secondClient={quote.secondClient}
+          className="mb-6"
+          showAddresses={true}
+        />
 
         {/* Dettagli evento */}
         <Card className="mb-6">
@@ -213,7 +172,10 @@ export default function PublicQuotePage() {
               {/* Dettagli del rito */}
               {(quote.ceremonyLocation || quote.ceremonyTime) && (
                 <div className="col-span-1 md:col-span-2">
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Rito</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1 flex items-center">
+                    <Church className="h-4 w-4 mr-1 text-muted-foreground" />
+                    Rito / Cerimonia
+                  </h4>
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
                     <p className="font-medium">{quote.ceremonyLocation || "Non specificato"}</p>
@@ -293,21 +255,16 @@ export default function PublicQuotePage() {
           </Card>
         )}
 
-        {/* Informazioni di contatto */}
-        <div className="text-center mt-8 p-6 border rounded-lg bg-muted/30">
-          <h3 className="text-lg font-medium mb-2">Per qualsiasi informazione</h3>
-          <p className="mb-4">Contattaci direttamente per confermare il tuo preventivo o per richieste personalizzate.</p>
-          <div className="flex justify-center space-x-6">
-            <div className="text-center">
-              <p className="font-medium">Email</p>
-              <p className="text-sm text-muted-foreground">info@imagestudio.it</p>
-            </div>
-            <div className="text-center">
-              <p className="font-medium">Telefono</p>
-              <p className="text-sm text-muted-foreground">+39 123 456 7890</p>
-            </div>
-          </div>
-        </div>
+        {/* Informazioni di contatto dello studio */}
+        <Card className="mt-8 mb-6">
+          <CardHeader>
+            <CardTitle className="text-center">Per qualsiasi informazione</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center mb-4">Contattaci direttamente per confermare il tuo preventivo o per richieste personalizzate.</p>
+            <StudioInfo className="mx-auto max-w-md" />
+          </CardContent>
+        </Card>
       </div>
     </PublicLayout>
   );

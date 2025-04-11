@@ -51,7 +51,8 @@ import {
   Plus,
   Link,
   Loader2,
-  Check
+  Check,
+  Church
 } from "lucide-react";
 
 export default function QuoteDetailPage() {
@@ -464,7 +465,7 @@ export default function QuoteDetailPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Tipo Lavoro</h4>
-                    <p className="font-medium">{quote.eventType || "Non specificato"}</p>
+                    <p className="font-medium">{quote.category?.name || "Non specificato"}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Workflow</h4>
@@ -497,6 +498,37 @@ export default function QuoteDetailPage() {
                       <p className="font-medium">{quote.location || "Non specificata"}</p>
                     </div>
                   </div>
+                  
+                  {/* Informazioni sul rito religioso */}
+                  {(quote.ceremonyLocation || quote.ceremonyTime) && (
+                    <div className="col-span-2 md:col-span-3 border-t pt-4 mt-2">
+                      <h4 className="text-sm font-semibold mb-2 flex items-center">
+                        <Church className="h-4 w-4 mr-2 text-muted-foreground" />
+                        Dettagli Rito / Cerimonia
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {quote.ceremonyLocation && (
+                          <div>
+                            <h5 className="text-sm font-medium text-muted-foreground mb-1">Luogo</h5>
+                            <div className="flex items-center">
+                              <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                              <p className="font-medium">{quote.ceremonyLocation}</p>
+                            </div>
+                          </div>
+                        )}
+                        {quote.ceremonyTime && (
+                          <div>
+                            <h5 className="text-sm font-medium text-muted-foreground mb-1">Orario</h5>
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                              <p className="font-medium">{quote.ceremonyTime}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Provenienza</h4>
                     <p className="font-medium">{quote.leadSource?.name || "Non specificata"}</p>

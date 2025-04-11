@@ -905,22 +905,43 @@ export class DatabaseStorage implements IStorage {
   
   async getQuoteByShareToken(token: string): Promise<Quote | undefined> {
     try {
+      console.log("Cerco preventivo con token:", token);
+      
       // Utilizziamo una select semplice e sicura
       const [quote] = await db.select()
         .from(quotes)
         .where(eq(quotes.shareToken, token));
       
       if (!quote || !quote.shareToken || !quote.isShared) {
+        console.log("Preventivo non trovato o non condiviso");
         return undefined;
       }
       
-      // Aggiungiamo i dati dei clienti, categoria, ecc.
-      const result = await this.getQuote(quote.id);
-      if (!result) return undefined;
+      // Creiamo un oggetto base con i campi virtuali
+      const result: Quote = {
+        ...quote,
+        subtotal: 0,
+        total: 0,
+        discount: 0,
+        shareExpiry: null,
+      };
       
-      return result;
+      try {
+        // Otteniamo tutti i dati relazionati usando le funzioni esistenti
+        // Questo evita errori con colonne mancanti
+        const items = await this.getQuoteItemsByQuote(quote.id);
+        
+        // Aggiungiamo gli elementi come dati relazionati senza modificare il tipo Quote
+        (result as any).items = items;
+        
+        return result;
+      } catch (e) {
+        console.error("Errore nell'arricchimento dei dati del preventivo:", e);
+        // Se c'è un errore, restituiamo comunque i dati base
+        return result;
+      }
     } catch (error) {
-      console.error("Error in getQuoteByShareToken:", error);
+      console.error("Errore nel recupero del preventivo condiviso:", error);
       return undefined;
     }
   }

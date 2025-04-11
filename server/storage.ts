@@ -875,32 +875,11 @@ export class DatabaseStorage implements IStorage {
       // Genera un token casuale
       const token = crypto.randomBytes(16).toString('hex');
       
-      // Imposta la data di scadenza (30 giorni da oggi)
-      const expiry = new Date();
-      expiry.setDate(expiry.getDate() + 30);
-      
-      // Prepariamo un oggetto di aggiornamento con solo i campi che sappiamo esistere
-      const updateData: any = {
+      // Aggiorna il preventivo con il token
+      const updateData = {
         isShared: true,
         shareToken: token
       };
-      
-      // Otteniamo lo schema attuale del database
-      try {
-        // Verifichiamo se possiamo aggiungere anche shareExpiry
-        const result = await db.query.quotes.findFirst({
-          where: (quotesTable, { eq }) => eq(quotesTable.id, id)
-        });
-        
-        // Se abbiamo il campo shareExpiry nella tabella, lo aggiungiamo ai dati da aggiornare
-        if (result) {
-          // Questo evita l'errore di colonna mancante
-          updateData.shareExpiry = expiry;
-        }
-      } catch (e) {
-        // Ignoriamo eventuali errori e procediamo con l'aggiornamento senza shareExpiry
-        console.log("shareExpiry potrebbe non esistere nella tabella, proseguiamo senza");
-      }
       
       // Aggiorna il preventivo con il token e la scadenza se disponibile
       const [updatedQuote] = await db
@@ -983,8 +962,8 @@ export class DatabaseStorage implements IStorage {
       if ('discount' in quote && quote.discount !== undefined) safeQuote.discount = quote.discount;
       if ('shareExpiry' in quote && quote.shareExpiry !== undefined) safeQuote.shareExpiry = quote.shareExpiry;
       
-      // Verifica la scadenza se esiste
-      if (safeQuote.shareExpiry && new Date(safeQuote.shareExpiry) < new Date()) {
+      // Il preventivo è valido se ha un token di condivisione
+      if (!safeQuote.shareToken) {
         return undefined;
       }
       

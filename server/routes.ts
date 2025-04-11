@@ -1407,14 +1407,29 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Recupera gli elementi del preventivo (per mostrare servizi, prodotti, ecc.)
       const quoteItems = await storage.getQuoteItemsByQuote(quote.id);
       
-      // Recupera il cliente associato al preventivo
+      // Recupera i clienti associati al preventivo
       const client = await storage.getClient(quote.clientId);
+      
+      // Recupera il secondo cliente se presente
+      let secondClient = undefined;
+      if (quote.secondClientId) {
+        secondClient = await storage.getClient(quote.secondClientId);
+      }
+      
+      // Recupera i dettagli dei servizi per ogni elemento del preventivo
+      const enrichedQuoteItems = await Promise.all(
+        quoteItems.map(async (item) => {
+          const service = await storage.getService(item.serviceId);
+          return { ...item, service };
+        })
+      );
       
       // Prepara l'oggetto completo del preventivo con tutte le informazioni
       const completeQuote = {
         ...quote,
-        quoteItems,
-        client: client || undefined
+        quoteItems: enrichedQuoteItems,
+        client: client || undefined,
+        secondClient: secondClient || undefined
       };
       
       res.json(completeQuote);

@@ -58,8 +58,10 @@ import {
   MapPin,
   Calendar as CalendarIcon2,
   Paperclip,
-  Save
+  Save,
+  Church
 } from "lucide-react";
+import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { 
   Command, 
   CommandInput, 

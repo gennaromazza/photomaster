@@ -950,7 +950,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Eseguiamo una query SQL grezza che seleziona solo i campi che sappiamo esistere
       const result = await db.execute(
-        `SELECT id, quote_id, service_id, quantity, unit_price, total, notes, 
+        `SELECT id, quote_id, service_id, quantity, unit_price, total,
          has_discount, discount_type, discount_value, discounted_price
          FROM quote_items WHERE id = $1`,
         [id]
@@ -970,7 +970,7 @@ export class DatabaseStorage implements IStorage {
         quantity: item.quantity,
         unitPrice: item.unit_price,
         total: item.total,
-        notes: item.notes,
+        notes: null, // Impostiamo notes a null se non esiste nella tabella
         hasDiscount: item.has_discount,
         discountType: item.discount_type,
         discountValue: item.discount_value,
@@ -988,7 +988,7 @@ export class DatabaseStorage implements IStorage {
       // Eseguiamo una query SQL grezza che seleziona solo i campi che sappiamo esistere
       // Questo evita riferimenti a colonne che potrebbero non esistere
       const result = await db.execute(
-        `SELECT id, quote_id, service_id, quantity, unit_price, total, notes, 
+        `SELECT id, quote_id, service_id, quantity, unit_price, total,
          has_discount, discount_type, discount_value, discounted_price
          FROM quote_items WHERE quote_id = $1`,
         [quoteId]
@@ -1002,7 +1002,7 @@ export class DatabaseStorage implements IStorage {
         quantity: item.quantity,
         unitPrice: item.unit_price,
         total: item.total,
-        notes: item.notes,
+        notes: null, // Impostiamo notes a null se non esiste nella tabella
         hasDiscount: item.has_discount,
         discountType: item.discount_type,
         discountValue: item.discount_value,

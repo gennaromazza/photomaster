@@ -374,6 +374,8 @@ export const quotes = pgTable("quotes", {
   eventTime: text("event_time"), // Orario di inizio evento (formato HH:MM)
   eventEndTime: text("event_end_time"), // Orario di fine evento (formato HH:MM)
   location: text("location"), // Indirizzo/location dell'evento
+  ceremonyLocation: text("ceremony_location"), // Luogo del rito (chiesa, comune, ecc.)
+  ceremonyTime: text("ceremony_time"), // Orario del rito (formato HH:MM)
   eventType: text("event_type"), // Tipo di lavoro/evento (wedding, baptism, ecc.)
   workflow: text("workflow").default("default"), // Workflow da applicare
   createdAt: timestamp("created_at").defaultNow().notNull(),

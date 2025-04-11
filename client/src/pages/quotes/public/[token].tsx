@@ -118,6 +118,59 @@ export default function PublicQuotePage() {
           </p>
         </div>
 
+        {/* Dettagli cliente */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Dettagli Cliente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {quote.client && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Cliente</h4>
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 mr-1 text-muted-foreground" />
+                    <p className="font-medium">
+                      {quote.client.firstName} {quote.client.lastName}
+                    </p>
+                  </div>
+                  {quote.client.email && (
+                    <p className="text-sm text-muted-foreground mt-1 ml-5">
+                      Email: {quote.client.email}
+                    </p>
+                  )}
+                  {quote.client.phone && (
+                    <p className="text-sm text-muted-foreground mt-1 ml-5">
+                      Tel: {quote.client.phone}
+                    </p>
+                  )}
+                </div>
+              )}
+              {quote.secondClient && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Secondo Cliente</h4>
+                  <div className="flex items-center">
+                    <User className="h-4 w-4 mr-1 text-muted-foreground" />
+                    <p className="font-medium">
+                      {quote.secondClient.firstName} {quote.secondClient.lastName}
+                    </p>
+                  </div>
+                  {quote.secondClient.email && (
+                    <p className="text-sm text-muted-foreground mt-1 ml-5">
+                      Email: {quote.secondClient.email}
+                    </p>
+                  )}
+                  {quote.secondClient.phone && (
+                    <p className="text-sm text-muted-foreground mt-1 ml-5">
+                      Tel: {quote.secondClient.phone}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Dettagli evento */}
         <Card className="mb-6">
           <CardHeader>
@@ -156,6 +209,23 @@ export default function PublicQuotePage() {
                   <p className="font-medium">{quote.location || "Non specificata"}</p>
                 </div>
               </div>
+              
+              {/* Dettagli del rito */}
+              {(quote.ceremonyLocation || quote.ceremonyTime) && (
+                <div className="col-span-1 md:col-span-2">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Rito</h4>
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
+                    <p className="font-medium">{quote.ceremonyLocation || "Non specificato"}</p>
+                  </div>
+                  {quote.ceremonyTime && (
+                    <div className="flex items-center mt-1 ml-5">
+                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                      <p className="text-sm">{quote.ceremonyTime}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -45,6 +45,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("login");
+  const [, setLocation] = useLocation();
 
   // Form per il login
   const loginForm = useForm<LoginFormValues>({
@@ -148,7 +149,7 @@ export default function AuthPage() {
                         )}
                       </Button>
                       <div className="text-center mt-2">
-                        <Button variant="link" size="sm" className="p-0" onClick={() => window.location.href = "/forgot-password"}>
+                        <Button variant="link" size="sm" className="p-0" onClick={() => setLocation("/forgot-password")}>
                           Password dimenticata?
                         </Button>
                       </div>

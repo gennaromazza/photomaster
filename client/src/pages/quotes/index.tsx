@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { Quote, Client, Event } from "@shared/schema";
 const QuotesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [, setLocation] = useLocation();
   
   const { data: quotes = [], isLoading } = useQuery<Quote[]>({
     queryKey: ["/api/quotes"],
@@ -143,7 +144,7 @@ const QuotesPage = () => {
                     <tr 
                       key={quote.id} 
                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => window.location.href = `/quotes/detail/${quote.id}`}
+                      onClick={() => setLocation(`/quotes/detail/${quote.id}`)}
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center">

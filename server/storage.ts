@@ -723,48 +723,40 @@ export class DatabaseStorage implements IStorage {
 
   async createQuote(quote: InsertQuote): Promise<Quote> {
     try {
-      // Creazione di un oggetto sicuro con solo i campi obbligatori
-      // che sappiamo esistere nella tabella
-      const safeData = {
+      const insertData = {
         title: quote.title || 'Nuovo preventivo',
-        clientId: quote.clientId
+        clientId: quote.clientId,
+        secondClientId: quote.secondClientId,
+        eventId: quote.eventId,
+        categoryId: quote.categoryId,
+        leadSourceId: quote.leadSourceId,
+        eventDate: quote.eventDate,
+        isFullDay: quote.isFullDay,
+        eventTime: quote.eventTime,
+        eventEndTime: quote.eventEndTime,
+        location: quote.location,
+        eventType: quote.eventType,
+        workflow: quote.workflow || 'default',
+        status: quote.status || 'draft',
+        notes: quote.notes,
+        isShared: false,
+        subtotal: 0,
+        total: 0,
+        discount: 0
       };
-      
-      // Lista dei campi opzionali che sappiamo esistere nella tabella
-      const allowedOptionalFields = [
-        'secondClientId', 'eventDate', 'categoryId', 
-        'leadSourceId', 'status', 'isShared', 'shareToken'
-      ];
-      
-      // Copiamo solo i campi consentiti che sono presenti nell'input
-      // Creazione di un oggetto completo da inserire
-      const insertData: Record<string, any> = {...safeData};
-      
-      for (const field of allowedOptionalFields) {
-        if (field in quote && (quote as any)[field] !== undefined) {
-          insertData[field] = (quote as any)[field];
-        }
-      }
-      
-      console.log("Inserting quote with data:", insertData);
-      
-      // Inseriamo i dati sicuri come array per forzare il tipo corretto
-      const [newQuote] = await db.insert(quotes).values([insertData as any]).returning();
+
+      const [newQuote] = await db.insert(quotes).values(insertData).returning();
       
       if (!newQuote) {
         throw new Error("Failed to create quote");
       }
-      
-      // Aggiungiamo i campi virtuali per l'applicazione frontend
-      const result = {
+
+      return {
         ...newQuote,
         subtotal: 0,
         total: 0,
-        discount: 0,
-        shareExpiry: null
-      };
-      
-      return result as Quote;
+        discount: 0
+      } as Quote;
     } catch (error) {
       console.error("Error in createQuote:", error);
       throw error;

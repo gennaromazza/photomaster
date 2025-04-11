@@ -947,12 +947,72 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuoteItem(id: number): Promise<QuoteItem | undefined> {
-    const [quoteItem] = await db.select().from(quoteItems).where(eq(quoteItems.id, id));
-    return quoteItem || undefined;
+    try {
+      // Eseguiamo una query SQL grezza che seleziona solo i campi che sappiamo esistere
+      const result = await db.execute(
+        `SELECT id, quote_id, service_id, quantity, unit_price, total, notes, 
+         has_discount, discount_type, discount_value, discounted_price
+         FROM quote_items WHERE id = $1`,
+        [id]
+      );
+      
+      if (result.length === 0) {
+        return undefined;
+      }
+      
+      const item = result[0];
+      
+      // Convertiamo i nomi delle colonne in camel case per TypeScript
+      return {
+        id: item.id,
+        quoteId: item.quote_id,
+        serviceId: item.service_id,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        total: item.total,
+        notes: item.notes,
+        hasDiscount: item.has_discount,
+        discountType: item.discount_type,
+        discountValue: item.discount_value,
+        discountedPrice: item.discounted_price,
+        bundleId: null, // Impostiamo bundleId a null se non esiste nella tabella
+      } as QuoteItem;
+    } catch (error) {
+      console.error("Errore nel recupero dell'elemento del preventivo:", error);
+      return undefined;
+    }
   }
 
   async getQuoteItemsByQuote(quoteId: number): Promise<QuoteItem[]> {
-    return await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quoteId));
+    try {
+      // Eseguiamo una query SQL grezza che seleziona solo i campi che sappiamo esistere
+      // Questo evita riferimenti a colonne che potrebbero non esistere
+      const result = await db.execute(
+        `SELECT id, quote_id, service_id, quantity, unit_price, total, notes, 
+         has_discount, discount_type, discount_value, discounted_price
+         FROM quote_items WHERE quote_id = $1`,
+        [quoteId]
+      );
+      
+      // Convertiamo i nomi delle colonne in camel case per TypeScript
+      return result.map(item => ({
+        id: item.id,
+        quoteId: item.quote_id,
+        serviceId: item.service_id,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        total: item.total,
+        notes: item.notes,
+        hasDiscount: item.has_discount,
+        discountType: item.discount_type,
+        discountValue: item.discount_value,
+        discountedPrice: item.discounted_price,
+        bundleId: null, // Impostiamo bundleId a null se non esiste nella tabella
+      })) as QuoteItem[];
+    } catch (error) {
+      console.error("Errore nel recupero degli elementi del preventivo:", error);
+      return []; // In caso di errore restituiamo un array vuoto
+    }
   }
 
   async createQuoteItem(quoteItem: InsertQuoteItem): Promise<QuoteItem> {

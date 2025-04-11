@@ -707,13 +707,13 @@ export class DatabaseStorage implements IStorage {
 
   async getAllQuotes(): Promise<Quote[]> {
     try {
-      // Utilizziamo una query SQL grezza specificando solo le colonne che sappiamo esistere
-      const rawQuotes = await db.execute(`
+      // Utilizziamo il client postgres diretto per evitare problemi con campi mancanti
+      const rawQuotes = await pgClient`
         SELECT id, title, client_id, second_client_id, event_id, category_id, lead_source_id, 
         event_date, is_full_day, event_time, event_end_time, location, event_type, workflow, 
         created_at, updated_at, expiry_date, status, notes, signature, is_shared, share_token
         FROM quotes
-      `);
+      `;
       
       // Convertiamo manualmente i nomi delle colonne in camelCase e aggiungiamo campi virtuali
       return rawQuotes.map(q => ({
@@ -1007,13 +1007,12 @@ export class DatabaseStorage implements IStorage {
 
   async getQuoteItem(id: number): Promise<QuoteItem | undefined> {
     try {
-      // Eseguiamo una query SQL grezza che seleziona solo i campi che sappiamo esistere
-      const result = await db.execute(
-        `SELECT id, quote_id, service_id, quantity, unit_price, total,
+      // Utilizziamo il client postgres diretto per evitare problemi con campi mancanti
+      const result = await pgClient`
+        SELECT id, quote_id, service_id, quantity, unit_price, total,
          has_discount, discount_type, discount_value, discounted_price
-         FROM quote_items WHERE id = $1`,
-        [id]
-      );
+         FROM quote_items WHERE id = ${id}
+      `;
       
       if (result.length === 0) {
         return undefined;
@@ -1044,14 +1043,12 @@ export class DatabaseStorage implements IStorage {
 
   async getQuoteItemsByQuote(quoteId: number): Promise<QuoteItem[]> {
     try {
-      // Eseguiamo una query SQL grezza che seleziona solo i campi che sappiamo esistere
-      // Questo evita riferimenti a colonne che potrebbero non esistere
-      const result = await db.execute(
-        `SELECT id, quote_id, service_id, quantity, unit_price, total,
+      // Utilizziamo il client postgres diretto per evitare problemi con campi mancanti
+      const result = await pgClient`
+        SELECT id, quote_id, service_id, quantity, unit_price, total,
          has_discount, discount_type, discount_value, discounted_price
-         FROM quote_items WHERE quote_id = $1`,
-        [quoteId]
-      );
+         FROM quote_items WHERE quote_id = ${quoteId}
+      `;
       
       // Convertiamo i nomi delle colonne in camel case per TypeScript
       return result.map(item => ({

@@ -575,16 +575,45 @@ export class DatabaseStorage implements IStorage {
 
   async getQuote(id: number): Promise<any> {
     try {
-      // Utilizziamo una select semplice e sicura
-      const [quote] = await db.select()
-        .from(quotes)
-        .where(eq(quotes.id, id));
+      // Utilizziamo il client postgres diretto per evitare problemi con campi mancanti
+      const result = await pgClient`
+        SELECT id, title, client_id, second_client_id, event_id, category_id, lead_source_id, 
+        event_date, is_full_day, event_time, event_end_time, location, event_type, workflow, 
+        created_at, updated_at, expiry_date, status, notes, signature, is_shared, share_token
+        FROM quotes WHERE id = ${id}
+      `;
       
-      if (!quote) return undefined;
+      if (result.length === 0) return undefined;
       
-      // Creiamo un oggetto con valori predefiniti per tutti i campi che potrebbero mancare
-      const quoteWithDefaults = {
-        ...quote,
+      const rawQuote = result[0];
+      
+      // Convertiamo da snake_case a camelCase per TypeScript
+      const quote = {
+        id: rawQuote.id,
+        title: rawQuote.title,
+        clientId: rawQuote.client_id,
+        secondClientId: rawQuote.second_client_id,
+        eventId: rawQuote.event_id,
+        categoryId: rawQuote.category_id,
+        leadSourceId: rawQuote.lead_source_id,
+        eventDate: rawQuote.event_date,
+        isFullDay: rawQuote.is_full_day,
+        eventTime: rawQuote.event_time,
+        eventEndTime: rawQuote.event_end_time,
+        location: rawQuote.location,
+        eventType: rawQuote.event_type,
+        workflow: rawQuote.workflow,
+        createdAt: rawQuote.created_at,
+        updatedAt: rawQuote.updated_at,
+        expiryDate: rawQuote.expiry_date,
+        status: rawQuote.status,
+        notes: rawQuote.notes,
+        signature: rawQuote.signature,
+        isShared: rawQuote.is_shared,
+        shareToken: rawQuote.share_token,
+        // Campi virtuali o mancanti nel database
+        ceremonyLocation: null,
+        ceremonyTime: null,
         subtotal: 0,
         total: 0,
         discount: 0,
@@ -631,48 +660,40 @@ export class DatabaseStorage implements IStorage {
         leadSource = leadSourceData;
       }
       
-      // Carica gli elementi del preventivo con i relativi servizi
-      const quoteItemsWithServices = await db
-        .select({
-          quote_items: {
-            id: quoteItems.id,
-            quoteId: quoteItems.quoteId,
-            serviceId: quoteItems.serviceId,
-            quantity: quoteItems.quantity,
-            unitPrice: quoteItems.unitPrice,
-            total: quoteItems.total,
-          },
-          services: services
-        })
-        .from(quoteItems)
-        .where(eq(quoteItems.quoteId, id))
-        .leftJoin(services, eq(quoteItems.serviceId, services.id));
+      // Carica gli elementi del preventivo e i relativi servizi
+      const quoteItems = await this.getQuoteItemsByQuote(id);
       
-      // Formatta gli elementi del preventivo
-      const formattedItems = quoteItemsWithServices.map(item => ({
-        id: item.quote_items.id,
-        quoteId: item.quote_items.quoteId,
-        serviceId: item.quote_items.serviceId,
-        quantity: item.quote_items.quantity || 1,
-        unitPrice: item.quote_items.unitPrice || 0,
-        total: item.quote_items.total || 0,
-        // Imposta valori di default per i campi non presenti nel DB
-        hasDiscount: false,
-        discountType: null,
-        discountValue: null,
-        discountedPrice: null,
-        notes: null,
-        service: item.services
-      }));
+      // Carica i servizi per ogni elemento del preventivo
+      const itemsWithServices = [];
+      for (const item of quoteItems) {
+        if (item.serviceId) {
+          // Otteniamo i dati del servizio
+          const serviceData = await db
+            .select()
+            .from(services)
+            .where(eq(services.id, item.serviceId));
+            
+          if (serviceData && serviceData.length > 0) {
+            itemsWithServices.push({
+              ...item,
+              service: serviceData[0]
+            });
+          } else {
+            itemsWithServices.push(item);
+          }
+        } else {
+          itemsWithServices.push(item);
+        }
+      }
       
       // Formatta il risultato completo
       const formattedQuote = {
-        ...quoteWithDefaults,
+        ...quote,
         client: client,
         secondClient: secondClient,
         category: category,
         leadSource: leadSource,
-        quoteItems: formattedItems
+        quoteItems: itemsWithServices
       };
       
       return formattedQuote;

@@ -59,9 +59,13 @@ import {
   Calendar as CalendarIcon2,
   Paperclip,
   Save,
-  Church
+  Church,
+  Package
 } from "lucide-react";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
+import { ModuleSelector, QuoteModuleData } from "@/components/quotes/module-selector";
+import { FixedModule } from "@/components/quotes/fixed-module";
+import { VariableModule } from "@/components/quotes/variable-module";
 import { 
   Command, 
   CommandInput, 
@@ -131,7 +135,12 @@ export default function NewQuotePage() {
 
   // Variabili per i controlli selezionati
   const [assignPhotographers, setAssignPhotographers] = useState(false);
-
+  
+  // Variabili per la gestione dei moduli
+  const [modules, setModules] = useState<QuoteModuleData[]>([]);
+  const [editingModule, setEditingModule] = useState<QuoteModuleData | null>(null);
+  const [showModuleForm, setShowModuleForm] = useState<'fixed' | 'variable' | null>(null);
+  
   // Query per ottenere i clienti
   const { data: clients = [], isLoading: isLoadingClients } = useQuery<any[]>({
     queryKey: ["/api/clients"],

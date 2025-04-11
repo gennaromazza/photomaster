@@ -430,6 +430,7 @@ export const quotesRelations = relations(quotes, ({ one, many }) => ({
     references: [leadSources.id],
   }),
   quoteItems: many(quoteItems),
+  modules: many(quoteModules),
 }));
 
 // Quote Items Schema

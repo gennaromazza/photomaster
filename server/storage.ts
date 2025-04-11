@@ -9,7 +9,7 @@ const pgClient = postgres(connectionString);
 import {
   users, clients, events, tasks, collaborators, eventCollaborators,
   contracts, services, quotes, quoteItems, settings, serviceCategories, leadSources,
-  serviceBundles, serviceBundleItems, serviceItems,
+  serviceBundles, serviceBundleItems, serviceItems, quoteModules, quoteModuleItems,
   type User, type InsertUser, 
   type Client, type InsertClient,
   type Event, type InsertEvent,
@@ -23,6 +23,8 @@ import {
   type ServiceBundle, type InsertServiceBundle,
   type ServiceBundleItem, type InsertServiceBundleItem,
   type ServiceItem, type InsertServiceItem,
+  type QuoteModule, type InsertQuoteModule,
+  type QuoteModuleItem, type InsertQuoteModuleItem,
   type Settings, type InsertSettings,
   type ServiceCategory, type InsertServiceCategory,
   type LeadSource, type InsertLeadSource
@@ -152,6 +154,21 @@ export interface IStorage {
   // Settings operations
   getSettings(): Promise<Settings | undefined>;
   updateSettings(settings: Partial<InsertSettings>): Promise<Settings>;
+  
+  // Quote Module operations
+  getQuoteModule(id: number): Promise<QuoteModule | undefined>;
+  getModulesByQuote(quoteId: number): Promise<QuoteModule[]>;
+  createQuoteModule(module: InsertQuoteModule): Promise<QuoteModule>;
+  updateQuoteModule(id: number, module: Partial<InsertQuoteModule>): Promise<QuoteModule | undefined>;
+  deleteQuoteModule(id: number): Promise<boolean>;
+  getQuoteModuleByShareToken(token: string): Promise<QuoteModule | undefined>;
+  
+  // Quote Module Item operations
+  getQuoteModuleItem(id: number): Promise<QuoteModuleItem | undefined>;
+  getQuoteModuleItemsByModule(moduleId: number): Promise<QuoteModuleItem[]>;
+  createQuoteModuleItem(item: InsertQuoteModuleItem): Promise<QuoteModuleItem>;
+  updateQuoteModuleItem(id: number, item: Partial<InsertQuoteModuleItem>): Promise<QuoteModuleItem | undefined>;
+  deleteQuoteModuleItem(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1207,6 +1224,78 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return newSettings;
     }
+  }
+
+  // Quote Module methods
+  async getQuoteModule(id: number): Promise<QuoteModule | undefined> {
+    const [module] = await db.select().from(quoteModules).where(eq(quoteModules.id, id));
+    return module || undefined;
+  }
+
+  async getModulesByQuote(quoteId: number): Promise<QuoteModule[]> {
+    return await db.select().from(quoteModules).where(eq(quoteModules.quoteId, quoteId));
+  }
+
+  async createQuoteModule(module: InsertQuoteModule): Promise<QuoteModule> {
+    // Generiamo un token di condivisione casuale per i moduli variabili
+    if (module.type === 'variable' && !module.shareToken) {
+      module.shareToken = crypto.randomBytes(16).toString('hex');
+    }
+    
+    const [newModule] = await db.insert(quoteModules).values(module).returning();
+    return newModule;
+  }
+
+  async updateQuoteModule(id: number, module: Partial<InsertQuoteModule>): Promise<QuoteModule | undefined> {
+    const [updatedModule] = await db
+      .update(quoteModules)
+      .set(module)
+      .where(eq(quoteModules.id, id))
+      .returning();
+    return updatedModule || undefined;
+  }
+
+  async deleteQuoteModule(id: number): Promise<boolean> {
+    // Prima eliminiamo gli elementi del modulo
+    await db.delete(quoteModuleItems).where(eq(quoteModuleItems.moduleId, id));
+    
+    // Poi eliminiamo il modulo
+    const result = await db.delete(quoteModules).where(eq(quoteModules.id, id));
+    return result !== undefined;
+  }
+
+  async getQuoteModuleByShareToken(token: string): Promise<QuoteModule | undefined> {
+    const [module] = await db.select().from(quoteModules).where(eq(quoteModules.shareToken, token));
+    return module || undefined;
+  }
+
+  // Quote Module Item methods
+  async getQuoteModuleItem(id: number): Promise<QuoteModuleItem | undefined> {
+    const [item] = await db.select().from(quoteModuleItems).where(eq(quoteModuleItems.id, id));
+    return item || undefined;
+  }
+
+  async getQuoteModuleItemsByModule(moduleId: number): Promise<QuoteModuleItem[]> {
+    return await db.select().from(quoteModuleItems).where(eq(quoteModuleItems.moduleId, moduleId));
+  }
+
+  async createQuoteModuleItem(item: InsertQuoteModuleItem): Promise<QuoteModuleItem> {
+    const [newItem] = await db.insert(quoteModuleItems).values(item).returning();
+    return newItem;
+  }
+
+  async updateQuoteModuleItem(id: number, item: Partial<InsertQuoteModuleItem>): Promise<QuoteModuleItem | undefined> {
+    const [updatedItem] = await db
+      .update(quoteModuleItems)
+      .set(item)
+      .where(eq(quoteModuleItems.id, id))
+      .returning();
+    return updatedItem || undefined;
+  }
+
+  async deleteQuoteModuleItem(id: number): Promise<boolean> {
+    const result = await db.delete(quoteModuleItems).where(eq(quoteModuleItems.id, id));
+    return result !== undefined;
   }
 }
 

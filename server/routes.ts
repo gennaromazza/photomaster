@@ -1818,6 +1818,272 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     }
   });
   
+  // API per gestione moduli nei preventivi
+  apiRouter.get("/quotes/:quoteId/modules", async (req, res) => {
+    try {
+      const quoteId = parseInt(req.params.quoteId);
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: "ID preventivo non valido" });
+      }
+
+      const modules = await storage.getModulesByQuote(quoteId);
+      res.json(modules);
+    } catch (err) {
+      console.error("Error fetching quote modules:", err);
+      res.status(500).json({ message: "Errore nel recupero dei moduli" });
+    }
+  });
+
+  apiRouter.get("/modules/:id", async (req, res) => {
+    try {
+      const moduleId = parseInt(req.params.id);
+      if (isNaN(moduleId)) {
+        return res.status(400).json({ message: "ID modulo non valido" });
+      }
+
+      const module = await storage.getQuoteModule(moduleId);
+      if (!module) {
+        return res.status(404).json({ message: "Modulo non trovato" });
+      }
+
+      // Recupera anche gli elementi del modulo
+      const items = await storage.getQuoteModuleItemsByModule(moduleId);
+      
+      res.json({ ...module, items });
+    } catch (err) {
+      console.error("Error fetching module:", err);
+      res.status(500).json({ message: "Errore nel recupero del modulo" });
+    }
+  });
+
+  apiRouter.post("/quotes/:quoteId/modules", async (req, res) => {
+    try {
+      const quoteId = parseInt(req.params.quoteId);
+      if (isNaN(quoteId)) {
+        return res.status(400).json({ message: "ID preventivo non valido" });
+      }
+
+      // Verifica che il preventivo esista
+      const quote = await storage.getQuote(quoteId);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato" });
+      }
+
+      // Crea il modulo
+      const moduleData = { ...req.body, quoteId };
+      const newModule = await storage.createQuoteModule(moduleData);
+
+      // Se ci sono elementi nel modulo, li creiamo
+      if (req.body.items && Array.isArray(req.body.items)) {
+        for (const item of req.body.items) {
+          await storage.createQuoteModuleItem({
+            ...item,
+            moduleId: newModule.id
+          });
+        }
+      }
+
+      // Recupera il modulo completo con i suoi elementi
+      const items = await storage.getQuoteModuleItemsByModule(newModule.id);
+      
+      res.status(201).json({ ...newModule, items });
+    } catch (err) {
+      console.error("Error creating module:", err);
+      res.status(500).json({ message: "Errore nella creazione del modulo" });
+    }
+  });
+
+  apiRouter.put("/modules/:id", async (req, res) => {
+    try {
+      const moduleId = parseInt(req.params.id);
+      if (isNaN(moduleId)) {
+        return res.status(400).json({ message: "ID modulo non valido" });
+      }
+
+      // Verifica che il modulo esista
+      const existingModule = await storage.getQuoteModule(moduleId);
+      if (!existingModule) {
+        return res.status(404).json({ message: "Modulo non trovato" });
+      }
+
+      // Aggiorna il modulo
+      const updatedModule = await storage.updateQuoteModule(moduleId, req.body);
+      
+      // Gestisci gli elementi del modulo
+      if (req.body.items && Array.isArray(req.body.items)) {
+        // Elimina gli elementi esistenti
+        const existingItems = await storage.getQuoteModuleItemsByModule(moduleId);
+        for (const item of existingItems) {
+          await storage.deleteQuoteModuleItem(item.id);
+        }
+
+        // Crea i nuovi elementi
+        for (const item of req.body.items) {
+          await storage.createQuoteModuleItem({
+            ...item,
+            moduleId
+          });
+        }
+      }
+
+      // Recupera il modulo aggiornato con i suoi elementi
+      const items = await storage.getQuoteModuleItemsByModule(moduleId);
+      
+      res.json({ ...updatedModule, items });
+    } catch (err) {
+      console.error("Error updating module:", err);
+      res.status(500).json({ message: "Errore nell'aggiornamento del modulo" });
+    }
+  });
+
+  apiRouter.delete("/modules/:id", async (req, res) => {
+    try {
+      const moduleId = parseInt(req.params.id);
+      if (isNaN(moduleId)) {
+        return res.status(400).json({ message: "ID modulo non valido" });
+      }
+
+      // Verifica che il modulo esista
+      const existingModule = await storage.getQuoteModule(moduleId);
+      if (!existingModule) {
+        return res.status(404).json({ message: "Modulo non trovato" });
+      }
+
+      // Elimina il modulo (gli elementi verranno eliminati automaticamente nell'implementazione di deleteQuoteModule)
+      await storage.deleteQuoteModule(moduleId);
+      
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting module:", err);
+      res.status(500).json({ message: "Errore nell'eliminazione del modulo" });
+    }
+  });
+
+  apiRouter.get("/modules/share/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      if (!token) {
+        return res.status(400).json({ message: "Token non valido" });
+      }
+
+      // Recupera il modulo
+      const module = await storage.getQuoteModuleByShareToken(token);
+      if (!module) {
+        return res.status(404).json({ message: "Modulo non trovato o link scaduto" });
+      }
+
+      // Verifica che il modulo sia di tipo variabile
+      if (module.type !== 'variable') {
+        return res.status(400).json({ message: "Questo link non è valido per la configurazione" });
+      }
+
+      // Verifica che il modulo sia attivo
+      if (module.status !== 'active' && module.status !== 'pending_selection') {
+        return res.status(400).json({ message: "Questo modulo non è più attivo" });
+      }
+
+      // Verifica la data di scadenza
+      if (module.expiryDate && new Date(module.expiryDate) < new Date()) {
+        return res.status(400).json({ message: "Il link di configurazione è scaduto" });
+      }
+
+      // Recupera il preventivo associato
+      const quote = await storage.getQuote(module.quoteId);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato" });
+      }
+
+      // Recupera gli elementi del modulo
+      const items = await storage.getQuoteModuleItemsByModule(module.id);
+      
+      // Recupera il cliente associato al preventivo
+      const client = await storage.getClient(quote.clientId);
+      
+      res.json({
+        module: { ...module, items },
+        quote: {
+          id: quote.id,
+          title: quote.title
+        },
+        client: client ? {
+          id: client.id,
+          firstName: client.firstName,
+          lastName: client.lastName
+        } : null
+      });
+    } catch (err) {
+      console.error("Error fetching shared module:", err);
+      res.status(500).json({ message: "Errore nel recupero del modulo condiviso" });
+    }
+  });
+
+  apiRouter.post("/modules/share/:token/select", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { selectedItems } = req.body;
+
+      if (!token) {
+        return res.status(400).json({ message: "Token non valido" });
+      }
+
+      if (!selectedItems || !Array.isArray(selectedItems)) {
+        return res.status(400).json({ message: "Dati di selezione non validi" });
+      }
+
+      // Recupera il modulo
+      const module = await storage.getQuoteModuleByShareToken(token);
+      if (!module) {
+        return res.status(404).json({ message: "Modulo non trovato o link scaduto" });
+      }
+
+      // Verifica che il modulo sia di tipo variabile
+      if (module.type !== 'variable') {
+        return res.status(400).json({ message: "Questo modulo non supporta le selezioni" });
+      }
+
+      // Verifica che il modulo sia attivo
+      if (module.status !== 'active' && module.status !== 'pending_selection') {
+        return res.status(400).json({ message: "Questo modulo non è più attivo" });
+      }
+
+      // Verifica la data di scadenza
+      if (module.expiryDate && new Date(module.expiryDate) < new Date()) {
+        return res.status(400).json({ message: "Il link di configurazione è scaduto" });
+      }
+
+      // Recupera tutti gli elementi del modulo
+      const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
+      
+      // Aggiorna lo stato di ciascun elemento
+      for (const item of moduleItems) {
+        const isSelected = selectedItems.includes(item.id);
+        
+        // Verifica se un elemento obbligatorio non è stato selezionato
+        if (item.selectionRequired && !isSelected) {
+          return res.status(400).json({ 
+            message: `È necessario selezionare l'opzione obbligatoria: ${item.serviceName || item.bundleName || 'Opzione'}`
+          });
+        }
+        
+        await storage.updateQuoteModuleItem(item.id, {
+          isSelected,
+          selectionDate: isSelected ? new Date() : null
+        });
+      }
+
+      // Aggiorna lo stato del modulo
+      await storage.updateQuoteModule(module.id, {
+        status: 'active', // Cambia da 'pending_selection' ad 'active' se necessario
+        updatedAt: new Date()
+      });
+
+      res.json({ message: "Selezioni salvate con successo" });
+    } catch (err) {
+      console.error("Error updating module selections:", err);
+      res.status(500).json({ message: "Errore nel salvataggio delle selezioni" });
+    }
+  });
+
   // Register all API routes
   // Registrazione dei router modulari
   app.use("/api/bundle-leads", bundleLeadsRouter);

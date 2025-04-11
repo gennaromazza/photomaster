@@ -384,40 +384,25 @@ export const quotes = pgTable("quotes", {
   signature: text("signature"), // Firma del cliente per l'approvazione
   isShared: boolean("is_shared").default(false), // Indica se il preventivo è condiviso pubblicamente
   shareToken: text("share_token"), // Token univoco per l'URL di condivisione
-  subtotal: integer("subtotal").default(0), // Subtotale (somma dei servizi/prodotti prima degli sconti)
-  total: integer("total").default(0), // Totale (subtotale - sconti)
-  discount: integer("discount").default(0), // Sconto applicato al preventivo
+  // Questi campi non esistono nella tabella reale
+  // subtotal: integer("subtotal").default(0), // Subtotale (somma dei servizi/prodotti prima degli sconti)
+  // total: integer("total").default(0), // Totale (subtotale - sconti)
+  // discount: integer("discount").default(0), // Sconto applicato al preventivo
 });
 
-export const insertQuoteSchema = createInsertSchema(quotes).pick({
-  title: true,
-  clientId: true,
-  secondClientId: true,
-  eventId: true,
-  categoryId: true,
-  leadSourceId: true,
-  eventDate: true,
-  isFullDay: true,
-  eventTime: true,
-  eventEndTime: true,
-  location: true,
-  eventType: true,
-  workflow: true,
-  expiryDate: true,
-  status: true,
-  notes: true,
-  signature: true,
-  updatedAt: true,
-  isShared: true,
-  shareToken: true,
-  shareExpiry: true,
-  subtotal: true,
-  total: true,
-  discount: true,
-});
+// Creiamo lo schema solo con i campi che esistono nella tabella reale
+export const insertQuoteSchema = createInsertSchema(quotes);
 
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;
-export type Quote = typeof quotes.$inferSelect;
+
+// Estendiamo Quote con i campi virtuali per l'applicazione frontend
+export type Quote = typeof quotes.$inferSelect & {
+  // Campi virtuali per il frontend - non esistono nel database
+  subtotal?: number;
+  total?: number;
+  discount?: number;
+  shareExpiry?: Date | null;
+};
 
 export const quotesRelations = relations(quotes, ({ one, many }) => ({
   client: one(clients, {

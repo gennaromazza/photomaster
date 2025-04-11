@@ -295,16 +295,22 @@ export default function NewQuotePage() {
     onSuccess: (newClient) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       clientForm.reset();
+      
+      // Immediatamente imposta il cliente come selezionato
+      form.setValue("clientId", newClient.id);
+      console.log("Cliente principale impostato:", newClient.id);
+      
+      // Mostra il messaggio di successo
       setShowClientSuccess(true);
-      // Dopo 2 secondi, nascondi il messaggio di successo e chiudi il dialog
+      
+      // Dopo 2 secondi, nascondi il messaggio e chiudi il dialog
       setTimeout(() => {
         setShowClientSuccess(false);
         setIsClientDialogOpen(false);
-        // Imposta il cliente appena creato come cliente selezionato
-        form.setValue("clientId", newClient.id);
       }, 2000);
     },
     onError: (error) => {
+      console.error("Errore creazione cliente:", error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante la creazione del cliente",
@@ -322,16 +328,22 @@ export default function NewQuotePage() {
     onSuccess: (newClient) => {
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       secondClientForm.reset();
+      
+      // Immediatamente imposta il cliente come secondo cliente selezionato
+      form.setValue("secondClientId", newClient.id);
+      console.log("Secondo cliente impostato:", newClient.id);
+      
+      // Mostra il messaggio di successo
       setShowSecondClientSuccess(true);
-      // Dopo 2 secondi, nascondi il messaggio di successo e chiudi il dialog
+      
+      // Dopo 2 secondi, nascondi il messaggio e chiudi il dialog
       setTimeout(() => {
         setShowSecondClientSuccess(false);
         setIsSecondClientDialogOpen(false);
-        // Imposta il cliente appena creato come secondo cliente
-        form.setValue("secondClientId", newClient.id);
       }, 2000);
     },
     onError: (error) => {
+      console.error("Errore creazione secondo cliente:", error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante la creazione del secondo cliente",

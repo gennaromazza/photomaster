@@ -907,32 +907,59 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log("Cerco preventivo con token:", token);
       
-      // Utilizziamo una select semplice e sicura
-      const [quote] = await db.select()
-        .from(quotes)
-        .where(eq(quotes.shareToken, token));
+      // Utilizziamo una query SQL grezza specificando solo colonne esistenti
+      const rawQuotes = await db.execute(`
+        SELECT id, title, client_id, second_client_id, event_id, category_id, lead_source_id, 
+        event_date, is_full_day, event_time, event_end_time, location, event_type, workflow, 
+        created_at, updated_at, expiry_date, status, notes, signature, is_shared, share_token
+        FROM quotes WHERE share_token = $1 AND is_shared = true
+      `, [token]);
       
-      if (!quote || !quote.shareToken || !quote.isShared) {
+      if (!rawQuotes || rawQuotes.length === 0) {
         console.log("Preventivo non trovato o non condiviso");
         return undefined;
       }
       
-      // Creiamo un oggetto base con i campi virtuali
+      const rawQuote = rawQuotes[0];
+      
+      // Convertiamo da snake_case a camelCase per TypeScript
       const result: Quote = {
-        ...quote,
+        id: rawQuote.id,
+        title: rawQuote.title,
+        clientId: rawQuote.client_id,
+        secondClientId: rawQuote.second_client_id,
+        eventId: rawQuote.event_id,
+        categoryId: rawQuote.category_id,
+        leadSourceId: rawQuote.lead_source_id,
+        eventDate: rawQuote.event_date,
+        isFullDay: rawQuote.is_full_day,
+        eventTime: rawQuote.event_time,
+        eventEndTime: rawQuote.event_end_time,
+        location: rawQuote.location,
+        eventType: rawQuote.event_type,
+        workflow: rawQuote.workflow,
+        createdAt: rawQuote.created_at,
+        updatedAt: rawQuote.updated_at,
+        expiryDate: rawQuote.expiry_date,
+        status: rawQuote.status,
+        notes: rawQuote.notes,
+        signature: rawQuote.signature,
+        isShared: rawQuote.is_shared,
+        shareToken: rawQuote.share_token,
+        // Campi virtuali
         subtotal: 0,
         total: 0,
         discount: 0,
         shareExpiry: null,
-      };
+      } as Quote;
       
       try {
         // Otteniamo tutti i dati relazionati usando le funzioni esistenti
         // Questo evita errori con colonne mancanti
-        const items = await this.getQuoteItemsByQuote(quote.id);
+        const items = await this.getQuoteItemsByQuote(result.id);
         
         // Aggiungiamo gli elementi come dati relazionati senza modificare il tipo Quote
-        (result as any).items = items;
+        (result as any).quoteItems = items;
         
         return result;
       } catch (e) {

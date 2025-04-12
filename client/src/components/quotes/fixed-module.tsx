@@ -130,11 +130,12 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
           if (selectedService) {
             // Resetta i campi non pertinenti utilizzando l'utility di reset
             newItems[index] = resetItemFields(newItems[index], true);
-          // Poi imposta i nuovi valori
-          newItems[index].serviceId = selectedService.id;
-          newItems[index].unitPrice = selectedService.price;
-          newItems[index].serviceName = selectedService.name;
-          newItems[index].serviceDescription = selectedService.description;
+            // Poi imposta i nuovi valori
+            newItems[index].serviceId = selectedService.id;
+            newItems[index].unitPrice = selectedService.price;
+            newItems[index].serviceName = selectedService.name;
+            newItems[index].serviceDescription = selectedService.description;
+          }
         }
       }
 
@@ -173,6 +174,19 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
         newItems[index].total = total;
         newItems[index].discountedPrice = discountedPrice;
       }
+
+      if (field === 'hasDiscount') {
+        newItems[index].hasDiscount = value;
+        if (!value) {
+          // Reset completo dei campi sconto
+          newItems[index].discountType = 'percentage';
+          newItems[index].discountValue = 0;
+          newItems[index].discountedPrice = undefined;
+          // Ricalcola il totale senza sconto
+          newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
+        }
+      }
+
 
       return { ...prev, items: newItems };
     });

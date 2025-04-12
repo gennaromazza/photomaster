@@ -154,21 +154,22 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           if (selectedService) {
             // Resetta i campi non pertinenti utilizzando l'utility di reset
             newItems[index] = resetItemFields(newItems[index], true);
-          // Poi imposta i nuovi valori
-          newItems[index].serviceId = selectedService.id;
-          newItems[index].unitPrice = selectedService.price;
-          newItems[index].serviceName = selectedService.name;
-          newItems[index].serviceDescription = selectedService.description;
+            // Poi imposta i nuovi valori
+            newItems[index].serviceId = selectedService.id;
+            newItems[index].unitPrice = selectedService.price;
+            newItems[index].serviceName = selectedService.name;
+            newItems[index].serviceDescription = selectedService.description;
 
-          // Mantieni i campi di configurazione specifici dei moduli variabili
-          if (newItems[index].selectionRequired !== undefined) {
-            newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
-          }
-          if (newItems[index].isDefault !== undefined) {
-            newItems[index].isDefault = Boolean(newItems[index].isDefault);
-          }
-          if (newItems[index].selectionOrder !== undefined) {
-            newItems[index].selectionOrder = Number(newItems[index].selectionOrder) || index + 1;
+            // Mantieni i campi di configurazione specifici dei moduli variabili
+            if (newItems[index].selectionRequired !== undefined) {
+              newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
+            }
+            if (newItems[index].isDefault !== undefined) {
+              newItems[index].isDefault = Boolean(newItems[index].isDefault);
+            }
+            if (newItems[index].selectionOrder !== undefined) {
+              newItems[index].selectionOrder = Number(newItems[index].selectionOrder) || index + 1;
+            }
           }
         }
       }
@@ -229,6 +230,18 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
         const { total, discountedPrice } = calculateItemTotal(newItems[index]);
         newItems[index].total = total;
         newItems[index].discountedPrice = discountedPrice;
+      }
+
+      if (field === 'hasDiscount') {
+        newItems[index].hasDiscount = value;
+        if (!value) {
+          // Reset completo dei campi sconto
+          newItems[index].discountType = 'percentage';
+          newItems[index].discountValue = 0;
+          newItems[index].discountedPrice = undefined;
+          // Ricalcola il totale senza sconto
+          newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
+        }
       }
 
       return { ...prev, items: newItems };

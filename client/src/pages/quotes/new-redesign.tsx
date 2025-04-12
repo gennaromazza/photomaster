@@ -60,7 +60,8 @@ import {
   Paperclip,
   Save,
   Church,
-  Package as PackageIcon
+  Package as PackageIcon,
+  ArrowRight
 } from "lucide-react";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { QuoteModuleData } from "@/components/quotes/module-selector";
@@ -1218,76 +1219,30 @@ export default function NewQuotePage() {
                   Moduli Preventivo
                 </h3>
                 
-                {/* Mostra elenco dei moduli già aggiunti */}
-                {modules.length > 0 && (
-                  <div className="space-y-4 mb-4">
-                    {modules.map((module) => (
-                      <Card key={module.id} className="border border-muted">
-                        <CardHeader className="py-3 px-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <div className="flex flex-col">
-                                <CardTitle className="text-base">{module.name}</CardTitle>
-                                <CardDescription className="text-xs">
-                                  {module.type === 'fixed' ? 'Modulo fisso' : 'Modulo variabile'} · 
-                                  {module.items.length} {module.items.length === 1 ? 'elemento' : 'elementi'}
-                                </CardDescription>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleEditModule(module)}
-                              >
-                                Modifica
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteModule(module.id!)}
-                              >
-                                Elimina
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))}
+                {isEditMode ? (
+                  <div className="p-4 border rounded-md bg-muted/30">
+                    <div className="flex flex-col items-center justify-center text-center py-4">
+                      <p className="text-muted-foreground mb-2">
+                        I moduli di questo preventivo possono essere gestiti nella pagina di dettaglio,
+                        dopo aver salvato le modifiche.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setLocation(`/quotes/detail/${editId}`)}
+                      >
+                        <ArrowRight className="mr-2 h-4 w-4" />
+                        Vai alla pagina di dettaglio
+                      </Button>
+                    </div>
                   </div>
-                )}
-                
-                {/* Se non stiamo già mostrando un form di modifica/creazione, mostra il selettore */}
-                {!showModuleForm && (
-                  <div className="mb-6">
-                    <ModuleSelector 
-                      quoteId={parseInt(editId || "-1")} 
-                      onAddModule={handleAddModule} 
-                    />
+                ) : (
+                  <div className="p-4 border rounded-md bg-muted/30">
+                    <div className="flex flex-col items-center justify-center text-center py-4">
+                      <p className="text-muted-foreground mb-2">
+                        I moduli potranno essere aggiunti dopo aver creato il preventivo
+                      </p>
+                    </div>
                   </div>
-                )}
-                
-                {/* Form modulo fisso */}
-                {showModuleForm === 'fixed' && (
-                  <FixedModule
-                    quoteId={parseInt(editId || "-1")}
-                    module={editingModule || undefined}
-                    onSave={handleSaveModule}
-                    onCancel={handleCancelModule}
-                    onDelete={editingModule?.id ? handleDeleteModule : undefined}
-                  />
-                )}
-                
-                {/* Form modulo variabile */}
-                {showModuleForm === 'variable' && (
-                  <VariableModule
-                    quoteId={parseInt(editId || "-1")}
-                    module={editingModule || undefined}
-                    onSave={handleSaveModule}
-                    onCancel={handleCancelModule}
-                    onDelete={editingModule?.id ? handleDeleteModule : undefined}
-                  />
                 )}
                 
                 <Separator className="my-4" />

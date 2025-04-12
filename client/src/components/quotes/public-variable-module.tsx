@@ -5,13 +5,27 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, Info } from "lucide-react";
+import { Calendar, Info, ImageOff } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { 
+  calculateItemTotal, 
+  calculateModuleTotal, 
+  getItemNameAndDescription,
+  getItemImagePath,
+  ImageLoadState
+} from "@/lib/module-utils";
 
 interface PublicVariableModuleProps {
   module: any;
   onSelectionChange?: (moduleId: number, selectedItems: number[]) => void;
+}
+
+// Interfaccia per gli elementi selezionati che usa gli ID effettivi degli elementi
+interface SelectedItemData {
+  id: number;
+  index: number;
+  isRequired: boolean;
 }
 
 export function PublicVariableModule({ module, onSelectionChange }: PublicVariableModuleProps) {
@@ -34,82 +48,148 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
     );
   }
 
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  // Stato per la selezione degli elementi (usando ID invece di indici)
+  const [selectedItems, setSelectedItems] = useState<SelectedItemData[]>([]);
   const [total, setTotal] = useState(0);
+  
+  // Teniamo traccia dello stato di caricamento delle immagini
+  const [imageLoadState, setImageLoadState] = useState<Record<number, ImageLoadState>>({});
 
   // Controlla se sono obbligatori item con minSelectCount
-  const hasRequiredItems = (module.items || []).some((item: any) => item.minSelectCount && item.minSelectCount > 0);
+  const hasRequiredItems = (module.items || []).some((item: any) => 
+    item && item.minSelectCount && item.minSelectCount > 0
+  );
+  
+  // Funzione per controllare se un item è richiesto
+  const isItemRequired = (item: any): boolean => {
+    return Boolean(item && item.minSelectCount && item.minSelectCount > 0);
+  };
   
   // Inizializza gli item selezionati in base al minSelectCount
   useEffect(() => {
-    const initialSelected: number[] = [];
-    module.items.forEach((item: any, index: number) => {
-      if (item.minSelectCount && item.minSelectCount > 0) {
-        initialSelected.push(index);
-      }
-    });
+    const initialSelected: SelectedItemData[] = [];
+    
+    if (module.items && Array.isArray(module.items)) {
+      module.items.forEach((item: any, index: number) => {
+        if (!item || !item.id) return;
+        
+        if (isItemRequired(item)) {
+          initialSelected.push({
+            id: item.id,
+            index: index,
+            isRequired: true
+          });
+        }
+      });
+    }
+    
     setSelectedItems(initialSelected);
+    
+    // Inizializza lo stato per il caricamento delle immagini
+    const initialImageLoadState: Record<number, ImageLoadState> = {};
+    if (module.items && Array.isArray(module.items)) {
+      module.items.forEach((item: any) => {
+        if (item && item.id) {
+          initialImageLoadState[item.id] = {
+            hasError: false,
+            isLoading: true
+          };
+        }
+      });
+    }
+    setImageLoadState(initialImageLoadState);
   }, [module.items]);
 
   // Calcola il totale in base agli elementi selezionati
   useEffect(() => {
+    // Calcola il totale degli elementi selezionati
     let sum = 0;
-    selectedItems.forEach(index => {
-      const item = module.items[index];
+    selectedItems.forEach(selected => {
+      const item = module.items.find((item: any) => item.id === selected.id);
       if (item) {
-        sum += item.total || 0;
+        sum += Number(item.total || 0);
       }
     });
     setTotal(sum);
     
+    // Notifica il componente padre della selezione
     if (onSelectionChange) {
-      // Verifica che gli elementi selezionati siano validi e abbiano un ID
-      const selectedItemIds = selectedItems
-        .filter(index => index >= 0 && index < module.items.length)
-        .map(index => {
-          const item = module.items[index];
-          if (!item || !item.id) {
-            console.log(`[LOG] Item selezionato senza ID valido nel modulo ${module.id}, index: ${index}`, item);
-            return null;
-          }
-          return item.id;
-        })
-        .filter(Boolean);
-      
+      const selectedItemIds = selectedItems.map(selected => selected.id);
       console.log(`[LOG] Cambiata selezione modulo ${module.id}, elementi selezionati (IDs):`, selectedItemIds);
       onSelectionChange(module.id, selectedItemIds);
     }
   }, [selectedItems, module, onSelectionChange]);
 
   // Gestisce il cambio di selezione di un item
-  const handleItemSelect = (index: number, checked: boolean) => {
+  const handleItemSelect = (itemId: number, index: number, checked: boolean) => {
+    if (!itemId) {
+      console.error(`[ERRORE] Tentativo di selezionare un item senza ID valido nel modulo ${module.id}`);
+      return;
+    }
+    
     if (checked) {
-      setSelectedItems(prev => [...prev, index]);
+      // Verifica se l'elemento può essere selezionato
+      if (!canSelectMore() && !isItemSelected(itemId) && !isItemRequired(module.items[index])) {
+        return;
+      }
+      
+      setSelectedItems(prev => [
+        ...prev, 
+        {
+          id: itemId,
+          index: index,
+          isRequired: isItemRequired(module.items[index])
+        }
+      ]);
     } else {
       // Non permettere la deselezione se è un item obbligatorio
       const item = module.items[index];
-      if (item.minSelectCount && item.minSelectCount > 0) {
+      if (isItemRequired(item)) {
         return;
       }
-      setSelectedItems(prev => prev.filter(i => i !== index));
+      
+      setSelectedItems(prev => prev.filter(selected => selected.id !== itemId));
     }
   };
 
+  // Verifica se un elemento è selezionato per ID
+  const isItemSelected = (itemId: number): boolean => {
+    return selectedItems.some(selected => selected.id === itemId);
+  };
+
   // Verifica se è possibile selezionare altri item (in base al maxSelectCount)
-  const canSelectMore = () => {
+  const canSelectMore = (): boolean => {
     if (!module.maxSelectCount) return true;
     return selectedItems.length < module.maxSelectCount;
   };
 
   // Controlla se un item è selezionabile
-  const isItemSelectable = (index: number) => {
-    const item = module.items[index];
+  const isItemSelectable = (item: any, index: number): boolean => {
+    if (!item || !item.id) return false;
+    
     // Se è già selezionato o è obbligatorio, è selezionabile
-    if (selectedItems.includes(index) || (item.minSelectCount && item.minSelectCount > 0)) {
+    if (isItemSelected(item.id) || isItemRequired(item)) {
       return true;
     }
+    
     // Altrimenti controllo se ho raggiunto il limite massimo
     return canSelectMore();
+  };
+  
+  // Gestisce errori di caricamento immagini
+  const handleImageError = (itemId: number) => {
+    setImageLoadState(prev => ({
+      ...prev,
+      [itemId]: { hasError: true, isLoading: false }
+    }));
+  };
+  
+  // Gestisce il completamento del caricamento delle immagini
+  const handleImageLoad = (itemId: number) => {
+    setImageLoadState(prev => ({
+      ...prev,
+      [itemId]: { hasError: false, isLoading: false }
+    }));
   };
 
   // Verifica se il modulo è scaduto
@@ -158,35 +238,41 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
       <CardContent className="p-4">
         <div className="space-y-3">
           {module.items.map((item: any, index: number) => {
-            const isRequired = item.minSelectCount && item.minSelectCount > 0;
-            const isSelected = selectedItems.includes(index);
+            if (!item || !item.id) return null;
+            
+            const isRequired = isItemRequired(item);
+            const isSelected = isItemSelected(item.id);
+            const itemSelectable = isItemSelectable(item, index);
+            const { name, description } = getItemNameAndDescription(item);
+            const imagePath = getItemImagePath(item);
+            const imageState = imageLoadState[item.id] || { hasError: false, isLoading: true };
             
             return (
               <div 
-                key={index} 
+                key={item.id} 
                 className={`border rounded-md p-3 transition-colors ${
                   isSelected 
                     ? 'bg-primary/10 border-primary/30' 
-                    : !isItemSelectable(index)
+                    : !itemSelectable
                       ? 'bg-muted/20 opacity-60'
                       : 'bg-muted/20 hover:bg-muted/30'
                 }`}
               >
                 <div className="flex items-start gap-2">
                   <Checkbox 
-                    id={`item-${module.id}-${index}`}
+                    id={`item-${module.id}-${item.id}`}
                     checked={isSelected}
-                    disabled={!isItemSelectable(index) && !isSelected}
-                    onCheckedChange={(checked) => handleItemSelect(index, Boolean(checked))}
+                    disabled={!itemSelectable && !isSelected}
+                    onCheckedChange={(checked) => handleItemSelect(item.id, index, Boolean(checked))}
                     className="mt-1"
                   />
                   <div className="flex-1">
                     <div className="flex flex-wrap justify-between items-center gap-2">
                       <Label 
-                        htmlFor={`item-${module.id}-${index}`}
+                        htmlFor={`item-${module.id}-${item.id}`}
                         className={`font-medium cursor-pointer ${isRequired ? 'after:content-["*"] after:text-red-500 after:ml-0.5' : ''}`}
                       >
-                        {item.serviceName || item.productName || item.bundleName || "Servizio/Prodotto"}
+                        {name}
                       </Label>
                       <Badge variant="outline" className={isSelected ? 'bg-primary/20' : ''}>
                         {formatCurrency(item.total)}
@@ -194,43 +280,31 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                     </div>
                     
                     {/* Descrizione del prodotto/servizio */}
-                    {(item.serviceDescription || item.productDescription || item.bundleDescription) && (
+                    {description && (
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {item.serviceDescription || item.productDescription || item.bundleDescription}
+                        {description}
                       </p>
                     )}
                     
                     {/* Immagine del prodotto/servizio se disponibile */}
-                    {(item.serviceImagePath || item.productImagePath || item.bundleImagePath) && (
+                    {imagePath && (
                       <div className="mt-2 w-full h-28 rounded-md overflow-hidden bg-muted/40">
-                        <img 
-                          src={item.serviceImagePath || item.productImagePath || item.bundleImagePath} 
-                          alt={item.serviceName || item.productName || item.bundleName || "Immagine prodotto"}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const imagePath = item.serviceImagePath || item.productImagePath || item.bundleImagePath;
-                            console.log(`[LOG] Errore caricamento immagine modulo variabile: ${imagePath}`);
-                            
-                            const target = e.target as HTMLImageElement;
-                            target.onerror = null; // Previene loop di errori
-                            target.style.display = 'none'; // Nasconde l'immagine
-                            target.alt = 'Immagine non disponibile';
-                            
-                            // Aggiungiamo un container per l'icona fallback
-                            const parent = target.parentElement;
-                            if (parent) {
-                              parent.classList.add('flex', 'items-center', 'justify-center', 'bg-muted');
-                              
-                              // Verifichiamo che l'icona non sia già stata aggiunta
-                              if (!parent.querySelector('.fallback-icon')) {
-                                const icon = document.createElement('div');
-                                icon.className = 'fallback-icon text-muted-foreground';
-                                icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>';
-                                parent.appendChild(icon);
-                              }
-                            }
-                          }}
-                        />
+                        {imageState.hasError ? (
+                          <div className="w-full h-full flex items-center justify-center bg-muted">
+                            <div className="text-muted-foreground flex flex-col items-center">
+                              <ImageOff className="h-8 w-8 mb-2 opacity-70" />
+                              <span className="text-xs">Immagine non disponibile</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <img 
+                            src={imagePath}
+                            alt={name || "Immagine prodotto"}
+                            className="w-full h-full object-cover"
+                            onError={() => handleImageError(item.id)}
+                            onLoad={() => handleImageLoad(item.id)}
+                          />
+                        )}
                       </div>
                     )}
                     

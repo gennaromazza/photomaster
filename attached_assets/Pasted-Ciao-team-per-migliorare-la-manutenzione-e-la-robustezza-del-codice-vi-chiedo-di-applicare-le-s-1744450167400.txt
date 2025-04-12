@@ -1,0 +1,41 @@
+Ciao team,
+
+per migliorare la manutenzione e la robustezza del codice, vi chiedo di applicare le seguenti modifiche sui file:
+  • variable-module.tsx
+  • fixed-module.tsx
+  • public-variable-module.tsx
+
+Modifiche richieste:
+
+1. Centralizzazione della logica di calcolo e gestione sconti
+   - Estendere la logica per il calcolo dei totali degli elementi e l’applicazione degli sconti (sia percentuali che fissi) in una funzione helper comune (o un custom hook) in modo da eliminare la duplicazione tra FixedModule e VariableModule.
+
+2. Gestione sicura del reset dei campi
+   - Revisionare la funzione handleItemChange per garantire che, quando si cambia il tipo di selezione (da servizio a prodotto o pacchetto), i campi non pertinenti vengano resettati in modo affidabile e in sincronia con il nuovo valore selezionato.
+
+3. Selezione degli elementi nel modulo variabile
+   - In public-variable-module.tsx, sostituire l’utilizzo degli indici dell’array per gestire la selezione con identificatori univoci (ad esempio l’id dell’item) per rendere il meccanismo più robusto, soprattutto in caso di riordino o modifiche dinamiche dell’array.
+
+4. Gestione degli errori nel caricamento delle immagini
+   - Migliorare il meccanismo di fallback per il caricamento delle immagini. Invece di modificare direttamente il DOM (ad es., usando target.style.display), utilizzare lo stato del componente per mostrare un placeholder o un’immagine di fallback se il caricamento fallisce.
+
+Ulteriori miglioramenti:
+
+5. Uso di custom hooks e ottimizzazione dello stato
+   - Considerare la creazione di custom hooks (es. useModuleData) per gestire il recupero dei dati dalle API e lo stato interno dei moduli in maniera centralizzata.
+   - Applicare React.memo o useCallback dove opportuno per ottimizzare i re-render dei componenti.
+
+6. Rafforzamento della tipizzazione e validazione dei dati
+   - Migliorare le interfacce TypeScript relative ai moduli (QuoteModuleData e QuoteModuleItemData) definendo chiaramente quali campi sono obbligatori e quali opzionali.
+   - Integrare una libreria di validazione (es. Yup o Zod) per convalidare i dati del modulo prima del salvataggio.
+
+7. Testing ed Error Boundary
+   - Aggiungere test unitari per la logica di calcolo (totali, sconti e reset dei campi) e per eventuali custom hooks.
+   - Implementare un Error Boundary per gestire possibili errori di rendering e migliorare l’esperienza utente in caso di problemi in fase di caricamento.
+
+8. Aggiornamento della documentazione
+   - Aggiornare i commenti inline e, se possibile, generare una documentazione (ad es. con Storybook) per rendere chiara la struttura e il flusso dei moduli.
+
+Per favore, integra tutte queste modifiche, verifica che il flusso complessivo del preventivo e la configurazione dei moduli funzionino correttamente e assicurati che non vengano introdotti regressioni.
+
+Grazie!

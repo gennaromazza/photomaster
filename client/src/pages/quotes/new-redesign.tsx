@@ -440,6 +440,54 @@ export default function NewQuotePage() {
       setMainClientSearch("");
     }
   };
+  
+  // Gestione dei moduli del preventivo
+  const handleAddModule = (type: 'fixed' | 'variable') => {
+    setShowModuleForm(type);
+    setEditingModule(null);
+  };
+  
+  const handleSaveModule = (module: QuoteModuleData) => {
+    if (module.id) {
+      // Se il modulo ha già un ID, lo stiamo modificando
+      setModules(modules.map(m => m.id === module.id ? module : m));
+      toast({
+        title: "Modulo aggiornato",
+        description: `Il modulo ${module.name} è stato aggiornato con successo`,
+      });
+    } else {
+      // Altrimenti lo stiamo creando
+      // Assegnamo un ID temporaneo (sarà sostituito da quello del DB)
+      const tempId = -Date.now(); // ID negativo temporaneo
+      setModules([...modules, { ...module, id: tempId }]);
+      toast({
+        title: "Modulo aggiunto",
+        description: `Il modulo ${module.name} è stato aggiunto al preventivo`,
+      });
+    }
+    setShowModuleForm(null);
+    setEditingModule(null);
+  };
+  
+  const handleCancelModule = () => {
+    setShowModuleForm(null);
+    setEditingModule(null);
+  };
+  
+  const handleEditModule = (module: QuoteModuleData) => {
+    setEditingModule(module);
+    setShowModuleForm(module.type);
+  };
+  
+  const handleDeleteModule = (moduleId: number) => {
+    setModules(modules.filter(m => m.id !== moduleId));
+    toast({
+      title: "Modulo rimosso",
+      description: "Il modulo è stato rimosso dal preventivo",
+    });
+    setShowModuleForm(null);
+    setEditingModule(null);
+  };
 
   return (
     <Layout>

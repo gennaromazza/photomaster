@@ -182,8 +182,10 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
           newItems[index].discountType = 'percentage';
           newItems[index].discountValue = 0;
           newItems[index].discountedPrice = undefined;
-          // Ricalcola il totale senza sconto
-          newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
+          // Ricalcola il totale usando la funzione utility
+          const calculated = calculateItemTotals(newItems[index]);
+          newItems[index].total = calculated.total;
+          newItems[index].discountedPrice = calculated.discountedPrice;
         }
       }
 

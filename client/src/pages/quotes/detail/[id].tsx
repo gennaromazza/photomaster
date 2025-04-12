@@ -481,20 +481,33 @@ export default function QuoteDetailPage() {
     });
   };
 
-  const handleDeleteModule = (moduleId: number) => {
+  const handleDeleteModule = async (moduleId: number) => {
     if (confirm('Sei sicuro di voler eliminare questo modulo?')) {
-      // Imposta lo stato di caricamento
-      setIsLoading(true);
-      console.log(`Eliminazione modulo con ID: ${moduleId}`);
-      
-      // Aggiorna immediatamente lo stato locale per un feedback più reattivo
-      setModules(prev => {
-        if (!prev) return prev;
-        return prev.filter(m => m.id !== moduleId);
-      });
-      
-      // Poi esegui la chiamata al server
-      deleteModuleMutation.mutate(moduleId);
+      try {
+        setIsLoading(true);
+        console.log(`Eliminazione modulo con ID: ${moduleId}`);
+        
+        // Esegui prima la chiamata al server
+        await deleteModuleMutation.mutateAsync(moduleId);
+        
+        // Se l'eliminazione ha successo, aggiorna lo stato locale
+        setModules(prev => prev?.filter(m => m.id !== moduleId));
+        
+        // Forza il ricalcolo dei totali
+        setTimeout(() => {
+          refreshQuoteTotals();
+        }, 500);
+        
+      } catch (error) {
+        console.error("Errore durante l'eliminazione del modulo:", error);
+        toast({
+          title: "Errore",
+          description: "Impossibile eliminare il modulo",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
   

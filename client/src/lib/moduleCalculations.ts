@@ -40,9 +40,22 @@ export function calculateItemTotals(item: QuoteModuleItemData): QuoteModuleItemD
 }
 
 export function calculateModuleTotals(items: QuoteModuleItemData[]) {
+  if (!items || items.length === 0) {
+    return {
+      subtotal: 0,
+      total: 0,
+      hasDiscounts: false,
+      itemCount: 0,
+      discountedItemCount: 0,
+      totalDiscount: 0,
+      averageDiscount: 0,
+      discountPercentage: 0
+    };
+  }
+
   const result = items.reduce((acc, item) => {
     const calculated = calculateItemTotals(item);
-    const itemSubtotal = calculated.unitPrice * calculated.quantity;
+    const itemSubtotal = (calculated.unitPrice || 0) * (calculated.quantity || 1);
     const itemTotal = calculated.total || itemSubtotal;
     
     return {

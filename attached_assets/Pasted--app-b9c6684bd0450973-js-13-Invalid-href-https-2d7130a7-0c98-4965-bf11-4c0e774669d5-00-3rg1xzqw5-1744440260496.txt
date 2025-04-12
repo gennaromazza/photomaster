@@ -1,0 +1,83 @@
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+dotdevproxy.janeway.repl.co/__reachability:1 
+            
+            
+            Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail/10' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//settings' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+11_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+2_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail/10' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+2_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail/11' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+2_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail/11' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/new-redesign?edit=11' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail/11' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/de' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/d' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail/11' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail/1' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail/' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detai' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/deta' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/det' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/de' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/d' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//qu' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//q' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//services' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes/detail/11' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+(anonymous) @ _app-b9c6684bd0450973.js:13
+3_app-b9c6684bd0450973.js:13  Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.

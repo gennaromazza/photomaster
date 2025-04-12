@@ -450,28 +450,41 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                             <span className="h-2 w-2 rounded-full bg-primary opacity-75"></span>
                             Servizio
                           </Label>
-                          <Select
-                            value={item.serviceId?.toString() || ""}
-                            onValueChange={(value) => {
-                              if (value) {
-                                handleItemChange(index, 'serviceId', parseInt(value));
-                                // Resetta altri campi
-                                handleItemChange(index, 'productId', undefined);
-                                handleItemChange(index, 'bundleId', undefined);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className={item.serviceId ? "border-primary/50 bg-primary/5" : ""}>
-                              <SelectValue placeholder="Seleziona un servizio" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableServices.map(service => (
-                                <SelectItem key={service.id} value={service.id.toString()}>
-                                  {service.name} ({formatCurrency(service.price)})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-2">
+                            <Select
+                              value={item.serviceId?.toString() || ""}
+                              onValueChange={(value) => {
+                                if (value) {
+                                  handleItemChange(index, 'serviceId', parseInt(value));
+                                  // Resetta altri campi
+                                  handleItemChange(index, 'productId', undefined);
+                                  handleItemChange(index, 'bundleId', undefined);
+                                  
+                                  // Aggiorna automaticamente il prezzo e altri dettagli
+                                  const selectedService = availableServices.find(s => s.id === parseInt(value));
+                                  if (selectedService) {
+                                    handleItemChange(index, 'unitPrice', selectedService.price);
+                                    handleItemChange(index, 'serviceName', selectedService.name);
+                                    handleItemChange(index, 'serviceDescription', selectedService.description);
+                                    // Calcola il totale (prezzo x quantità)
+                                    const qty = item.quantity || 1;
+                                    handleItemChange(index, 'total', qty * selectedService.price);
+                                  }
+                                }
+                              }}
+                            >
+                              <SelectTrigger className={item.serviceId ? "border-primary/50 bg-primary/5" : ""}>
+                                <SelectValue placeholder="Seleziona un servizio" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableServices.map(service => (
+                                  <SelectItem key={service.id} value={service.id.toString()}>
+                                    {service.name} ({formatCurrency(service.price)})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         
                         <div>
@@ -482,28 +495,41 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                             <span className="h-2 w-2 rounded-full bg-amber-500 opacity-75"></span>
                             Prodotto
                           </Label>
-                          <Select
-                            value={item.productId?.toString() || ""}
-                            onValueChange={(value) => {
-                              if (value) {
-                                handleItemChange(index, 'productId', parseInt(value));
-                                // Resetta altri campi
-                                handleItemChange(index, 'serviceId', undefined);
-                                handleItemChange(index, 'bundleId', undefined);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className={item.productId ? "border-amber-500/50 bg-amber-500/5" : ""}>
-                              <SelectValue placeholder="Seleziona un prodotto" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableProducts.map(product => (
-                                <SelectItem key={product.id} value={product.id.toString()}>
-                                  {product.name} ({formatCurrency(product.price)})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-2">
+                            <Select
+                              value={item.productId?.toString() || ""}
+                              onValueChange={(value) => {
+                                if (value) {
+                                  handleItemChange(index, 'productId', parseInt(value));
+                                  // Resetta altri campi
+                                  handleItemChange(index, 'serviceId', undefined);
+                                  handleItemChange(index, 'bundleId', undefined);
+                                  
+                                  // Aggiorna automaticamente il prezzo e altri dettagli
+                                  const selectedProduct = availableProducts.find(p => p.id === parseInt(value));
+                                  if (selectedProduct) {
+                                    handleItemChange(index, 'unitPrice', selectedProduct.price);
+                                    handleItemChange(index, 'productName', selectedProduct.name);
+                                    handleItemChange(index, 'productDescription', selectedProduct.description);
+                                    // Calcola il totale (prezzo x quantità)
+                                    const qty = item.quantity || 1;
+                                    handleItemChange(index, 'total', qty * selectedProduct.price);
+                                  }
+                                }
+                              }}
+                            >
+                              <SelectTrigger className={item.productId ? "border-amber-500/50 bg-amber-500/5" : ""}>
+                                <SelectValue placeholder="Seleziona un prodotto" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableProducts.map(product => (
+                                  <SelectItem key={product.id} value={product.id.toString()}>
+                                    {product.name} ({formatCurrency(product.price)})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         
                         <div>
@@ -514,28 +540,42 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                             <span className="h-2 w-2 rounded-full bg-green-500 opacity-75"></span>
                             Pacchetto
                           </Label>
-                          <Select
-                            value={item.bundleId?.toString() || ""}
-                            onValueChange={(value) => {
-                              if (value) {
-                                handleItemChange(index, 'bundleId', parseInt(value));
-                                // Resetta altri campi
-                                handleItemChange(index, 'serviceId', undefined);
-                                handleItemChange(index, 'productId', undefined);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className={item.bundleId ? "border-green-500/50 bg-green-500/5" : ""}>
-                              <SelectValue placeholder="Seleziona un pacchetto" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableBundles.map(bundle => (
-                                <SelectItem key={bundle.id} value={bundle.id.toString()}>
-                                  {bundle.name} ({formatCurrency(bundle.discountedPrice || bundle.totalPrice)})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-2">
+                            <Select
+                              value={item.bundleId?.toString() || ""}
+                              onValueChange={(value) => {
+                                if (value) {
+                                  handleItemChange(index, 'bundleId', parseInt(value));
+                                  // Resetta altri campi
+                                  handleItemChange(index, 'serviceId', undefined);
+                                  handleItemChange(index, 'productId', undefined);
+                                  
+                                  // Aggiorna automaticamente il prezzo e altri dettagli
+                                  const selectedBundle = availableBundles.find(b => b.id === parseInt(value));
+                                  if (selectedBundle) {
+                                    const bundlePrice = selectedBundle.discountedPrice || selectedBundle.totalPrice;
+                                    handleItemChange(index, 'unitPrice', bundlePrice);
+                                    handleItemChange(index, 'bundleName', selectedBundle.name);
+                                    handleItemChange(index, 'bundleDescription', selectedBundle.description);
+                                    // Calcola il totale (prezzo x quantità)
+                                    const qty = item.quantity || 1;
+                                    handleItemChange(index, 'total', qty * bundlePrice);
+                                  }
+                                }
+                              }}
+                            >
+                              <SelectTrigger className={item.bundleId ? "border-green-500/50 bg-green-500/5" : ""}>
+                                <SelectValue placeholder="Seleziona un pacchetto" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableBundles.map(bundle => (
+                                  <SelectItem key={bundle.id} value={bundle.id.toString()}>
+                                    {bundle.name} ({formatCurrency(bundle.discountedPrice || bundle.totalPrice)})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
                     </div>

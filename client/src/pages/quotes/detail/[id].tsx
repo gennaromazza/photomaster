@@ -684,13 +684,116 @@ export default function QuoteDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Moduli e prodotti */}
+            {/* Moduli */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Moduli</CardTitle>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleAddModuleClick}>
                   <Plus className="mr-2 h-4 w-4" />
                   Aggiungi Modulo
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {modules && modules.length > 0 ? (
+                  <div className="space-y-4">
+                    {modules.map((module) => (
+                      <Card key={module.id} className="border border-muted">
+                        <CardHeader className="py-3 px-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="flex flex-col">
+                                <CardTitle className="text-base">{module.name}</CardTitle>
+                                <CardDescription className="text-xs">
+                                  {module.type === 'fixed' ? 'Modulo fisso' : 'Modulo variabile'} · 
+                                  {module.items?.length || 0} {module.items?.length === 1 ? 'elemento' : 'elementi'}
+                                </CardDescription>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleEditModule(module)}
+                              >
+                                Modifica
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteModule(module.id!)}
+                              >
+                                Elimina
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded-md">
+                    <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                    <p className="text-muted-foreground">Nessun modulo aggiunto</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={handleAddModuleClick}
+                    >
+                      Aggiungi primo modulo
+                    </Button>
+                  </div>
+                )}
+                
+                {/* Mostra editor di moduli quando necessario */}
+                {showModuleForm === 'fixed' && (
+                  <div className="mt-6">
+                    <FixedModule
+                      quoteId={parseInt(id)}
+                      module={editingModule || undefined}
+                      onSave={handleSaveModule}
+                      onCancel={handleCancelModule}
+                      onDelete={editingModule?.id ? handleDeleteModule : undefined}
+                    />
+                  </div>
+                )}
+                
+                {showModuleForm === 'variable' && (
+                  <div className="mt-6">
+                    <VariableModule
+                      quoteId={parseInt(id)}
+                      module={editingModule || undefined}
+                      onSave={handleSaveModule}
+                      onCancel={handleCancelModule}
+                      onDelete={editingModule?.id ? handleDeleteModule : undefined}
+                    />
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="flex justify-between border-t pt-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Totale Moduli</p>
+                  <p className="font-medium text-xl">€ {(quote.subtotal || 0).toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Totale Preventivo</p>
+                  <p className="font-medium text-xl">€ {(quote.total || 0).toLocaleString()}</p>
+                </div>
+              </CardFooter>
+            </Card>
+            
+            {/* Servizi e prodotti */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Servizi e Prodotti</CardTitle>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setLocation(`/quotes/new-redesign?edit=${id}`)}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Modifica
                 </Button>
               </CardHeader>
               <CardContent>
@@ -714,23 +817,18 @@ export default function QuoteDetailPage() {
                 ) : (
                   <div className="text-center py-8 border rounded-md">
                     <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-muted-foreground">Nessun modulo aggiunto</p>
-                    <Button variant="outline" size="sm" className="mt-2">
-                      Aggiungi primo modulo
+                    <p className="text-muted-foreground">Nessun servizio aggiunto</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => setLocation(`/quotes/new-redesign?edit=${id}`)}
+                    >
+                      Aggiungi servizio
                     </Button>
                   </div>
                 )}
               </CardContent>
-              <CardFooter className="flex justify-between border-t pt-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Totale Moduli</p>
-                  <p className="font-medium text-xl">€ {(quote.subtotal || 0).toLocaleString()}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Totale Preventivo</p>
-                  <p className="font-medium text-xl">€ {(quote.total || 0).toLocaleString()}</p>
-                </div>
-              </CardFooter>
             </Card>
 
             {/* Acconti */}

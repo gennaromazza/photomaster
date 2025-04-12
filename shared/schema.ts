@@ -484,6 +484,110 @@ export const quoteItemsRelations = relations(quoteItems, ({ one }) => ({
   }),
 }));
 
+// Quote Modules Schema
+export const quoteModules = pgTable("quote_modules", {
+  id: serial("id").primaryKey(),
+  quoteId: integer("quote_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // 'fixed' o 'variable'
+  status: text("status").default("draft").notNull(), // 'draft', 'active', 'selected'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at"),
+  expiryDate: timestamp("expiry_date"), // Data di scadenza per i moduli variabili
+  shareToken: text("share_token"), // Token univoco per l'URL di condivisione
+  clientNotes: text("client_notes"), // Note per il cliente
+  internalNotes: text("internal_notes"), // Note interne
+  // Campi per la gestione del prezzo totale
+  subtotal: integer("subtotal").default(0), // Subtotale (somma degli elementi)
+  total: integer("total").default(0), // Totale finale
+  maxSelections: integer("max_selections"), // Numero massimo di selezioni per moduli variabili
+});
+
+export const insertQuoteModuleSchema = createInsertSchema(quoteModules).pick({
+  quoteId: true,
+  name: true,
+  description: true,
+  type: true,
+  status: true,
+  expiryDate: true,
+  shareToken: true,
+  clientNotes: true,
+  internalNotes: true,
+  subtotal: true,
+  total: true,
+  maxSelections: true,
+});
+
+export type InsertQuoteModule = z.infer<typeof insertQuoteModuleSchema>;
+export type QuoteModule = typeof quoteModules.$inferSelect;
+
+// Quote Module Items Schema
+export const quoteModuleItems = pgTable("quote_module_items", {
+  id: serial("id").primaryKey(),
+  moduleId: integer("module_id").notNull(),
+  serviceId: integer("service_id"), // Se elemento è un servizio/prodotto
+  bundleId: integer("bundle_id"), // Se elemento è un pacchetto
+  quantity: integer("quantity").default(1).notNull(),
+  unitPrice: integer("unit_price").notNull(),
+  isRequired: boolean("is_required").default(false), // Indica se questo elemento è obbligatorio (per moduli variabili)
+  isSelected: boolean("is_selected").default(false), // Indica se questo elemento è stato selezionato dal cliente
+  position: integer("position").default(0), // Posizione nell'elenco
+  // Sconto specifico per l'elemento nel modulo
+  hasDiscount: boolean("has_discount").default(false).notNull(),
+  discountType: text("discount_type"), // 'percentage' o 'fixed'
+  discountValue: integer("discount_value"), // Valore dello sconto (percentuale o fisso)
+  discountedPrice: integer("discounted_price"), // Prezzo unitario scontato
+  // Totale calcolato (quantity * unitPrice o quantity * discountedPrice se scontato)
+  total: integer("total").notNull(),
+  // Note specifiche per l'elemento
+  notes: text("notes"),
+});
+
+export const insertQuoteModuleItemSchema = createInsertSchema(quoteModuleItems).pick({
+  moduleId: true,
+  serviceId: true,
+  bundleId: true,
+  quantity: true,
+  unitPrice: true,
+  isRequired: true,
+  isSelected: true,
+  position: true,
+  hasDiscount: true,
+  discountType: true,
+  discountValue: true,
+  discountedPrice: true,
+  total: true,
+  notes: true,
+});
+
+export type InsertQuoteModuleItem = z.infer<typeof insertQuoteModuleItemSchema>;
+export type QuoteModuleItem = typeof quoteModuleItems.$inferSelect;
+
+export const quoteModulesRelations = relations(quoteModules, ({ one, many }) => ({
+  quote: one(quotes, {
+    fields: [quoteModules.quoteId],
+    references: [quotes.id],
+  }),
+  items: many(quoteModuleItems),
+}));
+
+export const quoteModuleItemsRelations = relations(quoteModuleItems, ({ one }) => ({
+  module: one(quoteModules, {
+    fields: [quoteModuleItems.moduleId],
+    references: [quoteModules.id],
+  }),
+  service: one(services, {
+    fields: [quoteModuleItems.serviceId],
+    references: [services.id],
+  }),
+  bundle: one(serviceBundles, {
+    fields: [quoteModuleItems.bundleId],
+    references: [serviceBundles.id],
+    relationName: "moduleItemBundle",
+  }),
+}));
+
 // Pacchetti (Bundle) Schema - Raggruppamenti di servizi e prodotti
 export const serviceBundles = pgTable("service_bundles", {
   id: serial("id").primaryKey(),
@@ -602,104 +706,7 @@ export const leadSourcesRelations = relations(leadSources, ({ many }) => ({
   quotes: many(quotes),
 }));
 
-// Moduli: schema per moduli di preventivo (fissi e variabili)
-export const quoteModules = pgTable("quote_modules", {
-  id: serial("id").primaryKey(),
-  quoteId: integer("quote_id").notNull(),
-  name: text("name").notNull(), // Nome del modulo
-  description: text("description"),
-  type: text("type").notNull(), // 'fixed' o 'variable'
-  status: text("status").default("active").notNull(), // active, inactive, pending_selection
-  shareToken: text("share_token"), // Token per condivisione moduli variabili
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at"),
-  expiryDate: timestamp("expiry_date"), // Data scadenza per moduli variabili
-});
-
-export const insertQuoteModuleSchema = createInsertSchema(quoteModules).pick({
-  quoteId: true,
-  name: true,
-  description: true,
-  type: true,
-  status: true,
-  shareToken: true,
-  expiryDate: true,
-});
-
-export type InsertQuoteModule = z.infer<typeof insertQuoteModuleSchema>;
-export type QuoteModule = typeof quoteModules.$inferSelect;
-
-// Elementi dei moduli (servizi, prodotti o pacchetti inclusi)
-export const quoteModuleItems = pgTable("quote_module_items", {
-  id: serial("id").primaryKey(),
-  moduleId: integer("module_id").notNull(),
-  serviceId: integer("service_id"), // Se elemento è un servizio/prodotto
-  bundleId: integer("bundle_id"), // Se elemento è un pacchetto
-  quantity: integer("quantity").default(1).notNull(),
-  unitPrice: integer("unit_price").notNull(),
-  // Sconto specifico per l'elemento nel modulo
-  hasDiscount: boolean("has_discount").default(false).notNull(),
-  discountType: text("discount_type"), // 'percentage' o 'fixed'
-  discountValue: integer("discount_value"), // Valore dello sconto
-  discountedPrice: integer("discounted_price"), // Prezzo unitario scontato
-  // Totale calcolato (quantity * unitPrice o quantity * discountedPrice se scontato)
-  total: integer("total").notNull(),
-  // Per moduli variabili
-  isSelected: boolean("is_selected").default(false), // Cliente ha selezionato questo elemento
-  selectionRequired: boolean("selection_required").default(false), // Cliente deve selezionare questo elemento
-  isDefault: boolean("is_default").default(false), // Elemento è pre-selezionato per moduli variabili
-  selectionDate: timestamp("selection_date"), // Data in cui è stato selezionato
-  selectionOrder: integer("selection_order"), // Ordine visualizzazione/priorità
-  // Note specifiche per l'elemento
-  notes: text("notes"),
-});
-
-export const insertQuoteModuleItemSchema = createInsertSchema(quoteModuleItems).pick({
-  moduleId: true,
-  serviceId: true,
-  bundleId: true,
-  quantity: true,
-  unitPrice: true,
-  hasDiscount: true,
-  discountType: true,
-  discountValue: true,
-  discountedPrice: true,
-  total: true,
-  isSelected: true,
-  selectionRequired: true,
-  isDefault: true,
-  selectionOrder: true,
-  notes: true,
-});
-
-export type InsertQuoteModuleItem = z.infer<typeof insertQuoteModuleItemSchema>;
-export type QuoteModuleItem = typeof quoteModuleItems.$inferSelect;
-
-// Relazioni per moduli e item
-export const quoteModulesRelations = relations(quoteModules, ({ one, many }) => ({
-  quote: one(quotes, {
-    fields: [quoteModules.quoteId],
-    references: [quotes.id],
-  }),
-  items: many(quoteModuleItems),
-}));
-
-export const quoteModuleItemsRelations = relations(quoteModuleItems, ({ one }) => ({
-  module: one(quoteModules, {
-    fields: [quoteModuleItems.moduleId],
-    references: [quoteModules.id],
-  }),
-  service: one(services, {
-    fields: [quoteModuleItems.serviceId],
-    references: [services.id],
-    relationName: "moduleItemService",
-  }),
-  bundle: one(serviceBundles, {
-    fields: [quoteModuleItems.bundleId],
-    references: [serviceBundles.id],
-    relationName: "moduleItemBundle",
-  }),
-}));
+// Nessuna relazione aggiuntiva qui
 
 // Settings Schema
 export const settings = pgTable("settings", {

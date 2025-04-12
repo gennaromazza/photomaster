@@ -274,7 +274,16 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
 
     setIsLoading(true);
     try {
-      onSave(formData);
+      // Prepara i dati da salvare, assicurandosi che la data sia in formato stringa ISO
+      const dataToSave = {
+        ...formData,
+        // Se expiryDate è un oggetto Date, lo convertiamo in stringa ISO, altrimenti lo lasciamo invariato
+        expiryDate: formData.expiryDate instanceof Date 
+          ? formData.expiryDate.toISOString() 
+          : formData.expiryDate
+      };
+      
+      onSave(dataToSave);
       toast({
         title: isEdit ? "Modulo aggiornato" : "Modulo creato",
         description: `Il modulo "${formData.name}" è stato ${isEdit ? 'aggiornato' : 'aggiunto'} al preventivo`

@@ -742,30 +742,16 @@ export default function QuoteDetailPage() {
                   </div>
                 )}
                 
-                {/* Mostra editor di moduli quando necessario */}
-                {showModuleForm === 'fixed' && (
-                  <div className="mt-6">
-                    <FixedModule
-                      quoteId={parseInt(id)}
-                      module={editingModule || undefined}
-                      onSave={handleSaveModule}
-                      onCancel={handleCancelModule}
-                      onDelete={editingModule?.id ? handleDeleteModule : undefined}
-                    />
-                  </div>
-                )}
-                
-                {showModuleForm === 'variable' && (
-                  <div className="mt-6">
-                    <VariableModule
-                      quoteId={parseInt(id)}
-                      module={editingModule || undefined}
-                      onSave={handleSaveModule}
-                      onCancel={handleCancelModule}
-                      onDelete={editingModule?.id ? handleDeleteModule : undefined}
-                    />
-                  </div>
-                )}
+                {/* Dialog modale per modifica/creazione moduli */}
+                <ModuleDialog
+                  open={isModuleDialogOpen}
+                  onOpenChange={setIsModuleDialogOpen}
+                  moduleType={moduleType}
+                  quoteId={parseInt(id)}
+                  module={editingModule || undefined}
+                  onSave={handleSaveModule}
+                  onDelete={handleDeleteModule}
+                />
               </CardContent>
               <CardFooter className="flex justify-between border-t pt-4">
                 <div>

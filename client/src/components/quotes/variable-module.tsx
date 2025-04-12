@@ -120,7 +120,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
       isDefault: false,
       selectionOrder: formData.items.length + 1
     };
-    
+
     setFormData(prev => ({
       ...prev,
       items: [...prev.items, newItem]
@@ -155,7 +155,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           newItems[index].unitPrice = selectedService.price;
           newItems[index].serviceName = selectedService.name;
           newItems[index].serviceDescription = selectedService.description;
-          
+
           // Mantieni i campi di configurazione specifici dei moduli variabili
           if (newItems[index].selectionRequired !== undefined) {
             newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
@@ -180,7 +180,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           newItems[index].unitPrice = selectedProduct.price;
           newItems[index].productName = selectedProduct.name;
           newItems[index].productDescription = selectedProduct.description;
-          
+
           // Mantieni i campi di configurazione specifici dei moduli variabili
           if (newItems[index].selectionRequired !== undefined) {
             newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
@@ -205,7 +205,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           newItems[index].unitPrice = selectedBundle.discountedPrice || selectedBundle.totalPrice;
           newItems[index].bundleName = selectedBundle.name;
           newItems[index].bundleDescription = selectedBundle.description;
-          
+
           // Mantieni i campi di configurazione specifici dei moduli variabili
           if (newItems[index].selectionRequired !== undefined) {
             newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
@@ -296,8 +296,8 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           ? formData.expiryDate.toISOString() 
           : formData.expiryDate
       };
-      
-      onSave(dataToSave);
+
+      await onSave(dataToSave); // Await added here
       toast({
         title: isEdit ? "Modulo aggiornato" : "Modulo creato",
         description: `Il modulo "${formData.name}" è stato ${isEdit ? 'aggiornato' : 'aggiunto'} al preventivo`
@@ -331,7 +331,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           Crea un modulo con opzioni tra cui il cliente potrà scegliere
         </CardDescription>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Nome e descrizione del modulo */}
         <div className="space-y-4">
@@ -346,7 +346,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                 placeholder="es. Opzioni aggiuntive, Upgrade servizi, ecc."
               />
             </div>
-            
+
             <div>
               <Label htmlFor="description">Descrizione (opzionale)</Label>
               <Textarea
@@ -367,7 +367,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
             <Link className="h-4 w-4 mr-2" />
             Configurazioni di condivisione
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="expiryDate">Data di scadenza del link</Label>
@@ -398,7 +398,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                 </Popover>
               </div>
             </div>
-            
+
             {isEdit && shareUrl && (
               <div className="space-y-2">
                 <Label>Link di configurazione</Label>
@@ -462,14 +462,14 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="p-4 space-y-4">
                     <div className="grid grid-cols-1 gap-4">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-medium text-muted-foreground">Seleziona un tipo di elemento</span>
                         <div className="h-px flex-1 bg-border"></div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <Label 
@@ -488,7 +488,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                                   // Resetta altri campi
                                   handleItemChange(index, 'productId', undefined);
                                   handleItemChange(index, 'bundleId', undefined);
-                                  
+
                                   // Aggiorna automaticamente il prezzo e altri dettagli
                                   const selectedService = availableServices.find(s => s.id === parseInt(value));
                                   if (selectedService) {
@@ -515,7 +515,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                             </Select>
                           </div>
                         </div>
-                        
+
                         <div>
                           <Label 
                             htmlFor={`productId-${index}`}
@@ -533,7 +533,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                                   // Resetta altri campi
                                   handleItemChange(index, 'serviceId', undefined);
                                   handleItemChange(index, 'bundleId', undefined);
-                                  
+
                                   // Aggiorna automaticamente il prezzo e altri dettagli
                                   const selectedProduct = availableProducts.find(p => p.id === parseInt(value));
                                   if (selectedProduct) {
@@ -560,7 +560,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                             </Select>
                           </div>
                         </div>
-                        
+
                         <div>
                           <Label 
                             htmlFor={`bundleId-${index}`}
@@ -578,7 +578,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                                   // Resetta altri campi
                                   handleItemChange(index, 'serviceId', undefined);
                                   handleItemChange(index, 'productId', undefined);
-                                  
+
                                   // Aggiorna automaticamente il prezzo e altri dettagli
                                   const selectedBundle = availableBundles.find(b => b.id === parseInt(value));
                                   if (selectedBundle) {
@@ -608,7 +608,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor={`quantity-${index}`}>Quantità</Label>
@@ -620,7 +620,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                           onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor={`unitPrice-${index}`}>Prezzo unitario (€)</Label>
                         <Input
@@ -632,7 +632,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                           onChange={(e) => handleItemChange(index, 'unitPrice', parseFloat(e.target.value))}
                         />
                       </div>
-                      
+
                       <div className="flex items-end">
                         <Button
                           variant={item.hasDiscount ? "default" : "outline"}
@@ -643,7 +643,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                         </Button>
                       </div>
                     </div>
-                    
+
                     {item.hasDiscount && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border rounded-md bg-muted/20">
                         <div>
@@ -661,7 +661,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         <div>
                           <Label htmlFor={`discountValue-${index}`}>
                             {item.discountType === 'fixed' ? 'Importo sconto (€)' : 'Percentuale sconto (%)'}
@@ -678,7 +678,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Opzioni di selezione per moduli variabili */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border rounded-md">
                       <div className="flex items-center space-x-2">
@@ -695,7 +695,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                         />
                         <Label htmlFor={`required-${index}`}>Opzione obbligatoria</Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <Switch
                           id={`default-${index}`}
@@ -705,7 +705,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                         />
                         <Label htmlFor={`default-${index}`}>Preselezionata</Label>
                       </div>
-                      
+
                       <div className="col-span-2">
                         <Label htmlFor={`selectionOrder-${index}`}>Ordine di visualizzazione</Label>
                         <Input
@@ -717,7 +717,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
                         />
                       </div>
                     </div>
-                    
+
                     <div className="pt-2 border-t flex justify-between items-center">
                       <div>
                         {item.hasDiscount && item.discountedPrice !== undefined && (
@@ -762,13 +762,13 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           )}
         </div>
       </CardContent>
-      
+
       <CardFooter className="flex justify-between">
         <div className="flex gap-2">
           <Button variant="outline" onClick={onCancel}>
             Annulla
           </Button>
-          
+
           {isEdit && onDelete && (
             <Button variant="destructive" onClick={handleDelete}>
               <Trash2 className="h-4 w-4 mr-2" />
@@ -776,7 +776,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
             </Button>
           )}
         </div>
-        
+
         <Button onClick={handleSave} disabled={isLoading}>
           <Save className="h-4 w-4 mr-2" />
           {isEdit ? "Aggiorna" : "Salva"} modulo

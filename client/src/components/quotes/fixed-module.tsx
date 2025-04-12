@@ -96,7 +96,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
       hasDiscount: false,
       total: 0
     };
-    
+
     setFormData(prev => ({
       ...prev,
       items: [...prev.items, newItem]
@@ -212,7 +212,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
 
     setIsLoading(true);
     try {
-      onSave(formData);
+      await onSave(formData);
       toast({
         title: isEdit ? "Modulo aggiornato" : "Modulo creato",
         description: `Il modulo "${formData.name}" è stato ${isEdit ? 'aggiornato' : 'aggiunto'} al preventivo`
@@ -258,7 +258,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
           </ul>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Nome e descrizione del modulo */}
         <div className="space-y-4">
@@ -285,7 +285,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                 placeholder="es. Pacchetto base, Servizi aggiuntivi, ecc."
               />
             </div>
-            
+
             <div>
               <Label htmlFor="description">Descrizione (opzionale)</Label>
               <Textarea
@@ -334,7 +334,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="p-4 space-y-4">
                     <div className="grid grid-cols-1 gap-4">
                       <div className="flex items-center gap-2 mb-1">
@@ -351,7 +351,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                         </TooltipProvider>
                         <div className="h-px flex-1 bg-border"></div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <Label 
@@ -370,7 +370,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                                   // Resetta altri campi
                                   handleItemChange(index, 'productId', undefined);
                                   handleItemChange(index, 'bundleId', undefined);
-                                  
+
                                   // Aggiorna automaticamente il prezzo e altri dettagli
                                   const selectedService = availableServices.find(s => s.id === parseInt(value));
                                   if (selectedService) {
@@ -397,7 +397,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                             </Select>
                           </div>
                         </div>
-                        
+
                         <div>
                           <Label 
                             htmlFor={`productId-${index}`}
@@ -415,7 +415,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                                   // Resetta altri campi
                                   handleItemChange(index, 'serviceId', undefined);
                                   handleItemChange(index, 'bundleId', undefined);
-                                  
+
                                   // Aggiorna automaticamente il prezzo e altri dettagli
                                   const selectedProduct = availableProducts.find(p => p.id === parseInt(value));
                                   if (selectedProduct) {
@@ -442,7 +442,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                             </Select>
                           </div>
                         </div>
-                        
+
                         <div>
                           <Label 
                             htmlFor={`bundleId-${index}`}
@@ -460,7 +460,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                                   // Resetta altri campi
                                   handleItemChange(index, 'serviceId', undefined);
                                   handleItemChange(index, 'productId', undefined);
-                                  
+
                                   // Aggiorna automaticamente il prezzo e altri dettagli
                                   const selectedBundle = availableBundles.find(b => b.id === parseInt(value));
                                   if (selectedBundle) {
@@ -490,7 +490,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <div className="flex items-center gap-1">
@@ -514,7 +514,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                           onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
                         />
                       </div>
-                      
+
                       <div>
                         <div className="flex items-center gap-1">
                           <Label htmlFor={`unitPrice-${index}`}>Prezzo unitario (€)</Label>
@@ -538,7 +538,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                           onChange={(e) => handleItemChange(index, 'unitPrice', parseFloat(e.target.value))}
                         />
                       </div>
-                      
+
                       <div className="flex items-end">
                         <TooltipProvider>
                           <Tooltip>
@@ -558,7 +558,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                         </TooltipProvider>
                       </div>
                     </div>
-                    
+
                     {item.hasDiscount && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border rounded-md bg-muted/20">
                         <div>
@@ -576,7 +576,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         <div>
                           <Label htmlFor={`discountValue-${index}`}>
                             {item.discountType === 'fixed' ? 'Importo sconto (€)' : 'Percentuale sconto (%)'}
@@ -593,7 +593,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="pt-2 border-t flex justify-between items-center">
                       <div>
                         {item.hasDiscount && item.discountedPrice !== undefined && (
@@ -630,13 +630,13 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
           )}
         </div>
       </CardContent>
-      
+
       <CardFooter className="flex justify-between">
         <div className="flex gap-2">
           <Button variant="outline" onClick={onCancel}>
             Annulla
           </Button>
-          
+
           {isEdit && onDelete && (
             <Button variant="destructive" onClick={handleDelete}>
               <Trash2 className="h-4 w-4 mr-2" />
@@ -644,7 +644,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
             </Button>
           )}
         </div>
-        
+
         <Button onClick={handleSave} disabled={isLoading}>
           <Save className="h-4 w-4 mr-2" />
           {isEdit ? "Aggiorna" : "Salva"} modulo

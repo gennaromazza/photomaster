@@ -49,9 +49,9 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
   }
 
   // Stato per la selezione degli elementi (usando ID invece di indici)
-  const [selectedItems, setSelectedItems] = useState<SelectedItemData[]>([]);
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [total, setTotal] = useState(0);
-  
+
   // Teniamo traccia dello stato di caricamento delle immagini
   const [imageLoadState, setImageLoadState] = useState<Record<number, ImageLoadState>>({});
 
@@ -59,20 +59,20 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
   const hasRequiredItems = (module.items || []).some((item: any) => 
     item && item.minSelectCount && item.minSelectCount > 0
   );
-  
+
   // Funzione per controllare se un item è richiesto
   const isItemRequired = (item: any): boolean => {
     return Boolean(item && item.minSelectCount && item.minSelectCount > 0);
   };
-  
+
   // Inizializza gli item selezionati in base al minSelectCount
   useEffect(() => {
     const initialSelected: SelectedItemData[] = [];
-    
+
     if (module.items && Array.isArray(module.items)) {
       module.items.forEach((item: any, index: number) => {
         if (!item || !item.id) return;
-        
+
         if (isItemRequired(item)) {
           initialSelected.push({
             id: item.id,
@@ -82,9 +82,9 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
         }
       });
     }
-    
+
     setSelectedItems(initialSelected);
-    
+
     // Inizializza lo stato per il caricamento delle immagini
     const initialImageLoadState: Record<number, ImageLoadState> = {};
     if (module.items && Array.isArray(module.items)) {
@@ -111,7 +111,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
       }
     });
     setTotal(sum);
-    
+
     // Notifica il componente padre della selezione
     if (onSelectionChange) {
       const selectedItemIds = selectedItems.map(selected => selected.id);
@@ -126,13 +126,13 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
       console.error(`[ERRORE] Tentativo di selezionare un item senza ID valido nel modulo ${module.id}`);
       return;
     }
-    
+
     if (checked) {
       // Verifica se l'elemento può essere selezionato
       if (!canSelectMore() && !isItemSelected(itemId) && !isItemRequired(module.items[index])) {
         return;
       }
-      
+
       setSelectedItems(prev => [
         ...prev, 
         {
@@ -147,7 +147,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
       if (isItemRequired(item)) {
         return;
       }
-      
+
       setSelectedItems(prev => prev.filter(selected => selected.id !== itemId));
     }
   };
@@ -166,16 +166,16 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
   // Controlla se un item è selezionabile
   const isItemSelectable = (item: any, index: number): boolean => {
     if (!item || !item.id) return false;
-    
+
     // Se è già selezionato o è obbligatorio, è selezionabile
     if (isItemSelected(item.id) || isItemRequired(item)) {
       return true;
     }
-    
+
     // Altrimenti controllo se ho raggiunto il limite massimo
     return canSelectMore();
   };
-  
+
   // Gestisce errori di caricamento immagini
   const handleImageError = (itemId: number) => {
     setImageLoadState(prev => ({
@@ -183,7 +183,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
       [itemId]: { hasError: true, isLoading: false }
     }));
   };
-  
+
   // Gestisce il completamento del caricamento delle immagini
   const handleImageLoad = (itemId: number) => {
     setImageLoadState(prev => ({
@@ -214,7 +214,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
         {module.description && (
           <p className="text-sm text-muted-foreground mt-1">{module.description}</p>
         )}
-        
+
         {module.expiryDate && (
           <div className="flex items-center text-xs text-muted-foreground mt-2">
             <Calendar className="h-3 w-3 mr-1" />
@@ -223,7 +223,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
             </span>
           </div>
         )}
-        
+
         {(module.minSelectCount || module.maxSelectCount) && (
           <div className="flex items-center mt-2 text-xs p-2 bg-muted/40 rounded-md">
             <Info className="h-3 w-3 mr-1 text-muted-foreground" />
@@ -234,19 +234,19 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
           </div>
         )}
       </CardHeader>
-      
+
       <CardContent className="p-4">
         <div className="space-y-3">
           {module.items.map((item: any, index: number) => {
             if (!item || !item.id) return null;
-            
+
             const isRequired = isItemRequired(item);
             const isSelected = isItemSelected(item.id);
             const itemSelectable = isItemSelectable(item, index);
             const { name, description } = getItemNameAndDescription(item);
             const imagePath = getItemImagePath(item);
             const imageState = imageLoadState[item.id] || { hasError: false, isLoading: true };
-            
+
             return (
               <div 
                 key={item.id} 
@@ -278,14 +278,14 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                         {formatCurrency(item.total)}
                       </Badge>
                     </div>
-                    
+
                     {/* Descrizione del prodotto/servizio */}
                     {description && (
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                         {description}
                       </p>
                     )}
-                    
+
                     {/* Immagine del prodotto/servizio se disponibile */}
                     {imagePath && (
                       <div className="mt-2 w-full h-28 rounded-md overflow-hidden bg-muted/40">
@@ -307,7 +307,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                         )}
                       </div>
                     )}
-                    
+
                     <div className="text-sm text-muted-foreground mt-2">
                       Quantità: {item.quantity} x {formatCurrency(item.unitPrice)}
                       {item.hasDiscount && item.discountedPrice !== undefined && (
@@ -325,7 +325,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
           })}
         </div>
       </CardContent>
-      
+
       <CardFooter className="flex justify-between border-t pt-3 bg-muted/10">
         <div>
           <p className="text-sm text-muted-foreground">Elementi selezionati: {selectedItems.length}</p>

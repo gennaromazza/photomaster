@@ -43,7 +43,7 @@ export function ModuleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto" description="Configura le impostazioni del modulo e seleziona i servizi, pacchetti e prodotti da includere">
         <DialogHeader>
           <DialogTitle className="font-playfair text-2xl">
             {module?.id ? "Modifica Modulo" : "Nuovo Modulo"}

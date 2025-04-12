@@ -91,6 +91,8 @@ export interface QuoteModuleData {
   status: 'active' | 'inactive' | 'pending_selection';
   shareToken?: string;
   expiryDate?: Date;
+  minSelectCount?: number;
+  maxSelectCount?: number;
   items: QuoteModuleItemData[];
 }
 
@@ -112,6 +114,7 @@ export interface QuoteModuleItemData {
   selectionRequired?: boolean;
   isDefault?: boolean;
   selectionOrder?: number;
+  minSelectCount?: number;
   notes?: string;
   // Campi virtuali per UI
   serviceName?: string;

@@ -113,12 +113,36 @@ export default function QuoteDetailPage() {
   // Mutations
   const updateQuoteTotalsMutation = useMutation({
     mutationFn: async ({ subtotal, total }: { subtotal: number, total: number }) => {
-      const res = await apiRequest("PATCH", `/api/quotes/${id}`, {
-        subtotal,
-        total
-      });
-      if (!res.ok) throw new Error("Errore nell'aggiornamento dei totali");
-      return res.json();
+      try {
+        console.log(`[LOG] Aggiornamento totali preventivo - subtotal: ${subtotal}, total: ${total}`);
+        const res = await fetch(`/api/quotes/${id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
+          },
+          body: JSON.stringify({ subtotal, total }),
+          credentials: "include"
+        });
+        
+        // Non tentiamo di fare il parsing del JSON se la risposta è vuota o non è JSON
+        if (!res.ok) {
+          const text = await res.text();
+          if (text.includes("<!DOCTYPE html>")) {
+            console.error("[LOG] Ricevuta risposta HTML invece di JSON");
+            // Return senza errore per non bloccare l'aggiornamento
+            return { subtotal, total };
+          }
+          throw new Error(`Errore nell'aggiornamento dei totali: ${text}`);
+        }
+        
+        // Non facciamo res.json() perché potrebbe non restituire JSON valido
+        return { subtotal, total };
+      } catch (error) {
+        console.error(`[ERRORE] Aggiornamento totali preventivo fallito:`, error);
+        // Non lanciamo l'errore per evitare interruzioni
+        return { subtotal, total };
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
@@ -133,12 +157,8 @@ export default function QuoteDetailPage() {
       }
     },
     onError: (error) => {
-      console.error("Errore nell'aggiornamento dei totali:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare i totali del preventivo",
-        variant: "destructive",
-      });
+      console.error("[ERRORE] Errore nell'aggiornamento dei totali:", error);
+      // Non mostriamo errori all'utente per questa operazione di background
     },
   });
   

@@ -171,6 +171,17 @@ export default function NewQuotePage() {
     queryKey: ["/api/quotes", editId],
     enabled: !!editId,
   });
+  
+  // Query per ottenere i moduli del preventivo in modalità modifica
+  const { data: quoteModules = [], isLoading: isLoadingModules } = useQuery<QuoteModuleData[]>({
+    queryKey: ["/api/quotes", editId, "modules"],
+    queryFn: async () => {
+      const res = await fetch(`/api/quotes/${editId}/modules`);
+      if (!res.ok) throw new Error("Errore nel caricamento dei moduli");
+      return res.json();
+    },
+    enabled: !!editId,
+  });
 
   // Form per il preventivo
   const form = useForm<QuoteFormValues>({
@@ -294,6 +305,13 @@ export default function NewQuotePage() {
       setIsFullDayEvent(quoteToEdit.isFullDay || false);
     }
   }, [quoteToEdit, isLoadingQuote, form]);
+  
+  // Effetto per caricare i moduli esistenti quando si modifica un preventivo
+  useEffect(() => {
+    if (quoteModules && quoteModules.length > 0) {
+      setModules(quoteModules);
+    }
+  }, [quoteModules]);
 
   // Mutation per creare un nuovo cliente principale
   const createClientMutation = useMutation({
@@ -410,13 +428,65 @@ export default function NewQuotePage() {
     },
   });
 
+  // Mutation per salvare un modulo
+  const saveModuleMutation = useMutation({
+    mutationFn: async (module: QuoteModuleData) => {
+      const url = module.id && module.id > 0 
+        ? `/api/quotes/${editId}/modules/${module.id}`
+        : `/api/quotes/${editId}/modules`;
+      const method = module.id && module.id > 0 ? "PATCH" : "POST";
+      
+      const res = await apiRequest(method, url, module);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", editId, "modules"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante il salvataggio del modulo",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation per eliminare un modulo
+  const deleteModuleMutation = useMutation({
+    mutationFn: async (moduleId: number) => {
+      const res = await apiRequest("DELETE", `/api/quotes/${editId}/modules/${moduleId}`);
+      return res.ok;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", editId, "modules"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'eliminazione del modulo",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Gestisci il submit del form preventivo
   const onSubmit = (data: QuoteFormValues) => {
     // Qui usiamo direttamente i dati senza convertire la data in stringa
     if (isEditMode) {
       updateQuoteMutation.mutate(data);
+      
+      // Salva anche i moduli se siamo in modalità modifica
+      modules.forEach(module => {
+        // Salva solo i moduli con ID temporaneo (negativo) o quelli modificati
+        if (module.id && module.id < 0) {
+          // Rimuovi l'ID temporaneo prima di salvare
+          const { id, ...moduleData } = module;
+          saveModuleMutation.mutate({ ...moduleData, quoteId: parseInt(editId!) });
+        }
+      });
     } else {
       createQuoteMutation.mutate(data);
+      // I moduli verranno salvati dopo la creazione del preventivo dalla pagina di dettaglio
     }
   };
 
@@ -448,23 +518,35 @@ export default function NewQuotePage() {
   };
   
   const handleSaveModule = (module: QuoteModuleData) => {
-    if (module.id) {
-      // Se il modulo ha già un ID, lo stiamo modificando
-      setModules(modules.map(m => m.id === module.id ? module : m));
-      toast({
-        title: "Modulo aggiornato",
-        description: `Il modulo ${module.name} è stato aggiornato con successo`,
-      });
+    if (isEditMode && editId) {
+      // Se siamo in modalità modifica ed esiste un ID preventivo valido
+      if (module.id && module.id > 0) {
+        // Aggiornamento di un modulo esistente nel database
+        saveModuleMutation.mutate(module);
+      } else {
+        // Creazione di un nuovo modulo nel database
+        const { id, ...newModule } = module;
+        saveModuleMutation.mutate({ ...newModule, quoteId: parseInt(editId) });
+      }
     } else {
-      // Altrimenti lo stiamo creando
-      // Assegnamo un ID temporaneo (sarà sostituito da quello del DB)
-      const tempId = -Date.now(); // ID negativo temporaneo
-      setModules([...modules, { ...module, id: tempId }]);
-      toast({
-        title: "Modulo aggiunto",
-        description: `Il modulo ${module.name} è stato aggiunto al preventivo`,
-      });
+      // In modalità creazione, gestisci i moduli solo in memoria
+      if (module.id) {
+        // Se il modulo ha già un ID, lo stiamo modificando
+        setModules(modules.map(m => m.id === module.id ? module : m));
+      } else {
+        // Altrimenti lo stiamo creando con un ID temporaneo
+        const tempId = -Date.now(); // ID negativo temporaneo
+        setModules([...modules, { ...module, id: tempId }]);
+      }
     }
+    
+    toast({
+      title: module.id && module.id > 0 ? "Modulo aggiornato" : "Modulo aggiunto",
+      description: module.id && module.id > 0 
+        ? `Il modulo ${module.name} è stato aggiornato con successo` 
+        : `Il modulo ${module.name} è stato aggiunto al preventivo`,
+    });
+    
     setShowModuleForm(null);
     setEditingModule(null);
   };
@@ -480,11 +562,19 @@ export default function NewQuotePage() {
   };
   
   const handleDeleteModule = (moduleId: number) => {
+    // Se è un modulo esistente nel DB (ID positivo) e siamo in modalità modifica
+    if (isEditMode && moduleId > 0) {
+      deleteModuleMutation.mutate(moduleId);
+    }
+    
+    // In ogni caso, rimuovi il modulo dall'array locale
     setModules(modules.filter(m => m.id !== moduleId));
+    
     toast({
       title: "Modulo rimosso",
       description: "Il modulo è stato rimosso dal preventivo",
     });
+    
     setShowModuleForm(null);
     setEditingModule(null);
   };
@@ -1207,6 +1297,86 @@ export default function NewQuotePage() {
                   </div>
                 )}
 
+                <Separator className="my-4" />
+                
+                {/* Moduli preventivo */}
+                <h3 className="text-lg font-medium mb-2 flex items-center">
+                  <Package className="h-5 w-5 mr-2" />
+                  Moduli Preventivo
+                </h3>
+                
+                {/* Mostra elenco dei moduli già aggiunti */}
+                {modules.length > 0 && (
+                  <div className="space-y-4 mb-4">
+                    {modules.map((module) => (
+                      <Card key={module.id} className="border border-muted">
+                        <CardHeader className="py-3 px-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="flex flex-col">
+                                <CardTitle className="text-base">{module.name}</CardTitle>
+                                <CardDescription className="text-xs">
+                                  {module.type === 'fixed' ? 'Modulo fisso' : 'Modulo variabile'} · 
+                                  {module.items.length} {module.items.length === 1 ? 'elemento' : 'elementi'}
+                                </CardDescription>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleEditModule(module)}
+                              >
+                                Modifica
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteModule(module.id!)}
+                              >
+                                Elimina
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Se non stiamo già mostrando un form di modifica/creazione, mostra il selettore */}
+                {!showModuleForm && (
+                  <div className="mb-6">
+                    <ModuleSelector 
+                      quoteId={parseInt(editId || "-1")} 
+                      onAddModule={handleAddModule} 
+                    />
+                  </div>
+                )}
+                
+                {/* Form modulo fisso */}
+                {showModuleForm === 'fixed' && (
+                  <FixedModule
+                    quoteId={parseInt(editId || "-1")}
+                    module={editingModule || undefined}
+                    onSave={handleSaveModule}
+                    onCancel={handleCancelModule}
+                    onDelete={editingModule?.id ? handleDeleteModule : undefined}
+                  />
+                )}
+                
+                {/* Form modulo variabile */}
+                {showModuleForm === 'variable' && (
+                  <VariableModule
+                    quoteId={parseInt(editId || "-1")}
+                    module={editingModule || undefined}
+                    onSave={handleSaveModule}
+                    onCancel={handleCancelModule}
+                    onDelete={editingModule?.id ? handleDeleteModule : undefined}
+                  />
+                )}
+                
                 <Separator className="my-4" />
 
                 {/* Note di lavoro */}

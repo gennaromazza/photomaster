@@ -60,7 +60,7 @@ import {
   Paperclip,
   Save,
   Church,
-  Package
+  Package as PackageIcon
 } from "lucide-react";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { ModuleSelector, QuoteModuleData } from "@/components/quotes/module-selector";
@@ -1301,7 +1301,7 @@ export default function NewQuotePage() {
                 
                 {/* Moduli preventivo */}
                 <h3 className="text-lg font-medium mb-2 flex items-center">
-                  <Package className="h-5 w-5 mr-2" />
+                  <PackageIcon className="h-5 w-5 mr-2" />
                   Moduli Preventivo
                 </h3>
                 

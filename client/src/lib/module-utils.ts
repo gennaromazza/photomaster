@@ -5,29 +5,47 @@
 
 import { formatCurrency } from "@/lib/utils";
 
+interface ItemTotalResult {
+  total: number;
+  discountedPrice: number | undefined;
+}
+
 /**
  * Calcola il totale di un elemento in base a prezzo unitario, quantità e sconto
+ * @param item Oggetto contenente i dati dell'elemento o parametri individuali
+ * @returns Oggetto con il prezzo totale e il prezzo scontato unitario
  */
-export function calculateItemTotal(
-  unitPrice: number, 
-  quantity: number, 
-  hasDiscount: boolean = false,
-  discountType: string | null = null,
-  discountValue: number | null = null
-): number {
-  // Calcola il prezzo base
+export function calculateItemTotal(item: any): ItemTotalResult {
+  // Se l'oggetto non è definito, ritorna valori di default
+  if (!item) {
+    return { total: 0, discountedPrice: undefined };
+  }
+  
+  // Estrai i valori dall'oggetto item
+  const unitPrice = Number(item.unitPrice) || 0;
+  const quantity = Number(item.quantity) || 1;
+  const hasDiscount = Boolean(item.hasDiscount);
+  const discountType = item.discountType || 'percentage';
+  const discountValue = Number(item.discountValue) || 0;
+  
+  let discountedUnitPrice: number | undefined = undefined;
   let total = unitPrice * quantity;
   
   // Applica lo sconto se presente
-  if (hasDiscount && discountValue && discountValue > 0) {
+  if (hasDiscount && discountValue > 0) {
     if (discountType === 'percentage') {
-      total = total - (total * discountValue / 100);
-    } else {
-      total = total - discountValue;
+      discountedUnitPrice = unitPrice * (1 - (discountValue / 100));
+      total = quantity * discountedUnitPrice;
+    } else { // sconto fisso
+      discountedUnitPrice = Math.max(0, unitPrice - discountValue);
+      total = quantity * discountedUnitPrice;
     }
   }
   
-  return total;
+  return { 
+    total: total, 
+    discountedPrice: discountedUnitPrice 
+  };
 }
 
 /**

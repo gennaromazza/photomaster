@@ -1869,8 +1869,15 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(404).json({ message: "Preventivo non trovato" });
       }
 
-      // Crea il modulo
-      const moduleData = { ...req.body, quoteId };
+      // Crea il modulo con gestione corretta della data di scadenza
+      const moduleData = { 
+        ...req.body, 
+        quoteId,
+        // Assicuriamoci che expiryDate sia nel formato corretto
+        expiryDate: req.body.expiryDate 
+          ? new Date(req.body.expiryDate) 
+          : (req.body.type === 'variable' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : undefined)
+      };
       const newModule = await storage.createQuoteModule(moduleData);
 
       // Se ci sono elementi nel modulo, li creiamo
@@ -1906,8 +1913,17 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(404).json({ message: "Modulo non trovato" });
       }
 
+      // Prepara i dati per l'aggiornamento con gestione corretta della data
+      const updateData = {
+        ...req.body,
+        // Assicuriamoci che expiryDate sia nel formato corretto
+        expiryDate: req.body.expiryDate 
+          ? new Date(req.body.expiryDate) 
+          : existingModule.expiryDate
+      };
+      
       // Aggiorna il modulo
-      const updatedModule = await storage.updateQuoteModule(moduleId, req.body);
+      const updatedModule = await storage.updateQuoteModule(moduleId, updateData);
       
       // Gestisci gli elementi del modulo
       if (req.body.items && Array.isArray(req.body.items)) {

@@ -1,5 +1,5 @@
 import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { FixedModule } from "./fixed-module";
 import { VariableModule } from "./variable-module";
 import { QuoteModuleData } from "./module-selector";
@@ -43,11 +43,14 @@ export function ModuleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto" description="Configura le impostazioni del modulo e seleziona i servizi, pacchetti e prodotti da includere">
+      <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-playfair text-2xl">
             {module?.id ? "Modifica Modulo" : "Nuovo Modulo"}
           </DialogTitle>
+          <DialogDescription>
+            Configura le impostazioni del modulo e seleziona i servizi, pacchetti e prodotti da includere
+          </DialogDescription>
         </DialogHeader>
         
         {moduleType === 'fixed' ? (

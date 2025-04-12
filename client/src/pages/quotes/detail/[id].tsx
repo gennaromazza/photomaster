@@ -765,51 +765,37 @@ export default function QuoteDetailPage() {
               </CardFooter>
             </Card>
             
-            {/* Servizi e prodotti */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Servizi e Prodotti</CardTitle>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setLocation(`/quotes/new-redesign?edit=${id}`)}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Modifica
-                </Button>
+            {/* Riepilogo preventivo */}
+            <Card className="my-4 bg-gradient-to-br from-primary/5 to-background border border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center text-base">
+                  <FileText className="h-4 w-4 mr-2 text-primary" />
+                  Riepilogo Preventivo
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                {quote.quoteItems && quote.quoteItems.length > 0 ? (
-                  <div className="space-y-4">
-                    {quote.quoteItems.map((item: any) => (
-                      <div key={item.id} className="border rounded-md p-4">
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium">{item.service?.name || "Servizio"}</h4>
-                          <Badge variant="outline">€ {(item.total || 0).toLocaleString()}</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {item.quantity || 1} x €{(item.unitPrice || 0).toLocaleString()}
-                          {item.hasDiscount && (
-                            <span> (-{item.discountType === 'percentage' ? `${item.discountValue}%` : `€${item.discountValue}`})</span>
-                          )}
-                        </p>
-                      </div>
-                    ))}
+              <CardContent className="py-4">
+                <div className="text-sm text-muted-foreground mb-4">
+                  Tutti i servizi, pacchetti e prodotti sono inclusi nei moduli sopra.
+                </div>
+                
+                <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Subtotale</p>
+                    <p className="text-xl font-medium">€ {(quote.subtotal || 0).toLocaleString()}</p>
                   </div>
-                ) : (
-                  <div className="text-center py-8 border rounded-md">
-                    <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-muted-foreground">Nessun servizio aggiunto</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-2"
-                      onClick={() => setLocation(`/quotes/new-redesign?edit=${id}`)}
-                    >
-                      Aggiungi servizio
-                    </Button>
+                  
+                  {quote.discount > 0 && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Sconto</p>
+                      <p className="text-xl font-medium text-green-600">-€ {(quote.discount || 0).toLocaleString()}</p>
+                    </div>
+                  )}
+                  
+                  <div className="bg-primary/10 px-5 py-3 rounded-md border border-primary/20">
+                    <p className="text-xs uppercase tracking-wider text-primary font-medium">Totale Preventivo</p>
+                    <p className="text-2xl font-bold">€ {(quote.total || 0).toLocaleString()}</p>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
 

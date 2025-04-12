@@ -34,17 +34,22 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
 
   const [availableServices, setAvailableServices] = useState<any[]>([]);
   const [availableBundles, setAvailableBundles] = useState<any[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Carica servizi e pacchetti disponibili
+  // Carica servizi, pacchetti e prodotti disponibili
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Carica i servizi
         const servicesResponse = await fetch('/api/services');
         if (servicesResponse.ok) {
-          const services = await servicesResponse.json();
+          const allItems = await servicesResponse.json();
+          // Separiamo servizi e prodotti
+          const services = allItems.filter((item: any) => item.type === 'service');
+          const products = allItems.filter((item: any) => item.type === 'product');
           setAvailableServices(services || []);
+          setAvailableProducts(products || []);
         }
 
         // Carica i pacchetti
@@ -54,10 +59,10 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
           setAvailableBundles(bundles || []);
         }
       } catch (error) {
-        console.error("Errore nel caricamento dei servizi o pacchetti:", error);
+        console.error("Errore nel caricamento dei servizi, prodotti o pacchetti:", error);
         toast({
           title: "Errore",
-          description: "Impossibile caricare i servizi o i pacchetti",
+          description: "Impossibile caricare i servizi, prodotti o pacchetti",
           variant: "destructive",
         });
       }

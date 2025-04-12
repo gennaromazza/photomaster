@@ -284,6 +284,44 @@ export default function PublicQuotePage() {
           </CardFooter>
         </Card>
 
+        {/* Moduli del preventivo */}
+        {modules && modules.length > 0 && (
+          <Card className="mb-8 border-primary/20">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-primary" />
+                {modules.length > 1 ? "Moduli" : "Modulo"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5">
+              <div className="mb-2 text-sm text-muted-foreground">
+                Qui puoi visualizzare i {modules.length > 1 ? "moduli" : "modulo"} inclusi nel preventivo.
+                {modules.some(m => m.type === 'variable') && (
+                  <p className="mt-1">
+                    I moduli <span className="font-medium">variabili</span> ti permettono di selezionare le opzioni che preferisci.
+                  </p>
+                )}
+              </div>
+              
+              <div className="space-y-6 mt-4">
+                {/* Moduli fissi */}
+                {modules.filter(m => m.type === 'fixed').map(module => (
+                  <PublicFixedModule key={module.id} module={module} />
+                ))}
+                
+                {/* Moduli variabili */}
+                {modules.filter(m => m.type === 'variable').map(module => (
+                  <PublicVariableModule 
+                    key={module.id} 
+                    module={module}
+                    onSelectionChange={handleModuleItemSelection}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
         {/* Note */}
         {quote.notes && (
           <Card className="mb-8 border-primary/20">

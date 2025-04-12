@@ -121,11 +121,15 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
       };
 
       // Se il campo è serviceId, aggiorna anche il prezzo unitario con il prezzo del servizio
-      if (field === 'serviceId' && value) {
-        const selectedService = availableServices.find(s => s.id === parseInt(value));
-        if (selectedService) {
-          // Resetta i campi non pertinenti utilizzando l'utility di reset
-          newItems[index] = resetItemFields(newItems[index], true);
+      if (field === 'serviceId') {
+        if (!value) {
+          // Reset completo se deselezionato
+          newItems[index] = resetItemFields(newItems[index], false);
+        } else {
+          const selectedService = availableServices.find(s => s.id === parseInt(value));
+          if (selectedService) {
+            // Resetta i campi non pertinenti utilizzando l'utility di reset
+            newItems[index] = resetItemFields(newItems[index], true);
           // Poi imposta i nuovi valori
           newItems[index].serviceId = selectedService.id;
           newItems[index].unitPrice = selectedService.price;

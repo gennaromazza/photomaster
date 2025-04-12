@@ -158,7 +158,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                         htmlFor={`item-${module.id}-${index}`}
                         className={`font-medium cursor-pointer ${isRequired ? 'after:content-["*"] after:text-red-500 after:ml-0.5' : ''}`}
                       >
-                        {item.serviceName || item.bundleName || "Servizio"}
+                        {item.serviceName || item.productName || item.bundleName || "Servizio/Prodotto"}
                       </Label>
                       <Badge variant="outline" className={isSelected ? 'bg-primary/20' : ''}>
                         {formatCurrency(item.total)}

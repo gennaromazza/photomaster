@@ -33,7 +33,7 @@ export function PublicFixedModule({ module }: PublicFixedModuleProps) {
             >
               <div className="flex flex-wrap justify-between items-center gap-2">
                 <h4 className="font-medium">
-                  {item.serviceName || item.bundleName || "Servizio"}
+                  {item.serviceName || item.productName || item.bundleName || "Servizio/Prodotto"}
                 </h4>
                 <Badge variant="outline">
                   {formatCurrency(item.total)}

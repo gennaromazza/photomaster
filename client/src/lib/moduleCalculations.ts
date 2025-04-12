@@ -40,7 +40,7 @@ export function calculateItemTotals(item: QuoteModuleItemData): QuoteModuleItemD
 }
 
 export function calculateModuleTotals(items: QuoteModuleItemData[]) {
-  return items.reduce((acc, item) => {
+  const result = items.reduce((acc, item) => {
     const calculated = calculateItemTotals(item);
     const itemSubtotal = calculated.unitPrice * calculated.quantity;
     const itemTotal = calculated.total || itemSubtotal;
@@ -50,15 +50,25 @@ export function calculateModuleTotals(items: QuoteModuleItemData[]) {
       total: acc.total + itemTotal,
       hasDiscounts: acc.hasDiscounts || calculated.hasDiscount,
       itemCount: acc.itemCount + 1,
-      discountedItemCount: acc.discountedItemCount + (calculated.hasDiscount ? 1 : 0)
+      discountedItemCount: acc.discountedItemCount + (calculated.hasDiscount ? 1 : 0),
+      totalDiscount: acc.totalDiscount + (itemSubtotal - itemTotal)
     };
   }, { 
     subtotal: 0, 
     total: 0, 
     hasDiscounts: false,
     itemCount: 0,
-    discountedItemCount: 0 
+    discountedItemCount: 0,
+    totalDiscount: 0
   });
+
+  return {
+    ...result,
+    averageDiscount: result.discountedItemCount > 0 ? 
+      (result.totalDiscount / result.discountedItemCount) : 0,
+    discountPercentage: result.subtotal > 0 ? 
+      ((result.subtotal - result.total) / result.subtotal * 100) : 0
+  };
 }
 
 export function calculateDiscountAmount(price: number, discountType: 'percentage' | 'fixed', discountValue: number): number {
@@ -71,6 +81,12 @@ export function calculateDiscountAmount(price: number, discountType: 'percentage
 export function formatPrice(amount: number) {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
-    currency: 'EUR'
-  }).format(amount / 100);
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+}
+
+export function roundToTwoDecimals(num: number): number {
+  return Math.round((num + Number.EPSILON) * 100) / 100;
 }

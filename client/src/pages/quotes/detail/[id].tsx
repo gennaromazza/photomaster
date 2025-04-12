@@ -111,6 +111,37 @@ export default function QuoteDetailPage() {
   });
   
   // Mutations
+  const updateQuoteTotalsMutation = useMutation({
+    mutationFn: async ({ subtotal, total }: { subtotal: number, total: number }) => {
+      const res = await apiRequest("PATCH", `/api/quotes/${id}`, {
+        subtotal,
+        total
+      });
+      if (!res.ok) throw new Error("Errore nell'aggiornamento dei totali");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
+      
+      // Se è il primo aggiornamento, mostra un toast
+      if (!window.localStorage.getItem('totalsUpdated')) {
+        window.localStorage.setItem('totalsUpdated', 'true');
+        toast({
+          title: "Totali aggiornati",
+          description: "I totali del preventivo sono stati aggiornati in base ai moduli",
+        });
+      }
+    },
+    onError: (error) => {
+      console.error("Errore nell'aggiornamento dei totali:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare i totali del preventivo",
+        variant: "destructive",
+      });
+    },
+  });
+  
   const deleteQuoteMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("DELETE", `/api/quotes/${id}`);
@@ -267,6 +298,41 @@ export default function QuoteDetailPage() {
       setModules(quoteModules);
     }
   }, [quoteModules]);
+  
+  // Effetto per ricalcolare il totale quando cambiano i moduli
+  useEffect(() => {
+    if (quote && modules && modules.length > 0) {
+      // Calcola il totale dei moduli
+      let moduleTotal = 0;
+      modules.forEach(module => {
+        if (module.items && module.items.length > 0) {
+          module.items.forEach(item => {
+            if (item.price) {
+              moduleTotal += Number(item.price);
+            }
+          });
+        }
+      });
+      
+      // Calcola il nuovo subtotale: totale dei moduli + eventuali prodotti/servizi diretti
+      const servicesTotal = quote.services?.reduce((acc, service) => acc + (Number(service.price) || 0), 0) || 0;
+      const productsTotal = quote.products?.reduce((acc, product) => acc + (Number(product.price) || 0), 0) || 0;
+      const newSubtotal = moduleTotal + servicesTotal + productsTotal;
+      
+      // Calcola il nuovo totale applicando lo sconto
+      const newTotal = quote.discountType === 'percentage' 
+        ? newSubtotal - (newSubtotal * (Number(quote.discountValue) || 0) / 100)
+        : newSubtotal - (Number(quote.discountValue) || 0);
+      
+      // Se il totale è cambiato, aggiorna il preventivo
+      if (newSubtotal !== quote.subtotal || newTotal !== quote.total) {
+        updateQuoteTotalsMutation.mutate({
+          subtotal: newSubtotal,
+          total: newTotal
+        });
+      }
+    }
+  }, [quote, modules]);
   
   // Handler di eventi
   const handleDeleteClick = () => {

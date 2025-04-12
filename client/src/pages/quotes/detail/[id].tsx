@@ -5,6 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Layout from "@/components/layout/layout";
 import CeremonyDetails from "@/components/quotes/ceremony-details";
+import { ModuleSelector, QuoteModuleData } from "@/components/quotes/module-selector";
+import { FixedModule } from "@/components/quotes/fixed-module";
+import { VariableModule } from "@/components/quotes/variable-module";
 import {
   Card,
   CardContent,
@@ -68,6 +71,11 @@ export default function QuoteDetailPage() {
   const [shareUrl, setShareUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
+  // Stati per gestione moduli
+  const [modules, setModules] = useState<QuoteModuleData[]>([]);
+  const [editingModule, setEditingModule] = useState<QuoteModuleData | null>(null);
+  const [showModuleForm, setShowModuleForm] = useState<'fixed' | 'variable' | null>(null);
+  
   // Stato per gestire le fasi del workflow
   const [workflowSteps, setWorkflowSteps] = useState([
     { id: 1, name: "Data di creazione", date: "", completed: true, current: false },
@@ -89,6 +97,17 @@ export default function QuoteDetailPage() {
       if (!res.ok) throw new Error("Errore nel caricamento del preventivo");
       return res.json();
     },
+  });
+  
+  // Carica i moduli del preventivo
+  const { data: quoteModules = [], isLoading: isLoadingModules } = useQuery<QuoteModuleData[]>({
+    queryKey: ["/api/quotes", parseInt(id), "modules"],
+    queryFn: async () => {
+      const res = await fetch(`/api/quotes/${id}/modules`);
+      if (!res.ok) throw new Error("Errore nel caricamento dei moduli");
+      return res.json();
+    },
+    enabled: !!id,
   });
   
   // Mutations
@@ -242,6 +261,13 @@ export default function QuoteDetailPage() {
     }
   }, [quote]);
   
+  // Effetto per caricare i moduli esistenti quando cambiano
+  useEffect(() => {
+    if (quoteModules && quoteModules.length > 0) {
+      setModules(quoteModules);
+    }
+  }, [quoteModules]);
+  
   // Handler di eventi
   const handleDeleteClick = () => {
     setIsDeleteDialogOpen(true);
@@ -267,6 +293,120 @@ export default function QuoteDetailPage() {
       description: "Il link è stato copiato negli appunti",
     });
   };
+  
+  // Handlers per la gestione dei moduli
+  const handleAddModuleClick = () => {
+    setShowModuleForm(null);
+    setEditingModule(null);
+    const dialogDiv = document.createElement('div');
+    dialogDiv.innerHTML = `
+      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md">
+          <h2 class="text-xl font-semibold mb-4">Seleziona tipo di modulo</h2>
+          <div class="grid grid-cols-2 gap-4">
+            <button id="fixed-module-btn" class="p-4 border rounded-md hover:bg-gray-100">
+              <div class="font-medium">Modulo Fisso</div>
+              <div class="text-sm text-muted-foreground">Decidi tu i prodotti e servizi</div>
+            </button>
+            <button id="variable-module-btn" class="p-4 border rounded-md hover:bg-gray-100">
+              <div class="font-medium">Modulo Variabile</div>
+              <div class="text-sm text-muted-foreground">Cliente sceglie dai prodotti</div>
+            </button>
+          </div>
+          <div class="flex justify-end mt-4">
+            <button id="cancel-module-btn" class="px-4 py-2 text-sm">Annulla</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(dialogDiv);
+    
+    document.getElementById('fixed-module-btn')?.addEventListener('click', () => {
+      document.body.removeChild(dialogDiv);
+      setShowModuleForm('fixed');
+    });
+    
+    document.getElementById('variable-module-btn')?.addEventListener('click', () => {
+      document.body.removeChild(dialogDiv);
+      setShowModuleForm('variable');
+    });
+    
+    document.getElementById('cancel-module-btn')?.addEventListener('click', () => {
+      document.body.removeChild(dialogDiv);
+    });
+  };
+  
+  const handleEditModule = (module: QuoteModuleData) => {
+    setEditingModule(module);
+    setShowModuleForm(module.type as 'fixed' | 'variable');
+  };
+  
+  const handleDeleteModule = (moduleId: number) => {
+    if (confirm('Sei sicuro di voler eliminare questo modulo?')) {
+      deleteModuleMutation.mutate(moduleId);
+    }
+  };
+  
+  const handleSaveModule = (module: QuoteModuleData) => {
+    saveModuleMutation.mutate(module);
+    setShowModuleForm(null);
+    setEditingModule(null);
+  };
+  
+  const handleCancelModule = () => {
+    setShowModuleForm(null);
+    setEditingModule(null);
+  };
+  
+  // Mutation per salvare un modulo
+  const saveModuleMutation = useMutation({
+    mutationFn: async (module: QuoteModuleData) => {
+      const url = module.id && module.id > 0 
+        ? `/api/quotes/${id}/modules/${module.id}`
+        : `/api/quotes/${id}/modules`;
+      const method = module.id && module.id > 0 ? "PATCH" : "POST";
+      
+      const res = await apiRequest(method, url, module);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
+      toast({
+        title: "Modulo salvato",
+        description: "Il modulo è stato salvato con successo",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante il salvataggio del modulo",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation per eliminare un modulo
+  const deleteModuleMutation = useMutation({
+    mutationFn: async (moduleId: number) => {
+      const res = await apiRequest("DELETE", `/api/quotes/${id}/modules/${moduleId}`);
+      return res.ok;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
+      toast({
+        title: "Modulo eliminato",
+        description: "Il modulo è stato eliminato con successo",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'eliminazione del modulo",
+        variant: "destructive",
+      });
+    },
+  });
   
   // Rendering condizionale per stati di caricamento o assenza di dati
   if (isLoadingQuote) {

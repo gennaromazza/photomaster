@@ -232,7 +232,15 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
 
     setIsLoading(true);
     try {
-      const result = await onSave(formData);
+      // Calcola i totali prima del salvataggio
+      const totals = handleCalculateTotals(formData.items);
+      const moduleToSave = {
+        ...formData,
+        subtotal: totals.subtotal,
+        total: totals.total
+      };
+      
+      const result = await onSave(moduleToSave);
       if (result) {
         toast({
           title: isEdit ? "Modulo aggiornato" : "Modulo creato",
@@ -243,7 +251,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
       console.error("Errore nel salvataggio del modulo:", error);
       toast({
         title: "Errore",
-        description: "Impossibile salvare il modulo",
+        description: error.message || "Impossibile salvare il modulo",
         variant: "destructive"
       });
     } finally {

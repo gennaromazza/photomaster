@@ -818,7 +818,7 @@ export default function QuoteDetailPage() {
                       <p className="font-medium">
                         {quote.isFullDay ? "Giornata intera" : 
                          (quote.eventTime ? quote.eventTime : "Non specificato") +
-                         (quote.eventEndTime ? ` - ${`quote.eventEndTime}` : "")}
+                         (quote.eventEndTime ? ` - ${quote.eventEndTime}` : "")}
                       </p>
                     </div>
                   </div>

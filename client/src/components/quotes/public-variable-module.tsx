@@ -63,11 +63,20 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
     setTotal(sum);
     
     if (onSelectionChange) {
-      const selectedItemIds = selectedItems.map(index => {
-        const item = module.items[index];
-        return item.id;
-      }).filter(Boolean);
+      // Verifica che gli elementi selezionati siano validi e abbiano un ID
+      const selectedItemIds = selectedItems
+        .filter(index => index >= 0 && index < module.items.length)
+        .map(index => {
+          const item = module.items[index];
+          if (!item || !item.id) {
+            console.log(`[LOG] Item selezionato senza ID valido nel modulo ${module.id}, index: ${index}`, item);
+            return null;
+          }
+          return item.id;
+        })
+        .filter(Boolean);
       
+      console.log(`[LOG] Cambiata selezione modulo ${module.id}, elementi selezionati (IDs):`, selectedItemIds);
       onSelectionChange(module.id, selectedItemIds);
     }
   }, [selectedItems, module, onSelectionChange]);

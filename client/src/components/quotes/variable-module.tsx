@@ -40,6 +40,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
 
   const [availableServices, setAvailableServices] = useState<any[]>([]);
   const [availableBundles, setAvailableBundles] = useState<any[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [shareUrl, setShareUrl] = useState<string>("");
 
@@ -50,15 +51,19 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
     }
   }, [module]);
 
-  // Carica servizi e pacchetti disponibili
+  // Carica servizi, prodotti e pacchetti disponibili
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Carica i servizi
+        // Carica i servizi e prodotti
         const servicesResponse = await fetch('/api/services');
         if (servicesResponse.ok) {
-          const services = await servicesResponse.json();
+          const allItems = await servicesResponse.json();
+          // Separiamo servizi e prodotti
+          const services = allItems.filter((item: any) => item.type === 'service');
+          const products = allItems.filter((item: any) => item.type === 'product');
           setAvailableServices(services || []);
+          setAvailableProducts(products || []);
         }
 
         // Carica i pacchetti
@@ -68,10 +73,10 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           setAvailableBundles(bundles || []);
         }
       } catch (error) {
-        console.error("Errore nel caricamento dei servizi o pacchetti:", error);
+        console.error("Errore nel caricamento dei servizi, prodotti o pacchetti:", error);
         toast({
           title: "Errore",
-          description: "Impossibile caricare i servizi o i pacchetti",
+          description: "Impossibile caricare i servizi, prodotti o pacchetti",
           variant: "destructive",
         });
       }

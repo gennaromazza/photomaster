@@ -100,6 +100,7 @@ export interface QuoteModuleItemData {
   moduleId?: number;
   serviceId?: number;
   bundleId?: number;
+  productId?: number;
   quantity: number;
   unitPrice: number;
   hasDiscount: boolean;
@@ -117,4 +118,6 @@ export interface QuoteModuleItemData {
   serviceDescription?: string;
   bundleName?: string;
   bundleDescription?: string;
+  productName?: string; 
+  productDescription?: string;
 }

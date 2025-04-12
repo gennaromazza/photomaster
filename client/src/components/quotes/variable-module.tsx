@@ -21,10 +21,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { 
-  calculateItemTotal, 
-  calculateModuleTotal, 
-  resetItemFields,
+import {
+  calculateItemTotals,
+  calculateModuleTotals,
+  formatPrice
+} from "@/lib/moduleCalculations";
+import {
   getItemNameAndDescription
 } from "@/lib/module-utils";
 
@@ -148,28 +150,19 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
       if (field === 'serviceId') {
         if (!value) {
           // Reset completo se deselezionato
-          newItems[index] = resetItemFields(newItems[index], false);
+          newItems[index].serviceId = undefined;
+          newItems[index].serviceName = undefined;
+          newItems[index].serviceDescription = undefined;
+          newItems[index].unitPrice = 0;
+          newItems[index].total = 0;
         } else {
           const selectedService = availableServices.find(s => s.id === parseInt(value));
           if (selectedService) {
-            // Resetta i campi non pertinenti utilizzando l'utility di reset
-            newItems[index] = resetItemFields(newItems[index], true);
-            // Poi imposta i nuovi valori
             newItems[index].serviceId = selectedService.id;
             newItems[index].unitPrice = selectedService.price;
             newItems[index].serviceName = selectedService.name;
             newItems[index].serviceDescription = selectedService.description;
-
-            // Mantieni i campi di configurazione specifici dei moduli variabili
-            if (newItems[index].selectionRequired !== undefined) {
-              newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
-            }
-            if (newItems[index].isDefault !== undefined) {
-              newItems[index].isDefault = Boolean(newItems[index].isDefault);
-            }
-            if (newItems[index].selectionOrder !== undefined) {
-              newItems[index].selectionOrder = Number(newItems[index].selectionOrder) || index + 1;
-            }
+            newItems[index].total = newItems[index].quantity * selectedService.price;
           }
         }
       }
@@ -178,24 +171,11 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
       if (field === 'productId' && value) {
         const selectedProduct = availableProducts.find(p => p.id === parseInt(value));
         if (selectedProduct) {
-          // Resetta i campi non pertinenti utilizzando l'utility di reset
-          newItems[index] = resetItemFields(newItems[index], true);
-          // Poi imposta i nuovi valori
           newItems[index].productId = selectedProduct.id;
           newItems[index].unitPrice = selectedProduct.price;
           newItems[index].productName = selectedProduct.name;
           newItems[index].productDescription = selectedProduct.description;
-
-          // Mantieni i campi di configurazione specifici dei moduli variabili
-          if (newItems[index].selectionRequired !== undefined) {
-            newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
-          }
-          if (newItems[index].isDefault !== undefined) {
-            newItems[index].isDefault = Boolean(newItems[index].isDefault);
-          }
-          if (newItems[index].selectionOrder !== undefined) {
-            newItems[index].selectionOrder = Number(newItems[index].selectionOrder) || index + 1;
-          }
+          newItems[index].total = newItems[index].quantity * selectedProduct.price;
         }
       }
 
@@ -203,33 +183,19 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
       if (field === 'bundleId' && value) {
         const selectedBundle = availableBundles.find(b => b.id === parseInt(value));
         if (selectedBundle) {
-          // Resetta i campi non pertinenti utilizzando l'utility di reset
-          newItems[index] = resetItemFields(newItems[index], true);
-          // Poi imposta i nuovi valori
           newItems[index].bundleId = selectedBundle.id;
           newItems[index].unitPrice = selectedBundle.discountedPrice || selectedBundle.totalPrice;
           newItems[index].bundleName = selectedBundle.name;
           newItems[index].bundleDescription = selectedBundle.description;
-
-          // Mantieni i campi di configurazione specifici dei moduli variabili
-          if (newItems[index].selectionRequired !== undefined) {
-            newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
-          }
-          if (newItems[index].isDefault !== undefined) {
-            newItems[index].isDefault = Boolean(newItems[index].isDefault);
-          }
-          if (newItems[index].selectionOrder !== undefined) {
-            newItems[index].selectionOrder = Number(newItems[index].selectionOrder) || index + 1;
-          }
+          newItems[index].total = newItems[index].quantity * (selectedBundle.discountedPrice || selectedBundle.totalPrice);
         }
       }
 
       // Ricalcola il totale utilizzando la funzione utility
       if (['quantity', 'unitPrice', 'hasDiscount', 'discountType', 'discountValue'].includes(field)) {
         // Usa la funzione utility per calcolare il totale dell'elemento
-        const { total, discountedPrice } = calculateItemTotal(newItems[index]);
+        const { total } = calculateItemTotals(newItems[index]);
         newItems[index].total = total;
-        newItems[index].discountedPrice = discountedPrice;
       }
 
       if (field === 'hasDiscount') {
@@ -238,7 +204,6 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           // Reset completo dei campi sconto
           newItems[index].discountType = 'percentage';
           newItems[index].discountValue = 0;
-          newItems[index].discountedPrice = undefined;
           // Ricalcola il totale senza sconto
           newItems[index].total = newItems[index].quantity * newItems[index].unitPrice;
         }
@@ -258,7 +223,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
   // Calcola il totale massimo possibile (tutti gli elementi selezionati)
   const calculateMaxTotal = useCallback(() => {
     // Utilizza la funzione utility per calcolare il totale del modulo
-    return calculateModuleTotal(formData.items);
+    return calculateModuleTotals(formData.items);
   }, [formData.items]);
 
   // Copia l'URL di condivisione negli appunti

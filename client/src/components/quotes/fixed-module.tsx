@@ -17,10 +17,10 @@ import { Trash2, Save, Plus, HelpCircle } from "lucide-react";
 import { QuoteModuleData, QuoteModuleItemData } from "./module-selector";
 import { formatCurrency } from "@/lib/utils";
 import { 
-  calculateItemTotal, 
-  calculateModuleTotal, 
-  resetItemFields 
-} from "@/lib/module-utils";
+  calculateItemTotals,
+  calculateModuleTotals,
+  formatPrice
+} from "@/lib/moduleCalculations";
 
 interface FixedModuleProps {
   quoteId: number;

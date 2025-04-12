@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { 
+  calculateItemTotal, 
+  calculateModuleTotal, 
+  resetItemFields,
+  getItemNameAndDescription
+} from "@/lib/module-utils";
 
 interface VariableModuleProps {
   quoteId: number;
@@ -130,7 +136,7 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
   };
 
   // Gestisce il cambiamento dei campi di un elemento
-  const handleItemChange = (index: number, field: keyof QuoteModuleItemData, value: any) => {
+  const handleItemChange = useCallback((index: number, field: keyof QuoteModuleItemData, value: any) => {
     setFormData(prev => {
       const newItems = [...prev.items];
       newItems[index] = {
@@ -142,16 +148,24 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
       if (field === 'serviceId' && value) {
         const selectedService = availableServices.find(s => s.id === parseInt(value));
         if (selectedService) {
+          // Resetta i campi non pertinenti utilizzando l'utility di reset
+          newItems[index] = resetItemFields(newItems[index], true);
+          // Poi imposta i nuovi valori
+          newItems[index].serviceId = selectedService.id;
           newItems[index].unitPrice = selectedService.price;
           newItems[index].serviceName = selectedService.name;
           newItems[index].serviceDescription = selectedService.description;
-          // Resetta gli altri campi
-          newItems[index].bundleId = undefined;
-          newItems[index].bundleName = undefined;
-          newItems[index].bundleDescription = undefined;
-          newItems[index].productId = undefined;
-          newItems[index].productName = undefined;
-          newItems[index].productDescription = undefined;
+          
+          // Mantieni i campi di configurazione specifici dei moduli variabili
+          if (newItems[index].selectionRequired !== undefined) {
+            newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
+          }
+          if (newItems[index].isDefault !== undefined) {
+            newItems[index].isDefault = Boolean(newItems[index].isDefault);
+          }
+          if (newItems[index].selectionOrder !== undefined) {
+            newItems[index].selectionOrder = Number(newItems[index].selectionOrder) || index + 1;
+          }
         }
       }
 
@@ -159,16 +173,24 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
       if (field === 'productId' && value) {
         const selectedProduct = availableProducts.find(p => p.id === parseInt(value));
         if (selectedProduct) {
+          // Resetta i campi non pertinenti utilizzando l'utility di reset
+          newItems[index] = resetItemFields(newItems[index], true);
+          // Poi imposta i nuovi valori
+          newItems[index].productId = selectedProduct.id;
           newItems[index].unitPrice = selectedProduct.price;
           newItems[index].productName = selectedProduct.name;
           newItems[index].productDescription = selectedProduct.description;
-          // Resetta gli altri campi
-          newItems[index].serviceId = undefined;
-          newItems[index].serviceName = undefined;
-          newItems[index].serviceDescription = undefined;
-          newItems[index].bundleId = undefined;
-          newItems[index].bundleName = undefined;
-          newItems[index].bundleDescription = undefined;
+          
+          // Mantieni i campi di configurazione specifici dei moduli variabili
+          if (newItems[index].selectionRequired !== undefined) {
+            newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
+          }
+          if (newItems[index].isDefault !== undefined) {
+            newItems[index].isDefault = Boolean(newItems[index].isDefault);
+          }
+          if (newItems[index].selectionOrder !== undefined) {
+            newItems[index].selectionOrder = Number(newItems[index].selectionOrder) || index + 1;
+          }
         }
       }
 
@@ -176,59 +198,51 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
       if (field === 'bundleId' && value) {
         const selectedBundle = availableBundles.find(b => b.id === parseInt(value));
         if (selectedBundle) {
+          // Resetta i campi non pertinenti utilizzando l'utility di reset
+          newItems[index] = resetItemFields(newItems[index], true);
+          // Poi imposta i nuovi valori
+          newItems[index].bundleId = selectedBundle.id;
           newItems[index].unitPrice = selectedBundle.discountedPrice || selectedBundle.totalPrice;
           newItems[index].bundleName = selectedBundle.name;
           newItems[index].bundleDescription = selectedBundle.description;
-          // Resetta gli altri campi
-          newItems[index].serviceId = undefined;
-          newItems[index].serviceName = undefined;
-          newItems[index].serviceDescription = undefined;
-          newItems[index].productId = undefined;
-          newItems[index].productName = undefined;
-          newItems[index].productDescription = undefined;
-        }
-      }
-
-      // Ricalcola il totale
-      if (['quantity', 'unitPrice', 'hasDiscount', 'discountType', 'discountValue'].includes(field)) {
-        const qty = newItems[index].quantity || 1;
-        const unitPrice = newItems[index].unitPrice || 0;
-        const hasDiscount = newItems[index].hasDiscount || false;
-        
-        if (!hasDiscount) {
-          newItems[index].total = qty * unitPrice;
-          newItems[index].discountedPrice = undefined;
-        } else {
-          const discountType = newItems[index].discountType || 'percentage';
-          const discountValue = newItems[index].discountValue || 0;
           
-          if (discountType === 'percentage') {
-            const discountedPrice = unitPrice * (1 - (discountValue / 100));
-            newItems[index].discountedPrice = discountedPrice;
-            newItems[index].total = qty * discountedPrice;
-          } else { // fixed
-            const discountedPrice = Math.max(0, unitPrice - discountValue);
-            newItems[index].discountedPrice = discountedPrice;
-            newItems[index].total = qty * discountedPrice;
+          // Mantieni i campi di configurazione specifici dei moduli variabili
+          if (newItems[index].selectionRequired !== undefined) {
+            newItems[index].selectionRequired = Boolean(newItems[index].selectionRequired);
+          }
+          if (newItems[index].isDefault !== undefined) {
+            newItems[index].isDefault = Boolean(newItems[index].isDefault);
+          }
+          if (newItems[index].selectionOrder !== undefined) {
+            newItems[index].selectionOrder = Number(newItems[index].selectionOrder) || index + 1;
           }
         }
       }
 
+      // Ricalcola il totale utilizzando la funzione utility
+      if (['quantity', 'unitPrice', 'hasDiscount', 'discountType', 'discountValue'].includes(field)) {
+        // Usa la funzione utility per calcolare il totale dell'elemento
+        const { total, discountedPrice } = calculateItemTotal(newItems[index]);
+        newItems[index].total = total;
+        newItems[index].discountedPrice = discountedPrice;
+      }
+
       return { ...prev, items: newItems };
     });
-  };
+  }, [availableServices, availableProducts, availableBundles]);
 
   // Calcola il totale del modulo per gli elementi obbligatori
-  const calculateRequiredTotal = () => {
+  const calculateRequiredTotal = useCallback(() => {
     return formData.items
       .filter(item => item.selectionRequired)
-      .reduce((total, item) => total + (item.total || 0), 0);
-  };
+      .reduce((total, item) => total + (Number(item.total) || 0), 0);
+  }, [formData.items]);
 
   // Calcola il totale massimo possibile (tutti gli elementi selezionati)
-  const calculateMaxTotal = () => {
-    return formData.items.reduce((total, item) => total + (item.total || 0), 0);
-  };
+  const calculateMaxTotal = useCallback(() => {
+    // Utilizza la funzione utility per calcolare il totale del modulo
+    return calculateModuleTotal(formData.items);
+  }, [formData.items]);
 
   // Copia l'URL di condivisione negli appunti
   const copyShareUrl = () => {

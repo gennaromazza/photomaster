@@ -9,8 +9,28 @@ interface PublicFixedModuleProps {
 }
 
 export function PublicFixedModule({ module }: PublicFixedModuleProps) {
-  // Calcola il totale del modulo
-  const moduleTotal = module.items.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
+  // Controllo preventivo
+  if (!module || !module.items) {
+    console.error("Module o module.items non definito:", module);
+    return (
+      <Card className="mb-4 border border-primary/20">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Modulo non disponibile
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            I dettagli di questo modulo non sono attualmente disponibili.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Calcola il totale del modulo in modo sicuro
+  const moduleTotal = (module.items || []).reduce((acc: number, item: any) => 
+    acc + (Number(item?.total) || 0), 0);
 
   return (
     <Card className="mb-4 border border-primary/20 overflow-hidden">
@@ -69,7 +89,7 @@ export function PublicFixedModule({ module }: PublicFixedModuleProps) {
                     <div className="flex flex-wrap justify-between items-center gap-2">
                       <h4 className="font-medium">{itemName}</h4>
                       <Badge variant="outline">
-                        {formatCurrency(item.total)}
+                        {formatCurrency(item?.total || 0)}
                       </Badge>
                     </div>
                     

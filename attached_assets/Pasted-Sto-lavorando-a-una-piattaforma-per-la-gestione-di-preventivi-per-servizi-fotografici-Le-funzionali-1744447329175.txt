@@ -1,0 +1,92 @@
+Sto lavorando a una piattaforma per la gestione di preventivi per servizi fotografici. Le funzionalità principali sono già implementate, ma sto riscontrando alcuni bug importanti. Serve una correzione ragionata, senza riscrivere le funzioni esistenti, ma richiamandole correttamente e sistemando la logica e i dati.
+
+📂 STRUTTURA DEI MODULI
+Modulo Fisso: prodotti/servizi sempre inclusi nel preventivo.
+
+Modulo Variabile: prodotti che il cliente può selezionare → solo quelli confermati vanno conteggiati nel totale.
+
+🐞 BUG RISCONTRATI
+1. ❌ Calcolo totale non aggiornato
+Anche dopo l’aggiunta di moduli, il Totale Moduli e il Totale Preventivo restano a € 0.
+
+La funzione di calcolo è già presente ma non viene richiamata correttamente (es. onAdd, onConfirm, onDelete).
+
+🎯 Serve:
+
+Richiamare la funzione calcolaTotale() dopo ogni azione significativa.
+
+Escludere i moduli variabili non confermati:
+
+js
+Copia
+Modifica
+if (modulo.tipo === 'variabile' && !modulo.confermato) return;
+2. ❌ Eliminazione moduli non funziona
+Il messaggio di conferma “Elimina modulo” appare, ma il modulo non viene rimosso dal frontend né dal backend.
+
+🎯 Serve:
+
+Controllare che venga effettivamente chiamata una route tipo:
+
+js
+Copia
+Modifica
+DELETE /moduli/:id
+Verificare che il modulo venga rimosso dallo stato (es. filter() o mutazione Vue/React).
+
+Loggare eventuali errori silenziati nella promise o fetch.
+
+3. ❌ Vista pubblica incompleta
+Quando condivido la pagina col cliente:
+
+I moduli appaiono senza immagini e dettagli dei prodotti/servizi, pur essendo salvati.
+
+🎯 Serve:
+
+Verificare che i dati siano passati correttamente ai componenti pubblici.
+
+Assicurarsi che il percorso immagine sia accessibile:
+
+jsx
+Copia
+Modifica
+<img src={prodotto.immagine_url} />
+Controllare accesso pubblico e permessi dei media.
+
+4. ❌ Errore runtime nella vista cliente
+Quando apro il link pubblico per il cliente, ricevo questo errore:
+
+typescript
+Copia
+Modifica
+[plugin:runtime-error-plugin] Cannot read properties of undefined (reading 'reduce')
+/home/runner/workspace/client/src/components/quotes/public-fixed-module.tsx:13:36
+11 |  export function PublicFixedModule({ module }: PublicFixedModuleProps) {
+12 |    // Calcola il totale del modulo
+13 |    const moduleTotal = module.items.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
+   |                                     ^
+🎯 Serve:
+
+Aggiungere un controllo preventivo:
+
+ts
+Copia
+Modifica
+const moduleTotal = (module?.items || []).reduce((acc, item) => acc + (item.total || 0), 0);
+Oppure validare module e items prima del rendering del componente.
+
+🧠 NOTE IMPORTANTI
+Le funzioni di calcolo, eliminazione e visualizzazione sono già implementate.
+
+Serve solo richiamarle correttamente e aggiungere i controlli mancanti.
+
+L'obiettivo è evitare duplicazioni, migliorare la logica esistente e prevenire errori runtime.
+
+🛠️ Output richiesto
+Diagnosi tecnica dei bug sopra.
+
+Correzione dei punti critici (con frammenti di codice).
+
+Consigli per attivazione corretta delle funzioni (eventi, hook, computed...).
+
+Validazione della vista pubblica per evitare errori utente/clienti.

@@ -411,11 +411,69 @@ export default function QuoteDetailPage() {
     setIsModuleDialogOpen(true);
   };
   
+  // Funzione per forzare il ricalcolo del totale
+  const refreshQuoteTotals = () => {
+    if (!quote || !modules) return;
+    
+    console.log("Ricalcolo totali preventivo...");
+    
+    let moduleTotal = 0;
+    // Escludiamo i moduli variabili non confermati
+    modules.forEach(module => {
+      if (module.type === 'variable' && module.status !== 'confirmed') {
+        console.log(`Modulo variabile ${module.id} non confermato, escluso dal totale`);
+        return;
+      }
+      
+      if (module.items && module.items.length > 0) {
+        module.items.forEach(item => {
+          const itemTotal = Number(item.total || 0);
+          console.log(`Aggiunto ${itemTotal} dal modulo ${module.id}, item ${item.id || 'nuovo'}`);
+          moduleTotal += itemTotal;
+        });
+      }
+    });
+    
+    // Calcola il nuovo subtotale e totale
+    const servicesTotal = quote.services?.reduce((acc, service) => 
+      acc + (Number(service.total || service.price) || 0), 0) || 0;
+    const productsTotal = quote.products?.reduce((acc, product) => 
+      acc + (Number(product.total || product.price) || 0), 0) || 0;
+    
+    const newSubtotal = moduleTotal + servicesTotal + productsTotal;
+    
+    // Applica lo sconto
+    let newTotal = newSubtotal;
+    if (quote.hasDiscount && quote.discountValue) {
+      if (quote.discountType === 'percentage') {
+        newTotal = newSubtotal - (newSubtotal * (Number(quote.discountValue) || 0) / 100);
+      } else {
+        newTotal = newSubtotal - (Number(quote.discountValue) || 0);
+      }
+    }
+    
+    console.log(`Nuovi totali calcolati - Subtotale: ${newSubtotal}, Totale: ${newTotal}`);
+    
+    // Utilizza la mutation esistente
+    updateQuoteTotalsMutation.mutate({
+      subtotal: newSubtotal,
+      total: newTotal
+    });
+  };
+
   const handleDeleteModule = (moduleId: number) => {
     if (confirm('Sei sicuro di voler eliminare questo modulo?')) {
       // Imposta lo stato di caricamento
       setIsLoading(true);
       console.log(`Eliminazione modulo con ID: ${moduleId}`);
+      
+      // Aggiorna immediatamente lo stato locale per un feedback più reattivo
+      setModules(prev => {
+        if (!prev) return prev;
+        return prev.filter(m => m.id !== moduleId);
+      });
+      
+      // Poi esegui la chiamata al server
       deleteModuleMutation.mutate(moduleId);
     }
   };
@@ -451,6 +509,8 @@ export default function QuoteDetailPage() {
     },
   });
   
+
+
   // Mutation per eliminare un modulo
   const deleteModuleMutation = useMutation({
     mutationFn: async (moduleId: number) => {
@@ -466,6 +526,9 @@ export default function QuoteDetailPage() {
       // Invalidiamo sia la query dei moduli che i dati del preventivo per aggiornare i totali
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
+      
+      // Esegui il ricalcolo dei totali
+      refreshQuoteTotals();
       
       // Ripristina lo stato di caricamento
       setIsLoading(false);

@@ -15,11 +15,30 @@ interface PublicVariableModuleProps {
 }
 
 export function PublicVariableModule({ module, onSelectionChange }: PublicVariableModuleProps) {
+  // Controllo preventivo
+  if (!module || !module.items) {
+    console.error("Module o module.items non definito:", module);
+    return (
+      <Card className="mb-4 border border-primary/20">
+        <CardHeader>
+          <CardTitle className="text-base">
+            Modulo variabile non disponibile
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Le opzioni di questo modulo non sono attualmente disponibili.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [total, setTotal] = useState(0);
 
   // Controlla se sono obbligatori item con minSelectCount
-  const hasRequiredItems = module.items.some((item: any) => item.minSelectCount && item.minSelectCount > 0);
+  const hasRequiredItems = (module.items || []).some((item: any) => item.minSelectCount && item.minSelectCount > 0);
   
   // Inizializza gli item selezionati in base al minSelectCount
   useEffect(() => {
@@ -177,10 +196,17 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                       <div className="mt-2 w-full h-28 rounded-md overflow-hidden bg-muted/40">
                         <img 
                           src={item.serviceImagePath || item.productImagePath || item.bundleImagePath} 
-                          alt={item.serviceName || item.productName || item.bundleName}
+                          alt={item.serviceName || item.productName || item.bundleName || "Immagine prodotto"}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = ''; // Rimuovi immagine in caso di errore
+                            target.alt = 'Immagine non disponibile';
+                            target.parentElement?.classList.add('flex', 'items-center', 'justify-center');
+                            const icon = document.createElement('div');
+                            icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>';
+                            target.parentElement?.appendChild(icon);
                           }}
                         />
                       </div>

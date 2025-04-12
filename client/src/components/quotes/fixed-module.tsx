@@ -48,7 +48,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
         }
 
         // Carica i pacchetti
-        const bundlesResponse = await fetch('/api/bundles');
+        const bundlesResponse = await fetch('/api/service-bundles');
         if (bundlesResponse.ok) {
           const bundles = await bundlesResponse.json();
           setAvailableBundles(bundles || []);

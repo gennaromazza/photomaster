@@ -67,14 +67,25 @@ export function PublicFixedModule({ module }: PublicFixedModuleProps) {
                         alt={itemName}
                         className="w-full h-full object-cover"
                         onError={(e) => {
+                          console.log(`[LOG] Errore caricamento immagine modulo fisso: ${imagePath}`);
                           const target = e.target as HTMLImageElement;
-                          target.onerror = null;
-                          target.src = ''; // Rimuovi immagine in caso di errore
+                          target.onerror = null; // Previene loop di errori
+                          target.style.display = 'none'; // Nasconde l'immagine
                           target.alt = 'Immagine non disponibile';
-                          target.parentElement?.classList.add('flex', 'items-center', 'justify-center');
-                          const icon = document.createElement('div');
-                          icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>';
-                          target.parentElement?.appendChild(icon);
+                          
+                          // Aggiungiamo un container per l'icona fallback
+                          const parent = target.parentElement;
+                          if (parent) {
+                            parent.classList.add('flex', 'items-center', 'justify-center', 'bg-muted');
+                            
+                            // Verifichiamo che l'icona non sia già stata aggiunta
+                            if (!parent.querySelector('.fallback-icon')) {
+                              const icon = document.createElement('div');
+                              icon.className = 'fallback-icon text-muted-foreground';
+                              icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>';
+                              parent.appendChild(icon);
+                            }
+                          }
                         }}
                       />
                     </div>

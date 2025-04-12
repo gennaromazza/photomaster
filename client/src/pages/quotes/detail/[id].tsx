@@ -490,17 +490,26 @@ export default function QuoteDetailPage() {
         : `/api/quotes/${id}/modules`;
       const method = module.id && module.id > 0 ? "PATCH" : "POST";
       
+      console.log(`[LOG] Salvando modulo ${module.id || 'nuovo'} di tipo ${module.type}`);
       const res = await apiRequest(method, url, module);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log(`[LOG] Modulo salvato con successo:`, data);
+      // Invalidiamo le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
+      
+      // Ricalcolo dei totali dopo il salvataggio di un modulo
+      setTimeout(() => refreshQuoteTotals(), 500);
+      
       toast({
         title: "Modulo salvato",
         description: "Il modulo è stato salvato con successo",
       });
     },
     onError: (error) => {
+      console.error(`[ERRORE] Salvataggio modulo fallito:`, error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante il salvataggio del modulo",
@@ -514,6 +523,7 @@ export default function QuoteDetailPage() {
   // Mutation per eliminare un modulo
   const deleteModuleMutation = useMutation({
     mutationFn: async (moduleId: number) => {
+      console.log(`[LOG] Eliminazione modulo con ID: ${moduleId}`);
       const res = await apiRequest("DELETE", `/api/quotes/${id}/modules/${moduleId}`);
       if (!res.ok) {
         throw new Error(`Errore HTTP ${res.status}: Impossibile eliminare il modulo`);
@@ -523,15 +533,22 @@ export default function QuoteDetailPage() {
       return res.ok;
     },
     onSuccess: () => {
-      // Invalidiamo sia la query dei moduli che i dati del preventivo per aggiornare i totali
+      console.log(`[LOG] Modulo eliminato con successo`);
+      
+      // Invalidiamo le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
       
-      // Esegui il ricalcolo dei totali
-      refreshQuoteTotals();
-      
-      // Ripristina lo stato di caricamento
-      setIsLoading(false);
+      // Utilizziamo setTimeout per assicurarci che l'aggiornamento dello stato avvenga dopo che 
+      // React ha aggiornato lo stato locale (setModules) e le query sono state invalidate
+      setTimeout(() => {
+        console.log(`[LOG] Ricalcolo totali dopo eliminazione modulo...`);
+        // Esegui il ricalcolo dei totali
+        refreshQuoteTotals();
+        
+        // Ripristina lo stato di caricamento
+        setIsLoading(false);
+      }, 500);
       
       toast({
         title: "Modulo eliminato",
@@ -539,7 +556,7 @@ export default function QuoteDetailPage() {
       });
     },
     onError: (error) => {
-      console.error("Errore durante l'eliminazione del modulo:", error);
+      console.error(`[ERRORE] Eliminazione modulo fallita:`, error);
       // Ripristina lo stato di caricamento
       setIsLoading(false);
       

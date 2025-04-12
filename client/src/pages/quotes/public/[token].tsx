@@ -98,10 +98,18 @@ export default function PublicQuotePage() {
   
   // Funzione per gestire la selezione degli elementi nei moduli variabili
   const handleModuleItemSelection = (moduleId: number, selectedItems: number[]) => {
-    setSelectedModuleItems(prev => ({
-      ...prev,
-      [moduleId]: selectedItems
-    }));
+    console.log(`[LOG] Selezione modulo ${moduleId}, elementi selezionati:`, selectedItems);
+    
+    setSelectedModuleItems(prev => {
+      const newSelections = {
+        ...prev,
+        [moduleId]: selectedItems
+      };
+      
+      // Log per debugging
+      console.log(`[LOG] Nuovo stato selezioni moduli:`, newSelections);
+      return newSelections;
+    });
   };
 
   useEffect(() => {

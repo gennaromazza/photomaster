@@ -6,8 +6,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import Layout from "@/components/layout/layout";
 import CeremonyDetails from "@/components/quotes/ceremony-details";
 import { ModuleSelector, QuoteModuleData } from "@/components/quotes/module-selector";
-import { FixedModule } from "@/components/quotes/fixed-module";
-import { VariableModule } from "@/components/quotes/variable-module";
+import { ModuleDialog } from "@/components/quotes/module-dialog";
 import {
   Card,
   CardContent,
@@ -74,7 +73,8 @@ export default function QuoteDetailPage() {
   // Stati per gestione moduli
   const [modules, setModules] = useState<QuoteModuleData[]>([]);
   const [editingModule, setEditingModule] = useState<QuoteModuleData | null>(null);
-  const [showModuleForm, setShowModuleForm] = useState<'fixed' | 'variable' | null>(null);
+  const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
+  const [moduleType, setModuleType] = useState<'fixed' | 'variable' | null>(null);
   
   // Stato per gestire le fasi del workflow
   const [workflowSteps, setWorkflowSteps] = useState([
@@ -296,8 +296,6 @@ export default function QuoteDetailPage() {
   
   // Handlers per la gestione dei moduli
   const handleAddModuleClick = () => {
-    setShowModuleForm(null);
-    setEditingModule(null);
     const dialogDiv = document.createElement('div');
     dialogDiv.innerHTML = `
       <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -324,12 +322,16 @@ export default function QuoteDetailPage() {
     
     document.getElementById('fixed-module-btn')?.addEventListener('click', () => {
       document.body.removeChild(dialogDiv);
-      setShowModuleForm('fixed');
+      setEditingModule(null);
+      setModuleType('fixed');
+      setIsModuleDialogOpen(true);
     });
     
     document.getElementById('variable-module-btn')?.addEventListener('click', () => {
       document.body.removeChild(dialogDiv);
-      setShowModuleForm('variable');
+      setEditingModule(null);
+      setModuleType('variable');
+      setIsModuleDialogOpen(true);
     });
     
     document.getElementById('cancel-module-btn')?.addEventListener('click', () => {
@@ -339,7 +341,8 @@ export default function QuoteDetailPage() {
   
   const handleEditModule = (module: QuoteModuleData) => {
     setEditingModule(module);
-    setShowModuleForm(module.type as 'fixed' | 'variable');
+    setModuleType(module.type as 'fixed' | 'variable');
+    setIsModuleDialogOpen(true);
   };
   
   const handleDeleteModule = (moduleId: number) => {
@@ -350,13 +353,6 @@ export default function QuoteDetailPage() {
   
   const handleSaveModule = (module: QuoteModuleData) => {
     saveModuleMutation.mutate(module);
-    setShowModuleForm(null);
-    setEditingModule(null);
-  };
-  
-  const handleCancelModule = () => {
-    setShowModuleForm(null);
-    setEditingModule(null);
   };
   
   // Mutation per salvare un modulo

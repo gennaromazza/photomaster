@@ -76,7 +76,10 @@ const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
       
       <aside className="fixed inset-y-0 left-0 z-30 w-64 bg-white transform transition lg:hidden">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-          <h1 className="font-display text-xl font-semibold text-primary">Studio Arté</h1>
+          <div>
+            <h1 className="font-display text-xl font-semibold text-primary">Studio Arté</h1>
+            <p className="text-xs text-gray-500">Fotografia</p>
+          </div>
           <button 
             className="text-gray-500 hover:text-primary" 
             onClick={onClose}

@@ -18,7 +18,9 @@ const Header = ({ onOpenSidebar }: HeaderProps) => {
           <i className="ri-menu-line text-2xl"></i>
         </button>
         
-        <h1 className="font-display text-xl font-semibold text-primary">Studio Arté</h1>
+        <div>
+          <h1 className="font-display text-xl font-semibold text-primary">Studio Arté</h1>
+        </div>
         
         <Link href="/settings">
           <Button variant="ghost" size="icon" className="text-gray-500 hover:text-primary">

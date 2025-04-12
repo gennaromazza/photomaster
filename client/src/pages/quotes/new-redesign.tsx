@@ -136,11 +136,6 @@ export default function NewQuotePage() {
   // Variabili per i controlli selezionati
   const [assignPhotographers, setAssignPhotographers] = useState(false);
   
-  // Variabili per la gestione dei moduli
-  const [modules, setModules] = useState<QuoteModuleData[]>([]);
-  const [editingModule, setEditingModule] = useState<QuoteModuleData | null>(null);
-  const [showModuleForm, setShowModuleForm] = useState<'fixed' | 'variable' | null>(null);
-  
   // Query per ottenere i clienti
   const { data: clients = [], isLoading: isLoadingClients } = useQuery<any[]>({
     queryKey: ["/api/clients"],

@@ -63,9 +63,8 @@ import {
   Package as PackageIcon
 } from "lucide-react";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
-import { ModuleSelector, QuoteModuleData } from "@/components/quotes/module-selector";
-import { FixedModule } from "@/components/quotes/fixed-module";
-import { VariableModule } from "@/components/quotes/variable-module";
+import { QuoteModuleData } from "@/components/quotes/module-selector";
+// Rimozione dei componenti dei moduli, che saranno utilizzati solo nella pagina di dettaglio
 import { 
   Command, 
   CommandInput, 
@@ -301,12 +300,7 @@ export default function NewQuotePage() {
     }
   }, [quoteToEdit, isLoadingQuote, form]);
   
-  // Effetto per caricare i moduli esistenti quando si modifica un preventivo
-  useEffect(() => {
-    if (quoteModules && quoteModules.length > 0) {
-      setModules(quoteModules);
-    }
-  }, [quoteModules]);
+  // I moduli ora vengono gestiti direttamente nella pagina di dettaglio
 
   // Mutation per creare un nuovo cliente principale
   const createClientMutation = useMutation({
@@ -466,22 +460,12 @@ export default function NewQuotePage() {
   
   // Gestisci il submit del form preventivo
   const onSubmit = (data: QuoteFormValues) => {
-    // Qui usiamo direttamente i dati senza convertire la data in stringa
+    // Semplifichiamo la gestione: solo creazione o aggiornamento del preventivo base
     if (isEditMode) {
       updateQuoteMutation.mutate(data);
-      
-      // Salva anche i moduli se siamo in modalità modifica
-      modules.forEach(module => {
-        // Salva solo i moduli con ID temporaneo (negativo) o quelli modificati
-        if (module.id && module.id < 0) {
-          // Rimuovi l'ID temporaneo prima di salvare
-          const { id, ...moduleData } = module;
-          saveModuleMutation.mutate({ ...moduleData, quoteId: parseInt(editId!) });
-        }
-      });
     } else {
       createQuoteMutation.mutate(data);
-      // I moduli verranno salvati dopo la creazione del preventivo dalla pagina di dettaglio
+      // I moduli verranno gestiti esclusivamente nella pagina di dettaglio
     }
   };
 
@@ -506,73 +490,7 @@ export default function NewQuotePage() {
     }
   };
   
-  // Gestione dei moduli del preventivo
-  const handleAddModule = (type: 'fixed' | 'variable') => {
-    setShowModuleForm(type);
-    setEditingModule(null);
-  };
-  
-  const handleSaveModule = (module: QuoteModuleData) => {
-    if (isEditMode && editId) {
-      // Se siamo in modalità modifica ed esiste un ID preventivo valido
-      if (module.id && module.id > 0) {
-        // Aggiornamento di un modulo esistente nel database
-        saveModuleMutation.mutate(module);
-      } else {
-        // Creazione di un nuovo modulo nel database
-        const { id, ...newModule } = module;
-        saveModuleMutation.mutate({ ...newModule, quoteId: parseInt(editId) });
-      }
-    } else {
-      // In modalità creazione, gestisci i moduli solo in memoria
-      if (module.id) {
-        // Se il modulo ha già un ID, lo stiamo modificando
-        setModules(modules.map(m => m.id === module.id ? module : m));
-      } else {
-        // Altrimenti lo stiamo creando con un ID temporaneo
-        const tempId = -Date.now(); // ID negativo temporaneo
-        setModules([...modules, { ...module, id: tempId }]);
-      }
-    }
-    
-    toast({
-      title: module.id && module.id > 0 ? "Modulo aggiornato" : "Modulo aggiunto",
-      description: module.id && module.id > 0 
-        ? `Il modulo ${module.name} è stato aggiornato con successo` 
-        : `Il modulo ${module.name} è stato aggiunto al preventivo`,
-    });
-    
-    setShowModuleForm(null);
-    setEditingModule(null);
-  };
-  
-  const handleCancelModule = () => {
-    setShowModuleForm(null);
-    setEditingModule(null);
-  };
-  
-  const handleEditModule = (module: QuoteModuleData) => {
-    setEditingModule(module);
-    setShowModuleForm(module.type);
-  };
-  
-  const handleDeleteModule = (moduleId: number) => {
-    // Se è un modulo esistente nel DB (ID positivo) e siamo in modalità modifica
-    if (isEditMode && moduleId > 0) {
-      deleteModuleMutation.mutate(moduleId);
-    }
-    
-    // In ogni caso, rimuovi il modulo dall'array locale
-    setModules(modules.filter(m => m.id !== moduleId));
-    
-    toast({
-      title: "Modulo rimosso",
-      description: "Il modulo è stato rimosso dal preventivo",
-    });
-    
-    setShowModuleForm(null);
-    setEditingModule(null);
-  };
+  // La gestione dei moduli è stata spostata nella pagina di dettaglio del preventivo
 
   return (
     <Layout>

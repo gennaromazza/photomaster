@@ -193,9 +193,9 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
   }, [availableServices, availableProducts, availableBundles]);
 
   // Calcola il totale del modulo utilizzando la funzione utility
-  const calculateTotal = useCallback(() => {
-    return calculateModuleTotal(formData.items);
-  }, [formData.items]);
+  const handleCalculateTotals = (items: QuoteModuleItemData[]) => {
+    return calculateModuleTotals(items);
+  };
 
   // Salva il modulo
   const handleSave = async () => {
@@ -255,6 +255,38 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
       onDelete(formData.id);
     }
   };
+
+  const calculateItemTotal = (item: QuoteModuleItemData): {total: number, discountedPrice?: number} => {
+    let total = item.quantity * item.unitPrice;
+    if (item.hasDiscount) {
+      if (item.discountType === 'percentage') {
+        const discountAmount = total * (item.discountValue / 100);
+        total -= discountAmount;
+      } else {
+        total -= item.discountValue;
+      }
+    }
+    return {total, discountedPrice: item.hasDiscount ? total : undefined};
+  }
+
+  const resetItemFields = (item: QuoteModuleItemData, keepPrice: boolean) => {
+    return {
+      ...item,
+      serviceId: undefined,
+      serviceName: undefined,
+      serviceDescription: undefined,
+      productId: undefined,
+      productName: undefined,
+      productDescription: undefined,
+      bundleId: undefined,
+      bundleName: undefined,
+      bundleDescription: undefined,
+      discountType: 'percentage',
+      discountValue: 0,
+      discountedPrice: undefined,
+      total: keepPrice ? item.unitPrice * item.quantity : 0
+    };
+  }
 
   return (
     <Card className="w-full">
@@ -642,7 +674,7 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Totale modulo:</span>
                   <span className="text-xl font-bold">
-                    {formatCurrency(calculateTotal())}
+                    {formatCurrency(handleCalculateTotals(formData.items))}
                   </span>
                 </div>
               </div>

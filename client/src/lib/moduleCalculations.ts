@@ -42,12 +42,30 @@ export function calculateItemTotals(item: QuoteModuleItemData): QuoteModuleItemD
 export function calculateModuleTotals(items: QuoteModuleItemData[]) {
   return items.reduce((acc, item) => {
     const calculated = calculateItemTotals(item);
+    const itemSubtotal = calculated.unitPrice * calculated.quantity;
+    const itemTotal = calculated.total || itemSubtotal;
+    
     return {
-      subtotal: acc.subtotal + (calculated.unitPrice * calculated.quantity),
-      total: acc.total + calculated.total,
-      hasDiscounts: acc.hasDiscounts || calculated.hasDiscount
+      subtotal: acc.subtotal + itemSubtotal,
+      total: acc.total + itemTotal,
+      hasDiscounts: acc.hasDiscounts || calculated.hasDiscount,
+      itemCount: acc.itemCount + 1,
+      discountedItemCount: acc.discountedItemCount + (calculated.hasDiscount ? 1 : 0)
     };
-  }, { subtotal: 0, total: 0, hasDiscounts: false });
+  }, { 
+    subtotal: 0, 
+    total: 0, 
+    hasDiscounts: false,
+    itemCount: 0,
+    discountedItemCount: 0 
+  });
+}
+
+export function calculateDiscountAmount(price: number, discountType: 'percentage' | 'fixed', discountValue: number): number {
+  if (discountType === 'percentage') {
+    return price * (discountValue / 100);
+  }
+  return Math.min(price, discountValue);
 }
 
 export function formatPrice(amount: number) {

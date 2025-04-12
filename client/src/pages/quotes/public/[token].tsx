@@ -19,6 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ClientAddressDetails } from "@/components/quotes/client-address-details";
 import { StudioInfo } from "@/components/quotes/studio-info";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
+import { PublicFixedModule } from "@/components/quotes/public-fixed-module";
+import { PublicVariableModule } from "@/components/quotes/public-variable-module";
 
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
@@ -58,6 +60,7 @@ export default function PublicQuotePage() {
   const { token } = useParams();
   const { toast } = useToast();
   const [isExpired, setIsExpired] = useState(false);
+  const [selectedModuleItems, setSelectedModuleItems] = useState<Record<number, number[]>>({});
 
   // Carica i dati del preventivo tramite token di condivisione
   const { data: quote, isLoading, error } = useQuery({
@@ -74,6 +77,32 @@ export default function PublicQuotePage() {
       return res.json();
     },
   });
+
+  // Carica i moduli del preventivo
+  const { data: modules = [], isLoading: isLoadingModules } = useQuery({
+    queryKey: ["/api/quotes/share", token, "modules"],
+    queryFn: async () => {
+      if (!quote?.id) return [];
+      
+      try {
+        const res = await fetch(`/api/quotes/${quote.id}/modules`);
+        if (!res.ok) return [];
+        return res.json();
+      } catch (err) {
+        console.error("Errore nel caricamento dei moduli:", err);
+        return [];
+      }
+    },
+    enabled: !!quote?.id,
+  });
+  
+  // Funzione per gestire la selezione degli elementi nei moduli variabili
+  const handleModuleItemSelection = (moduleId: number, selectedItems: number[]) => {
+    setSelectedModuleItems(prev => ({
+      ...prev,
+      [moduleId]: selectedItems
+    }));
+  };
 
   useEffect(() => {
     if (error) {

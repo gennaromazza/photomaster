@@ -22,8 +22,8 @@ const SidebarLink = ({ href, icon, children, active }: SidebarLinkProps) => {
       <div
         className={cn(
           "flex items-center px-4 py-2.5 text-sm font-medium rounded-md cursor-pointer",
-          active 
-            ? "bg-background text-primary" 
+          active
+            ? "bg-background text-primary"
             : "text-gray-600 hover:bg-background hover:text-primary"
         )}
       >
@@ -37,90 +37,90 @@ const SidebarLink = ({ href, icon, children, active }: SidebarLinkProps) => {
 const Sidebar = ({ className }: SidebarProps) => {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
-  
+
   return (
     <aside className={cn("hidden lg:flex flex-col w-64 bg-white border-r border-gray-200", className)}>
       <div className="p-6 border-b border-gray-100">
         <h1 className="font-display text-xl font-semibold text-primary">Studio Arté</h1>
         <p className="text-sm text-gray-500 mt-1">Fotografia</p>
       </div>
-      
+
       <nav className="flex-1 px-4 py-6 space-y-1">
-        <SidebarLink 
-          href="/" 
-          icon={<i className="ri-dashboard-line" />} 
+        <SidebarLink
+          href="/"
+          icon={<i className="ri-dashboard-line" />}
           active={location === "/"}
         >
           Dashboard
         </SidebarLink>
-        
-        <SidebarLink 
-          href="/clients" 
-          icon={<i className="ri-user-3-line" />} 
+
+        <SidebarLink
+          href="/clients"
+          icon={<i className="ri-user-3-line" />}
           active={location.startsWith("/clients")}
         >
           Clienti
         </SidebarLink>
-        
-        <SidebarLink 
-          href="/calendar" 
-          icon={<i className="ri-calendar-2-line" />} 
+
+        <SidebarLink
+          href="/calendar"
+          icon={<i className="ri-calendar-2-line" />}
           active={location.startsWith("/calendar")}
         >
           Calendario
         </SidebarLink>
-        
-        <SidebarLink 
-          href="/events" 
-          icon={<i className="ri-calendar-event-line" />} 
+
+        <SidebarLink
+          href="/events"
+          icon={<i className="ri-calendar-event-line" />}
           active={location.startsWith("/events")}
         >
           Eventi
         </SidebarLink>
-        
-        <SidebarLink 
-          href="/tasks" 
-          icon={<i className="ri-task-line" />} 
+
+        <SidebarLink
+          href="/tasks"
+          icon={<i className="ri-task-line" />}
           active={location.startsWith("/tasks")}
         >
           Task
         </SidebarLink>
-        
-        <SidebarLink 
-          href="/collaborators" 
-          icon={<i className="ri-team-line" />} 
+
+        <SidebarLink
+          href="/collaborators"
+          icon={<i className="ri-team-line" />}
           active={location.startsWith("/collaborators")}
         >
           Collaboratori
         </SidebarLink>
-        
-        <SidebarLink 
-          href="/contracts" 
-          icon={<i className="ri-file-list-3-line" />} 
+
+        <SidebarLink
+          href="/contracts"
+          icon={<i className="ri-file-list-3-line" />}
           active={location.startsWith("/contracts")}
         >
           Contratti
         </SidebarLink>
-        
-        <SidebarLink 
-          href="/quotes" 
-          icon={<i className="ri-money-euro-circle-line" />} 
+
+        <SidebarLink
+          href="/quotes"
+          icon={<i className="ri-money-euro-circle-line" />}
           active={location.startsWith("/quotes")}
         >
           Preventivi
         </SidebarLink>
-        
-        <SidebarLink 
-          href="/services" 
-          icon={<i className="ri-price-tag-3-line" />} 
+
+        <SidebarLink
+          href="/services"
+          icon={<i className="ri-price-tag-3-line" />}
           active={location.startsWith("/services") || location.startsWith("/bundles")}
         >
           Servizi e Prodotti
         </SidebarLink>
-        
+
         <div className="pt-4 mt-4 border-t border-gray-100">
-          <SidebarLink 
-            href="/settings" 
+          <SidebarLink
+            href="/settings"
             icon={<i className="ri-settings-4-line" />}
             active={location.startsWith("/settings")}
           >
@@ -128,7 +128,7 @@ const Sidebar = ({ className }: SidebarProps) => {
           </SidebarLink>
         </div>
       </nav>
-      
+
       {user && (
         <div className="p-4 border-t border-gray-100">
           <div className="flex flex-col space-y-3">
@@ -141,11 +141,11 @@ const Sidebar = ({ className }: SidebarProps) => {
                 <p className="text-xs text-gray-500 capitalize">{user.role}</p>
               </div>
             </div>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full" 
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
               onClick={() => logoutMutation.mutate()}
               disabled={logoutMutation.isPending}
             >

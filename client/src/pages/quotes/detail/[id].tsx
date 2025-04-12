@@ -63,19 +63,19 @@ export default function QuoteDetailPage() {
   const { id } = useParams();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  
+
   // Hooks per gli stati
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Stati per gestione moduli
   const [modules, setModules] = useState<QuoteModuleData[]>([]);
   const [editingModule, setEditingModule] = useState<QuoteModuleData | null>(null);
   const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
   const [moduleType, setModuleType] = useState<'fixed' | 'variable' | null>(null);
-  
+
   // Stato per gestire le fasi del workflow
   const [workflowSteps, setWorkflowSteps] = useState([
     { id: 1, name: "Data di creazione", date: "", completed: true, current: false },
@@ -88,7 +88,7 @@ export default function QuoteDetailPage() {
     { id: 8, name: "Lavoro Completo", date: "", completed: false, current: false },
     { id: 9, name: "App. Consegna/Archivio", date: "", completed: false, current: false },
   ]);
-  
+
   // Carica i dati del preventivo
   const { data: quote, isLoading: isLoadingQuote } = useQuery({
     queryKey: ["/api/quotes", parseInt(id)],
@@ -98,7 +98,7 @@ export default function QuoteDetailPage() {
       return res.json();
     },
   });
-  
+
   // Carica i moduli del preventivo
   const { data: quoteModules = [], isLoading: isLoadingModules } = useQuery<QuoteModuleData[]>({
     queryKey: ["/api/quotes", parseInt(id), "modules"],
@@ -109,7 +109,7 @@ export default function QuoteDetailPage() {
     },
     enabled: !!id,
   });
-  
+
   // Mutations
   const updateQuoteTotalsMutation = useMutation({
     mutationFn: async ({ subtotal, total }: { subtotal: number, total: number }) => {
@@ -124,7 +124,7 @@ export default function QuoteDetailPage() {
           body: JSON.stringify({ subtotal, total }),
           credentials: "include"
         });
-        
+
         // Non tentiamo di fare il parsing del JSON se la risposta è vuota o non è JSON
         if (!res.ok) {
           const text = await res.text();
@@ -135,7 +135,7 @@ export default function QuoteDetailPage() {
           }
           throw new Error(`Errore nell'aggiornamento dei totali: ${text}`);
         }
-        
+
         // Non facciamo res.json() perché potrebbe non restituire JSON valido
         return { subtotal, total };
       } catch (error) {
@@ -146,7 +146,7 @@ export default function QuoteDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
-      
+
       // Se è il primo aggiornamento, mostra un toast
       if (!window.localStorage.getItem('totalsUpdated')) {
         window.localStorage.setItem('totalsUpdated', 'true');
@@ -161,7 +161,7 @@ export default function QuoteDetailPage() {
       // Non mostriamo errori all'utente per questa operazione di background
     },
   });
-  
+
   const deleteQuoteMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("DELETE", `/api/quotes/${id}`);
@@ -193,18 +193,18 @@ export default function QuoteDetailPage() {
     onSuccess: (data) => {
       const { stepId, completed } = data;
       const updatedSteps = [...workflowSteps];
-      
+
       // Aggiorna lo step corrente
       updatedSteps[stepId - 1].completed = completed;
       updatedSteps[stepId - 1].current = false;
-      
+
       // Se completato, aggiorna il prossimo step come corrente
       if (completed && stepId < updatedSteps.length) {
         updatedSteps[stepId].current = true;
       }
-      
+
       setWorkflowSteps(updatedSteps);
-      
+
       toast({
         title: "Workflow aggiornato",
         description: `Fase "${updatedSteps[stepId - 1].name}" completata.`,
@@ -218,7 +218,7 @@ export default function QuoteDetailPage() {
       });
     },
   });
-  
+
   const generateShareLinkMutation = useMutation({
     mutationFn: async () => {
       setIsLoading(true);
@@ -228,12 +228,13 @@ export default function QuoteDetailPage() {
     },
     onSuccess: (data) => {
       // Utilizziamo l'URL fornito dal backend oppure costruiamolo correttamente
+      const baseUrl = window.location.origin; // Corrected line
       if (data.shareUrl) {
         // Rimuoviamo eventuali slash iniziali per evitare doppi slash
         const shareUrl = data.shareUrl.startsWith('/') ? data.shareUrl.substring(1) : data.shareUrl;
-        setShareUrl(`${window.location.origin}/${shareUrl}`);
+        setShareUrl(`${baseUrl}/${shareUrl}`);
       } else {
-        setShareUrl(`${window.location.origin}/quotes/public/${data.token}`);
+        setShareUrl(`${baseUrl}/quotes/public/${data.token}`);
       }
       setIsShareDialogOpen(true);
       setIsLoading(false);
@@ -251,7 +252,7 @@ export default function QuoteDetailPage() {
       });
     },
   });
-  
+
   const disableShareMutation = useMutation({
     mutationFn: async () => {
       setIsLoading(true);
@@ -277,19 +278,19 @@ export default function QuoteDetailPage() {
       });
     },
   });
-  
+
   // Effetti
   useEffect(() => {
     if (quote) {
       try {
         // Aggiorna la data di creazione nel workflow
         const updatedSteps = [...workflowSteps];
-        
+
         // Data di creazione
         if (quote.createdAt) {
           updatedSteps[0].date = format(new Date(quote.createdAt), "dd/MM/yyyy HH:mm", { locale: it });
         }
-        
+
         // Data evento
         if (quote.eventDate) {
           updatedSteps[4].date = format(new Date(quote.eventDate), "dd/MM/yyyy", { locale: it });
@@ -297,28 +298,28 @@ export default function QuoteDetailPage() {
             updatedSteps[4].date += ` ${quote.eventTime}`;
           }
         }
-        
+
         // Se lo stato è confermato, aggiorna anche la fase 4
         if (quote.status === "approved" || quote.status === "confermato") {
           updatedSteps[3].completed = true;
           updatedSteps[3].current = false;
           updatedSteps[4].current = true;
         }
-        
+
         setWorkflowSteps(updatedSteps);
       } catch (error) {
         console.error("Errore nell'aggiornamento del workflow:", error);
       }
     }
   }, [quote]);
-  
+
   // Effetto per caricare i moduli esistenti quando cambiano
   useEffect(() => {
     if (quoteModules && quoteModules.length > 0) {
       setModules(quoteModules);
     }
   }, [quoteModules]);
-  
+
   // Effetto per ricalcolare il totale quando cambiano i moduli
   useEffect(() => {
     if (quote && modules && modules.length > 0) {
@@ -333,17 +334,17 @@ export default function QuoteDetailPage() {
           });
         }
       });
-      
+
       // Calcola il nuovo subtotale: totale dei moduli + eventuali prodotti/servizi diretti
       const servicesTotal = quote.services?.reduce((acc, service) => acc + (Number(service.price) || 0), 0) || 0;
       const productsTotal = quote.products?.reduce((acc, product) => acc + (Number(product.price) || 0), 0) || 0;
       const newSubtotal = moduleTotal + servicesTotal + productsTotal;
-      
+
       // Calcola il nuovo totale applicando lo sconto
       const newTotal = quote.discountType === 'percentage' 
         ? newSubtotal - (newSubtotal * (Number(quote.discountValue) || 0) / 100)
         : newSubtotal - (Number(quote.discountValue) || 0);
-      
+
       // Se il totale è cambiato, aggiorna il preventivo
       if (newSubtotal !== quote.subtotal || newTotal !== quote.total) {
         updateQuoteTotalsMutation.mutate({
@@ -353,12 +354,12 @@ export default function QuoteDetailPage() {
       }
     }
   }, [quote, modules]);
-  
+
   // Handler di eventi
   const handleDeleteClick = () => {
     setIsDeleteDialogOpen(true);
   };
-  
+
   const confirmDelete = () => {
     deleteQuoteMutation.mutate();
     setIsDeleteDialogOpen(false);
@@ -367,11 +368,11 @@ export default function QuoteDetailPage() {
   const completeWorkflowStep = (stepId: number) => {
     updateWorkflowStepMutation.mutate({ stepId, completed: true });
   };
-  
+
   const handleShareClick = () => {
     generateShareLinkMutation.mutate();
   };
-  
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(shareUrl);
     toast({
@@ -379,7 +380,7 @@ export default function QuoteDetailPage() {
       description: "Il link è stato copiato negli appunti",
     });
   };
-  
+
   // Handlers per la gestione dei moduli
   const handleAddModuleClick = () => {
     const dialogDiv = document.createElement('div');
@@ -403,40 +404,40 @@ export default function QuoteDetailPage() {
         </div>
       </div>
     `;
-    
+
     document.body.appendChild(dialogDiv);
-    
+
     document.getElementById('fixed-module-btn')?.addEventListener('click', () => {
       document.body.removeChild(dialogDiv);
       setEditingModule(null);
       setModuleType('fixed');
       setIsModuleDialogOpen(true);
     });
-    
+
     document.getElementById('variable-module-btn')?.addEventListener('click', () => {
       document.body.removeChild(dialogDiv);
       setEditingModule(null);
       setModuleType('variable');
       setIsModuleDialogOpen(true);
     });
-    
+
     document.getElementById('cancel-module-btn')?.addEventListener('click', () => {
       document.body.removeChild(dialogDiv);
     });
   };
-  
+
   const handleEditModule = (module: QuoteModuleData) => {
     setEditingModule(module);
     setModuleType(module.type as 'fixed' | 'variable');
     setIsModuleDialogOpen(true);
   };
-  
+
   // Funzione per forzare il ricalcolo del totale
   const refreshQuoteTotals = () => {
     if (!quote || !modules) return;
-    
+
     console.log("Ricalcolo totali preventivo...");
-    
+
     let moduleTotal = 0;
     // Escludiamo i moduli variabili non confermati
     modules.forEach(module => {
@@ -444,7 +445,7 @@ export default function QuoteDetailPage() {
         console.log(`Modulo variabile ${module.id} non confermato, escluso dal totale`);
         return;
       }
-      
+
       if (module.items && module.items.length > 0) {
         module.items.forEach(item => {
           const itemTotal = Number(item.total || 0);
@@ -453,15 +454,15 @@ export default function QuoteDetailPage() {
         });
       }
     });
-    
+
     // Calcola il nuovo subtotale e totale
     const servicesTotal = quote.services?.reduce((acc, service) => 
       acc + (Number(service.total || service.price) || 0), 0) || 0;
     const productsTotal = quote.products?.reduce((acc, product) => 
       acc + (Number(product.total || product.price) || 0), 0) || 0;
-    
+
     const newSubtotal = moduleTotal + servicesTotal + productsTotal;
-    
+
     // Applica lo sconto
     let newTotal = newSubtotal;
     if (quote.hasDiscount && quote.discountValue) {
@@ -471,9 +472,9 @@ export default function QuoteDetailPage() {
         newTotal = newSubtotal - (Number(quote.discountValue) || 0);
       }
     }
-    
+
     console.log(`Nuovi totali calcolati - Subtotale: ${newSubtotal}, Totale: ${newTotal}`);
-    
+
     // Utilizza la mutation esistente
     updateQuoteTotalsMutation.mutate({
       subtotal: newSubtotal,
@@ -486,18 +487,18 @@ export default function QuoteDetailPage() {
       try {
         setIsLoading(true);
         console.log(`Eliminazione modulo con ID: ${moduleId}`);
-        
+
         // Esegui prima la chiamata al server
         await deleteModuleMutation.mutateAsync(moduleId);
-        
+
         // Se l'eliminazione ha successo, aggiorna lo stato locale
         setModules(prev => prev?.filter(m => m.id !== moduleId));
-        
+
         // Forza il ricalcolo dei totali
         setTimeout(() => {
           refreshQuoteTotals();
         }, 500);
-        
+
       } catch (error) {
         console.error("Errore durante l'eliminazione del modulo:", error);
         toast({
@@ -510,11 +511,11 @@ export default function QuoteDetailPage() {
       }
     }
   };
-  
+
   const handleSaveModule = (module: QuoteModuleData) => {
     saveModuleMutation.mutate(module);
   };
-  
+
   // Mutation per salvare un modulo
   const saveModuleMutation = useMutation({
     mutationFn: async (module: QuoteModuleData) => {
@@ -522,7 +523,7 @@ export default function QuoteDetailPage() {
         ? `/api/quotes/${id}/modules/${module.id}`
         : `/api/quotes/${id}/modules`;
       const method = module.id && module.id > 0 ? "PATCH" : "POST";
-      
+
       console.log(`[LOG] Salvando modulo ${module.id || 'nuovo'} di tipo ${module.type}`);
       const res = await apiRequest(method, url, module);
       return res.json();
@@ -532,10 +533,10 @@ export default function QuoteDetailPage() {
       // Invalidiamo le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
-      
+
       // Ricalcolo dei totali dopo il salvataggio di un modulo
       setTimeout(() => refreshQuoteTotals(), 500);
-      
+
       toast({
         title: "Modulo salvato",
         description: "Il modulo è stato salvato con successo",
@@ -550,7 +551,7 @@ export default function QuoteDetailPage() {
       });
     },
   });
-  
+
 
 
   // Mutation per eliminare un modulo
@@ -567,22 +568,22 @@ export default function QuoteDetailPage() {
     },
     onSuccess: () => {
       console.log(`[LOG] Modulo eliminato con successo`);
-      
+
       // Invalidiamo le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
-      
+
       // Utilizziamo setTimeout per assicurarci che l'aggiornamento dello stato avvenga dopo che 
       // React ha aggiornato lo stato locale (setModules) e le query sono state invalidate
       setTimeout(() => {
         console.log(`[LOG] Ricalcolo totali dopo eliminazione modulo...`);
         // Esegui il ricalcolo dei totali
         refreshQuoteTotals();
-        
+
         // Ripristina lo stato di caricamento
         setIsLoading(false);
       }, 500);
-      
+
       toast({
         title: "Modulo eliminato",
         description: "Il modulo è stato eliminato con successo",
@@ -592,7 +593,7 @@ export default function QuoteDetailPage() {
       console.error(`[ERRORE] Eliminazione modulo fallita:`, error);
       // Ripristina lo stato di caricamento
       setIsLoading(false);
-      
+
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'eliminazione del modulo",
@@ -600,7 +601,7 @@ export default function QuoteDetailPage() {
       });
     },
   });
-  
+
   // Rendering condizionale per stati di caricamento o assenza di dati
   if (isLoadingQuote) {
     return (
@@ -673,7 +674,7 @@ export default function QuoteDetailPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex space-x-2">
             <Button variant="outline" onClick={() => setLocation(`/quotes/new-redesign?edit=${id}`)}>
               <Edit className="mr-2 h-4 w-4" />
@@ -817,7 +818,7 @@ export default function QuoteDetailPage() {
                       <p className="font-medium">
                         {quote.isFullDay ? "Giornata intera" : 
                          (quote.eventTime ? quote.eventTime : "Non specificato") +
-                         (quote.eventEndTime ? ` - ${quote.eventEndTime}` : "")}
+                         (quote.eventEndTime ? ` - ${`quote.eventEndTime}` : "")}
                       </p>
                     </div>
                   </div>
@@ -828,7 +829,7 @@ export default function QuoteDetailPage() {
                       <p className="font-medium">{quote.location || "Non specificata"}</p>
                     </div>
                   </div>
-                  
+
                   {/* Informazioni sul rito religioso */}
                   {(quote.ceremonyLocation || quote.ceremonyTime) && (
                     <div className="col-span-2 md:col-span-3 border-t pt-4 mt-2">
@@ -858,13 +859,13 @@ export default function QuoteDetailPage() {
                       </div>
                     </div>
                   )}
-                  
+
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Provenienza</h4>
                     <p className="font-medium">{quote.leadSource?.name || "Non specificata"}</p>
                   </div>
 
-                  
+
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Workflow</h4>
                     <p className="font-medium">{quote.workflow || "Default"}</p>
@@ -938,7 +939,7 @@ export default function QuoteDetailPage() {
                     </Button>
                   </div>
                 )}
-                
+
                 {/* Dialog modale per modifica/creazione moduli */}
                 <ModuleDialog
                   open={isModuleDialogOpen}
@@ -961,7 +962,7 @@ export default function QuoteDetailPage() {
                 </div>
               </CardFooter>
             </Card>
-            
+
             {/* Riepilogo preventivo */}
             <Card className="my-4 bg-gradient-to-br from-primary/5 to-background border border-primary/20">
               <CardHeader className="pb-2">
@@ -974,20 +975,20 @@ export default function QuoteDetailPage() {
                 <div className="text-sm text-muted-foreground mb-4">
                   Tutti i servizi, pacchetti e prodotti sono inclusi nei moduli sopra.
                 </div>
-                
+
                 <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2">
                   <div>
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Subtotale</p>
                     <p className="text-xl font-medium">€ {(quote.subtotal || 0).toLocaleString()}</p>
                   </div>
-                  
+
                   {quote.discount > 0 && (
                     <div>
                       <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Sconto</p>
                       <p className="text-xl font-medium text-green-600">-€ {(quote.discount || 0).toLocaleString()}</p>
                     </div>
                   )}
-                  
+
                   <div className="bg-primary/10 px-5 py-3 rounded-md border border-primary/20">
                     <p className="text-xs uppercase tracking-wider text-primary font-medium">Totale Preventivo</p>
                     <p className="text-2xl font-bold">€ {(quote.total || 0).toLocaleString()}</p>
@@ -1041,7 +1042,7 @@ export default function QuoteDetailPage() {
                 <div className="relative">
                   {/* Linea verticale */}
                   <div className="absolute left-3 top-0 h-full w-0.5 bg-gray-200"></div>
-                  
+
                   {/* Steps */}
                   <div className="space-y-6">
                     {workflowSteps.map((step) => (
@@ -1063,7 +1064,7 @@ export default function QuoteDetailPage() {
                               {step.date}
                             </p>
                           )}
-                          
+
                           {step.current && (
                             <div className="mt-2">
                               <Button 
@@ -1086,7 +1087,7 @@ export default function QuoteDetailPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Dialog di conferma per l'eliminazione */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
@@ -1121,7 +1122,7 @@ export default function QuoteDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Dialog per la condivisione */}
       <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
         <DialogContent>
@@ -1149,7 +1150,7 @@ export default function QuoteDetailPage() {
                 Il cliente potrà visualizzare il preventivo senza necessità di accesso.
               </p>
             </div>
-            
+
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <Link className="h-4 w-4 text-primary" />

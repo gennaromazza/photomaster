@@ -297,11 +297,13 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
           : formData.expiryDate
       };
 
-      await onSave(dataToSave); // Await added here
-      toast({
-        title: isEdit ? "Modulo aggiornato" : "Modulo creato",
-        description: `Il modulo "${formData.name}" è stato ${isEdit ? 'aggiornato' : 'aggiunto'} al preventivo`
-      });
+      const result = await onSave(dataToSave);
+      if (result) {
+        toast({
+          title: isEdit ? "Modulo aggiornato" : "Modulo creato",
+          description: `Il modulo "${formData.name}" è stato ${isEdit ? 'aggiornato' : 'aggiunto'} al preventivo`
+        });
+      }
     } catch (error) {
       console.error("Errore nel salvataggio del modulo:", error);
       toast({

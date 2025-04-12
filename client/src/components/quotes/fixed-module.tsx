@@ -212,11 +212,13 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
 
     setIsLoading(true);
     try {
-      await onSave(formData);
-      toast({
-        title: isEdit ? "Modulo aggiornato" : "Modulo creato",
-        description: `Il modulo "${formData.name}" è stato ${isEdit ? 'aggiornato' : 'aggiunto'} al preventivo`
-      });
+      const result = await onSave(formData);
+      if (result) {
+        toast({
+          title: isEdit ? "Modulo aggiornato" : "Modulo creato",
+          description: `Il modulo "${formData.name}" è stato ${isEdit ? 'aggiornato' : 'aggiunto'} al preventivo`
+        });
+      }
     } catch (error) {
       console.error("Errore nel salvataggio del modulo:", error);
       toast({

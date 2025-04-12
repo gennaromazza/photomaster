@@ -1,0 +1,69 @@
+Situazione attuale
+1. Moduli
+Sono divisi in:
+
+moduli fissi (inclusi sempre)
+
+moduli variabili (l'utente deve selezionare e confermare elementi → altrimenti non vanno nel totale)
+
+2. Totale preventivo
+Alcuni moduli non contribuiscono al calcolo perché i metodi di somma non sono richiamati (o triggerati) correttamente.
+
+La funzione di calcolo è già presente, ma non viene attivata al momento giusto (es. onChange, onConfirm, onDelete).
+
+3. Bug eliminazione modulo
+Il modulo non viene rimosso dal database o dalla vista, anche se appare il messaggio di conferma.
+
+Serve verificare che venga correttamente:
+
+Richiamata la API di eliminazione
+
+Rimosso dal DOM (frontend) dopo il successo della chiamata
+
+4. Condivisione con il cliente
+I moduli condivisi non mostrano immagini o i dettagli completi.
+
+I dati dei prodotti/servizi sono già salvati, ma vanno resi visibili nella vista pubblica (link cliente).
+
+🧠 Richiesta tecnica per Replit:
+Piano logico da seguire:
+
+Definisci quando richiamare il metodo di ricalcolo totale:
+
+Dopo aggiunta/rimozione modulo
+
+Dopo selezione confermata di un elemento in un modulo variabile
+
+Usa gli ID dei moduli o un flag (isConfirmed, modulo.tipo) per decidere cosa includere.
+
+Verifica flusso eliminazione moduli:
+
+Mostrami come controllare se la funzione di eliminazione:
+
+Richiama la route corretta (Laravel route o API)
+
+Riceve correttamente lo id_modulo
+
+Gestisce il successo per rimuovere visivamente il modulo dalla pagina
+
+Fix per vista cliente:
+
+I dati sono già presenti.
+
+Mostrami come renderizzare correttamente immagini e testi già associati ai prodotti nei moduli, lato pubblico.
+
+Evitare doppio sviluppo:
+
+Le funzioni esistono, non voglio riscriverle.
+
+Aiutami a richiamarle al momento giusto e nei punti corretti (JS / Blade / componenti Vue se presenti).
+
+📅 Ordine di intervento consigliato (cronologico):
+Correggere richiamo funzione di ricalcolo totale preventivo (trigger on aggiunta/rimozione/conferma moduli).
+
+Correggere bug eliminazione modulo (controllare evento → chiamata → rimozione visuale).
+
+Sistemare visualizzazione lato cliente (caricamento immagini da moduli già esistenti).
+
+Solo se necessario, estendere/modificare logica moduli variabili (es. aggiungere flag selezionato/confermato).
+

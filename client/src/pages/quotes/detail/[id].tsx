@@ -413,6 +413,9 @@ export default function QuoteDetailPage() {
   
   const handleDeleteModule = (moduleId: number) => {
     if (confirm('Sei sicuro di voler eliminare questo modulo?')) {
+      // Imposta lo stato di caricamento
+      setIsLoading(true);
+      console.log(`Eliminazione modulo con ID: ${moduleId}`);
       deleteModuleMutation.mutate(moduleId);
     }
   };
@@ -452,16 +455,31 @@ export default function QuoteDetailPage() {
   const deleteModuleMutation = useMutation({
     mutationFn: async (moduleId: number) => {
       const res = await apiRequest("DELETE", `/api/quotes/${id}/modules/${moduleId}`);
+      if (!res.ok) {
+        throw new Error(`Errore HTTP ${res.status}: Impossibile eliminare il modulo`);
+      }
+      // Forziamo un breve ritardo per garantire che il backend abbia completato tutte le operazioni
+      await new Promise(resolve => setTimeout(resolve, 300));
       return res.ok;
     },
     onSuccess: () => {
+      // Invalidiamo sia la query dei moduli che i dati del preventivo per aggiornare i totali
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
+      
+      // Ripristina lo stato di caricamento
+      setIsLoading(false);
+      
       toast({
         title: "Modulo eliminato",
         description: "Il modulo è stato eliminato con successo",
       });
     },
     onError: (error) => {
+      console.error("Errore durante l'eliminazione del modulo:", error);
+      // Ripristina lo stato di caricamento
+      setIsLoading(false);
+      
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'eliminazione del modulo",

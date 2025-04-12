@@ -165,7 +165,28 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                       </Badge>
                     </div>
                     
-                    <div className="text-sm text-muted-foreground mt-1">
+                    {/* Descrizione del prodotto/servizio */}
+                    {(item.serviceDescription || item.productDescription || item.bundleDescription) && (
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        {item.serviceDescription || item.productDescription || item.bundleDescription}
+                      </p>
+                    )}
+                    
+                    {/* Immagine del prodotto/servizio se disponibile */}
+                    {(item.serviceImagePath || item.productImagePath || item.bundleImagePath) && (
+                      <div className="mt-2 w-full h-28 rounded-md overflow-hidden bg-muted/40">
+                        <img 
+                          src={item.serviceImagePath || item.productImagePath || item.bundleImagePath} 
+                          alt={item.serviceName || item.productName || item.bundleName}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="text-sm text-muted-foreground mt-2">
                       Quantità: {item.quantity} x {formatCurrency(item.unitPrice)}
                       {item.hasDiscount && item.discountedPrice !== undefined && (
                         <span className="text-green-600 ml-2">

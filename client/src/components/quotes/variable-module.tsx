@@ -7,8 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Save, Plus, Copy, Calendar, Link } from "lucide-react";
+import { Trash2, Save, Plus, Copy, Calendar, Link, HelpCircle } from "lucide-react";
 import { QuoteModuleData, QuoteModuleItemData } from "./module-selector";
 import { formatCurrency } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Save, Plus } from "lucide-react";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Trash2, Save, Plus, HelpCircle } from "lucide-react";
 import { QuoteModuleData, QuoteModuleItemData } from "./module-selector";
 import { formatCurrency } from "@/lib/utils";
 
@@ -260,6 +266,18 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
         <CardDescription>
           Aggiungi servizi e prodotti che saranno inclusi nel preventivo
         </CardDescription>
+        <div className="p-3 mt-2 bg-muted/20 rounded-md text-sm text-muted-foreground border border-dashed">
+          <p className="flex items-center gap-1">
+            <HelpCircle className="h-4 w-4 text-primary" />
+            <span className="font-medium">Guida rapida:</span>
+          </p>
+          <ul className="list-disc pl-5 mt-1 space-y-1 text-xs">
+            <li>I <span className="font-medium">moduli fissi</span> contengono elementi predefiniti scelti da te, non modificabili dal cliente</li>
+            <li>Aggiungi servizi, prodotti e pacchetti utilizzando i menu a tendina</li>
+            <li>Puoi specificare quantità e applicare sconti personalizzati per ogni elemento</li>
+            <li>Il totale del modulo viene calcolato automaticamente</li>
+          </ul>
+        </div>
       </CardHeader>
       
       <CardContent className="space-y-6">
@@ -267,7 +285,19 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <Label htmlFor="name">Nome del modulo *</Label>
+              <div className="flex items-center gap-1">
+                <Label htmlFor="name">Nome del modulo *</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="w-[220px] text-xs">Un nome breve e descrittivo per identificare questo modulo nel preventivo</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id="name"
                 name="name"
@@ -330,6 +360,16 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                     <div className="grid grid-cols-1 gap-4">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-medium text-muted-foreground">Seleziona un tipo di elemento</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="w-[240px] text-xs">Scegli un solo tipo per elemento: un servizio (cerchio blu), un prodotto (cerchio ambra) o un pacchetto (cerchio verde)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <div className="h-px flex-1 bg-border"></div>
                       </div>
                       
@@ -474,7 +514,19 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <Label htmlFor={`quantity-${index}`}>Quantità</Label>
+                        <div className="flex items-center gap-1">
+                          <Label htmlFor={`quantity-${index}`}>Quantità</Label>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="w-[180px] text-xs">Inserisci la quantità desiderata. Il totale viene calcolato automaticamente moltiplicando la quantità per il prezzo unitario.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                         <Input
                           id={`quantity-${index}`}
                           type="number"
@@ -485,7 +537,19 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                       </div>
                       
                       <div>
-                        <Label htmlFor={`unitPrice-${index}`}>Prezzo unitario (€)</Label>
+                        <div className="flex items-center gap-1">
+                          <Label htmlFor={`unitPrice-${index}`}>Prezzo unitario (€)</Label>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="w-[200px] text-xs">Il prezzo viene automaticamente importato quando selezioni un servizio, prodotto o pacchetto. Puoi modificare manualmente questo valore se necessario.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                         <Input
                           id={`unitPrice-${index}`}
                           type="number"
@@ -497,13 +561,22 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
                       </div>
                       
                       <div className="flex items-end">
-                        <Button
-                          variant={item.hasDiscount ? "default" : "outline"}
-                          className="w-full"
-                          onClick={() => handleItemChange(index, 'hasDiscount', !item.hasDiscount)}
-                        >
-                          {item.hasDiscount ? "Sconto applicato" : "Aggiungi sconto"}
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild className="w-full">
+                              <Button
+                                variant={item.hasDiscount ? "default" : "outline"}
+                                className="w-full"
+                                onClick={() => handleItemChange(index, 'hasDiscount', !item.hasDiscount)}
+                              >
+                                {item.hasDiscount ? "Sconto applicato" : "Aggiungi sconto"}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="w-[200px] text-xs">Aggiungi uno sconto percentuale o a importo fisso a questo elemento. Gli sconti vengono calcolati sul prezzo unitario.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                     

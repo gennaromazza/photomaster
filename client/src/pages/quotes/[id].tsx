@@ -36,8 +36,20 @@ import {
   Euro,
   Camera,
   ClipboardCheck,
-  Info
+  Info,
+  Loader2
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -162,10 +174,15 @@ export default function QuoteDetailPage() {
     );
   }
 
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
   const handleDeleteClick = () => {
-    if (window.confirm("Sei sicuro di voler eliminare questo preventivo?")) {
-      deleteQuoteMutation.mutate();
-    }
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = () => {
+    deleteQuoteMutation.mutate();
+    setShowDeleteDialog(false);
   };
 
   return (
@@ -213,10 +230,38 @@ export default function QuoteDetailPage() {
               <Share2 className="mr-2 h-4 w-4" />
               Condividi
             </Button>
-            <Button variant="destructive" onClick={handleDeleteClick}>
-              <Trash className="mr-2 h-4 w-4" />
-              Elimina
-            </Button>
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash className="mr-2 h-4 w-4" />
+                  Elimina
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Elimina preventivo</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Sei sicuro di voler eliminare questo preventivo? Questa azione non può essere annullata.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={handleConfirmDelete}
+                  >
+                    {deleteQuoteMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Eliminazione...
+                      </>
+                    ) : (
+                      "Elimina"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 

@@ -1963,24 +1963,37 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(404).json({ message: "Preventivo non trovato" });
       }
 
+      // Valida i dati del modulo
+      if (!req.body.name || !req.body.type) {
+        return res.status(400).json({ 
+          message: "Dati del modulo incompleti",
+          details: "Nome e tipo sono richiesti"
+        });
+      }
+
       // Crea il modulo con gestione corretta della data di scadenza
-      const moduleData = { 
-        ...req.body, 
+      const moduleData = {
+        ...req.body,
         quoteId,
-        // Assicuriamoci che expiryDate sia nel formato corretto
         expiryDate: req.body.expiryDate 
           ? new Date(req.body.expiryDate) 
           : (req.body.type === 'variable' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : undefined)
       };
+
       const newModule = await storage.createQuoteModule(moduleData);
+      if (!newModule) {
+        throw new Error("Errore nella creazione del modulo");
+      }
 
       // Se ci sono elementi nel modulo, li creiamo
       if (req.body.items && Array.isArray(req.body.items)) {
-        for (const item of req.body.items) {
-          await storage.createQuoteModuleItem({
+        await Promise.all(req.body.items.map(item => 
+          storage.createQuoteModuleItem({
             ...item,
             moduleId: newModule.id
-          });
+          })
+        ));
+      }
         }
       }
 

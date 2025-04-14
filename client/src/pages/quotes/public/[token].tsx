@@ -12,7 +12,8 @@ import {
   Euro,
   Loader2,
   Church,
-  FileSignature
+  FileSignature,
+  CheckCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";

@@ -22,7 +22,9 @@ import { StudioInfo } from "@/components/quotes/studio-info";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { PublicFixedModule } from "@/components/quotes/public-fixed-module";
 import { PublicVariableModule } from "@/components/quotes/public-variable-module";
-import { Label, Input, Button } from "@/components/ui/forms"; // Assuming these imports are needed
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 
 // Layout specifico per la visualizzazione pubblica

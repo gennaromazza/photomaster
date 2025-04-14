@@ -1,44 +1,39 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import Sidebar from "./sidebar";
 import Header from "./header";
 import MobileSidebar from "./mobile-sidebar";
-import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const Layout = ({ children }: LayoutProps) => {
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const { user, isLoading } = useAuth();
-
+/**
+ * Layout principale dell'applicazione
+ * Responsabilità: Fornire una struttura coerente per tutte le pagine dell'applicazione
+ */
+export default function Layout({ children }: LayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
   const handleOpenSidebar = () => {
-    setIsMobileSidebarOpen(true);
+    setSidebarOpen(true);
   };
-
+  
   const handleCloseSidebar = () => {
-    setIsMobileSidebarOpen(false);
+    setSidebarOpen(false);
   };
-
-  // Se l'utente non è autenticato e il caricamento è completato, reindirizza alla pagina di autenticazione
-  if (!isLoading && !user) {
-    return <Redirect to="/auth" />;
-  }
-
+  
   return (
-    <div className="min-h-screen flex">
-      <Sidebar />
-      <MobileSidebar isOpen={isMobileSidebarOpen} onClose={handleCloseSidebar} />
-
-      <div className="flex-1 flex flex-col">
-        <Header onOpenSidebar={handleOpenSidebar} />
-        <main className="flex-1 overflow-y-auto bg-background pb-10 pt-0 lg:pt-0 mt-16 lg:mt-0">
+    <div className="min-h-screen flex flex-col">
+      <Header onOpenSidebar={handleOpenSidebar} />
+      
+      <div className="flex flex-1">
+        <Sidebar />
+        <MobileSidebar isOpen={sidebarOpen} onClose={handleCloseSidebar} />
+        
+        <main className="flex-1 bg-background/50 dark:bg-background">
           {children}
         </main>
       </div>
     </div>
   );
-};
-
-export default Layout;
+}

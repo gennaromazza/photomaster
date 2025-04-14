@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertQuoteSchema } from "@shared/schema";
-import Layout from "@/components/layout";
+import Layout from "@/components/layout/layout";
 import { useToast } from "@/hooks/use-toast";
 import {
   Form,

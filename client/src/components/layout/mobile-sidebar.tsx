@@ -1,229 +1,194 @@
+import React from "react";
 import { Link, useLocation } from "wouter";
-import { cn, getInitials } from "@/lib/utils";
-import React, { useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import {
+  Home,
+  Users,
+  Calendar,
+  FileText,
+  Settings,
+  Package,
+  ShoppingBag,
+  BarChart2,
+  LayoutDashboard,
+  FileSignature,
+  MessageSquare,
+  BookMarked,
+  X,
+} from "lucide-react";
 
-interface MobileSidebarProps {
+export interface MobileSidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface MobileSidebarLinkProps {
+/**
+ * Versione mobile della sidebar (si apre come un drawer)
+ * Responsabilità: Fornire la navigazione principale per dispositivi mobili
+ */
+export default function MobileSidebar({
+  isOpen,
+  onClose,
+}: MobileSidebarProps) {
+  const [location] = useLocation();
+  
+  const isActive = (path: string) => {
+    if (path === "/") {
+      return location === path;
+    }
+    return location.startsWith(path);
+  };
+  
+  return (
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="left" className="w-64 p-0">
+        <SheetHeader className="border-b p-4">
+          <SheetTitle className="flex items-center justify-between">
+            <span className="font-playfair text-xl">
+              <span className="font-bold">Image</span>
+              <span className="font-light">Studio</span>
+            </span>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </SheetTitle>
+        </SheetHeader>
+        
+        <div className="py-4 px-2">
+          <nav className="flex flex-col gap-1">
+            <NavItem
+              href="/"
+              icon={<LayoutDashboard className="h-4 w-4" />}
+              label="Dashboard"
+              isActive={isActive("/")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/quotes"
+              icon={<FileText className="h-4 w-4" />}
+              label="Preventivi"
+              isActive={isActive("/quotes")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/contracts"
+              icon={<FileSignature className="h-4 w-4" />}
+              label="Contratti"
+              isActive={isActive("/contracts")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/clients"
+              icon={<Users className="h-4 w-4" />}
+              label="Clienti"
+              isActive={isActive("/clients")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/events"
+              icon={<Calendar className="h-4 w-4" />}
+              label="Eventi"
+              isActive={isActive("/events")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/services"
+              icon={<Package className="h-4 w-4" />}
+              label="Servizi"
+              isActive={isActive("/services")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/products"
+              icon={<ShoppingBag className="h-4 w-4" />}
+              label="Prodotti"
+              isActive={isActive("/products")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/messages"
+              icon={<MessageSquare className="h-4 w-4" />}
+              label="Messaggi"
+              isActive={isActive("/messages")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/tasks"
+              icon={<BookMarked className="h-4 w-4" />}
+              label="Attività"
+              isActive={isActive("/tasks")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/reports"
+              icon={<BarChart2 className="h-4 w-4" />}
+              label="Reportistica"
+              isActive={isActive("/reports")}
+              onClick={onClose}
+            />
+          </nav>
+        </div>
+        
+        <SheetFooter className="px-4 py-4 mt-auto border-t">
+          <NavItem
+            href="/settings"
+            icon={<Settings className="h-4 w-4" />}
+            label="Impostazioni"
+            isActive={isActive("/settings")}
+            onClick={onClose}
+          />
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+interface NavItemProps {
   href: string;
   icon: React.ReactNode;
-  children: React.ReactNode;
-  active?: boolean;
+  label: string;
+  isActive: boolean;
   onClick: () => void;
 }
 
-const MobileSidebarLink = ({ href, icon, children, active, onClick }: MobileSidebarLinkProps) => {
-  const [, setLocation] = useLocation();
-  
+function NavItem({
+  href,
+  icon,
+  label,
+  isActive,
+  onClick,
+}: NavItemProps) {
   return (
-    <div
-      className={cn(
-        "flex items-center px-4 py-2.5 text-sm font-medium rounded-md cursor-pointer",
-        active 
-          ? "bg-background text-primary" 
-          : "text-gray-600 hover:bg-background hover:text-primary"
-      )}
-      onClick={() => {
-        onClick();
-        // Utilizziamo il router di wouter per la navigazione
-        setLocation(href);
-      }}
-    >
-      <span className="text-lg mr-3">{icon}</span>
-      {children}
-    </div>
-  );
-};
-
-const MobileSidebar = ({ isOpen, onClose }: MobileSidebarProps) => {
-  const [location] = useLocation();
-  const { user, logoutMutation } = useAuth();
-  
-  // Close sidebar when clicking outside or pressing escape
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-      document.body.style.overflow = "hidden";
-    }
-    
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "";
-    };
-  }, [isOpen, onClose]);
-  
-  if (!isOpen) return null;
-  
-  return (
-    <>
-      <div 
-        className="fixed inset-0 z-20 bg-gray-600 bg-opacity-75 lg:hidden" 
-        onClick={onClose}
-        aria-hidden="true"
-      />
-      
-      <aside className="fixed inset-y-0 left-0 z-30 w-64 bg-white transform transition lg:hidden">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-          <div>
-            <h1 className="font-display text-xl font-semibold text-primary">Studio Arté</h1>
-            <p className="text-xs text-gray-500">Fotografia</p>
-          </div>
-          <button 
-            className="text-gray-500 hover:text-primary" 
-            onClick={onClose}
-            aria-label="Close menu"
-          >
-            <i className="ri-close-line text-2xl"></i>
-          </button>
-        </div>
-        
-        <nav className="flex-1 px-4 py-6 space-y-1">
-          <MobileSidebarLink 
-            href="/" 
-            icon={<i className="ri-dashboard-line" />} 
-            active={location === "/"}
-            onClick={onClose}
-          >
-            Dashboard
-          </MobileSidebarLink>
-          
-          <MobileSidebarLink 
-            href="/clients" 
-            icon={<i className="ri-user-3-line" />} 
-            active={location.startsWith("/clients")}
-            onClick={onClose}
-          >
-            Clienti
-          </MobileSidebarLink>
-          
-          <MobileSidebarLink 
-            href="/calendar" 
-            icon={<i className="ri-calendar-2-line" />} 
-            active={location.startsWith("/calendar")}
-            onClick={onClose}
-          >
-            Calendario
-          </MobileSidebarLink>
-          
-          <MobileSidebarLink 
-            href="/events" 
-            icon={<i className="ri-calendar-event-line" />} 
-            active={location.startsWith("/events")}
-            onClick={onClose}
-          >
-            Eventi
-          </MobileSidebarLink>
-          
-          <MobileSidebarLink 
-            href="/tasks" 
-            icon={<i className="ri-task-line" />} 
-            active={location.startsWith("/tasks")}
-            onClick={onClose}
-          >
-            Task
-          </MobileSidebarLink>
-          
-          <MobileSidebarLink 
-            href="/collaborators" 
-            icon={<i className="ri-team-line" />} 
-            active={location.startsWith("/collaborators")}
-            onClick={onClose}
-          >
-            Collaboratori
-          </MobileSidebarLink>
-          
-          <MobileSidebarLink 
-            href="/contracts" 
-            icon={<i className="ri-file-list-3-line" />} 
-            active={location.startsWith("/contracts")}
-            onClick={onClose}
-          >
-            Contratti
-          </MobileSidebarLink>
-          
-          <MobileSidebarLink 
-            href="/quotes" 
-            icon={<i className="ri-money-euro-circle-line" />} 
-            active={location.startsWith("/quotes")}
-            onClick={onClose}
-          >
-            Preventivi
-          </MobileSidebarLink>
-          
-          <MobileSidebarLink 
-            href="/services" 
-            icon={<i className="ri-price-tag-3-line" />} 
-            active={location.startsWith("/services") || location.startsWith("/bundles")}
-            onClick={onClose}
-          >
-            Servizi e Prodotti
-          </MobileSidebarLink>
-          
-          <div className="pt-4 mt-4 border-t border-gray-100">
-            <MobileSidebarLink 
-              href="/settings" 
-              icon={<i className="ri-settings-4-line" />}
-              active={location.startsWith("/settings")}
-              onClick={onClose}
-            >
-              Impostazioni
-            </MobileSidebarLink>
-          </div>
-        </nav>
-        
-        {user && (
-          <div className="p-4 border-t border-gray-100">
-            <div className="flex flex-col space-y-3">
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <span className="font-medium">{getInitials(user.fullName.split(' ')[0], user.fullName.split(' ').slice(1).join(' '))}</span>
-                </div>
-                <div className="ml-3 flex-1 truncate">
-                  <p className="text-sm font-medium text-gray-700">{user.fullName}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user.role}</p>
-                </div>
-              </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full" 
-                onClick={() => {
-                  logoutMutation.mutate();
-                  onClose();
-                }}
-                disabled={logoutMutation.isPending}
-              >
-                {logoutMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Disconnessione...
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Disconnetti
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+    <Link href={href}>
+      <div
+        className={cn(
+          "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors cursor-pointer",
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
-      </aside>
-    </>
+        onClick={onClick}
+      >
+        {icon}
+        {label}
+      </div>
+    </Link>
   );
-};
-
-export default MobileSidebar;
+}

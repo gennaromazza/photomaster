@@ -1,171 +1,145 @@
-import { Link, useLocation } from "wouter";
-import { cn, getInitials } from "@/lib/utils";
 import React from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { Loader2, LogOut } from "lucide-react";
-
-interface SidebarProps {
-  className?: string;
-}
+import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+import {
+  Home,
+  Users,
+  Calendar,
+  FileText,
+  Settings,
+  Package,
+  ShoppingBag,
+  BarChart2,
+  LayoutDashboard,
+  FileSignature,
+  MessageSquare,
+  BookMarked,
+} from "lucide-react";
 
 interface SidebarLinkProps {
   href: string;
   icon: React.ReactNode;
-  children: React.ReactNode;
-  active?: boolean;
+  text: string;
+  isActive: boolean;
 }
 
-const SidebarLink = ({ href, icon, children, active }: SidebarLinkProps) => {
+/**
+ * Componente per i link nella sidebar
+ */
+function SidebarLink({ href, icon, text, isActive }: SidebarLinkProps) {
   return (
     <Link href={href}>
       <div
         className={cn(
-          "flex items-center px-4 py-2.5 text-sm font-medium rounded-md cursor-pointer",
-          active
-            ? "bg-background text-primary"
-            : "text-gray-600 hover:bg-background hover:text-primary"
+          "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors cursor-pointer",
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
       >
-        <span className="text-lg mr-3">{icon}</span>
-        {children}
+        {icon}
+        {text}
       </div>
     </Link>
   );
-};
+}
 
-const Sidebar = ({ className }: SidebarProps) => {
+/**
+ * Sidebar dell'applicazione
+ * Responsabilità: Fornire la navigazione principale dell'applicazione
+ */
+export default function Sidebar() {
   const [location] = useLocation();
-  const { user, logoutMutation } = useAuth();
-
+  
+  const isActive = (path: string) => {
+    if (path === "/") {
+      return location === path;
+    }
+    return location.startsWith(path);
+  };
+  
   return (
-    <aside className={cn("hidden lg:flex flex-col w-64 bg-white border-r border-gray-200", className)}>
-      <div className="p-6 border-b border-gray-100">
-        <h1 className="font-display text-xl font-semibold text-primary">Studio Arté</h1>
-        <p className="text-sm text-gray-500 mt-1">Fotografia</p>
-      </div>
-
-      <nav className="flex-1 px-4 py-6 space-y-1">
+    <div className="hidden md:flex md:flex-col md:border-r md:bg-muted/40 md:w-56 md:overflow-y-auto">
+      <div className="flex flex-col gap-2 p-4">
         <SidebarLink
           href="/"
-          icon={<i className="ri-dashboard-line" />}
-          active={location === "/"}
-        >
-          Dashboard
-        </SidebarLink>
-
-        <SidebarLink
-          href="/clients"
-          icon={<i className="ri-user-3-line" />}
-          active={location.startsWith("/clients")}
-        >
-          Clienti
-        </SidebarLink>
-
-        <SidebarLink
-          href="/calendar"
-          icon={<i className="ri-calendar-2-line" />}
-          active={location.startsWith("/calendar")}
-        >
-          Calendario
-        </SidebarLink>
-
-        <SidebarLink
-          href="/events"
-          icon={<i className="ri-calendar-event-line" />}
-          active={location.startsWith("/events")}
-        >
-          Eventi
-        </SidebarLink>
-
-        <SidebarLink
-          href="/tasks"
-          icon={<i className="ri-task-line" />}
-          active={location.startsWith("/tasks")}
-        >
-          Task
-        </SidebarLink>
-
-        <SidebarLink
-          href="/collaborators"
-          icon={<i className="ri-team-line" />}
-          active={location.startsWith("/collaborators")}
-        >
-          Collaboratori
-        </SidebarLink>
-
-        <SidebarLink
-          href="/contracts"
-          icon={<i className="ri-file-list-3-line" />}
-          active={location.startsWith("/contracts")}
-        >
-          Contratti
-        </SidebarLink>
-
+          icon={<LayoutDashboard className="h-4 w-4" />}
+          text="Dashboard"
+          isActive={isActive("/")}
+        />
+        
         <SidebarLink
           href="/quotes"
-          icon={<i className="ri-money-euro-circle-line" />}
-          active={location.startsWith("/quotes")}
-        >
-          Preventivi
-        </SidebarLink>
-
+          icon={<FileText className="h-4 w-4" />}
+          text="Preventivi"
+          isActive={isActive("/quotes")}
+        />
+        
+        <SidebarLink
+          href="/contracts"
+          icon={<FileSignature className="h-4 w-4" />}
+          text="Contratti"
+          isActive={isActive("/contracts")}
+        />
+        
+        <SidebarLink
+          href="/clients"
+          icon={<Users className="h-4 w-4" />}
+          text="Clienti"
+          isActive={isActive("/clients")}
+        />
+        
+        <SidebarLink
+          href="/events"
+          icon={<Calendar className="h-4 w-4" />}
+          text="Eventi"
+          isActive={isActive("/events")}
+        />
+        
         <SidebarLink
           href="/services"
-          icon={<i className="ri-price-tag-3-line" />}
-          active={location.startsWith("/services") || location.startsWith("/bundles")}
-        >
-          Servizi e Prodotti
-        </SidebarLink>
-
-        <div className="pt-4 mt-4 border-t border-gray-100">
-          <SidebarLink
-            href="/settings"
-            icon={<i className="ri-settings-4-line" />}
-            active={location.startsWith("/settings")}
-          >
-            Impostazioni
-          </SidebarLink>
-        </div>
-      </nav>
-
-      {user && (
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex flex-col space-y-3">
-            <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <span className="font-medium">{getInitials(user.fullName.split(' ')[0], user.fullName.split(' ').slice(1).join(' '))}</span>
-              </div>
-              <div className="ml-3 flex-1 truncate">
-                <p className="text-sm font-medium text-gray-700">{user.fullName}</p>
-                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-            >
-              {logoutMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Disconnessione...
-                </>
-              ) : (
-                <>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Disconnetti
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-    </aside>
+          icon={<Package className="h-4 w-4" />}
+          text="Servizi"
+          isActive={isActive("/services")}
+        />
+        
+        <SidebarLink
+          href="/products"
+          icon={<ShoppingBag className="h-4 w-4" />}
+          text="Prodotti"
+          isActive={isActive("/products")}
+        />
+        
+        <SidebarLink
+          href="/messages"
+          icon={<MessageSquare className="h-4 w-4" />}
+          text="Messaggi"
+          isActive={isActive("/messages")}
+        />
+        
+        <SidebarLink
+          href="/tasks"
+          icon={<BookMarked className="h-4 w-4" />}
+          text="Attività"
+          isActive={isActive("/tasks")}
+        />
+        
+        <SidebarLink
+          href="/reports"
+          icon={<BarChart2 className="h-4 w-4" />}
+          text="Reportistica"
+          isActive={isActive("/reports")}
+        />
+      </div>
+      
+      <div className="mt-auto p-4">
+        <SidebarLink
+          href="/settings"
+          icon={<Settings className="h-4 w-4" />}
+          text="Impostazioni"
+          isActive={isActive("/settings")}
+        />
+      </div>
+    </div>
   );
-};
-
-export default Sidebar;
+}

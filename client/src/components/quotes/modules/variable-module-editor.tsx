@@ -3,20 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
-import { v4 as uuidv4 } from "uuid";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -25,12 +16,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
   Card,
   CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -40,45 +50,29 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
+  ArrowLeft,
+  Check,
+  ChevronsUpDown,
+  Info,
+  List,
+  ListChecks,
   Loader2,
   Plus,
   Save,
+  Search,
+  Settings2,
+  ShieldAlert,
+  Square,
   Trash2,
   X,
-  ChevronDown,
-  Edit,
-  CheckCircle2,
-  HelpCircle,
-  Users2,
 } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 import { formatCurrency } from "@/lib/utils";
+import { refreshQuoteTotals } from "../utils/refresh-quote-totals";
 
-// Tipi base per il modulo
+// Tipi
 interface SelectionOption {
-  id?: string; // Uso string come ID univoco generato lato client
+  id: string;
   selectionId?: string;
   itemId: number;
   itemType: 'service' | 'product';
@@ -90,7 +84,7 @@ interface SelectionOption {
 }
 
 interface ModuleSelection {
-  id?: string; // Uso string come ID univoco generato lato client
+  id: string;
   moduleId?: number;
   name: string;
   description?: string;
@@ -119,26 +113,37 @@ interface QuoteModuleData {
   updatedAt?: string;
 }
 
-// Schema di validazione per il modulo variabile
-const variableModuleSchema = z.object({
-  name: z.string().min(1, "Il nome del modulo è obbligatorio"),
-  description: z.string().optional(),
-  type: z.literal("variable"),
-  minSelections: z.coerce.number().min(0).default(0),
-  maxSelections: z.coerce.number().min(0).default(0),
-  isRequired: z.boolean().default(false),
-});
+interface Service {
+  id: number;
+  name: string;
+  description?: string;
+  price: number;
+  category?: { name: string };
+}
 
+interface Product {
+  id: number;
+  name: string;
+  description?: string;
+  price: number;
+  stock?: number;
+  category?: { name: string };
+}
+
+// Props dell'editor
 interface VariableModuleEditorProps {
   quoteId: number;
   module: QuoteModuleData | null;
-  onSave: (module: QuoteModuleData) => void;
+  onSave: (moduleData: QuoteModuleData) => void;
   onCancel: () => void;
 }
 
 /**
- * Componente per la creazione e modifica di moduli variabili
- * Responsabilità: Gestire la configurazione di moduli con opzioni selezionabili dal cliente
+ * Componente per la creazione e modifica di un modulo variabile
+ * Responsabilità:
+ * - Gestire il form per la creazione/modifica di un modulo variabile
+ * - Permettere la definizione di gruppi di selezioni con opzioni multiple
+ * - Definire limiti e condizioni per le selezioni del cliente
  */
 export default function VariableModuleEditor({
   quoteId,
@@ -146,786 +151,1048 @@ export default function VariableModuleEditor({
   onSave,
   onCancel,
 }: VariableModuleEditorProps) {
-  // Stati per la gestione dell'editor
-  const [activeTab, setActiveTab] = useState("info");
-  const [selections, setSelections] = useState<ModuleSelection[]>(module?.selections || []);
-  const [editingSelection, setEditingSelection] = useState<ModuleSelection | null>(null);
-  const [editingSelectionIndex, setEditingSelectionIndex] = useState<number | null>(null);
-  const [isSelectionOpen, setIsSelectionOpen] = useState(false);
-  const [selectedItemType, setSelectedItemType] = useState<"service" | "product">("service");
-  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
-  const [selectionName, setSelectionName] = useState("");
-  const [selectionDescription, setSelectionDescription] = useState("");
-  const [selectionRequired, setSelectionRequired] = useState(false);
-  const [minOptions, setMinOptions] = useState(0);
-  const [maxOptions, setMaxOptions] = useState(0);
-  const [selectionOptions, setSelectionOptions] = useState<SelectionOption[]>([]);
+  // Stati
+  const [moduleSelections, setModuleSelections] = useState<ModuleSelection[]>([]);
+  const [editingSelectionId, setEditingSelectionId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   
-  // Recupero dati prodotti e servizi
-  const { data: services = [], isLoading: isServicesLoading } = useQuery<any[]>({
-    queryKey: ["/api/services"],
+  // Schema di validazione per il modulo
+  const formSchema = z.object({
+    name: z.string().min(1, "Il nome del modulo è obbligatorio"),
+    description: z.string().optional(),
+    minSelections: z.coerce.number().min(0).optional(),
+    maxSelections: z.coerce.number().min(0).optional(),
+    isRequired: z.boolean().default(false),
+    discount: z.coerce.number().min(0).optional(),
+    discountType: z.enum(["percentage", "amount"]).default("percentage"),
   });
   
-  const { data: products = [], isLoading: isProductsLoading } = useQuery<any[]>({
-    queryKey: ["/api/products"],
+  // Schema di validazione per la selezione
+  const selectionFormSchema = z.object({
+    name: z.string().min(1, "Il nome della selezione è obbligatorio"),
+    description: z.string().optional(),
+    minOptions: z.coerce.number().min(0).optional(),
+    maxOptions: z.coerce.number().min(0).optional(),
+    isRequired: z.boolean().default(false),
   });
   
-  // Setup del form
-  const form = useForm<z.infer<typeof variableModuleSchema>>({
-    resolver: zodResolver(variableModuleSchema),
+  // Inizializzo i form
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: module?.name || "",
       description: module?.description || "",
-      type: "variable" as const,
       minSelections: module?.minSelections || 0,
       maxSelections: module?.maxSelections || 0,
       isRequired: module?.isRequired || false,
+      discount: module?.discount || 0,
+      discountType: module?.discountType || "percentage",
     },
   });
   
-  // Inizializza le selezioni se in modalità modifica
+  const selectionForm = useForm<z.infer<typeof selectionFormSchema>>({
+    resolver: zodResolver(selectionFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      minOptions: 0,
+      maxOptions: 0,
+      isRequired: false,
+    },
+  });
+  
+  // Recupero prodotti e servizi
+  const { data: services = [] } = useQuery<Service[]>({
+    queryKey: ["/api/services"],
+  });
+  
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+  });
+  
+  // Filtri per ricerca
+  const filteredServices = services.filter(
+    (service) => service.name.toLowerCase().includes(search.toLowerCase())
+  );
+  
+  const filteredProducts = products.filter(
+    (product) => product.name.toLowerCase().includes(search.toLowerCase())
+  );
+  
+  // Inizializzo le selezioni quando si modifica un modulo esistente
   useEffect(() => {
-    if (module?.selections) {
-      setSelections(module.selections);
+    if (module && module.selections && module.selections.length > 0) {
+      // Assicurati che ogni selezione e opzione abbia un ID
+      const selectionsWithIds = module.selections.map(selection => ({
+        ...selection,
+        id: selection.id || uuidv4(),
+        options: selection.options.map(option => ({
+          ...option,
+          id: option.id || uuidv4(),
+        }))
+      }));
+      setModuleSelections(selectionsWithIds);
     }
   }, [module]);
   
-  // Reinizializza l'editor delle selezioni
-  const resetSelectionEditor = () => {
-    setEditingSelection(null);
-    setEditingSelectionIndex(null);
-    setSelectionName("");
-    setSelectionDescription("");
-    setSelectionRequired(false);
-    setMinOptions(0);
-    setMaxOptions(0);
-    setSelectionOptions([]);
+  // Gestisco l'aggiunta di una nuova selezione
+  const handleAddSelection = (values: z.infer<typeof selectionFormSchema>) => {
+    const newSelection: ModuleSelection = {
+      id: editingSelectionId || uuidv4(),
+      name: values.name,
+      description: values.description,
+      options: [],
+      minOptions: values.minOptions,
+      maxOptions: values.maxOptions,
+      isRequired: values.isRequired,
+    };
+    
+    if (editingSelectionId) {
+      // Modifica selezione esistente
+      const existingSelectionIndex = moduleSelections.findIndex(s => s.id === editingSelectionId);
+      
+      if (existingSelectionIndex !== -1) {
+        const updatedSelections = [...moduleSelections];
+        // Mantieni le opzioni esistenti
+        newSelection.options = moduleSelections[existingSelectionIndex].options;
+        updatedSelections[existingSelectionIndex] = newSelection;
+        setModuleSelections(updatedSelections);
+      }
+    } else {
+      // Aggiunta nuova selezione
+      setModuleSelections([...moduleSelections, newSelection]);
+    }
+    
+    // Reset form e stato di editing
+    selectionForm.reset({
+      name: "",
+      description: "",
+      minOptions: 0,
+      maxOptions: 0,
+      isRequired: false,
+    });
+    setEditingSelectionId(null);
   };
   
-  // Prepara l'editor per modificare una selezione esistente
-  const editSelection = (selection: ModuleSelection, index: number) => {
-    setEditingSelection(selection);
-    setEditingSelectionIndex(index);
-    setSelectionName(selection.name);
-    setSelectionDescription(selection.description || "");
-    setSelectionRequired(selection.isRequired || false);
-    setMinOptions(selection.minOptions || 0);
-    setMaxOptions(selection.maxOptions || 0);
-    setSelectionOptions(selection.options || []);
-    setIsSelectionOpen(true);
+  // Gestisco la modifica di una selezione esistente
+  const handleEditSelection = (selectionId: string) => {
+    const selection = moduleSelections.find(s => s.id === selectionId);
+    if (!selection) return;
+    
+    selectionForm.reset({
+      name: selection.name,
+      description: selection.description || "",
+      minOptions: selection.minOptions || 0,
+      maxOptions: selection.maxOptions || 0,
+      isRequired: selection.isRequired || false,
+    });
+    
+    setEditingSelectionId(selectionId);
   };
   
-  // Aggiungi una nuova opzione alla selezione corrente
-  const handleAddOption = () => {
-    if (!selectedItemId) return;
+  // Gestisco l'eliminazione di una selezione
+  const handleDeleteSelection = (selectionId: string) => {
+    if (window.confirm("Sei sicuro di voler eliminare questa selezione?")) {
+      setModuleSelections(moduleSelections.filter(s => s.id !== selectionId));
+      
+      if (editingSelectionId === selectionId) {
+        selectionForm.reset({
+          name: "",
+          description: "",
+          minOptions: 0,
+          maxOptions: 0,
+          isRequired: false,
+        });
+        setEditingSelectionId(null);
+      }
+    }
+  };
+  
+  // Aggiungi servizio come opzione a una selezione
+  const handleAddServiceOption = (service: Service, selectionId: string) => {
+    const selectionIndex = moduleSelections.findIndex(s => s.id === selectionId);
+    if (selectionIndex === -1) return;
     
-    const itemType = selectedItemType;
-    const itemsList = itemType === "service" ? services : products;
-    const selectedItem = itemsList.find((item: any) => item.id === selectedItemId);
-    
-    if (!selectedItem) return;
-    
-    // Verifica se l'opzione è già presente
-    const isDuplicate = selectionOptions.some(
-      (option) => option.itemId === selectedItemId && option.itemType === itemType
+    // Controlla se il servizio è già presente nella selezione
+    const existingOptionIndex = moduleSelections[selectionIndex].options.findIndex(
+      option => option.itemId === service.id && option.itemType === "service"
     );
     
-    if (isDuplicate) {
-      alert("Questo elemento è già presente in questa selezione");
+    if (existingOptionIndex !== -1) {
+      // Il servizio è già presente
+      setIsServiceDialogOpen(false);
       return;
     }
     
+    // Aggiungi il servizio come nuova opzione
     const newOption: SelectionOption = {
-      id: uuidv4(),  // genera ID univoco lato client
-      itemId: selectedItem.id,
-      itemType,
-      name: selectedItem.name,
-      description: selectedItem.description || "",
-      price: selectedItem.price,
-      isDefault: false,
+      id: uuidv4(),
+      selectionId,
+      itemId: service.id,
+      itemType: "service",
+      name: service.name,
+      description: service.description,
+      price: service.price,
       isSelected: false,
+      isDefault: false,
     };
     
-    setSelectionOptions([...selectionOptions, newOption]);
-    setSelectedItemId(null);
+    const updatedSelections = [...moduleSelections];
+    updatedSelections[selectionIndex].options.push(newOption);
+    setModuleSelections(updatedSelections);
+    
+    setIsServiceDialogOpen(false);
   };
   
-  // Rimuovi un'opzione dalla selezione corrente
-  const handleRemoveOption = (index: number) => {
-    const newOptions = [...selectionOptions];
-    newOptions.splice(index, 1);
-    setSelectionOptions(newOptions);
-  };
-  
-  // Salva la selezione corrente (nuova o modificata)
-  const handleSaveSelection = () => {
-    if (!selectionName || selectionOptions.length === 0) {
-      alert("Il nome della selezione e almeno un'opzione sono obbligatori");
+  // Aggiungi prodotto come opzione a una selezione
+  const handleAddProductOption = (product: Product, selectionId: string) => {
+    const selectionIndex = moduleSelections.findIndex(s => s.id === selectionId);
+    if (selectionIndex === -1) return;
+    
+    // Controlla se il prodotto è già presente nella selezione
+    const existingOptionIndex = moduleSelections[selectionIndex].options.findIndex(
+      option => option.itemId === product.id && option.itemType === "product"
+    );
+    
+    if (existingOptionIndex !== -1) {
+      // Il prodotto è già presente
+      setIsProductDialogOpen(false);
       return;
     }
     
-    // Validazione dei limiti di selezione
-    if (minOptions > selectionOptions.length) {
-      alert(`Il minimo di opzioni (${minOptions}) non può essere maggiore del numero totale di opzioni (${selectionOptions.length})`);
-      return;
-    }
-    
-    if (maxOptions > 0 && maxOptions < minOptions) {
-      alert("Il massimo di opzioni non può essere minore del minimo");
-      return;
-    }
-    
-    if (maxOptions > selectionOptions.length) {
-      alert(`Il massimo di opzioni (${maxOptions}) non può essere maggiore del numero totale di opzioni (${selectionOptions.length})`);
-      return;
-    }
-    
-    const selection: ModuleSelection = {
-      id: editingSelection?.id || uuidv4(),
-      name: selectionName,
-      description: selectionDescription,
-      options: selectionOptions,
-      minOptions,
-      maxOptions,
-      isRequired: selectionRequired,
+    // Aggiungi il prodotto come nuova opzione
+    const newOption: SelectionOption = {
+      id: uuidv4(),
+      selectionId,
+      itemId: product.id,
+      itemType: "product",
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      isSelected: false,
+      isDefault: false,
     };
     
-    let newSelections;
-    if (editingSelectionIndex !== null) {
-      // Modifica una selezione esistente
-      newSelections = [...selections];
-      newSelections[editingSelectionIndex] = selection;
+    const updatedSelections = [...moduleSelections];
+    updatedSelections[selectionIndex].options.push(newOption);
+    setModuleSelections(updatedSelections);
+    
+    setIsProductDialogOpen(false);
+  };
+  
+  // Rimuovi un'opzione da una selezione
+  const handleRemoveOption = (selectionId: string, optionId: string) => {
+    const selectionIndex = moduleSelections.findIndex(s => s.id === selectionId);
+    if (selectionIndex === -1) return;
+    
+    const updatedSelections = [...moduleSelections];
+    updatedSelections[selectionIndex].options = updatedSelections[selectionIndex].options.filter(
+      option => option.id !== optionId
+    );
+    setModuleSelections(updatedSelections);
+  };
+  
+  // Imposta un'opzione come predefinita
+  const handleSetDefaultOption = (selectionId: string, optionId: string, isDefault: boolean) => {
+    const selectionIndex = moduleSelections.findIndex(s => s.id === selectionId);
+    if (selectionIndex === -1) return;
+    
+    const updatedSelections = [...moduleSelections];
+    const optionIndex = updatedSelections[selectionIndex].options.findIndex(
+      option => option.id === optionId
+    );
+    
+    if (optionIndex !== -1) {
+      updatedSelections[selectionIndex].options[optionIndex].isDefault = isDefault;
+      setModuleSelections(updatedSelections);
+    }
+  };
+  
+  // Calcola il subtotale considerando le opzioni predefinite
+  const calculateSubtotal = (): number => {
+    let subtotal = 0;
+    
+    moduleSelections.forEach(selection => {
+      // Aggiungi il prezzo di tutte le opzioni predefinite
+      selection.options.forEach(option => {
+        if (option.isDefault) {
+          subtotal += option.price;
+        }
+      });
+    });
+    
+    return subtotal;
+  };
+  
+  // Calcola il totale del modulo considerando lo sconto
+  const calculateTotal = (): number => {
+    const subtotal = calculateSubtotal();
+    const discount = form.watch("discount") || 0;
+    const discountType = form.watch("discountType");
+    
+    if (discount <= 0) {
+      return subtotal;
+    }
+    
+    if (discountType === "percentage") {
+      return subtotal - (subtotal * discount) / 100;
     } else {
-      // Aggiunge una nuova selezione
-      newSelections = [...selections, selection];
-    }
-    
-    setSelections(newSelections);
-    setIsSelectionOpen(false);
-    resetSelectionEditor();
-  };
-  
-  // Rimuovi una selezione
-  const handleRemoveSelection = (index: number) => {
-    if (confirm("Sei sicuro di voler rimuovere questa selezione?")) {
-      const newSelections = [...selections];
-      newSelections.splice(index, 1);
-      setSelections(newSelections);
+      return Math.max(0, subtotal - discount);
     }
   };
   
-  // Gestione submit form
-  const onSubmit = (values: z.infer<typeof variableModuleSchema>) => {
-    if (selections.length === 0) {
+  // Gestione del salvataggio del modulo
+  const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    if (moduleSelections.length === 0) {
       alert("Aggiungi almeno una selezione al modulo");
       return;
     }
     
+    // Verifica che ogni selezione abbia almeno un'opzione
+    const emptySelections = moduleSelections.filter(selection => selection.options.length === 0);
+    if (emptySelections.length > 0) {
+      alert(`Aggiungi almeno un'opzione alla selezione "${emptySelections[0].name}"`);
+      return;
+    }
+    
+    // Calcola i totali
+    const subtotal = calculateSubtotal();
+    const total = calculateTotal();
+    
+    // Prepara il modulo da salvare
     const moduleData: QuoteModuleData = {
-      ...values,
-      quoteId,
-      selections,
       id: module?.id,
+      quoteId,
+      name: values.name,
+      description: values.description,
+      type: "variable",
+      subtotal,
+      discount: values.discount,
+      discountType: values.discountType,
+      total,
+      selections: moduleSelections,
+      minSelections: values.minSelections,
+      maxSelections: values.maxSelections,
+      isRequired: values.isRequired,
     };
     
+    // Richiama la funzione di salvataggio
     onSave(moduleData);
   };
-
+  
+  // Verifica se ci sono selezioni disponibili
+  const hasSelections = moduleSelections.length > 0;
+  
   return (
-    <div className="border rounded-md p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">
-          {module ? "Modifica" : "Crea"} Modulo Variabile
-        </h3>
-        <Button variant="ghost" size="icon" onClick={onCancel}>
-          <X className="h-4 w-4" />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-medium">
+          {module ? "Modifica Modulo Variabile" : "Nuovo Modulo Variabile"}
+        </h2>
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Torna alla lista
         </Button>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="info">Informazioni Base</TabsTrigger>
-          <TabsTrigger value="selections">Selezioni Cliente</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="info" className="py-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7 space-y-6">
           <Form {...form}>
-            <form className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome Modulo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="es. Selezione Album" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrizione</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Descrivi brevemente questo modulo..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="minSelections"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Minimo Selezioni
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          type="button"
-                          className="ml-1 h-5 w-5 p-0 inline-flex"
-                          asChild
-                        >
-                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                        </Button>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(
-                              e.target.value === "" ? 0 : parseInt(e.target.value)
-                            );
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        0 = nessun minimo richiesto
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="maxSelections"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Massimo Selezioni
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          type="button"
-                          className="ml-1 h-5 w-5 p-0 inline-flex"
-                          asChild
-                        >
-                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                        </Button>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(
-                              e.target.value === "" ? 0 : parseInt(e.target.value)
-                            );
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        0 = nessun limite massimo
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="isRequired"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel>Modulo Obbligatorio</FormLabel>
-                      <FormDescription>
-                        Il cliente deve compilare questo modulo
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+            <form onSubmit={form.handleSubmit(handleSubmit)} id="moduleForm">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Informazioni Modulo</CardTitle>
+                  <CardDescription>
+                    Informazioni generali e limitazioni del modulo variabile
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome Modulo</FormLabel>
+                        <FormControl>
+                          <Input placeholder="es. Personalizza il tuo album" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Descrizione (opzionale)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Descrivi brevemente il modulo..."
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <FormField
+                      control={form.control}
+                      name="minSelections"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Minimo Selezioni</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={0}
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Numero minimo di categorie selezionabili
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="maxSelections"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Massimo Selezioni</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={0}
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Numero massimo di categorie selezionabili (0 = illimitato)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="isRequired"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Modulo Obbligatorio</FormLabel>
+                          <FormDescription>
+                            Il cliente deve selezionare almeno un'opzione in questo modulo
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
             </form>
           </Form>
           
-          <div className="flex justify-end mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setActiveTab("selections")}
-              className="mr-2"
-            >
-              Continua
-            </Button>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="selections" className="py-4 space-y-6">
-          {/* Gestione selezioni */}
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Selezioni per il Cliente</CardTitle>
-                  <CardDescription>
-                    Crea gruppi di opzioni tra cui il cliente potrà scegliere
-                  </CardDescription>
-                </div>
-                <Sheet open={isSelectionOpen} onOpenChange={setIsSelectionOpen}>
-                  <SheetTrigger asChild>
-                    <Button onClick={() => resetSelectionEditor()}>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Aggiungi Selezione
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent className="sm:max-w-md md:max-w-lg overflow-y-auto">
-                    <SheetHeader>
-                      <SheetTitle>
-                        {editingSelection ? "Modifica Selezione" : "Nuova Selezione"}
-                      </SheetTitle>
-                      <SheetDescription>
-                        Crea un gruppo di opzioni tra cui il cliente potrà scegliere
-                      </SheetDescription>
-                    </SheetHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <FormLabel htmlFor="selectionName">Nome Selezione</FormLabel>
-                        <Input
-                          id="selectionName"
-                          placeholder="es. Scegli il tipo di album"
-                          value={selectionName}
-                          onChange={(e) => setSelectionName(e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <FormLabel htmlFor="selectionDescription">Descrizione</FormLabel>
-                        <Textarea
-                          id="selectionDescription"
-                          placeholder="Descrivi questa selezione al cliente..."
-                          value={selectionDescription}
-                          onChange={(e) => setSelectionDescription(e.target.value)}
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <FormLabel htmlFor="minOptions">Minimo Opzioni</FormLabel>
-                          <Input
-                            id="minOptions"
-                            type="number"
-                            min="0"
-                            value={minOptions}
-                            onChange={(e) => setMinOptions(parseInt(e.target.value) || 0)}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            0 = nessun minimo
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <FormLabel htmlFor="maxOptions">Massimo Opzioni</FormLabel>
-                          <Input
-                            id="maxOptions"
-                            type="number"
-                            min="0"
-                            value={maxOptions}
-                            onChange={(e) => setMaxOptions(parseInt(e.target.value) || 0)}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            0 = nessun limite
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="selectionRequired"
-                          checked={selectionRequired}
-                          onCheckedChange={setSelectionRequired}
-                        />
-                        <FormLabel htmlFor="selectionRequired">
-                          Selezione Obbligatoria
-                        </FormLabel>
-                      </div>
-                      
-                      <Separator />
-                      
-                      {/* Aggiunta opzioni */}
-                      <div className="space-y-4">
-                        <h4 className="font-medium text-sm">Aggiungi Opzioni</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <FormLabel>Tipo</FormLabel>
-                            <Select
-                              value={selectedItemType}
-                              onValueChange={(value: "service" | "product") => {
-                                setSelectedItemType(value);
-                                setSelectedItemId(null);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleziona tipo" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="service">Servizio</SelectItem>
-                                <SelectItem value="product">Prodotto</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <FormLabel>
-                              {selectedItemType === "service" ? "Servizio" : "Prodotto"}
-                            </FormLabel>
-                            <Select
-                              value={selectedItemId?.toString() || ""}
-                              onValueChange={(value) => setSelectedItemId(parseInt(value))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue
-                                  placeholder={`Seleziona ${selectedItemType === "service" ? "servizio" : "prodotto"}`}
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {selectedItemType === "service"
-                                  ? services.map((service: any) => (
-                                      <SelectItem
-                                        key={service.id}
-                                        value={service.id.toString()}
-                                      >
-                                        {service.name} - {formatCurrency(service.price)}
-                                      </SelectItem>
-                                    ))
-                                  : products.map((product: any) => (
-                                      <SelectItem
-                                        key={product.id}
-                                        value={product.id.toString()}
-                                      >
-                                        {product.name} - {formatCurrency(product.price)}
-                                      </SelectItem>
-                                    ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={handleAddOption}
-                          disabled={!selectedItemId}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Aggiungi Opzione
-                        </Button>
-                      </div>
-                      
-                      <Separator />
-                      
-                      {/* Lista opzioni */}
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-sm">Opzioni ({selectionOptions.length})</h4>
-                        {selectionOptions.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            Nessuna opzione aggiunta. Aggiungi almeno un'opzione.
-                          </p>
-                        ) : (
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Nome</TableHead>
-                                <TableHead>Tipo</TableHead>
-                                <TableHead className="text-right">Prezzo</TableHead>
-                                <TableHead></TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {selectionOptions.map((option, index) => (
-                                <TableRow key={option.id}>
-                                  <TableCell className="font-medium">
-                                    {option.name}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline">
-                                      {option.itemType === "service"
-                                        ? "Servizio"
-                                        : "Prodotto"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    {formatCurrency(option.price)}
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleRemoveOption(index)}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        )}
-                      </div>
-                    </div>
-                    <SheetFooter>
-                      <Button
-                        type="button"
-                        variant="default"
-                        onClick={handleSaveSelection}
-                        disabled={
-                          !selectionName || selectionOptions.length === 0
-                        }
-                      >
-                        <Save className="h-4 w-4 mr-1" />
-                        Salva Selezione
-                      </Button>
-                    </SheetFooter>
-                  </SheetContent>
-                </Sheet>
-              </div>
+              <CardTitle className="text-lg flex items-center">
+                <ListChecks className="h-5 w-5 mr-2 text-primary/70" />
+                Selezioni del Modulo
+              </CardTitle>
+              <CardDescription>
+                Definisci le categorie di scelta che il cliente potrà personalizzare
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {selections.length === 0 ? (
-                <div className="text-center py-8 border border-dashed rounded-lg">
-                  <Users2 className="h-10 w-10 text-muted-foreground/60 mx-auto mb-3" />
-                  <p className="text-muted-foreground mb-2">
-                    Nessuna selezione creata.
+              <Form {...selectionForm}>
+                <form
+                  onSubmit={selectionForm.handleSubmit(handleAddSelection)}
+                  className="border rounded-md p-4 mb-6"
+                >
+                  <h3 className="text-base font-medium mb-4">
+                    {editingSelectionId ? "Modifica Selezione" : "Aggiungi Nuova Selezione"}
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <FormField
+                      control={selectionForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome Selezione</FormLabel>
+                          <FormControl>
+                            <Input placeholder="es. Tipo di Copertina" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={selectionForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descrizione (opzionale)</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Descrivi questa categoria di scelta..."
+                              rows={2}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={selectionForm.control}
+                        name="minOptions"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Minimo Opzioni</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={0}
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              Quante opzioni deve selezionare il cliente
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={selectionForm.control}
+                        name="maxOptions"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Massimo Opzioni</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={0}
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              0 = illimitato
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={selectionForm.control}
+                      name="isRequired"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
+                          <FormControl>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                id="selection-required"
+                              />
+                              <label
+                                htmlFor="selection-required"
+                                className="text-sm font-medium leading-none cursor-pointer"
+                              >
+                                Selezione Obbligatoria
+                              </label>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-end space-x-2 mt-4">
+                    {editingSelectionId && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          selectionForm.reset({
+                            name: "",
+                            description: "",
+                            minOptions: 0,
+                            maxOptions: 0,
+                            isRequired: false,
+                          });
+                          setEditingSelectionId(null);
+                        }}
+                      >
+                        Annulla Modifica
+                      </Button>
+                    )}
+                    <Button type="submit">
+                      {editingSelectionId ? "Aggiorna Selezione" : "Aggiungi Selezione"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+              
+              {/* Elenco delle selezioni */}
+              {moduleSelections.length === 0 ? (
+                <div className="text-center py-8 border border-dashed rounded-md">
+                  <ListChecks className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                  <h3 className="text-base font-medium mb-1">Nessuna selezione</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Aggiungi selezioni con le opzioni che il cliente potrà scegliere
                   </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Crea almeno una selezione per il cliente.
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      resetSelectionEditor();
-                      setIsSelectionOpen(true);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Aggiungi La Prima Selezione
-                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {selections.map((selection, index) => (
-                    <Card key={selection.id} className="overflow-hidden">
-                      <Collapsible className="w-full">
-                        <div className="flex items-center justify-between p-4">
-                          <div className="flex-1">
-                            <div className="flex items-start">
-                              <div>
-                                <h4 className="text-sm font-medium">{selection.name}</h4>
-                                {selection.description && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    {selection.description}
-                                  </p>
-                                )}
-                              </div>
-                              <Badge
-                                variant={selection.isRequired ? "default" : "outline"}
-                                className="ml-2"
-                              >
-                                {selection.isRequired ? "Obbligatorio" : "Opzionale"}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                              <div>
-                                Opzioni: {selection.options.length}
-                              </div>
-                              {selection.minOptions !== undefined && selection.minOptions > 0 && (
-                                <div>
-                                  Min: {selection.minOptions}
-                                </div>
+                  {moduleSelections.map((selection) => (
+                    <Card key={selection.id} className="mb-4">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <CardTitle className="text-base flex items-center">
+                              {selection.name}
+                              {selection.isRequired && (
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  Obbligatoria
+                                </Badge>
                               )}
-                              {selection.maxOptions !== undefined && selection.maxOptions > 0 && (
-                                <div>
-                                  Max: {selection.maxOptions}
-                                </div>
-                              )}
+                            </CardTitle>
+                            {selection.description && (
+                              <CardDescription>{selection.description}</CardDescription>
+                            )}
+                            <div className="flex items-center mt-1 text-xs text-muted-foreground">
+                              <span>
+                                {selection.minOptions !== undefined && selection.minOptions > 0
+                                  ? `Min: ${selection.minOptions}`
+                                  : "Min: nessuno"}
+                              </span>
+                              <span className="mx-2">|</span>
+                              <span>
+                                {selection.maxOptions !== undefined && selection.maxOptions > 0
+                                  ? `Max: ${selection.maxOptions}`
+                                  : "Max: illimitato"}
+                              </span>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
+                          
+                          <div className="flex space-x-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => editSelection(selection, index)}
+                              onClick={() => handleEditSelection(selection.id)}
                             >
-                              <Edit className="h-4 w-4" />
+                              <Settings2 className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleRemoveSelection(index)}
+                              onClick={() => handleDeleteSelection(selection.id)}
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                            <CollapsibleTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <ChevronDown className="h-4 w-4" />
-                              </Button>
-                            </CollapsibleTrigger>
                           </div>
                         </div>
-                        <CollapsibleContent>
-                          <Separator />
-                          <div className="p-4">
-                            <h5 className="text-xs font-medium mb-2">Opzioni:</h5>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Nome</TableHead>
-                                  <TableHead>Tipo</TableHead>
-                                  <TableHead className="text-right">Prezzo</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {selection.options.map((option) => (
-                                  <TableRow key={option.id}>
-                                    <TableCell className="font-medium">
-                                      {option.name}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="outline" className="text-xs">
-                                        {option.itemType === "service"
-                                          ? "Servizio"
-                                          : "Prodotto"}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      {formatCurrency(option.price)}
-                                    </TableCell>
+                      </CardHeader>
+                      
+                      <CardContent>
+                        <div className="space-y-3">
+                          {/* Opzioni della selezione */}
+                          {selection.options.length > 0 ? (
+                            <div className="border rounded-md overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-[50px]">Default</TableHead>
+                                    <TableHead>Opzione</TableHead>
+                                    <TableHead className="text-right">Prezzo</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
                                   </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
+                                </TableHeader>
+                                <TableBody>
+                                  {selection.options.map((option) => (
+                                    <TableRow key={option.id}>
+                                      <TableCell>
+                                        <div className="flex items-center justify-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-sm border flex items-center justify-center cursor-pointer ${
+                                              option.isDefault 
+                                                ? "bg-primary border-primary text-primary-foreground" 
+                                                : "border-input"
+                                            }`}
+                                            onClick={() => 
+                                              handleSetDefaultOption(selection.id, option.id, !option.isDefault)
+                                            }
+                                          >
+                                            {option.isDefault && <Check className="h-3 w-3" />}
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center">
+                                          <Badge
+                                            variant="outline"
+                                            className="mr-2 h-6 w-6 rounded-full p-0 flex items-center justify-center"
+                                          >
+                                            {option.itemType === "service" ? "S" : "P"}
+                                          </Badge>
+                                          <div>
+                                            <div className="font-medium">{option.name}</div>
+                                            {option.description && (
+                                              <div className="text-xs text-muted-foreground">
+                                                {option.description}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        {formatCurrency(option.price)}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => handleRemoveOption(selection.id, option.id)}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center p-4 text-sm text-muted-foreground border border-dashed rounded-md">
+                              Nessuna opzione aggiunta a questa selezione
+                            </div>
+                          )}
+                          
+                          {/* Pulsanti per aggiungere opzioni */}
+                          <div className="flex justify-end space-x-2 pt-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Servizio
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Aggiungi Servizio</DialogTitle>
+                                  <DialogDescription>
+                                    Cerca e seleziona un servizio da aggiungere come opzione
+                                  </DialogDescription>
+                                </DialogHeader>
+                                
+                                <div className="py-4">
+                                  <div className="relative mb-4">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Cerca servizio..."
+                                      className="pl-8"
+                                      value={search}
+                                      onChange={(e) => setSearch(e.target.value)}
+                                    />
+                                  </div>
+                                  
+                                  <div className="max-h-[300px] overflow-y-auto">
+                                    {filteredServices.length === 0 ? (
+                                      <div className="text-center py-4 text-muted-foreground">
+                                        Nessun servizio trovato
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        {filteredServices.map((service) => (
+                                          <div
+                                            key={service.id}
+                                            className="flex items-center justify-between p-2 hover:bg-muted rounded-md cursor-pointer"
+                                            onClick={() => handleAddServiceOption(service, selection.id)}
+                                          >
+                                            <div>
+                                              <div className="font-medium">{service.name}</div>
+                                              {service.category && (
+                                                <div className="text-xs text-muted-foreground">
+                                                  {service.category.name}
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div className="font-medium">
+                                              {formatCurrency(service.price)}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setSearch("")}>
+                                    Annulla
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                            
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Prodotto
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Aggiungi Prodotto</DialogTitle>
+                                  <DialogDescription>
+                                    Cerca e seleziona un prodotto da aggiungere come opzione
+                                  </DialogDescription>
+                                </DialogHeader>
+                                
+                                <div className="py-4">
+                                  <div className="relative mb-4">
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Cerca prodotto..."
+                                      className="pl-8"
+                                      value={search}
+                                      onChange={(e) => setSearch(e.target.value)}
+                                    />
+                                  </div>
+                                  
+                                  <div className="max-h-[300px] overflow-y-auto">
+                                    {filteredProducts.length === 0 ? (
+                                      <div className="text-center py-4 text-muted-foreground">
+                                        Nessun prodotto trovato
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        {filteredProducts.map((product) => (
+                                          <div
+                                            key={product.id}
+                                            className="flex items-center justify-between p-2 hover:bg-muted rounded-md cursor-pointer"
+                                            onClick={() => handleAddProductOption(product, selection.id)}
+                                          >
+                                            <div>
+                                              <div className="font-medium">{product.name}</div>
+                                              {product.category && (
+                                                <div className="text-xs text-muted-foreground">
+                                                  {product.category.name}
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div className="font-medium">
+                                              {formatCurrency(product.price)}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setSearch("")}>
+                                    Annulla
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
                           </div>
-                        </CollapsibleContent>
-                      </Collapsible>
+                        </div>
+                      </CardContent>
                     </Card>
                   ))}
                 </div>
               )}
             </CardContent>
           </Card>
-          
-          {/* Istruzioni per il cliente */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Anteprima per il Cliente</CardTitle>
-              <CardDescription>
-                Ecco come apparirà questo modulo al cliente
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 border rounded-md bg-muted/30">
-                  <h4 className="font-medium mb-2">Istruzioni per il Cliente:</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {form.watch("name") ? form.watch("name") : "Questo modulo"} ti permette di personalizzare la tua scelta.
-                    {form.watch("description") && (
-                      <span className="block mt-2">{form.watch("description")}</span>
-                    )}
-                  </p>
+        </div>
+        
+        <div className="lg:col-span-5">
+          <div className="space-y-6">
+            <Form {...form}>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Riepilogo Modulo</CardTitle>
+                  <CardDescription>
+                    Anteprima costi e sconto del modulo variabile
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-muted-foreground">Subtotale (opzioni default):</span>
+                    <span className="font-medium">
+                      {formatCurrency(calculateSubtotal())}
+                    </span>
+                  </div>
                   
-                  {form.watch("minSelections") > 0 || form.watch("maxSelections") > 0 ? (
-                    <div className="mt-2 p-2 bg-background rounded border text-sm">
-                      <span className="font-medium">Nota:</span>
-                      {form.watch("minSelections") > 0 && (
-                        <span>
-                          {" "}
-                          Devi completare almeno {form.watch("minSelections")}{" "}
-                          {form.watch("minSelections") === 1
-                            ? "selezione"
-                            : "selezioni"}.
-                        </span>
+                  <div className="p-4 border rounded-md space-y-3">
+                    <FormField
+                      control={form.control}
+                      name="discount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex justify-between items-center">
+                            <FormLabel>Sconto sul modulo:</FormLabel>
+                            <div className="flex items-center space-x-2">
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  className="w-20 text-right"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              
+                              <FormField
+                                control={form.control}
+                                name="discountType"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <Select
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger className="w-16">
+                                          <SelectValue placeholder="%" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="percentage">%</SelectItem>
+                                        <SelectItem value="amount">€</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                      {form.watch("maxSelections") > 0 && (
+                    />
+                    
+                    {form.watch("discount") > 0 && (
+                      <div className="text-xs text-muted-foreground flex items-center">
+                        <Info className="h-3 w-3 mr-1" />
                         <span>
-                          {" "}
-                          Puoi completare massimo {form.watch("maxSelections")}{" "}
-                          {form.watch("maxSelections") === 1
-                            ? "selezione"
-                            : "selezioni"}.
+                          {form.watch("discountType") === "percentage"
+                            ? `Sconto del ${form.watch("discount")}% equivale a ${formatCurrency(
+                                (calculateSubtotal() * form.watch("discount")) / 100
+                              )}`
+                            : `Sconto di ${formatCurrency(form.watch("discount"))}`}
                         </span>
-                      )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="h-[1px] bg-border my-2"></div>
+                  
+                  <div className="flex justify-between items-center py-2">
+                    <span className="font-medium">Totale di base:</span>
+                    <span className="text-xl font-semibold">
+                      {formatCurrency(calculateTotal())}
+                    </span>
+                  </div>
+                  
+                  <div className="bg-amber-50 p-3 rounded-md text-amber-800 text-sm">
+                    <div className="flex items-start">
+                      <ShieldAlert className="h-4 w-4 mt-0.5 mr-2 flex-shrink-0" />
+                      <div>
+                        Il prezzo finale dipenderà dalle scelte del cliente tra le opzioni disponibili.
+                        Il totale qui visualizzato considera solo le opzioni impostate come predefinite.
+                      </div>
                     </div>
-                  ) : null}
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <div className="w-full flex justify-between space-x-2">
+                    <Button type="button" variant="outline" onClick={onCancel}>
+                      Annulla
+                    </Button>
+                    <Button
+                      type="submit"
+                      form="moduleForm"
+                      disabled={moduleSelections.length === 0}
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      {module ? "Aggiorna Modulo" : "Salva Modulo"}
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            </Form>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Guida ai Moduli Variabili</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium">Cos'è una selezione?</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Una selezione è una categoria di scelta (es. "Tipo copertina")
+                    con varie opzioni tra cui il cliente può scegliere.
+                  </p>
                 </div>
                 
-                {selections.length > 0 && (
-                  <div className="border-l-4 border-primary/20 pl-4 py-2">
-                    <span className="text-sm text-primary font-medium">
-                      {selections.length} {selections.length === 1 ? "selezione" : "selezioni"} disponibili
-                    </span>
-                    <ul className="mt-2 space-y-2 text-sm">
-                      {selections.map((selection) => (
-                        <li key={selection.id} className="flex items-center text-muted-foreground">
-                          <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-primary/60" />
-                          {selection.name}
-                          {selection.isRequired && (
-                            <Badge variant="default" className="ml-2 text-[10px] px-1 py-0">
-                              Richiesto
-                            </Badge>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Pulsanti di azione */}
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setActiveTab("info")}>
-              Indietro
-            </Button>
-            <div className="space-x-2">
-              <Button variant="outline" onClick={onCancel}>
-                Annulla
-              </Button>
-              <Button onClick={form.handleSubmit(onSubmit)} disabled={selections.length === 0}>
-                <Save className="h-4 w-4 mr-1" />
-                Salva Modulo
-              </Button>
-            </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium">Opzioni predefinite</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Le opzioni marcate come "default" saranno preselezionate
+                    e considerate nel prezzo base del preventivo.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="font-medium">Requisiti e limiti</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Puoi impostare requisiti minimi e massimi sia per il numero
+                    di selezioni che per le opzioni all'interno di ciascuna selezione.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

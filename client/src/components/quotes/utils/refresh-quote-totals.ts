@@ -1,141 +1,244 @@
 /**
- * Utility per il calcolo dei totali di un preventivo e dei suoi moduli
- * Centralizza la logica di calcolo per garantire consistenza
+ * Utility per il calcolo dei totali dei moduli e dei preventivi
  */
 
-// Tipi semplificati per le funzioni di calcolo
+// Tipi
 interface ModuleItem {
+  id?: number;
+  moduleId?: number;
+  itemId: number;
+  itemType: 'service' | 'product';
+  name: string;
+  description?: string;
   price: number;
   quantity: number;
+  discount?: number;
+  discountType?: 'percentage' | 'amount';
+  total?: number;
+  note?: string;
 }
 
 interface SelectionOption {
+  id?: string;
+  selectionId?: string;
+  itemId: number;
+  itemType: 'service' | 'product';
+  name: string;
+  description?: string;
   price: number;
   isSelected?: boolean;
+  isDefault?: boolean;
 }
 
 interface ModuleSelection {
-  options: SelectionOption[];
+  id?: string;
+  moduleId?: number;
+  name: string;
+  description?: string;
+  options: Array<SelectionOption>;
+  minOptions?: number;
+  maxOptions?: number;
+  isRequired?: boolean;
 }
 
-interface QuoteModule {
+interface QuoteModuleData {
+  id?: number;
+  quoteId: number;
+  name: string;
+  description?: string;
   type: 'fixed' | 'variable';
-  items?: ModuleItem[];
-  selections?: ModuleSelection[];
+  position?: number;
   subtotal?: number;
   discount?: number;
   discountType?: 'percentage' | 'amount';
   total?: number;
+  items?: Array<ModuleItem>;
+  selections?: Array<ModuleSelection>;
+  minSelections?: number;
+  maxSelections?: number;
+  isRequired?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Quote {
-  modules?: QuoteModule[];
+  id: number;
+  title: string;
+  clientId: number;
+  secondClientId?: number;
+  status: string;
+  eventDate?: string | Date;
+  eventType?: string;
+  location?: string;
+  isFullDay?: boolean;
+  eventTime?: string;
+  eventEndTime?: string;
+  ceremonyLocation?: string;
+  ceremonyTime?: string;
+  notes?: string;
   subtotal?: number;
   discount?: number;
   discountType?: 'percentage' | 'amount';
   total?: number;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  modules?: QuoteModuleData[];
 }
 
 /**
- * Calcola il subtotale di un modulo fisso
- * @param items - Array di elementi nel modulo
- * @returns Subtotale del modulo
+ * Calcola il totale di un item considerando quantità e sconto
+ * @param item - Item di cui calcolare il totale
+ * @returns Totale dell'item
  */
-export function calculateFixedModuleSubtotal(items: ModuleItem[] = []): number {
-  return items.reduce((sum, item) => {
-    return sum + (item.price * (item.quantity || 1));
-  }, 0);
-}
-
-/**
- * Calcola il totale di un modulo fisso dopo l'applicazione di eventuali sconti
- * @param subtotal - Subtotale del modulo
- * @param discount - Valore dello sconto
- * @param discountType - Tipo di sconto (percentuale o importo)
- * @returns Totale del modulo scontato
- */
-export function calculateModuleTotal(
-  subtotal: number,
-  discount?: number,
-  discountType?: 'percentage' | 'amount'
-): number {
-  if (!discount || discount <= 0) return subtotal;
+export function calculateItemTotal(item: ModuleItem): number {
+  const baseTotal = item.price * item.quantity;
   
-  let total = subtotal;
-  
-  if (discountType === 'percentage') {
-    const discountAmount = (subtotal * discount) / 100;
-    total = subtotal - discountAmount;
-  } else if (discountType === 'amount') {
-    total = subtotal - discount;
+  if (!item.discount || item.discount <= 0) {
+    return baseTotal;
   }
   
-  return Math.max(0, total); // Evita totali negativi
+  if (item.discountType === "percentage") {
+    return baseTotal - (baseTotal * item.discount) / 100;
+  } else {
+    return Math.max(0, baseTotal - item.discount);
+  }
 }
 
 /**
- * Calcola il subtotale di un modulo variabile
- * Nota: per i moduli variabili, il subtotale comprende solo opzioni selezionate
- * @param selections - Array di selezioni nel modulo
+ * Calcola il subtotale di un modulo fisso (somma dei totali degli items)
+ * @param module - Modulo da calcolare
  * @returns Subtotale del modulo
  */
-export function calculateVariableModuleSubtotal(selections: ModuleSelection[] = []): number {
-  return selections.reduce((sum, selection) => {
-    // Considera solo le opzioni selezionate
-    const selectedOptionsTotal = selection.options
-      .filter(option => option.isSelected)
-      .reduce((optionSum, option) => optionSum + option.price, 0);
-    
-    return sum + selectedOptionsTotal;
+export function calculateFixedModuleSubtotal(module: QuoteModuleData): number {
+  if (!module.items || module.items.length === 0) {
+    return 0;
+  }
+  
+  return module.items.reduce((total, item) => {
+    return total + (item.total || calculateItemTotal(item));
   }, 0);
 }
 
 /**
- * Calcola il totale di un preventivo basato sui suoi moduli
+ * Calcola il subtotale di un modulo variabile (somma delle opzioni predefinite)
+ * @param module - Modulo da calcolare
+ * @returns Subtotale del modulo
+ */
+export function calculateVariableModuleSubtotal(module: QuoteModuleData): number {
+  if (!module.selections || module.selections.length === 0) {
+    return 0;
+  }
+  
+  let subtotal = 0;
+  
+  module.selections.forEach(selection => {
+    selection.options.forEach(option => {
+      if (option.isDefault || option.isSelected) {
+        subtotal += option.price;
+      }
+    });
+  });
+  
+  return subtotal;
+}
+
+/**
+ * Calcola il totale di un modulo considerando lo sconto applicato
+ * @param module - Modulo da calcolare
+ * @returns Totale del modulo dopo lo sconto
+ */
+export function calculateModuleTotal(module: QuoteModuleData): number {
+  const subtotal = module.type === "fixed" 
+    ? calculateFixedModuleSubtotal(module)
+    : calculateVariableModuleSubtotal(module);
+  
+  if (!module.discount || module.discount <= 0) {
+    return subtotal;
+  }
+  
+  if (module.discountType === "percentage") {
+    return subtotal - (subtotal * module.discount) / 100;
+  } else {
+    return Math.max(0, subtotal - module.discount);
+  }
+}
+
+/**
+ * Calcola il subtotale di un preventivo (somma dei totali dei moduli)
  * @param quote - Preventivo da calcolare
+ * @returns Subtotale del preventivo
+ */
+export function calculateQuoteSubtotal(quote: Quote): number {
+  if (!quote.modules || quote.modules.length === 0) {
+    return 0;
+  }
+  
+  return quote.modules.reduce((total, module) => {
+    // Usa il total preesistente o ricalcola
+    return total + (module.total !== undefined ? module.total : calculateModuleTotal(module));
+  }, 0);
+}
+
+/**
+ * Calcola il totale di un preventivo considerando lo sconto applicato
+ * @param quote - Preventivo da calcolare
+ * @returns Totale del preventivo dopo lo sconto
+ */
+export function calculateQuoteTotal(quote: Quote): number {
+  const subtotal = calculateQuoteSubtotal(quote);
+  
+  if (!quote.discount || quote.discount <= 0) {
+    return subtotal;
+  }
+  
+  if (quote.discountType === "percentage") {
+    return subtotal - (subtotal * quote.discount) / 100;
+  } else {
+    return Math.max(0, subtotal - quote.discount);
+  }
+}
+
+/**
+ * Aggiorna tutti i totali di un preventivo e dei suoi moduli
+ * @param quote - Preventivo da aggiornare
  * @returns Preventivo con totali aggiornati
  */
 export function refreshQuoteTotals(quote: Quote): Quote {
-  const modules = (quote.modules || []).map(module => {
-    let moduleSubtotal = 0;
-    
-    // Calcola subtotale in base al tipo di modulo
-    if (module.type === 'fixed' && module.items) {
-      moduleSubtotal = calculateFixedModuleSubtotal(module.items);
-    } else if (module.type === 'variable' && module.selections) {
-      moduleSubtotal = calculateVariableModuleSubtotal(module.selections);
+  if (!quote.modules || quote.modules.length === 0) {
+    quote.subtotal = 0;
+    quote.total = 0;
+    return quote;
+  }
+  
+  // Aggiorna i totali di ogni modulo
+  const updatedModules = quote.modules.map(module => {
+    if (module.type === "fixed" && module.items) {
+      // Aggiorna i totali di ogni item
+      module.items = module.items.map(item => ({
+        ...item,
+        total: calculateItemTotal(item),
+      }));
+      
+      module.subtotal = calculateFixedModuleSubtotal(module);
+    } else if (module.type === "variable" && module.selections) {
+      module.subtotal = calculateVariableModuleSubtotal(module);
     }
     
-    // Calcola il totale del modulo applicando eventuali sconti
-    const moduleTotal = calculateModuleTotal(
-      moduleSubtotal,
-      module.discount,
-      module.discountType
-    );
-    
-    // Aggiorna e restituisci il modulo con i totali calcolati
-    return {
-      ...module,
-      subtotal: moduleSubtotal,
-      total: moduleTotal
-    };
+    module.total = calculateModuleTotal(module);
+    return module;
   });
   
-  // Calcola il subtotale del preventivo sommando i totali dei moduli
-  const quoteSubtotal = modules.reduce((sum, module) => sum + (module.total || 0), 0);
-  
-  // Applica lo sconto al preventivo
-  const quoteTotal = calculateModuleTotal(
-    quoteSubtotal,
-    quote.discount,
-    quote.discountType
-  );
-  
-  // Restituisce il preventivo aggiornato
-  return {
+  // Aggiorna il preventivo con i moduli aggiornati
+  const updatedQuote = {
     ...quote,
-    modules,
-    subtotal: quoteSubtotal,
-    total: quoteTotal
+    modules: updatedModules,
+    subtotal: 0,
+    total: 0,
   };
+  
+  // Calcola i totali del preventivo
+  updatedQuote.subtotal = calculateQuoteSubtotal(updatedQuote);
+  updatedQuote.total = calculateQuoteTotal(updatedQuote);
+  
+  return updatedQuote;
 }

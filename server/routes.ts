@@ -1826,8 +1826,18 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(400).json({ message: "ID preventivo non valido" });
       }
 
+      // Ottieni tutti i moduli del preventivo
       const modules = await storage.getModulesByQuote(quoteId);
-      res.json(modules);
+      
+      // Per ogni modulo, recupera anche i suoi elementi
+      const modulesWithItems = await Promise.all(
+        modules.map(async (module) => {
+          const items = await storage.getQuoteModuleItemsByModule(module.id);
+          return { ...module, items };
+        })
+      );
+      
+      res.json(modulesWithItems);
     } catch (err) {
       console.error("Error fetching quote modules:", err);
       res.status(500).json({ message: "Errore nel recupero dei moduli" });

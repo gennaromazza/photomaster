@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -36,14 +35,14 @@ export default function MobileSidebar({
   onClose,
 }: MobileSidebarProps) {
   const [location] = useLocation();
-  
+
   const isActive = (path: string) => {
     if (path === "/") {
       return location === path;
     }
     return location.startsWith(path);
   };
-  
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="left" className="w-64 p-0">
@@ -58,7 +57,7 @@ export default function MobileSidebar({
             </Button>
           </SheetTitle>
         </SheetHeader>
-        
+
         <div className="py-4 px-2">
           <nav className="flex flex-col gap-1">
             <NavItem
@@ -68,7 +67,7 @@ export default function MobileSidebar({
               isActive={isActive("/")}
               onClick={onClose}
             />
-            
+
             <NavItem
               href="/calendar"
               icon={<Calendar className="h-4 w-4" />}
@@ -84,7 +83,7 @@ export default function MobileSidebar({
               isActive={isActive("/quotes")}
               onClick={onClose}
             />
-            
+
             <NavItem
               href="/contracts"
               icon={<FileSignature className="h-4 w-4" />}
@@ -92,7 +91,7 @@ export default function MobileSidebar({
               isActive={isActive("/contracts")}
               onClick={onClose}
             />
-            
+
             <NavItem
               href="/clients"
               icon={<Users className="h-4 w-4" />}
@@ -110,29 +109,13 @@ export default function MobileSidebar({
             />
 
             <NavItem
-              href="/collaborators"
-              icon={<Users className="h-4 w-4" />}
-              label="Collaboratori" 
-              isActive={isActive("/collaborators")}
-              onClick={onClose}
-            />
-
-            <NavItem
-              href="/events"
-              icon={<Calendar className="h-4 w-4" />}
-              label="Eventi"
-              isActive={isActive("/events")}
-              onClick={onClose}
-            />
-            
-            <NavItem
               href="/tasks"
               icon={<BookMarked className="h-4 w-4" />}
               label="Attività"
               isActive={isActive("/tasks")}
               onClick={onClose}
             />
-            
+
             <NavItem
               href="/reports"
               icon={<BarChart2 className="h-4 w-4" />}
@@ -142,7 +125,7 @@ export default function MobileSidebar({
             />
           </nav>
         </div>
-        
+
         <SheetFooter className="px-4 py-4 mt-auto border-t">
           <NavItem
             href="/settings"

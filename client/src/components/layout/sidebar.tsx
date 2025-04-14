@@ -104,20 +104,6 @@ export default function Sidebar() {
         />
         
         <SidebarLink
-          href="/collaborators"
-          icon={<Users className="h-4 w-4" />}
-          text="Collaboratori"
-          isActive={isActive("/collaborators")}
-        />
-
-        <SidebarLink
-          href="/events"
-          icon={<Calendar className="h-4 w-4" />}
-          text="Eventi"
-          isActive={isActive("/events")}
-        />
-        
-        <SidebarLink
           href="/messages"
           icon={<MessageSquare className="h-4 w-4" />}
           text="Messaggi"

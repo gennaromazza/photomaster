@@ -37,16 +37,6 @@ export default function ModuleSelector({
   onSelectModuleType,
 }: ModuleSelectorProps) {
 
-  const { data: services = [], isLoading: isLoadingServices } = useQuery<Service[]>({
-    queryKey: ["/api/services"],
-    staleTime: 30000, // Cache per 30 secondi
-  });
-
-  const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
-    queryKey: ["/api/products"],
-    staleTime: 30000,
-  });
-
   const { data: services = [], isLoading: isLoadingServices, error: servicesError } = useQuery<Service[]>({
     queryKey: ["/api/services"],
     staleTime: 30000,

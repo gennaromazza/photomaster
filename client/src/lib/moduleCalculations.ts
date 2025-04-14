@@ -1,10 +1,9 @@
-
 import { QuoteModuleItemData } from "@/components/quotes/module-selector";
 
 export function calculateItemTotals(item: QuoteModuleItemData): QuoteModuleItemData {
   const qty = Math.max(1, item.quantity || 1); // Garantisci quantità minima 1
   const unitPrice = Math.max(0, item.unitPrice || 0); // Garantisci prezzo non negativo
-  
+
   if (!item.hasDiscount) {
     const total = qty * unitPrice;
     return { 
@@ -16,10 +15,11 @@ export function calculateItemTotals(item: QuoteModuleItemData): QuoteModuleItemD
   } else {
     const discountType = item.discountType || 'percentage';
     const discountValue = item.discountValue || 0;
-    
+
     if (discountType === 'percentage') {
-      const discountedPrice = unitPrice * (1 - discountValue / 100);
-      const total = qty * discountedPrice;
+      if (discountValue > 100) discountValue = 100; // Cap max discount
+      const discountedPrice = roundToTwoDecimals(unitPrice * (1 - discountValue / 100));
+      const total = roundToTwoDecimals(qty * discountedPrice);
       return { 
         ...item, 
         discountedPrice,
@@ -27,8 +27,10 @@ export function calculateItemTotals(item: QuoteModuleItemData): QuoteModuleItemD
         finalUnitPrice: discountedPrice
       };
     } else { // fixed
-      const discountedPrice = Math.max(0, unitPrice - discountValue);
-      const total = qty * discountedPrice;
+      const maxDiscount = unitPrice; // Non può scontare più del prezzo
+      const actualDiscount = Math.min(discountValue, maxDiscount);
+      const discountedPrice = roundToTwoDecimals(Math.max(0, unitPrice - actualDiscount));
+      const total = roundToTwoDecimals(qty * discountedPrice);
       return { 
         ...item,
         discountedPrice,
@@ -57,7 +59,7 @@ export function calculateModuleTotals(items: QuoteModuleItemData[]) {
     const calculated = calculateItemTotals(item);
     const itemSubtotal = (calculated.unitPrice || 0) * (calculated.quantity || 1);
     const itemTotal = calculated.total || itemSubtotal;
-    
+
     return {
       subtotal: acc.subtotal + itemSubtotal,
       total: acc.total + itemTotal,
@@ -86,7 +88,7 @@ export function calculateModuleTotals(items: QuoteModuleItemData[]) {
 
 export function calculateDiscountAmount(price: number, discountType: 'percentage' | 'fixed', discountValue: number): number {
   if (!price || !discountValue) return 0;
-  
+
   if (discountType === 'percentage') {
     return roundToTwoDecimals(price * (discountValue / 100));
   }

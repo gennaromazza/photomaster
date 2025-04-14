@@ -226,7 +226,10 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
 
   // Calcola il totale di tutti i moduli
   const calculateTotal = () => {
-    return modules.reduce((total, module) => total + (module.total || 0), 0);
+    return modules.reduce((total, module) => {
+      const moduleTotal = module.total || module.subtotal || 0;
+      return roundToTwoDecimals(total + moduleTotal);
+    }, 0);
   };
 
   // Gestione errori

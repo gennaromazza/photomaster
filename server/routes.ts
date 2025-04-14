@@ -29,10 +29,10 @@ import { fromZodError } from "zod-validation-error";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
-  
+
   // Setup API routes
   const apiRouter = express.Router();
-  
+
   // Client routes
   apiRouter.get("/clients", async (req, res) => {
     try {
@@ -42,75 +42,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch clients" });
     }
   });
-  
+
   apiRouter.get("/clients/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const client = await storage.getClient(id);
-      
+
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       res.json(client);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch client" });
     }
   });
-  
+
   apiRouter.post("/clients", async (req, res) => {
     try {
       const parseResult = insertClientSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const client = await storage.createClient(parseResult.data);
       res.status(201).json(client);
     } catch (err) {
       res.status(500).json({ message: "Failed to create client" });
     }
   });
-  
+
   apiRouter.put("/clients/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertClientSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const updatedClient = await storage.updateClient(id, parseResult.data);
-      
+
       if (!updatedClient) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       res.json(updatedClient);
     } catch (err) {
       res.status(500).json({ message: "Failed to update client" });
     }
   });
-  
+
   apiRouter.delete("/clients/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteClient(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete client" });
     }
   });
-  
+
   // Event routes
   apiRouter.get("/events", async (req, res) => {
     try {
@@ -121,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch events" });
     }
   });
-  
+
   apiRouter.get("/events/upcoming", async (req, res) => {
     try {
       const events = await storage.getUpcomingEvents();
@@ -140,44 +140,44 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch client events" });
     }
   });
-  
+
   apiRouter.get("/events/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const event = await storage.getEvent(id);
-      
+
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
-      
+
       res.json(event);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch event" });
     }
   });
-  
+
   apiRouter.post("/events", async (req, res) => {
     try {
       // Estrai collaborators dalla richiesta e rimuovilo prima della validazione
       const { collaborators, ...eventData } = req.body;
-      
+
       console.log("Ricevuti dati evento:", eventData);
-      
+
       // Converti manualmente le date in oggetti Date
       const processedData = {
         ...eventData,
         date: eventData.date ? new Date(eventData.date) : undefined,
         endDate: eventData.endDate ? new Date(eventData.endDate) : undefined
       };
-      
+
       const parseResult = insertEventSchema.safeParse(processedData);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         console.error("Error parsing event data:", errorMessage);
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // Verifica che il cliente esista solo se l'ID del cliente è maggiore di 0
       if (parseResult.data.clientId > 0) {
         const client = await storage.getClient(parseResult.data.clientId);
@@ -186,11 +186,11 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Client not found" });
         }
       }
-      
+
       // Crea l'evento
       const event = await storage.createEvent(parseResult.data);
       console.log("Evento creato:", event);
-      
+
       // Se ci sono collaboratori, assegnali all'evento
       if (collaborators && Array.isArray(collaborators) && collaborators.length > 0) {
         for (const collaborator of collaborators) {
@@ -205,24 +205,24 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           }
         }
       }
-      
+
       res.status(201).json(event);
     } catch (err) {
       console.error("Error creating event:", err);
       res.status(500).json({ message: "Failed to create event" });
     }
   });
-  
+
   apiRouter.put("/events/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = partialEventSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // If clientId is provided, verify client exists
       if (parseResult.data.clientId) {
         const client = await storage.getClient(parseResult.data.clientId);
@@ -230,34 +230,34 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Client not found" });
         }
       }
-      
+
       const updatedEvent = await storage.updateEvent(id, parseResult.data);
-      
+
       if (!updatedEvent) {
         return res.status(404).json({ message: "Event not found" });
       }
-      
+
       res.json(updatedEvent);
     } catch (err) {
       res.status(500).json({ message: "Failed to update event" });
     }
   });
-  
+
   apiRouter.delete("/events/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteEvent(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Event not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete event" });
     }
   });
-  
+
   // Task routes
   apiRouter.get("/tasks", async (req, res) => {
     try {
@@ -267,7 +267,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch tasks" });
     }
   });
-  
+
   apiRouter.get("/tasks/uncompleted", async (req, res) => {
     try {
       const tasks = await storage.getUncompletedTasks();
@@ -276,7 +276,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch uncompleted tasks" });
     }
   });
-  
+
   apiRouter.get("/tasks/event/:eventId", async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
@@ -286,31 +286,31 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch event tasks" });
     }
   });
-  
+
   apiRouter.get("/tasks/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const task = await storage.getTask(id);
-      
+
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
-      
+
       res.json(task);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch task" });
     }
   });
-  
+
   apiRouter.post("/tasks", async (req, res) => {
     try {
       const parseResult = insertTaskSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // If eventId is provided, verify event exists
       if (parseResult.data.eventId) {
         const event = await storage.getEvent(parseResult.data.eventId);
@@ -318,24 +318,24 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Event not found" });
         }
       }
-      
+
       const task = await storage.createTask(parseResult.data);
       res.status(201).json(task);
     } catch (err) {
       res.status(500).json({ message: "Failed to create task" });
     }
   });
-  
+
   apiRouter.put("/tasks/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertTaskSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // If eventId is provided, verify event exists
       if (parseResult.data.eventId) {
         const event = await storage.getEvent(parseResult.data.eventId);
@@ -343,49 +343,49 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Event not found" });
         }
       }
-      
+
       const updatedTask = await storage.updateTask(id, parseResult.data);
-      
+
       if (!updatedTask) {
         return res.status(404).json({ message: "Task not found" });
       }
-      
+
       res.json(updatedTask);
     } catch (err) {
       res.status(500).json({ message: "Failed to update task" });
     }
   });
-  
+
   apiRouter.put("/tasks/:id/toggle", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const updatedTask = await storage.toggleTaskCompletion(id);
-      
+
       if (!updatedTask) {
         return res.status(404).json({ message: "Task not found" });
       }
-      
+
       res.json(updatedTask);
     } catch (err) {
       res.status(500).json({ message: "Failed to toggle task completion" });
     }
   });
-  
+
   apiRouter.delete("/tasks/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteTask(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Task not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete task" });
     }
   });
-  
+
   // Collaborator routes
   apiRouter.get("/collaborators", async (req, res) => {
     try {
@@ -395,7 +395,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch collaborators" });
     }
   });
-  
+
   apiRouter.get("/collaborators/available", async (req, res) => {
     try {
       const collaborators = await storage.getAvailableCollaborators();
@@ -404,75 +404,75 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch available collaborators" });
     }
   });
-  
+
   apiRouter.get("/collaborators/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const collaborator = await storage.getCollaborator(id);
-      
+
       if (!collaborator) {
         return res.status(404).json({ message: "Collaborator not found" });
       }
-      
+
       res.json(collaborator);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch collaborator" });
     }
   });
-  
+
   apiRouter.post("/collaborators", async (req, res) => {
     try {
       const parseResult = insertCollaboratorSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const collaborator = await storage.createCollaborator(parseResult.data);
       res.status(201).json(collaborator);
     } catch (err) {
       res.status(500).json({ message: "Failed to create collaborator" });
     }
   });
-  
+
   apiRouter.put("/collaborators/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertCollaboratorSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const updatedCollaborator = await storage.updateCollaborator(id, parseResult.data);
-      
+
       if (!updatedCollaborator) {
         return res.status(404).json({ message: "Collaborator not found" });
       }
-      
+
       res.json(updatedCollaborator);
     } catch (err) {
       res.status(500).json({ message: "Failed to update collaborator" });
     }
   });
-  
+
   apiRouter.delete("/collaborators/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteCollaborator(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Collaborator not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete collaborator" });
     }
   });
-  
+
   // Event Collaborator routes
   apiRouter.get("/events/:eventId/collaborators", async (req, res) => {
     try {
@@ -483,18 +483,18 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch event collaborators" });
     }
   });
-  
+
   // Get events associated with a collaborator
   apiRouter.get("/collaborators/:collaboratorId/events", async (req, res) => {
     try {
       const collaboratorId = parseInt(req.params.collaboratorId);
-      
+
       // Verifica che il collaboratore esista
       const collaborator = await storage.getCollaborator(collaboratorId);
       if (!collaborator) {
         return res.status(404).json({ message: "Collaborator not found" });
       }
-      
+
       // Ottieni tutti gli eventi che hanno questo collaboratore
       const events = await storage.getEventsByCollaborator(collaboratorId);
       res.json(events);
@@ -502,7 +502,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch collaborator events" });
     }
   });
-  
+
   apiRouter.post("/events/:eventId/collaborators", async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
@@ -510,47 +510,47 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         ...req.body,
         eventId
       });
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // Verify event and collaborator exist
       const event = await storage.getEvent(eventId);
       if (!event) {
         return res.status(400).json({ message: "Event not found" });
       }
-      
+
       const collaborator = await storage.getCollaborator(parseResult.data.collaboratorId);
       if (!collaborator) {
         return res.status(400).json({ message: "Collaborator not found" });
       }
-      
+
       const eventCollaborator = await storage.assignCollaboratorToEvent(parseResult.data);
       res.status(201).json(eventCollaborator);
     } catch (err) {
       res.status(500).json({ message: "Failed to assign collaborator to event" });
     }
   });
-  
+
   apiRouter.delete("/events/:eventId/collaborators/:collaboratorId", async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
       const collaboratorId = parseInt(req.params.collaboratorId);
-      
+
       const success = await storage.removeCollaboratorFromEvent(eventId, collaboratorId);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Event collaborator not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to remove collaborator from event" });
     }
   });
-  
+
   // Contract routes
   apiRouter.get("/contracts", async (req, res) => {
     try {
@@ -560,22 +560,22 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch contracts" });
     }
   });
-  
+
   apiRouter.get("/contracts/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const contract = await storage.getContract(id);
-      
+
       if (!contract) {
         return res.status(404).json({ message: "Contract not found" });
       }
-      
+
       res.json(contract);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch contract" });
     }
   });
-  
+
   apiRouter.get("/contracts/client/:clientId", async (req, res) => {
     try {
       const clientId = parseInt(req.params.clientId);
@@ -585,7 +585,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch client contracts" });
     }
   });
-  
+
   apiRouter.get("/contracts/event/:eventId", async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
@@ -595,44 +595,44 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch event contracts" });
     }
   });
-  
+
   apiRouter.post("/contracts", async (req, res) => {
     try {
       const parseResult = insertContractSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // Verify client and event exist
       const client = await storage.getClient(parseResult.data.clientId);
       if (!client) {
         return res.status(400).json({ message: "Client not found" });
       }
-      
+
       const event = await storage.getEvent(parseResult.data.eventId);
       if (!event) {
         return res.status(400).json({ message: "Event not found" });
       }
-      
+
       const contract = await storage.createContract(parseResult.data);
       res.status(201).json(contract);
     } catch (err) {
       res.status(500).json({ message: "Failed to create contract" });
     }
   });
-  
+
   apiRouter.put("/contracts/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertContractSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // If clientId is provided, verify client exists
       if (parseResult.data.clientId) {
         const client = await storage.getClient(parseResult.data.clientId);
@@ -640,7 +640,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Client not found" });
         }
       }
-      
+
       // If eventId is provided, verify event exists
       if (parseResult.data.eventId) {
         const event = await storage.getEvent(parseResult.data.eventId);
@@ -648,34 +648,34 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Event not found" });
         }
       }
-      
+
       const updatedContract = await storage.updateContract(id, parseResult.data);
-      
+
       if (!updatedContract) {
         return res.status(404).json({ message: "Contract not found" });
       }
-      
+
       res.json(updatedContract);
     } catch (err) {
       res.status(500).json({ message: "Failed to update contract" });
     }
   });
-  
+
   apiRouter.delete("/contracts/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteContract(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Contract not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete contract" });
     }
   });
-  
+
   // Service routes
   apiRouter.get("/services", async (req, res) => {
     try {
@@ -688,80 +688,80 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch services" });
     }
   });
-  
+
   apiRouter.get("/services/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const service = await storage.getService(id);
-      
+
       if (!service) {
         return res.status(404).json({ message: "Service not found" });
       }
-      
+
       res.json(service);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch service" });
     }
   });
-  
+
   apiRouter.post("/services", async (req, res) => {
     try {
       console.log("Creating new service with data:", req.body);
-      
+
       const parseResult = insertServiceSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         console.error("Validation error:", parseResult.error);
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       console.log("Validated data:", parseResult.data);
-      
+
       const service = await storage.createService(parseResult.data);
       console.log("Service created successfully:", service);
-      
+
       res.status(201).json(service);
     } catch (err) {
       console.error("Error creating service:", err);
       res.status(500).json({ message: "Failed to create service" });
     }
   });
-  
+
   apiRouter.put("/services/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       console.log(`Updating service ${id} with data:`, req.body);
-      
+
       const parseResult = insertServiceSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         console.error("Validation error:", parseResult.error);
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       console.log("Validated data:", parseResult.data);
-      
+
       // Get the current service to check for image path
       const currentService = await storage.getService(id);
       if (!currentService) {
         return res.status(404).json({ message: "Service not found" });
       }
-      
+
       // Ensure imagePath is preserved if not explicitly updated
       const dataToUpdate = { ...parseResult.data };
       if (!dataToUpdate.imagePath && currentService.imagePath) {
         console.log("Preserving existing image path:", currentService.imagePath);
         dataToUpdate.imagePath = currentService.imagePath;
       }
-      
+
       const updatedService = await storage.updateService(id, dataToUpdate);
-      
+
       if (!updatedService) {
         return res.status(404).json({ message: "Service not found" });
       }
-      
+
       console.log("Service updated successfully:", updatedService);
       res.json(updatedService);
     } catch (err) {
@@ -769,16 +769,16 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to update service" });
     }
   });
-  
+
   apiRouter.delete("/services/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteService(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Service not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete service" });
@@ -800,33 +800,33 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.post("/service-items", async (req, res) => {
     try {
       const parseResult = insertServiceItemSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // Verifica che esistano sia il servizio che il prodotto
       const service = await storage.getService(parseResult.data.serviceId);
       if (!service) {
         return res.status(400).json({ message: "Service not found" });
       }
-      
+
       const product = await storage.getService(parseResult.data.productId);
       if (!product) {
         return res.status(400).json({ message: "Product not found" });
       }
-      
+
       // Verifica che il prodotto sia di tipo 'product'
       if (product.type !== 'product') {
         return res.status(400).json({ message: "Selected item is not a product" });
       }
-      
+
       // Imposta il servizio come composito se non lo è già
       if (!service.isComposite) {
         await storage.updateService(service.id, { isComposite: true });
       }
-      
+
       const item = await storage.createServiceItem(parseResult.data);
       res.status(201).json(item);
     } catch (err) {
@@ -839,31 +839,31 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertServiceItemSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // Se viene aggiornato productId, verifica che il prodotto esista
       if (parseResult.data.productId) {
         const product = await storage.getService(parseResult.data.productId);
         if (!product) {
           return res.status(400).json({ message: "Product not found" });
         }
-        
+
         // Verifica che il prodotto sia di tipo 'product'
         if (product.type !== 'product') {
           return res.status(400).json({ message: "Selected item is not a product" });
         }
       }
-      
+
       const updatedItem = await storage.updateServiceItem(id, parseResult.data);
-      
+
       if (!updatedItem) {
         return res.status(404).json({ message: "Service item not found" });
       }
-      
+
       res.json(updatedItem);
     } catch (err) {
       console.error("Error updating service item:", err);
@@ -875,30 +875,30 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const item = await storage.getServiceItem(id);
-      
+
       if (!item) {
         return res.status(404).json({ message: "Service item not found" });
       }
-      
+
       const success = await storage.deleteServiceItem(id);
-      
+
       if (!success) {
         return res.status(500).json({ message: "Failed to delete service item" });
       }
-      
+
       // Controlla se il servizio ha ancora elementi, se no, imposta isComposite a false
       const remainingItems = await storage.getServiceItems(item.serviceId);
       if (remainingItems.length === 0) {
         await storage.updateService(item.serviceId, { isComposite: false });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       console.error("Error deleting service item:", err);
       res.status(500).json({ message: "Failed to delete service item" });
     }
   });
-  
+
   // Service Bundle routes
   apiRouter.get("/service-bundles", async (req, res) => {
     try {
@@ -908,7 +908,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch service bundles" });
     }
   });
-  
+
   apiRouter.get("/service-bundles/category/:categoryId", async (req, res) => {
     try {
       const categoryId = parseInt(req.params.categoryId);
@@ -918,87 +918,87 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch service bundles by category" });
     }
   });
-  
+
   apiRouter.get("/service-bundles/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const bundle = await storage.getServiceBundle(id);
-      
+
       if (!bundle) {
         return res.status(404).json({ message: "Service bundle not found" });
       }
-      
+
       res.json(bundle);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch service bundle" });
     }
   });
-  
+
   apiRouter.post("/service-bundles", async (req, res) => {
     try {
       console.log("Creating new service bundle with data:", req.body);
-      
+
       const parseResult = insertServiceBundleSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         console.error("Validation error:", parseResult.error);
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       console.log("Validated data:", parseResult.data);
-      
+
       const bundle = await storage.createServiceBundle(parseResult.data);
       console.log("Service bundle created successfully:", bundle);
-      
+
       res.status(201).json(bundle);
     } catch (err) {
       console.error("Error creating service bundle:", err);
       res.status(500).json({ message: "Failed to create service bundle" });
     }
   });
-  
+
   apiRouter.put("/service-bundles/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       console.log(`Updating service bundle ${id} with data:`, req.body);
-      
+
       const parseResult = insertServiceBundleSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         console.error("Validation error:", parseResult.error);
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       console.log("Validated data:", parseResult.data);
-      
+
       // Get the current bundle to check for image path and template style
       const currentBundle = await storage.getServiceBundle(id);
       if (!currentBundle) {
         return res.status(404).json({ message: "Service bundle not found" });
       }
-      
+
       // Ensure imagePath and templateStyle are preserved if not explicitly updated
       const dataToUpdate = { ...parseResult.data };
-      
+
       if (!dataToUpdate.imagePath && currentBundle.imagePath) {
         console.log("Preserving existing image path:", currentBundle.imagePath);
         dataToUpdate.imagePath = currentBundle.imagePath;
       }
-      
+
       // Assicurati che templateStyle sia preservato se non esplicitamente aggiornato
       if (!dataToUpdate.templateStyle && currentBundle.templateStyle) {
         console.log("Preserving existing template style:", currentBundle.templateStyle);
         dataToUpdate.templateStyle = currentBundle.templateStyle;
       }
-      
+
       const updatedBundle = await storage.updateServiceBundle(id, dataToUpdate);
-      
+
       if (!updatedBundle) {
         return res.status(404).json({ message: "Service bundle not found" });
       }
-      
+
       console.log("Service bundle updated successfully:", updatedBundle);
       res.json(updatedBundle);
     } catch (err) {
@@ -1006,22 +1006,22 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to update service bundle" });
     }
   });
-  
+
   apiRouter.delete("/service-bundles/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteServiceBundle(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Service bundle not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete service bundle" });
     }
   });
-  
+
   // Service Bundle Items routes
   apiRouter.get("/service-bundles/:bundleId/items", async (req, res) => {
     try {
@@ -1032,60 +1032,60 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch service bundle items" });
     }
   });
-  
+
   apiRouter.post("/service-bundle-items", async (req, res) => {
     try {
       const parseResult = insertServiceBundleItemSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const item = await storage.createServiceBundleItem(parseResult.data);
       res.status(201).json(item);
     } catch (err) {
       res.status(500).json({ message: "Failed to create service bundle item" });
     }
   });
-  
+
   apiRouter.put("/service-bundle-items/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertServiceBundleItemSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const updatedItem = await storage.updateServiceBundleItem(id, parseResult.data);
-      
+
       if (!updatedItem) {
         return res.status(404).json({ message: "Service bundle item not found" });
       }
-      
+
       res.json(updatedItem);
     } catch (err) {
       res.status(500).json({ message: "Failed to update service bundle item" });
     }
   });
-  
+
   apiRouter.delete("/service-bundle-items/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteServiceBundleItem(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Service bundle item not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete service bundle item" });
     }
   });
-  
+
   // Quote routes
   apiRouter.get("/quotes", async (req, res) => {
     try {
@@ -1095,22 +1095,22 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch quotes" });
     }
   });
-  
+
   apiRouter.get("/quotes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const quote = await storage.getQuote(id);
-      
+
       if (!quote) {
         return res.status(404).json({ message: "Quote not found" });
       }
-      
+
       res.json(quote);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch quote" });
     }
   });
-  
+
   apiRouter.get("/quotes/client/:clientId", async (req, res) => {
     try {
       const clientId = parseInt(req.params.clientId);
@@ -1120,7 +1120,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch client quotes" });
     }
   });
-  
+
   apiRouter.get("/quotes/:quoteId/items", async (req, res) => {
     try {
       const quoteId = parseInt(req.params.quoteId);
@@ -1130,7 +1130,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch quote items" });
     }
   });
-  
+
   apiRouter.post("/quotes", async (req, res) => {
     try {
       const { eventDate, ...rest } = req.body;
@@ -1138,18 +1138,18 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         ...rest,
         eventDate: eventDate ? new Date(eventDate) : undefined
       });
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // Verify client exists
       const client = await storage.getClient(parseResult.data.clientId);
       if (!client) {
         return res.status(400).json({ message: "Client not found" });
       }
-      
+
       // If eventId is provided, verify event exists
       if (parseResult.data.eventId) {
         const event = await storage.getEvent(parseResult.data.eventId);
@@ -1157,14 +1157,14 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Event not found" });
         }
       }
-      
+
       const quote = await storage.createQuote(parseResult.data);
       res.status(201).json(quote);
     } catch (err) {
       res.status(500).json({ message: "Failed to create quote" });
     }
   });
-  
+
   apiRouter.post("/quotes/:quoteId/items", async (req, res) => {
     try {
       const quoteId = parseInt(req.params.quoteId);
@@ -1172,40 +1172,40 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         ...req.body,
         quoteId
       });
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // Verify quote and service exist
       const quote = await storage.getQuote(quoteId);
       if (!quote) {
-        return res.status(400).json({ message: "Quote not found" });
+        return res.status(404).json({ message: "Quote not found" });
       }
-      
+
       const service = await storage.getService(parseResult.data.serviceId);
       if (!service) {
         return res.status(400).json({ message: "Service not found" });
       }
-      
+
       const quoteItem = await storage.createQuoteItem(parseResult.data);
       res.status(201).json(quoteItem);
     } catch (err) {
       res.status(500).json({ message: "Failed to add item to quote" });
     }
   });
-  
+
   apiRouter.put("/quotes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertQuoteSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // If clientId is provided, verify client exists
       if (parseResult.data.clientId) {
         const client = await storage.getClient(parseResult.data.clientId);
@@ -1213,7 +1213,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Client not found" });
         }
       }
-      
+
       // If eventId is provided, verify event exists
       if (parseResult.data.eventId) {
         const event = await storage.getEvent(parseResult.data.eventId);
@@ -1221,47 +1221,47 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Event not found" });
         }
       }
-      
+
       // Conserva la firma se è fornita
       const dataToUpdate = { ...parseResult.data };
-      
+
       const updatedQuote = await storage.updateQuote(id, dataToUpdate);
-      
+
       if (!updatedQuote) {
         return res.status(404).json({ message: "Quote not found" });
       }
-      
+
       res.json(updatedQuote);
     } catch (err) {
       res.status(500).json({ message: "Failed to update quote" });
     }
   });
-  
+
   // API per inviare il preventivo via email
   apiRouter.post("/quotes/:id/send", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { emailTo, message } = req.body;
-      
+
       if (!emailTo) {
         return res.status(400).json({ message: "Email required" });
       }
-      
+
       // Recupera il preventivo
       const quote = await storage.getQuote(id);
       if (!quote) {
         return res.status(404).json({ message: "Quote not found" });
       }
-      
+
       // Recupera il cliente associato
       const client = await storage.getClient(quote.clientId);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       // Recupera gli elementi del preventivo
       const quoteItems = await storage.getQuoteItemsByQuote(id);
-      
+
       // Invia l'email utilizzando SendGrid
       const emailParams = {
         to: emailTo,
@@ -1276,32 +1276,32 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           <p>Per visualizzare il preventivo completo e firmarlo, clicca <a href="${process.env.BASE_URL || 'http://localhost:3000'}/quotes/public/${id}">qui</a>.</p>
         `
       };
-      
+
       // Importa la funzione sendEmail
       const { sendEmail } = require('./email');
       const emailSent = await sendEmail(emailParams);
-      
+
       if (!emailSent) {
         return res.status(500).json({ message: "Failed to send email" });
       }
-      
+
       res.json({ success: true });
     } catch (err) {
       console.error("Email error:", err);
       res.status(500).json({ message: "Failed to send quote" });
     }
   });
-  
+
   apiRouter.put("/quotes/:quoteId/items/:itemId", async (req, res) => {
     try {
       const itemId = parseInt(req.params.itemId);
       const parseResult = insertQuoteItemSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // If serviceId is provided, verify service exists
       if (parseResult.data.serviceId) {
         const service = await storage.getService(parseResult.data.serviceId);
@@ -1309,51 +1309,51 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return res.status(400).json({ message: "Service not found" });
         }
       }
-      
+
       const updatedQuoteItem = await storage.updateQuoteItem(itemId, parseResult.data);
-      
+
       if (!updatedQuoteItem) {
         return res.status(404).json({ message: "Quote item not found" });
       }
-      
+
       res.json(updatedQuoteItem);
     } catch (err) {
       res.status(500).json({ message: "Failed to update quote item" });
     }
   });
-  
+
   apiRouter.delete("/quotes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteQuote(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Quote not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete quote" });
     }
   });
-  
+
   // API per la condivisione del preventivo
   apiRouter.post("/quotes/:id/share", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // Verifica se il preventivo esiste
       const quote = await storage.getQuote(id);
       if (!quote) {
         return res.status(404).json({ message: "Preventivo non trovato" });
       }
-      
+
       // Genera un token di condivisione
       const token = await storage.generateShareToken(id);
       if (!token) {
         return res.status(500).json({ message: "Impossibile generare il link di condivisione" });
       }
-      
+
       res.json({ 
         success: true, 
         token,
@@ -1364,64 +1364,106 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Errore nella condivisione del preventivo" });
     }
   });
-  
+
   // API per disattivare la condivisione
   apiRouter.delete("/quotes/:id/share", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // Verifica se il preventivo esiste
       const quote = await storage.getQuote(id);
       if (!quote) {
         return res.status(404).json({ message: "Preventivo non trovato" });
       }
-      
+
       const success = await storage.disableSharing(id);
       if (!success) {
         return res.status(500).json({ message: "Impossibile disattivare la condivisione" });
       }
-      
+
       res.json({ success: true });
     } catch (err) {
       console.error("Errore nella disattivazione della condivisione:", err);
       res.status(500).json({ message: "Errore nella disattivazione della condivisione" });
     }
   });
-  
-  // API per recuperare un preventivo tramite token di condivisione
+
+  // Endpoint per la firma del preventivo
+  apiRouter.post("/quotes/share/:token/sign", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { signature, status } = req.body;
+
+      if (!token || !signature || !status) {
+        return res.status(400).json({ message: "Dati mancanti" });
+      }
+
+      // Recupera il preventivo dal token
+      const quote = await storage.getQuoteByShareToken(token);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato" });
+      }
+
+      // Aggiorna lo stato del preventivo
+      await storage.updateQuote(quote.id, {
+        status,
+        signature,
+        signedAt: new Date(),
+      });
+
+      // Crea un nuovo evento
+      const event = await storage.createEvent({
+        title: quote.title,
+        description: quote.description,
+        date: quote.eventDate,
+        location: quote.location,
+        clientId: quote.clientId,
+        quoteId: quote.id,
+        status: "confirmed",
+        type: quote.category?.name || "wedding",
+      });
+
+      res.json({ success: true, event });
+    } catch (err) {
+      console.error("Error signing quote:", err);
+      res.status(500).json({ message: "Errore durante la firma del preventivo" });
+    }
+  });
+
+  // Rotte per la gestione delle quote
   apiRouter.get("/quotes/share/:token", async (req, res) => {
     try {
       const token = req.params.token;
-      
+
       // Recupera il preventivo tramite token
       const quote = await storage.getQuoteByShareToken(token);
       if (!quote) {
         return res.status(404).json({ message: "Preventivo non trovato o link non più valido" });
       }
-      
+
       // Se il preventivo non è condivisibile, restituisci un errore
       if (!quote.isShared) {
         return res.status(403).json({ message: "Questo preventivo non è più condivisibile" });
       }
-      
+
       // Recupera gli elementi del preventivo (per mostrare servizi, prodotti, ecc.)
       const quoteItems = await storage.getQuoteItemsByQuote(quote.id);
-      
+
       // Recupera i clienti associati al preventivo
       const client = await storage.getClient(quote.clientId);
-      
+
       // Recupera il secondo cliente se presente
       let secondClient = undefined;
       if (quote.secondClientId) {
         secondClient = await storage.getClient(quote.secondClientId);
       }
-      
+
       // Recupera la categoria del preventivo (tipo evento)
       let category = undefined;
       if (quote.categoryId) {
         category = await storage.getServiceCategory(quote.categoryId);
       }
-      
+
       // Recupera i dettagli dei servizi per ogni elemento del preventivo
       const enrichedQuoteItems = await Promise.all(
         quoteItems.map(async (item) => {
@@ -1429,7 +1471,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           return { ...item, service };
         })
       );
-      
+
       // Prepara l'oggetto completo del preventivo con tutte le informazioni
       const completeQuote = {
         ...quote,
@@ -1438,29 +1480,29 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         secondClient: secondClient || undefined,
         category: category || undefined
       };
-      
+
       res.json(completeQuote);
     } catch (err) {
       console.error("Errore nel recupero del preventivo condiviso:", err);
       res.status(500).json({ message: "Errore nel recupero del preventivo" });
     }
   });
-  
+
   apiRouter.delete("/quotes/:quoteId/items/:itemId", async (req, res) => {
     try {
       const itemId = parseInt(req.params.itemId);
       const success = await storage.deleteQuoteItem(itemId);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Quote item not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete quote item" });
     }
   });
-  
+
   // Service Category routes
   apiRouter.get("/service-categories", async (req, res) => {
     try {
@@ -1470,7 +1512,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch service categories" });
     }
   });
-  
+
   apiRouter.get("/service-categories/active", async (req, res) => {
     try {
       const categories = await storage.getActiveServiceCategories();
@@ -1479,75 +1521,75 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch active service categories" });
     }
   });
-  
+
   apiRouter.get("/service-categories/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const category = await storage.getServiceCategory(id);
-      
+
       if (!category) {
         return res.status(404).json({ message: "Service category not found" });
       }
-      
+
       res.json(category);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch service category" });
     }
   });
-  
+
   apiRouter.post("/service-categories", async (req, res) => {
     try {
       const parseResult = insertServiceCategorySchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const category = await storage.createServiceCategory(parseResult.data);
       res.status(201).json(category);
     } catch (err) {
       res.status(500).json({ message: "Failed to create service category" });
     }
   });
-  
+
   apiRouter.put("/service-categories/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertServiceCategorySchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const updatedCategory = await storage.updateServiceCategory(id, parseResult.data);
-      
+
       if (!updatedCategory) {
         return res.status(404).json({ message: "Service category not found" });
       }
-      
+
       res.json(updatedCategory);
     } catch (err) {
       res.status(500).json({ message: "Failed to update service category" });
     }
   });
-  
+
   apiRouter.delete("/service-categories/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteServiceCategory(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Service category not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete service category" });
     }
   });
-  
+
   // Lead Source routes
   apiRouter.get("/lead-sources", async (req, res) => {
     try {
@@ -1557,7 +1599,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch lead sources" });
     }
   });
-  
+
   apiRouter.get("/lead-sources/active", async (req, res) => {
     try {
       const sources = await storage.getActiveLeadSources();
@@ -1566,75 +1608,75 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch active lead sources" });
     }
   });
-  
+
   apiRouter.get("/lead-sources/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const source = await storage.getLeadSource(id);
-      
+
       if (!source) {
         return res.status(404).json({ message: "Lead source not found" });
       }
-      
+
       res.json(source);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch lead source" });
     }
   });
-  
+
   apiRouter.post("/lead-sources", async (req, res) => {
     try {
       const parseResult = insertLeadSourceSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const source = await storage.createLeadSource(parseResult.data);
       res.status(201).json(source);
     } catch (err) {
       res.status(500).json({ message: "Failed to create lead source" });
     }
   });
-  
+
   apiRouter.put("/lead-sources/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertLeadSourceSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const updatedSource = await storage.updateLeadSource(id, parseResult.data);
-      
+
       if (!updatedSource) {
         return res.status(404).json({ message: "Lead source not found" });
       }
-      
+
       res.json(updatedSource);
     } catch (err) {
       res.status(500).json({ message: "Failed to update lead source" });
     }
   });
-  
+
   apiRouter.delete("/lead-sources/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteLeadSource(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Lead source not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete lead source" });
     }
   });
-  
+
   // Settings routes
   apiRouter.get("/settings", async (req, res) => {
     try {
@@ -1644,96 +1686,96 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch settings" });
     }
   });
-  
+
   apiRouter.put("/settings", async (req, res) => {
     try {
       const parseResult = insertSettingsSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const updatedSettings = await storage.updateSettings(parseResult.data);
       res.json(updatedSettings);
     } catch (err) {
       res.status(500).json({ message: "Failed to update settings" });
     }
   });
-  
+
     // Reset Password routes
   apiRouter.post("/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ message: "Email richiesta" });
       }
-      
+
       // Cerca l'utente per email
       const user = await storage.getUserByEmail(email);
-      
+
       // Non rivelare se l'email esiste o meno per motivi di sicurezza
       if (!user) {
         // Simuliamo una risposta positiva anche se l'utente non esiste
         return res.status(200).json({ message: "Se l'indirizzo email è valido, riceverai istruzioni per reimpostare la password" });
       }
-      
+
       // Genera un token e imposta la scadenza (4 ore)
       const token = require('crypto').randomBytes(20).toString('hex');
       const expires = new Date();
       expires.setHours(expires.getHours() + 4);
-      
+
       // Aggiorna l'utente con il token di reset
       await storage.updateUser(user.id, {
         resetPasswordToken: token,
         resetPasswordExpires: expires
       });
-      
+
       // Invia l'email con il token di reset
       const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${token}`;
       const emailSent = await sendPasswordResetEmail(user, resetUrl);
-      
+
       if (!emailSent) {
         return res.status(500).json({ message: "Impossibile inviare l'email di reset" });
       }
-      
+
       res.status(200).json({ message: "Email di reset inviata" });
     } catch (err) {
       res.status(500).json({ message: "Errore durante l'invio dell'email di reset" });
     }
   });
-  
+
   apiRouter.post("/reset-password", async (req, res) => {
     try {
       const { token, password } = req.body;
-      
+
       if (!token || !password) {
         return res.status(400).json({ message: "Token e password richiesti" });
       }
-      
+
       // Trova l'utente con questo token
       const user = await storage.getUserByResetToken(token);
-      
+
       if (!user) {
         return res.status(400).json({ message: "Token non valido o scaduto" });
       }
-      
+
       // Verifica che il token non sia scaduto
       if (user.resetPasswordExpires && new Date(user.resetPasswordExpires) < new Date()) {
         return res.status(400).json({ message: "Token scaduto" });
       }
-      
+
       // Hash della nuova password
       const hashedPassword = await hashPassword(password);
-      
+
       // Aggiorna l'utente con la nuova password e cancella il token
       await storage.updateUser(user.id, {
         password: hashedPassword,
         resetPasswordToken: null,
         resetPasswordExpires: null
       });
-      
+
       res.status(200).json({ message: "Password aggiornata con successo" });
     } catch (err) {
       res.status(500).json({ message: "Errore durante il reset della password" });
@@ -1741,7 +1783,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   });
 
   // Add new routes for service items
-  apiRouter.get("/service-items/:serviceId", async (req, res) => {
+  apiRouter.get("/service-items/:serviceId", async (req,res) => {
     try {
       const serviceId = parseInt(req.params.serviceId);
       const items = await storage.getServiceItems(serviceId);
@@ -1751,28 +1793,28 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch service items" });
     }
   });
-  
+
   apiRouter.post("/service-items", async (req, res) => {
     try {
       const parseResult = insertServiceItemSchema.safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       // Verifica che il servizio esista
       const service = await storage.getService(parseResult.data.serviceId);
       if (!service) {
         return res.status(400).json({ message: "Service not found" });
       }
-      
+
       // Verifica che il prodotto esista
       const product = await storage.getService(parseResult.data.productId);
       if (!product) {
         return res.status(400).json({ message: "Product not found" });
       }
-      
+
       const item = await storage.createServiceItem(parseResult.data);
       res.status(201).json(item);
     } catch (err) {
@@ -1780,44 +1822,44 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to create service item" });
     }
   });
-  
+
   apiRouter.put("/service-items/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const parseResult = insertServiceItemSchema.partial().safeParse(req.body);
-      
+
       if (!parseResult.success) {
         const errorMessage = fromZodError(parseResult.error).message;
         return res.status(400).json({ message: errorMessage });
       }
-      
+
       const updatedItem = await storage.updateServiceItem(id, parseResult.data);
-      
+
       if (!updatedItem) {
         return res.status(404).json({ message: "Service item not found" });
       }
-      
+
       res.json(updatedItem);
     } catch (err) {
       res.status(500).json({ message: "Failed to update service item" });
     }
   });
-  
+
   apiRouter.delete("/service-items/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteServiceItem(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Service item not found" });
       }
-      
+
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ message: "Failed to delete service item" });
     }
   });
-  
+
   // API per gestione moduli nei preventivi
   apiRouter.get("/quotes/:quoteId/modules", async (req, res) => {
     try {
@@ -1828,17 +1870,17 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Ottieni tutti i moduli del preventivo
       const modules = await storage.getModulesByQuote(quoteId);
-      
+
       // Per ogni modulo, recupera i suoi elementi con dettagli di servizi/prodotti
       const modulesWithItems = await Promise.all(
         modules.map(async (module) => {
           const items = await storage.getQuoteModuleItemsByModule(module.id);
-          
+
           // Arricchisci ogni item con i dettagli del servizio o bundle associato
           const enrichedItems = await Promise.all(
             items.map(async (item) => {
               let enrichedItem = { ...item };
-              
+
               // Se l'item ha un serviceId, aggiungi i dettagli del servizio
               if (item.serviceId) {
                 const service = await storage.getService(item.serviceId);
@@ -1851,7 +1893,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                   };
                 }
               }
-              
+
               // Se l'item ha un bundleId, aggiungi i dettagli del bundle
               if (item.bundleId) {
                 const bundle = await storage.getServiceBundle(item.bundleId);
@@ -1864,15 +1906,15 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                   };
                 }
               }
-              
+
               return enrichedItem;
             })
           );
-          
+
           return { ...module, items: enrichedItems };
         })
       );
-      
+
       res.json(modulesWithItems);
     } catch (err) {
       console.error("Error fetching quote modules:", err);
@@ -1894,7 +1936,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Recupera anche gli elementi del modulo
       const items = await storage.getQuoteModuleItemsByModule(moduleId);
-      
+
       res.json({ ...module, items });
     } catch (err) {
       console.error("Error fetching module:", err);
@@ -1938,7 +1980,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Recupera il modulo completo con i suoi elementi
       const items = await storage.getQuoteModuleItemsByModule(newModule.id);
-      
+
       res.status(201).json({ ...newModule, items });
     } catch (err) {
       console.error("Error creating module:", err);
@@ -1967,10 +2009,10 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           ? new Date(req.body.expiryDate) 
           : existingModule.expiryDate
       };
-      
+
       // Aggiorna il modulo
       const updatedModule = await storage.updateQuoteModule(moduleId, updateData);
-      
+
       // Gestisci gli elementi del modulo
       if (req.body.items && Array.isArray(req.body.items)) {
         // Elimina gli elementi esistenti
@@ -1990,7 +2032,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Recupera il modulo aggiornato con i suoi elementi
       const items = await storage.getQuoteModuleItemsByModule(moduleId);
-      
+
       res.json({ ...updatedModule, items });
     } catch (err) {
       console.error("Error updating module:", err);
@@ -2013,7 +2055,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Elimina il modulo (gli elementi verranno eliminati automaticamente nell'implementazione di deleteQuoteModule)
       await storage.deleteQuoteModule(moduleId);
-      
+
       res.status(204).send();
     } catch (err) {
       console.error("Error deleting module:", err);
@@ -2057,12 +2099,12 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Recupera gli elementi del modulo
       const items = await storage.getQuoteModuleItemsByModule(module.id);
-      
+
       // Arricchisci gli elementi con i dettagli di servizi/prodotti
       const enrichedItems = await Promise.all(
         items.map(async (item) => {
           let enrichedItem = { ...item };
-          
+
           // Se l'item ha un serviceId, aggiungi i dettagli del servizio
           if (item.serviceId) {
             const service = await storage.getService(item.serviceId);
@@ -2075,7 +2117,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
               };
             }
           }
-          
+
           // Se l'item ha un bundleId, aggiungi i dettagli del bundle
           if (item.bundleId) {
             const bundle = await storage.getServiceBundle(item.bundleId);
@@ -2088,14 +2130,14 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
               };
             }
           }
-          
+
           return enrichedItem;
         })
       );
-      
+
       // Recupera il cliente associato al preventivo
       const client = await storage.getClient(quote.clientId);
-      
+
       res.json({
         module: { ...module, items: enrichedItems },
         quote: {
@@ -2150,12 +2192,12 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Recupera tutti gli elementi del modulo
       const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
-      
+
       // Recuperiamo tutte le informazioni arricchite degli elementi
       const enrichedItems = await Promise.all(
         moduleItems.map(async (item) => {
           let enrichedItem = { ...item };
-          
+
           // Se l'item ha un serviceId, aggiungi i dettagli del servizio
           if (item.serviceId) {
             const service = await storage.getService(item.serviceId);
@@ -2168,7 +2210,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
               };
             }
           }
-          
+
           // Se l'item ha un bundleId, aggiungi i dettagli del bundle
           if (item.bundleId) {
             const bundle = await storage.getServiceBundle(item.bundleId);
@@ -2181,7 +2223,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
               };
             }
           }
-          
+
           return enrichedItem;
         })
       );
@@ -2189,18 +2231,18 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Aggiorna lo stato di ciascun elemento
       for (const item of moduleItems) {
         const isSelected = selectedItems.includes(item.id);
-        
+
         // Verifica se un elemento obbligatorio non è stato selezionato
         if (item.isRequired && !isSelected) {
           // Trova il nome dell'elemento dai dati arricchiti
           const enrichedItem = enrichedItems.find(ei => ei.id === item.id);
           const itemName = enrichedItem?.serviceName || enrichedItem?.bundleName || 'Opzione';
-          
+
           return res.status(400).json({ 
             message: `È necessario selezionare l'opzione obbligatoria: ${itemName}`
           });
         }
-        
+
         await storage.updateQuoteModuleItem(item.id, {
           isSelected
         });
@@ -2222,13 +2264,13 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Registrazione dei router modulari
   app.use("/api/bundle-leads", bundleLeadsRouter);
   app.use("/api/settings", settingsRouter);
-  
+
   app.use("/api", apiRouter);
-  
+
   // Setup upload routes
   setupUploadRoutes(app);
-  
+
   const httpServer = createServer(app);
-  
+
   return httpServer;
 }

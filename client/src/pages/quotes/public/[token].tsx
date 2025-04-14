@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -11,16 +11,19 @@ import {
   FileText, 
   Euro,
   Loader2,
-  Church
+  Church,
+  FileSignature
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ClientAddressDetails } from "@/components/quotes/client-address-details";
 import { StudioInfo } from "@/components/quotes/studio-info";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { PublicFixedModule } from "@/components/quotes/public-fixed-module";
 import { PublicVariableModule } from "@/components/quotes/public-variable-module";
+import { Label, Input, Button } from "@/components/ui/forms"; // Assuming these imports are needed
+
 
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
@@ -58,9 +61,12 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => {
 
 export default function PublicQuotePage() {
   const { token } = useParams();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isExpired, setIsExpired] = useState(false);
   const [selectedModuleItems, setSelectedModuleItems] = useState<Record<number, number[]>>({});
+  const [signature, setSignature] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Carica i dati del preventivo tramite token di condivisione
   const { data: quote, isLoading, error } = useQuery({
@@ -83,7 +89,7 @@ export default function PublicQuotePage() {
     queryKey: ["/api/quotes/share", token, "modules"],
     queryFn: async () => {
       if (!quote?.id) return [];
-      
+
       try {
         const res = await fetch(`/api/quotes/${quote.id}/modules`);
         if (!res.ok) return [];
@@ -95,21 +101,68 @@ export default function PublicQuotePage() {
     },
     enabled: !!quote?.id,
   });
-  
+
   // Funzione per gestire la selezione degli elementi nei moduli variabili
   const handleModuleItemSelection = (moduleId: number, selectedItems: number[]) => {
     console.log(`[LOG] Selezione modulo ${moduleId}, elementi selezionati:`, selectedItems);
-    
+
     setSelectedModuleItems(prev => {
       const newSelections = {
         ...prev,
         [moduleId]: selectedItems
       };
-      
+
       // Log per debugging
       console.log(`[LOG] Nuovo stato selezioni moduli:`, newSelections);
       return newSelections;
     });
+  };
+
+  // Gestione firma e conferma preventivo
+  const handleSignQuote = async () => {
+    if (!signature.trim()) {
+      toast({
+        title: "Errore",
+        description: "Inserisci il tuo nome e cognome per firmare",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/quotes/share/${token}/sign`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          signature: signature.trim(),
+          status: "approved"
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Errore durante la firma del preventivo");
+      }
+
+      toast({
+        title: "Preventivo confermato",
+        description: "Grazie per aver confermato il preventivo!",
+      });
+
+      // Reindirizza alla pagina di conferma
+      setLocation(`/quotes/public/confirmation/${token}`);
+    } catch (error) {
+      console.error("Errore firma preventivo:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante la firma del preventivo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -220,7 +273,7 @@ export default function PublicQuotePage() {
                   <p className="font-medium">{quote.location || "Non specificata"}</p>
                 </div>
               </div>
-              
+
               {/* Utilizziamo il componente CeremonyDetails per una visualizzazione più elegante */}
               {(quote.ceremonyLocation || quote.ceremonyTime) && (
                 <div className="col-span-1 md:col-span-2">
@@ -310,13 +363,13 @@ export default function PublicQuotePage() {
                   </p>
                 )}
               </div>
-              
+
               <div className="space-y-6 mt-4">
                 {/* Moduli fissi */}
                 {modules.filter(m => m.type === 'fixed').map(module => (
                   <PublicFixedModule key={module.id} module={module} />
                 ))}
-                
+
                 {/* Moduli variabili */}
                 {modules.filter(m => m.type === 'variable').map(module => (
                   <PublicVariableModule 
@@ -329,38 +382,71 @@ export default function PublicQuotePage() {
             </CardContent>
           </Card>
         )}
-        
+
+        {/* Sezione Firma Digitale */}
+        <Card className="mb-8 border-primary/20">
+          <CardHeader className="bg-primary/5 border-b">
+            <CardTitle className="flex items-center">
+              <FileSignature className="h-5 w-5 mr-2 text-primary" />
+              Firma Digitale
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <p className="text-muted-foreground">
+                Firmando questo documento, confermi di accettare il preventivo e tutti i servizi/prodotti inclusi.
+              </p>
+
+              <div className="max-w-sm mx-auto space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signature">Nome e Cognome</Label>
+                  <Input
+                    id="signature"
+                    placeholder="Inserisci il tuo nome e cognome"
+                    value={signature}
+                    onChange={(e) => setSignature(e.target.value)}
+                  />
+                </div>
+
+                <Button 
+                  className="w-full" 
+                  size="lg"
+                  onClick={handleSignQuote}
+                  disabled={!signature.trim() || isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Elaborazione...
+                    </>
+                  ) : (
+                    <>
+                      <FileSignature className="mr-2 h-4 w-4" />
+                      Firma e Conferma
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Note */}
         {quote.notes && (
-          <Card className="mb-8 border-primary/20">
-            <CardHeader className="bg-primary/5 border-b">
-              <CardTitle className="flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-primary" />
-                Note
-              </CardTitle>
+          <Card className="mt-10 mb-6 overflow-hidden shadow-md">
+            <CardHeader className="bg-primary text-primary-foreground border-b">
+              <CardTitle className="text-center font-playfair">Per qualsiasi informazione</CardTitle>
             </CardHeader>
-            <CardContent className="p-5">
-              <div className="bg-muted/20 p-4 rounded-md border border-muted">
-                <p className="text-sm md:text-base whitespace-pre-line leading-relaxed">{quote.notes}</p>
+            <CardContent className="p-6">
+              <p className="text-center mb-6 text-muted-foreground">
+                Contattaci direttamente per confermare il tuo preventivo o per richieste personalizzate.
+              </p>
+              <div className="bg-muted/20 p-5 rounded-lg border">
+                <StudioInfo className="mx-auto max-w-md" />
               </div>
             </CardContent>
           </Card>
         )}
-
-        {/* Informazioni di contatto dello studio */}
-        <Card className="mt-10 mb-6 overflow-hidden shadow-md">
-          <CardHeader className="bg-primary text-primary-foreground border-b">
-            <CardTitle className="text-center font-playfair">Per qualsiasi informazione</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <p className="text-center mb-6 text-muted-foreground">
-              Contattaci direttamente per confermare il tuo preventivo o per richieste personalizzate.
-            </p>
-            <div className="bg-muted/20 p-5 rounded-lg border">
-              <StudioInfo className="mx-auto max-w-md" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </PublicLayout>
   );

@@ -1392,7 +1392,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.post("/quotes/share/:token/sign", async (req, res) => {
     try {
       const { token } = req.params;
-      const { signature, status } = req.body;
+      const { signature, status, signedAt, selectedModuleItems } = req.body;
 
       if (!token || !signature || !status) {
         return res.status(400).json({ message: "Dati mancanti" });
@@ -1404,11 +1404,17 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(404).json({ message: "Preventivo non trovato" });
       }
 
+      // Verifica se il preventivo è già stato firmato
+      if (quote.status === "approved") {
+        return res.status(400).json({ message: "Il preventivo è già stato firmato" });
+      }
+
       // Aggiorna lo stato del preventivo
       await storage.updateQuote(quote.id, {
         status,
         signature,
-        signedAt: new Date(),
+        signedAt: new Date(signedAt),
+        moduleSelections: selectedModuleItems
       });
 
       // Crea un nuovo evento

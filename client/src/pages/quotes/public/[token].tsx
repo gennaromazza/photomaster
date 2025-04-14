@@ -140,12 +140,15 @@ export default function PublicQuotePage() {
         },
         body: JSON.stringify({
           signature: signature.trim(),
-          status: "approved"
+          status: "approved",
+          signedAt: new Date().toISOString(),
+          selectedModuleItems: selectedModuleItems
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Errore durante la firma del preventivo");
+        const error = await response.json();
+        throw new Error(error.message || "Errore durante la firma del preventivo");
       }
 
       toast({

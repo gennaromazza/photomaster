@@ -224,7 +224,7 @@ export default function QuoteDetailPage() {
   // Gestione errori di caricamento
   if (isError) {
     return (
-      
+      <Layout>
         <div className="container py-10 text-center">
           <h1 className="text-2xl font-bold mb-4">Errore</h1>
           <p className="mb-6">Impossibile caricare i dettagli del preventivo.</p>
@@ -233,18 +233,18 @@ export default function QuoteDetailPage() {
             Torna alla lista preventivi
           </Button>
         </div>
-      
+      </Layout>
     );
   }
   
   // Caricamento dati
   if (isLoading || !quote) {
     return (
-      
+      <Layout>
         <div className="container py-10 flex justify-center items-center min-h-[50vh]">
           <Loader2 className="h-12 w-12 animate-spin text-primary/70" />
         </div>
-      
+      </Layout>
     );
   }
   
@@ -255,7 +255,7 @@ export default function QuoteDetailPage() {
     : "Data non specificata";
   
   return (
-    
+    <Layout>
       <div className="container py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
@@ -907,6 +907,6 @@ export default function QuoteDetailPage() {
           </div>
         </div>
       </div>
-    
+    </Layout>
   );
 }

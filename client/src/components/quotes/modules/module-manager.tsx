@@ -206,16 +206,47 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
 
   // Gestisce il salvataggio di un modulo
   const handleSaveModule = (moduleData: QuoteModuleData) => {
-    console.log("Salvando modulo " + (moduleData.id ? "esistente" : "nuovo") + " di tipo " + moduleData.type);
-    const sanitizedData = {
-      ...moduleData,
-      id: moduleData.id || undefined // Rimuovi id se nuovo modulo
-    };
-    saveModuleMutation.mutate(sanitizedData, {
-      onSuccess: (data) => {
-        console.log("Modulo salvato con successo:", data);
+    try {
+      // Validazione dati
+      if (!moduleData.name?.trim()) {
+        throw new Error("Il nome del modulo è obbligatorio");
       }
-    });
+
+      // Sanitizza e normalizza i dati
+      const sanitizedData = {
+        ...moduleData,
+        id: moduleData.id || undefined,
+        name: moduleData.name.trim(),
+        description: moduleData.description?.trim(),
+        items: moduleData.items?.map(item => ({
+          ...item,
+          quantity: Math.max(1, item.quantity || 1),
+          unitPrice: Math.max(0, item.unitPrice || 0)
+        }))
+      };
+
+      saveModuleMutation.mutate(sanitizedData, {
+        onSuccess: (data) => {
+          toast({
+            title: "Modulo salvato",
+            description: "Il modulo è stato salvato correttamente"
+          });
+        },
+        onError: (error) => {
+          toast({
+            title: "Errore",
+            description: "Errore durante il salvataggio del modulo",
+            variant: "destructive"
+          });
+        }
+      });
+    } catch (error) {
+      toast({
+        title: "Errore",
+        description: error instanceof Error ? error.message : "Errore durante la validazione",
+        variant: "destructive"
+      });
+    }
   };
 
   // Gestisce la cancellazione dell'operazione corrente

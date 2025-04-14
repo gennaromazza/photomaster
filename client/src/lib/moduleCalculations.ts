@@ -95,6 +95,28 @@ export function calculateDiscountAmount(price: number, discountType: 'percentage
   return roundToTwoDecimals(Math.min(price, discountValue));
 }
 
+export function calculateModuleSubtotalWithDiscount(module: any): number { // Added function based on snippet
+  let subtotal = 0;
+  module.options.forEach(option => {
+    if (option.isDefault || option.isSelected) {
+      const quantity = option.quantity || 1;
+      subtotal += option.price * quantity;
+    }
+  });
+
+  if (!module.discount || module.discount <= 0) {
+    return subtotal;
+  }
+
+  // Applica lo sconto al subtotale
+  if (module.discountType === 'percentage') {
+    return roundToTwoDecimals(subtotal * (1 - (module.discount / 100)));
+  } else {
+    return roundToTwoDecimals(Math.max(0, subtotal - module.discount));
+  }
+}
+
+
 export function formatPrice(amount: number) {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',

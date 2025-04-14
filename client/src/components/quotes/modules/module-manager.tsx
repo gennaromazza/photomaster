@@ -10,6 +10,7 @@ import ModuleList from "./module-list";
 import FixedModuleEditor from "./fixed-module-editor";
 import VariableModuleEditor from "./variable-module-editor";
 import { formatCurrency } from "@/lib/utils";
+import { roundToTwoDecimals } from "@/lib/moduleCalculations";
 import ModuleSelector from "./module-selector";
 
 // Tipi base per i moduli

@@ -1426,7 +1426,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         clientId: quote.clientId,
         quoteId: quote.id,
         status: "confirmed",
-        type: quote.category?.name || "wedding",
+        eventType: quote.category?.name || "wedding",
       });
 
       res.json({ success: true, event });

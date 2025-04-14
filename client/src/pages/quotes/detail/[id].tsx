@@ -495,35 +495,35 @@ export default function QuoteDetailPage() {
                             <Loader2 className="h-4 w-4 animate-spin text-primary/70" />
                             <span className="text-muted-foreground">Caricamento...</span>
                           </div>
-                        ) : quote.client ? (
+                        ) : client ? (
                           <div className="flex items-start space-x-3">
                             <Avatar className="h-10 w-10">
                               <AvatarImage src="/avatar.jpg" />
                               <AvatarFallback className="bg-primary/10 text-primary">
-                                {quote.client.firstName?.charAt(0)}{quote.client.lastName?.charAt(0)}
+                                {client.firstName?.charAt(0)}{client.lastName?.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="font-medium">
-                                {quote.client.firstName} {quote.client.lastName}
+                                {client.firstName} {client.lastName}
                               </div>
                               <div className="flex flex-col mt-1">
-                                {quote.client.email && (
+                                {client.email && (
                                   <div className="flex items-center text-sm text-muted-foreground">
                                     <Mail className="h-3.5 w-3.5 mr-1 opacity-70" />
-                                    <span>{quote.client.email}</span>
+                                    <span>{client.email}</span>
                                   </div>
                                 )}
-                                {quote.client.phone && (
+                                {client.phone && (
                                   <div className="flex items-center text-sm text-muted-foreground">
                                     <Phone className="h-3.5 w-3.5 mr-1 opacity-70" />
-                                    <span>{quote.client.phone}</span>
+                                    <span>{client.phone}</span>
                                   </div>
                                 )}
-                                {quote.client.address && (
+                                {client.address && (
                                   <div className="flex items-center text-sm text-muted-foreground">
                                     <MapPin className="h-3.5 w-3.5 mr-1 opacity-70" />
-                                    <span>{quote.client.address}</span>
+                                    <span>{client.address}</span>
                                   </div>
                                 )}
                               </div>
@@ -874,8 +874,7 @@ export default function QuoteDetailPage() {
 
                   <div className="flex items-center space-x-4">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      (quote.status === "approved" || quote.status === "confermato" ||
-                       quote.status === "rejected" || quote.status === "rifiutato") 
+                      (quote.status === "approved" || quote.status === "confermato" ||                       quote.status === "rejected" || quote.status === "rifiutato") 
                         ? "bg-primary text-white" 
                         : "bg-muted text-muted-foreground"
                     }`}>

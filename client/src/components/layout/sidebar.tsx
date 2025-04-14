@@ -104,10 +104,10 @@ export default function Sidebar() {
         />
         
         <SidebarLink
-          href="/products"
-          icon={<ShoppingBag className="h-4 w-4" />}
-          text="Prodotti"
-          isActive={isActive("/products")}
+          href="/collaborators"
+          icon={<Users className="h-4 w-4" />}
+          text="Collaboratori"
+          isActive={isActive("/collaborators")}
         />
         
         <SidebarLink

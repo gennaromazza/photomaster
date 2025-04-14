@@ -422,9 +422,14 @@ export default function PublicQuotePage() {
                       Firmato il {quote.signedAt ? format(new Date(quote.signedAt), "dd/MM/yyyy 'alle' HH:mm", { locale: it }) : ""}
                     </p>
                   </div>
-                  <div className="mt-4 flex items-center justify-center text-sm text-green-600">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Preventivo confermato e firmato
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center justify-center text-sm text-green-600">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Preventivo confermato e firmato
+                    </div>
+                    <p className="text-sm text-muted-foreground text-center">
+                      da {quote.signature}
+                    </p>
                   </div>
                 </div>
               </div>

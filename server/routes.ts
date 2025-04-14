@@ -2005,7 +2005,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       console.error("Error creating module:", err);
       res.status(500).json({ message: "Errore nella creazione del modulo" });
     }
-  });
+  }));
 
   apiRouter.put("/modules/:id", async (req, res) => {
     try {

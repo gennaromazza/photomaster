@@ -29,7 +29,7 @@ const QuotesPage = () => {
   const [quoteToDelete, setQuoteToDelete] = useState2<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState2(false);
 
-  const { data: quotes = [], isLoading } = useQuery<Quote[]>({
+  const { data: quotes = [], isLoading, refetch } = useQuery<Quote[]>({
     queryKey: ["/api/quotes"],
   });
 
@@ -73,9 +73,6 @@ const QuotesPage = () => {
     { value: "rejected", label: "Rifiutato" },
   ];
 
-  const { data: quotes = [], isLoading, refetch } = useQuery<Quote[]>({
-    queryKey: ["/api/quotes"],
-  });
 
   const handleDeleteQuote = async () => {
     if (!quoteToDelete) return;

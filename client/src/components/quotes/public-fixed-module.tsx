@@ -3,9 +3,39 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { Image } from "lucide-react";
+import { getItemNameAndDescription, getItemImagePath } from "@/lib/module-utils";
+
+interface ModuleItem {
+  id?: number;
+  total: number;
+  unitPrice: number;
+  quantity: number;
+  hasDiscount?: boolean;
+  discountType?: string;
+  discountValue?: number;
+  discountedPrice?: number;
+  serviceImagePath?: string;
+  productImagePath?: string;
+  bundleImagePath?: string;
+  serviceName?: string;
+  productName?: string;
+  bundleName?: string;
+  serviceDescription?: string;
+  productDescription?: string;
+  bundleDescription?: string;
+}
+
+interface Module {
+  id: number;
+  name: string;
+  description?: string;
+  type: string;
+  expiryDate?: string;
+  items: ModuleItem[];
+}
 
 interface PublicFixedModuleProps {
-  module: any;
+  module: Module;
 }
 
 export function PublicFixedModule({ module }: PublicFixedModuleProps) {
@@ -47,15 +77,14 @@ export function PublicFixedModule({ module }: PublicFixedModuleProps) {
       </CardHeader>
       <CardContent className="p-4">
         <div className="space-y-3">
-          {module.items.map((item: any, index: number) => {
-            // Determina l'origine delle proprietà (servizio, prodotto o pacchetto)
-            const itemName = item.serviceName || item.productName || item.bundleName || "Servizio/Prodotto";
-            const itemDescription = item.serviceDescription || item.productDescription || item.bundleDescription;
-            const imagePath = item.serviceImagePath || item.productImagePath || item.bundleImagePath;
+          {module.items.map((item: ModuleItem, index: number) => {
+            // Usa le funzioni di utilità importate per standardizzare l'accesso ai dati
+            const { name, description } = getItemNameAndDescription(item);
+            const imagePath = getItemImagePath(item);
             
             return (
               <div 
-                key={index} 
+                key={item.id || index} 
                 className="border rounded-md overflow-hidden bg-muted/20 hover:bg-muted/30 transition-colors"
               >
                 <div className="flex flex-col md:flex-row">
@@ -64,7 +93,7 @@ export function PublicFixedModule({ module }: PublicFixedModuleProps) {
                     <div className="w-full md:w-32 h-24 md:h-auto relative bg-muted">
                       <img 
                         src={imagePath} 
-                        alt={itemName}
+                        alt={name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           console.log(`[LOG] Errore caricamento immagine modulo fisso: ${imagePath}`);
@@ -98,14 +127,14 @@ export function PublicFixedModule({ module }: PublicFixedModuleProps) {
                   {/* Dettagli del prodotto/servizio */}
                   <div className="p-3 flex-1">
                     <div className="flex flex-wrap justify-between items-center gap-2">
-                      <h4 className="font-medium">{itemName}</h4>
+                      <h4 className="font-medium">{name}</h4>
                       <Badge variant="outline">
                         {formatCurrency(item?.total || 0)}
                       </Badge>
                     </div>
                     
-                    {itemDescription && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{itemDescription}</p>
+                    {description && (
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{description}</p>
                     )}
                     
                     <div className="text-sm text-muted-foreground mt-2">

@@ -17,8 +17,8 @@ export function calculateItemTotals(item: QuoteModuleItemData): QuoteModuleItemD
     const discountValue = item.discountValue || 0;
 
     if (discountType === 'percentage') {
-      if (discountValue > 100) discountValue = 100; // Cap max discount
-      const discountedPrice = roundToTwoDecimals(unitPrice * (1 - discountValue / 100));
+      const cappedDiscount = Math.min(discountValue, 100); // Cap max discount
+      const discountedPrice = roundToTwoDecimals(unitPrice * (1 - cappedDiscount / 100));
       const total = roundToTwoDecimals(qty * discountedPrice);
       return { 
         ...item, 

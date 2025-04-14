@@ -7,6 +7,7 @@ type ClientAddressDetailsProps = {
   secondClient?: any;
   className?: string;
   showAddresses?: boolean;
+  isLoading?: boolean;
 };
 
 /**

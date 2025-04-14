@@ -98,7 +98,7 @@ export default function QuoteDetailPage() {
   const [expiryDays, setExpiryDays] = useState(30);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const [activeTab, setActiveTab] = useState("details");
-  
+
   // Query per ottenere i dati del preventivo
   const { 
     data: quote, 
@@ -109,25 +109,19 @@ export default function QuoteDetailPage() {
     queryKey: ["/api/quotes", id],
     enabled: !!id,
   });
-  
+
   // Query per ottenere le info del cliente
-  const { 
-    data: client,
-    isLoading: isClientLoading
-  } = useQuery<any>({
-    queryKey: ["/api/clients", quote?.clientId],
+  const { data: client, isLoading: isClientLoading } = useQuery<any>({
+    queryKey: [`/api/clients/${quote?.clientId}`],
     enabled: !!quote?.clientId,
   });
-  
+
   // Query per ottenere le info del secondo cliente (se presente)
-  const { 
-    data: secondClient,
-    isLoading: isSecondClientLoading
-  } = useQuery<any>({
-    queryKey: ["/api/clients", quote?.secondClientId],
+  const { data: secondClient, isLoading: isSecondClientLoading } = useQuery<any>({
+    queryKey: [`/api/clients/${quote?.secondClientId}`],
     enabled: !!quote?.secondClientId,
   });
-  
+
   // Mutation per eliminare il preventivo
   const deleteQuoteMutation = useMutation({
     mutationFn: async () => {
@@ -152,7 +146,7 @@ export default function QuoteDetailPage() {
       });
     },
   });
-  
+
   // Mutation per generare il link di condivisione
   const generateShareLinkMutation = useMutation({
     mutationFn: async () => {
@@ -188,18 +182,18 @@ export default function QuoteDetailPage() {
       });
     },
   });
-  
+
   // Funzione per copiare il link negli appunti
   const copyLinkToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(shareLink);
       setCopyStatus("copied");
-      
+
       // Reset status after 2 seconds
       setTimeout(() => {
         setCopyStatus("idle");
       }, 2000);
-      
+
       toast({
         title: "Link copiato",
         description: "Link copiato negli appunti",
@@ -207,7 +201,7 @@ export default function QuoteDetailPage() {
     } catch (err) {
       console.error("Errore copia link:", err);
       setCopyStatus("error");
-      
+
       toast({
         title: "Errore",
         description: "Impossibile copiare il link negli appunti",
@@ -215,16 +209,16 @@ export default function QuoteDetailPage() {
       });
     }
   };
-  
+
   // Callback per aggiornare il preventivo dopo modifiche ai moduli
   const refreshQuote = useCallback(() => {
     refetch();
   }, [refetch]);
-  
+
   // Gestione errori di caricamento
   if (isError) {
     return (
-      
+
         <div className="container py-10 text-center">
           <h1 className="text-2xl font-bold mb-4">Errore</h1>
           <p className="mb-6">Impossibile caricare i dettagli del preventivo.</p>
@@ -233,29 +227,29 @@ export default function QuoteDetailPage() {
             Torna alla lista preventivi
           </Button>
         </div>
-      
+
     );
   }
-  
+
   // Caricamento dati
   if (isLoading || !quote) {
     return (
-      
+
         <div className="container py-10 flex justify-center items-center min-h-[50vh]">
           <Loader2 className="h-12 w-12 animate-spin text-primary/70" />
         </div>
-      
+
     );
   }
-  
+
   // Formattazione data
   const eventDate = quote.eventDate ? new Date(quote.eventDate) : null;
   const formattedEventDate = eventDate
     ? format(eventDate, "d MMMM yyyy", { locale: it })
     : "Data non specificata";
-  
+
   return (
-    
+
       <div className="container py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
@@ -291,7 +285,7 @@ export default function QuoteDetailPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
               <DialogTrigger asChild>
@@ -340,7 +334,7 @@ export default function QuoteDetailPage() {
                       </Button>
                     </div>
                   </div>
-                  
+
                   {shareLink && (
                     <div className="mt-4">
                       <label className="text-sm font-medium mb-1 block">
@@ -401,7 +395,7 @@ export default function QuoteDetailPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -471,7 +465,7 @@ export default function QuoteDetailPage() {
             </DropdownMenu>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Colonna principale - 8/12 */}
           <div className="lg:col-span-8 space-y-6">
@@ -481,7 +475,7 @@ export default function QuoteDetailPage() {
                 <TabsTrigger value="modules">Moduli</TabsTrigger>
                 <TabsTrigger value="attachments">Allegati</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="details" className="mt-6 space-y-6">
                 {/* Informazioni cliente */}
                 <Card>
@@ -542,7 +536,7 @@ export default function QuoteDetailPage() {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Secondo cliente */}
                       <div className="space-y-3">
                         <h3 className="font-medium text-sm">Secondo Cliente</h3>
@@ -601,7 +595,7 @@ export default function QuoteDetailPage() {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 {/* Informazioni evento */}
                 <Card>
                   <CardHeader className="pb-3">
@@ -647,7 +641,7 @@ export default function QuoteDetailPage() {
                           </div>
                         </dl>
                       </div>
-                      
+
                       <div>
                         <dl className="space-y-3">
                           <div>
@@ -694,7 +688,7 @@ export default function QuoteDetailPage() {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 {/* Note */}
                 <Card>
                   <CardHeader className="pb-3">
@@ -714,12 +708,12 @@ export default function QuoteDetailPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="modules" className="mt-6 space-y-6">
                 {/* Moduli preventivo */}
                 <ModuleManager quoteId={parseInt(id)} refreshQuote={refreshQuote} />
               </TabsContent>
-              
+
               <TabsContent value="attachments" className="mt-6 space-y-6">
                 <Card>
                   <CardHeader className="pb-3">
@@ -744,7 +738,7 @@ export default function QuoteDetailPage() {
               </TabsContent>
             </Tabs>
           </div>
-          
+
           {/* Colonna laterale - 4/12 */}
           <div className="lg:col-span-4 space-y-6">
             {/* Riepilogo finanziario */}
@@ -758,7 +752,7 @@ export default function QuoteDetailPage() {
                     <span className="text-muted-foreground">Subtotale</span>
                     <span>{formatCurrency(quote.subtotal || 0)}</span>
                   </div>
-                  
+
                   {/* Mostro lo sconto solo se presente */}
                   {quote.discount > 0 && (
                     <div className="flex justify-between text-muted-foreground">
@@ -776,16 +770,16 @@ export default function QuoteDetailPage() {
                       </span>
                     </div>
                   )}
-                  
+
                   {/* Eventuali altre voci */}
-                  
+
                   <Separator />
                   <div className="flex justify-between font-medium text-lg">
                     <span>Totale</span>
                     <span>{formatCurrency(quote.total || 0)}</span>
                   </div>
                 </div>
-                
+
                 <div className="text-sm text-muted-foreground mt-2">
                   Preventivo {quote.status === "draft" ? "in bozza" : quote.status}
                 </div>
@@ -802,7 +796,7 @@ export default function QuoteDetailPage() {
                     <Share className="mr-2 h-4 w-4" />
                     Condividi con Cliente
                   </Button>
-                  
+
                   <Button 
                     variant="outline" 
                     className="w-full"
@@ -814,7 +808,7 @@ export default function QuoteDetailPage() {
                 </div>
               </CardFooter>
             </Card>
-            
+
             {/* Timeline/stato */}
             <Card>
               <CardHeader>
@@ -833,7 +827,7 @@ export default function QuoteDetailPage() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-4">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       quote.status !== "draft" 
@@ -851,7 +845,7 @@ export default function QuoteDetailPage() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-4">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       (quote.status === "pending" || quote.status === "in attesa" ||
@@ -877,7 +871,7 @@ export default function QuoteDetailPage() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-4">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       (quote.status === "approved" || quote.status === "confermato" ||
@@ -907,6 +901,10 @@ export default function QuoteDetailPage() {
           </div>
         </div>
       </div>
-    
+
   );
+}
+
+function formatDate(date: Date, formatStr = "d MMM yyyy") {
+  return format(date, formatStr, { locale: it });
 }

@@ -129,7 +129,7 @@ export default function QuoteDetailPage() {
 
   if (isLoadingQuote) {
     return (
-      
+      <Layout>
         <div className="container py-6">
           <div className="flex justify-center items-center min-h-[60vh]">
             <div className="animate-pulse text-center">
@@ -139,13 +139,13 @@ export default function QuoteDetailPage() {
             </div>
           </div>
         </div>
-      
+      </Layout>
     );
   }
 
   if (!quote) {
     return (
-      
+      <Layout>
         <div className="container py-6">
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold mb-2">Preventivo non trovato</h2>
@@ -158,7 +158,7 @@ export default function QuoteDetailPage() {
             </Button>
           </div>
         </div>
-      
+      </Layout>
     );
   }
 
@@ -169,7 +169,7 @@ export default function QuoteDetailPage() {
   };
 
   return (
-    
+    <Layout>
       <div className="container py-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
@@ -496,6 +496,6 @@ export default function QuoteDetailPage() {
           </div>
         </div>
       </div>
-    
+    </Layout>
   );
 }

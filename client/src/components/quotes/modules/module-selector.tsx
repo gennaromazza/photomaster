@@ -1,132 +1,127 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, FileInput, ListChecks, Lightbulb, Users, Pointer } from "lucide-react";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Package, ListChecks, ArrowLeft } from "lucide-react";
 
 interface ModuleSelectorProps {
   onSelectModuleType: (type: "fixed" | "variable") => void;
 }
 
 /**
- * Componente per la selezione del tipo di modulo da creare
- * Responsabilità: Permettere all'utente di scegliere se creare un modulo fisso o variabile
+ * Componente per selezionare il tipo di modulo da creare
+ * Responsabilità:
+ * - Mostrare le opzioni di modulo disponibili (fisso o variabile)
+ * - Permettere all'utente di selezionare un tipo di modulo
  */
 export default function ModuleSelector({ onSelectModuleType }: ModuleSelectorProps) {
   return (
-    <div className="space-y-4">
-      <div className="text-center mb-4">
-        <h3 className="text-xl font-medium mb-2">Seleziona Tipo di Modulo</h3>
-        <p className="text-muted-foreground max-w-lg mx-auto">
-          I moduli ti permettono di organizzare servizi e prodotti in gruppi logici, 
-          rendendoli più facili da gestire e da presentare al cliente.
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center mb-4">
+        <h2 className="text-xl font-medium">Seleziona Tipo di Modulo</h2>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        {/* Modulo Fisso */}
-        <Card className="cursor-pointer hover:border-primary/50 transition-all" onClick={() => onSelectModuleType("fixed")}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <Package className="mr-2 h-5 w-5 text-primary/80" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card 
+          className="cursor-pointer border-primary/20 hover:border-primary transition-colors"
+          onClick={() => onSelectModuleType("fixed")}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Package className="mr-2 h-5 w-5 text-primary" />
               Modulo Fisso
             </CardTitle>
             <CardDescription>
-              Servizi e prodotti selezionati da te
+              Insieme predefinito di servizi o prodotti scelti da te
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="text-sm">
-                <p>
-                  Un modulo fisso include servizi e prodotti specifici, selezionati
-                  dal fotografo, che saranno sempre inclusi nel preventivo.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <div className="flex items-start">
-                  <div className="bg-primary/10 p-1.5 rounded-full mr-2 mt-0.5">
-                    <FileInput className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div className="text-xs">
-                    <p className="font-medium">Predefinito</p>
-                    <p className="text-muted-foreground">Selezione fissa di servizi</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="bg-primary/10 p-1.5 rounded-full mr-2 mt-0.5">
-                    <ListChecks className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div className="text-xs">
-                    <p className="font-medium">Non modificabile</p>
-                    <p className="text-muted-foreground">Dal cliente</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-center mt-4 pt-2">
-                <Button onClick={() => onSelectModuleType("fixed")}>
-                  Crea Modulo Fisso
-                </Button>
-              </div>
-            </div>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-start">
+                <span className="rounded-full h-5 w-5 bg-primary/10 text-primary flex items-center justify-center text-xs mr-2 mt-0.5">
+                  ✓
+                </span>
+                <span>Tu selezioni esattamente cosa includere nel modulo</span>
+              </li>
+              <li className="flex items-start">
+                <span className="rounded-full h-5 w-5 bg-primary/10 text-primary flex items-center justify-center text-xs mr-2 mt-0.5">
+                  ✓
+                </span>
+                <span>Il cliente non può modificare le selezioni</span>
+              </li>
+              <li className="flex items-start">
+                <span className="rounded-full h-5 w-5 bg-primary/10 text-primary flex items-center justify-center text-xs mr-2 mt-0.5">
+                  ✓
+                </span>
+                <span>Ideale per offerte predefinite e pacchetti standard</span>
+              </li>
+            </ul>
           </CardContent>
+          <CardFooter className="pt-2 pb-4">
+            <Button className="w-full" onClick={() => onSelectModuleType("fixed")}>
+              Crea Modulo Fisso
+            </Button>
+          </CardFooter>
         </Card>
         
-        {/* Modulo Variabile */}
-        <Card className="cursor-pointer hover:border-primary/50 transition-all" onClick={() => onSelectModuleType("variable")}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <Users className="mr-2 h-5 w-5 text-primary/80" />
+        <Card 
+          className="cursor-pointer border-primary/20 hover:border-primary transition-colors"
+          onClick={() => onSelectModuleType("variable")}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <ListChecks className="mr-2 h-5 w-5 text-primary" />
               Modulo Variabile
             </CardTitle>
             <CardDescription>
-              Opzioni selezionabili dal cliente
+              Opzioni tra cui il cliente può scegliere
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="text-sm">
-                <p>
-                  Un modulo variabile offre al cliente opzioni tra cui scegliere,
-                  permettendogli di personalizzare il preventivo in base alle sue esigenze.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <div className="flex items-start">
-                  <div className="bg-primary/10 p-1.5 rounded-full mr-2 mt-0.5">
-                    <Pointer className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div className="text-xs">
-                    <p className="font-medium">Scelta Cliente</p>
-                    <p className="text-muted-foreground">Opzioni personalizzabili</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="bg-primary/10 p-1.5 rounded-full mr-2 mt-0.5">
-                    <Lightbulb className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div className="text-xs">
-                    <p className="font-medium">Interattivo</p>
-                    <p className="text-muted-foreground">Configurabile online</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-center mt-4 pt-2">
-                <Button onClick={() => onSelectModuleType("variable")} variant="secondary">
-                  Crea Modulo Variabile
-                </Button>
-              </div>
-            </div>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-start">
+                <span className="rounded-full h-5 w-5 bg-primary/10 text-primary flex items-center justify-center text-xs mr-2 mt-0.5">
+                  ✓
+                </span>
+                <span>Crei gruppi di opzioni tra cui il cliente può scegliere</span>
+              </li>
+              <li className="flex items-start">
+                <span className="rounded-full h-5 w-5 bg-primary/10 text-primary flex items-center justify-center text-xs mr-2 mt-0.5">
+                  ✓
+                </span>
+                <span>Puoi definire limiti minimi e massimi di selezioni</span>
+              </li>
+              <li className="flex items-start">
+                <span className="rounded-full h-5 w-5 bg-primary/10 text-primary flex items-center justify-center text-xs mr-2 mt-0.5">
+                  ✓
+                </span>
+                <span>Ideale per personalizzazioni e opzioni aggiuntive</span>
+              </li>
+            </ul>
           </CardContent>
+          <CardFooter className="pt-2 pb-4">
+            <Button className="w-full" onClick={() => onSelectModuleType("variable")}>
+              Crea Modulo Variabile
+            </Button>
+          </CardFooter>
         </Card>
       </div>
       
-      <div className="py-4 text-sm text-center text-muted-foreground">
-        <p>
-          <span className="font-medium">Suggerimento:</span> Per un preventivo 
-          standard, inizia con un modulo fisso per i servizi principali, e aggiungi 
-          moduli variabili per le opzioni extra.
-        </p>
+      <div className="pt-4">
+        <Button 
+          variant="ghost" 
+          className="px-0"
+          onClick={() => onSelectModuleType("fixed")}
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Indietro alla lista moduli
+        </Button>
       </div>
     </div>
   );

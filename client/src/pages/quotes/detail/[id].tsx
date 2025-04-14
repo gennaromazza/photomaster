@@ -285,7 +285,7 @@ export default function QuoteDetailPage() {
                 <div className="flex items-center text-muted-foreground">
                   <Info className="h-4 w-4 mr-1" />
                   <span className="text-sm">
-                    Creato: {format(new Date(quote.createdAt), "dd/MM/yyyy")}
+                    Creato: {quote.createdAt ? formatDate(new Date(quote.createdAt)) : "Data non disponibile"}
                   </span>
                 </div>
               </div>
@@ -829,7 +829,7 @@ export default function QuoteDetailPage() {
                     <div className="flex-1">
                       <p className="font-medium">Creazione Preventivo</p>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(quote.createdAt), "d MMM yyyy, HH:mm", { locale: it })}
+                        {quote.createdAt ? formatDate(new Date(quote.createdAt), "d MMM yyyy, HH:mm") : "Data non disponibile"}
                       </p>
                     </div>
                   </div>
@@ -845,8 +845,8 @@ export default function QuoteDetailPage() {
                     <div className="flex-1">
                       <p className="font-medium">Configurazione Moduli</p>
                       <p className="text-sm text-muted-foreground">
-                        {quote.status !== "draft" 
-                          ? format(new Date(quote.updatedAt), "d MMM yyyy, HH:mm", { locale: it })
+                        {quote.status !== "draft" && quote.updatedAt
+                          ? formatDate(new Date(quote.updatedAt), "d MMM yyyy, HH:mm")
                           : "In corso..."}
                       </p>
                     </div>

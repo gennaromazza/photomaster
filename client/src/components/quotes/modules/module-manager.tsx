@@ -107,15 +107,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   } = useQuery<QuoteModuleData[]>({
     queryKey: [`/api/quotes/${quoteId}/modules`],
     enabled: !!quoteId,
-    retry: 3,
-    onError: (error) => {
-      console.error("Error fetching modules:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare i moduli. Riprova più tardi.",
-        variant: "destructive",
-      });
-    }
+    retry: 3
   });
 
   // Mutation per salvare un modulo
@@ -232,7 +224,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
         items: moduleData.items?.map(item => ({
           ...item,
           quantity: Math.max(1, item.quantity || 1),
-          unitPrice: Math.max(0, item.unitPrice || 0)
+          price: Math.max(0, item.price || 0)
         }))
       };
 
@@ -267,8 +259,10 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   };
 
   // Calcola il totale di tutti i moduli
-  const calculateTotal = () => {
-    return modules.reduce((total, module) => {
+  const calculateTotal = (): number => {
+    if (!Array.isArray(modules)) return 0;
+    
+    return modules.reduce((total: number, module: QuoteModuleData) => {
       const moduleTotal = module.total || module.subtotal || 0;
       return roundToTwoDecimals(total + moduleTotal);
     }, 0);

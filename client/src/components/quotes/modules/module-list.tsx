@@ -1,51 +1,26 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Edit, ListChecks, Trash2, GripVertical, Lock, BookOpen } from "lucide-react";
+import { Edit, Trash, ListChecks, Lock, BookOpen, BookMarked } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface ModuleData {
-  id?: number;
+  id: number;
   name: string;
   description?: string;
   type: 'fixed' | 'variable';
-  position?: number;
   subtotal?: number;
+  total?: number;
   discount?: number;
   discountType?: 'percentage' | 'amount';
-  total?: number;
   items?: any[];
   selections?: any[];
 }
 
 interface ModuleListProps {
   modules: ModuleData[];
-  onEditModule: (moduleId: number) => void;
+  onEditModule: (module: ModuleData) => void;
   onDeleteModule: (moduleId: number) => void;
   onReorderModules?: (modules: ModuleData[]) => void;
 }
@@ -108,7 +83,7 @@ export default function ModuleList({
       {modules.map((module) => (
         <Card key={module.id} className="overflow-hidden">
           <CardHeader className="pb-2">
-            <div className="flex items-start">
+            <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-base flex items-center">
                   <span className="mr-2">{module.name}</span>
@@ -132,133 +107,45 @@ export default function ModuleList({
               </div>
               <div className="text-right">
                 <div className="text-sm font-medium">
-                  {formatCurrency(module.total || 0)}
+                  {formatCurrency(module.total || module.subtotal || 0)}
                 </div>
+                {module.discount && module.discount > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Sconto: {getEffectiveDiscount(module)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pb-3 pt-0">
+            <div className="flex items-center justify-between">
+              <div>
                 <div className="text-xs text-muted-foreground">
                   {getModuleContentSummary(module)}
                 </div>
               </div>
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => onEditModule(module)}
+                >
+                  <Edit className="h-3.5 w-3.5 mr-1" />
+                  Modifica
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-destructive"
+                  onClick={() => onDeleteModule(module.id)}
+                >
+                  <Trash className="h-3.5 w-3.5 mr-1" />
+                  Elimina
+                </Button>
+              </div>
             </div>
-          </CardHeader>
-          
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="details" className="border-0">
-                <AccordionTrigger className="py-2 text-sm">
-                  Dettagli modulo
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-2">
-                    <div>
-                      <div className="text-muted-foreground text-xs mb-1">Tipo modulo</div>
-                      <div>{module.type === "fixed" ? "Fisso (selezionato dal fotografo)" : "Variabile (personalizzabile dal cliente)"}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-xs mb-1">Sconto applicato</div>
-                      <div>{getEffectiveDiscount(module)}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-xs mb-1">Subtotale</div>
-                      <div>{formatCurrency(module.subtotal || 0)}</div>
-                    </div>
-                    <div>
-                      <div className="text-muted-foreground text-xs mb-1">Totale modulo</div>
-                      <div className="font-medium">{formatCurrency(module.total || 0)}</div>
-                    </div>
-                  </div>
-                  
-                  {/* Contenuto del modulo (fisso) */}
-                  {module.type === "fixed" && module.items && module.items.length > 0 && (
-                    <div className="mt-3">
-                      <div className="text-muted-foreground text-xs mb-2">Contenuto del modulo:</div>
-                      <div className="text-xs space-y-1">
-                        {module.items.map((item, index) => (
-                          <div key={`${item.itemType}-${item.itemId}-${index}`} className="flex justify-between py-1 px-2 rounded hover:bg-muted/50">
-                            <div>
-                              <span>{item.name}</span>
-                              <span className="text-muted-foreground ml-2">x{item.quantity}</span>
-                            </div>
-                            <div>{formatCurrency(item.total || (item.price * item.quantity))}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Contenuto del modulo (variabile) */}
-                  {module.type === "variable" && module.selections && module.selections.length > 0 && (
-                    <div className="mt-3">
-                      <div className="text-muted-foreground text-xs mb-2">Categorie di scelta:</div>
-                      <div className="text-xs space-y-1">
-                        {module.selections.map((selection, index) => (
-                          <div key={index} className="p-2 border rounded-md mb-2">
-                            <div className="font-medium mb-1">{selection.name}</div>
-                            {selection.options && selection.options.length > 0 ? (
-                              <div className="pl-2 space-y-1 mt-1">
-                                {selection.options.map((option: any, optIdx: number) => (
-                                  <div key={optIdx} className="flex justify-between text-xs py-0.5">
-                                    <div className="flex items-center">
-                                      {option.isDefault && (
-                                        <Badge variant="outline" className="h-4 text-[10px] mr-1">Default</Badge>
-                                      )}
-                                      <span>{option.name}</span>
-                                    </div>
-                                    <div>{formatCurrency(option.price)}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-muted-foreground italic pl-2">Nessuna opzione</div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
           </CardContent>
-          
-          <CardFooter className="border-t p-3 flex justify-end">
-            <div className="flex space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => module.id && onEditModule(module.id)}
-              >
-                <Edit className="h-4 w-4 mr-1" />
-                Modifica
-              </Button>
-              
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Elimina
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Vuoi eliminare questo modulo?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Questa azione non può essere annullata. Il modulo "{module.name}" verrà
-                      rimosso definitivamente dal preventivo.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Annulla</AlertDialogCancel>
-                    <AlertDialogAction 
-                      className="bg-destructive hover:bg-destructive/90"
-                      onClick={() => module.id && onDeleteModule(module.id)}
-                    >
-                      Elimina
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </CardFooter>
         </Card>
       ))}
     </div>

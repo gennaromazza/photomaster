@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { RiEyeLine, RiEdit2Line, RiDeleteBinLine, RiMoreLine } from "react-icons/ri";
+import { RiEyeLine, RiEdit2Line, RiDeleteBinLine } from "react-icons/ri";
+import { MoreVertical } from "lucide-react";
 import { useState as useState2 } from 'react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
 

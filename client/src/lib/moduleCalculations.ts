@@ -85,10 +85,12 @@ export function calculateModuleTotals(items: QuoteModuleItemData[]) {
 }
 
 export function calculateDiscountAmount(price: number, discountType: 'percentage' | 'fixed', discountValue: number): number {
+  if (!price || !discountValue) return 0;
+  
   if (discountType === 'percentage') {
-    return price * (discountValue / 100);
+    return roundToTwoDecimals(price * (discountValue / 100));
   }
-  return Math.min(price, discountValue);
+  return roundToTwoDecimals(Math.min(price, discountValue));
 }
 
 export function formatPrice(amount: number) {

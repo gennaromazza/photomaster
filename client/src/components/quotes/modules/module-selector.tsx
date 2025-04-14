@@ -47,9 +47,29 @@ export default function ModuleSelector({
     staleTime: 30000,
   });
 
-  // Previeni rendering finché i dati non sono caricati
+  const { data: services = [], isLoading: isLoadingServices, error: servicesError } = useQuery<Service[]>({
+    queryKey: ["/api/services"],
+    staleTime: 30000,
+    retry: 2
+  });
+
+  const { data: products = [], isLoading: isLoadingProducts, error: productsError } = useQuery<Product[]>({
+    queryKey: ["/api/products"], 
+    staleTime: 30000,
+    retry: 2
+  });
+
+  // Gestione errori e loading
+  if (servicesError || productsError) {
+    return (
+      <div className="text-red-500 p-4 text-center">
+        Errore nel caricamento dei dati. Riprova più tardi.
+      </div>
+    );
+  }
+
   if (isLoadingServices || isLoadingProducts) {
-    return <div>Caricamento dati...</div>;
+    return <div className="p-4 text-center">Caricamento dati...</div>;
   }
 
   return (

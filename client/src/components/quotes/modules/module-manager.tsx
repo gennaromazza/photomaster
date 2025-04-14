@@ -95,7 +95,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   const [moduleManagerState, setModuleManagerState] = useState<ModuleManagerState>(ModuleManagerState.LIST);
   const [editingModule, setEditingModule] = useState<QuoteModuleData | null>(null);
   const { toast } = useToast();
-  
+
   // Query per ottenere i moduli del preventivo
   const {
     data: modules = [],
@@ -106,7 +106,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
     queryKey: [`/api/quotes/${quoteId}/modules`],
     enabled: !!quoteId,
   });
-  
+
   // Mutation per salvare un modulo
   const saveModuleMutation = useMutation({
     mutationFn: async (moduleData: QuoteModuleData) => {
@@ -123,11 +123,11 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
         description: "Il modulo è stato salvato con successo",
       });
       refetch();
-      
+
       // Resetta lo stato dell'editor
       setModuleManagerState(ModuleManagerState.LIST);
       setEditingModule(null);
-      
+
       // Aggiorna il preventivo principale
       if (refreshQuote) {
         refreshQuote();
@@ -142,7 +142,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       });
     },
   });
-  
+
   // Mutation per eliminare un modulo
   const deleteModuleMutation = useMutation({
     mutationFn: async (moduleId: number) => {
@@ -155,7 +155,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
         description: "Il modulo è stato eliminato con successo",
       });
       refetch();
-      
+
       // Aggiorna il preventivo principale
       if (refreshQuote) {
         refreshQuote();
@@ -170,13 +170,13 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       });
     },
   });
-  
+
   // Gestisce il click sul pulsante per aggiungere un nuovo modulo
   const handleAddModule = () => {
     setEditingModule(null);
     setModuleManagerState(ModuleManagerState.SELECT);
   };
-  
+
   // Gestisce la selezione del tipo di modulo
   const handleSelectModuleType = (type: "fixed" | "variable") => {
     if (type === "fixed") {
@@ -185,25 +185,25 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       setModuleManagerState(ModuleManagerState.EDIT_VARIABLE);
     }
   };
-  
+
   // Gestisce la modifica di un modulo esistente
   const handleEditModule = (module: QuoteModuleData) => {
     setEditingModule(module);
-    
+
     if (module.type === "fixed") {
       setModuleManagerState(ModuleManagerState.EDIT_FIXED);
     } else {
       setModuleManagerState(ModuleManagerState.EDIT_VARIABLE);
     }
   };
-  
+
   // Gestisce l'eliminazione di un modulo
   const handleDeleteModule = (moduleId: number) => {
     if (window.confirm("Sei sicuro di voler eliminare questo modulo?")) {
       deleteModuleMutation.mutate(moduleId);
     }
   };
-  
+
   // Gestisce il salvataggio di un modulo
   const handleSaveModule = (moduleData: QuoteModuleData) => {
     console.log("Salvando modulo " + (moduleData.id ? "esistente" : "nuovo") + " di tipo " + moduleData.type);
@@ -217,18 +217,18 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       }
     });
   };
-  
+
   // Gestisce la cancellazione dell'operazione corrente
   const handleCancel = () => {
     setModuleManagerState(ModuleManagerState.LIST);
     setEditingModule(null);
   };
-  
+
   // Calcola il totale di tutti i moduli
   const calculateTotal = () => {
     return modules.reduce((total, module) => total + (module.total || 0), 0);
   };
-  
+
   // Gestione errori
   if (isError) {
     return (
@@ -244,7 +244,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       </Card>
     );
   }
-  
+
   // Durante il caricamento
   if (isLoading) {
     return (
@@ -260,7 +260,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       </Card>
     );
   }
-  
+
   // Rendering condizionale in base allo stato
   return (
     <Card className="mb-8">
@@ -270,7 +270,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
             <Package className="mr-2 h-5 w-5 text-primary/70" />
             Moduli Preventivo
           </CardTitle>
-          
+
           {moduleManagerState === ModuleManagerState.LIST && (
             <Button size="sm" onClick={handleAddModule}>
               <Plus className="mr-1 h-4 w-4" />
@@ -279,7 +279,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent>
         {moduleManagerState === ModuleManagerState.LIST && (
           <>
@@ -288,18 +288,18 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
               onEditModule={handleEditModule}
               onDeleteModule={handleDeleteModule}
             />
-            
+
             {modules.length > 0 && (
               <>
                 <Separator className="my-4" />
-                
+
                 <div className="flex justify-between items-center">
                   <div className="text-sm font-medium">Totale Moduli</div>
                   <div className="text-xl font-semibold">
                     {formatCurrency(calculateTotal())}
                   </div>
                 </div>
-                
+
                 {modules.length === 0 && (
                   <div className="flex justify-center mt-6">
                     <Button
@@ -316,13 +316,13 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
             )}
           </>
         )}
-        
+
         {moduleManagerState === ModuleManagerState.SELECT && (
           <ModuleSelector
             onSelectModuleType={handleSelectModuleType}
           />
         )}
-        
+
         {moduleManagerState === ModuleManagerState.EDIT_FIXED && (
           <FixedModuleEditor
             quoteId={quoteId}
@@ -331,7 +331,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
             onCancel={handleCancel}
           />
         )}
-        
+
         {moduleManagerState === ModuleManagerState.EDIT_VARIABLE && (
           <VariableModuleEditor
             quoteId={quoteId}

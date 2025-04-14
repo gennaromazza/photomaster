@@ -449,6 +449,26 @@ export default function VariableModuleEditor({
       alert("Aggiungi almeno una selezione al modulo");
       return;
     }
+
+    // Valida limiti selezioni
+    if (values.minSelections && values.maxSelections && 
+        values.minSelections > values.maxSelections) {
+      alert("Il numero minimo di selezioni non può essere maggiore del massimo");
+      return;  
+    }
+
+    // Valida opzioni in ogni selezione
+    for (const selection of moduleSelections) {
+      if (selection.minOptions && selection.maxOptions && 
+          selection.minOptions > selection.maxOptions) {
+        alert(`Selezione "${selection.name}": il minimo di opzioni non può superare il massimo`);
+        return;
+      }
+      if (selection.isRequired && (!selection.options || selection.options.length === 0)) {
+        alert(`Selezione "${selection.name}" è obbligatoria ma non ha opzioni`);
+        return;
+      }
+    }
     
     // Verifica che ogni selezione abbia almeno un'opzione
     const emptySelections = moduleSelections.filter(selection => selection.options.length === 0);

@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Lock, BookOpen, Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Service, Product } from "@/types"; // Assuming these types are defined elsewhere
 
 interface ModuleSelectorProps {
   onSelectModuleType: (type: "fixed" | "variable") => void;
@@ -34,6 +36,22 @@ interface ModuleSelectorProps {
 export default function ModuleSelector({
   onSelectModuleType,
 }: ModuleSelectorProps) {
+
+  const { data: services = [], isLoading: isLoadingServices } = useQuery<Service[]>({
+    queryKey: ["/api/services"],
+    staleTime: 30000, // Cache per 30 secondi
+  });
+
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+    staleTime: 30000,
+  });
+
+  // Previeni rendering finché i dati non sono caricati
+  if (isLoadingServices || isLoadingProducts) {
+    return <div>Caricamento dati...</div>;
+  }
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -61,7 +79,7 @@ export default function ModuleSelector({
                 Modulo Variabile
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="fixed" className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2 space-y-4">
@@ -70,7 +88,7 @@ export default function ModuleSelector({
                     I moduli fissi contengono elementi pre-selezionati da te. Questi elementi non
                     possono essere modificati dal cliente e vengono sempre inclusi nel preventivo.
                   </p>
-                  
+
                   <h4 className="text-sm font-medium mt-4">Ideale per:</h4>
                   <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
                     <li>Servizi base sempre inclusi nel pacchetto</li>
@@ -78,7 +96,7 @@ export default function ModuleSelector({
                     <li>Pacchetti predefiniti con prezzo fisso</li>
                     <li>Elementi obbligatori del servizio</li>
                   </ul>
-                  
+
                   <h4 className="text-sm font-medium mt-4">Vantaggi:</h4>
                   <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
                     <li>Maggiore controllo sui servizi offerti</li>
@@ -86,7 +104,7 @@ export default function ModuleSelector({
                     <li>Prezzo preventivato più accurato</li>
                   </ul>
                 </div>
-                
+
                 <div className="col-span-1">
                   <Card>
                     <CardHeader className="pb-2">
@@ -110,7 +128,7 @@ export default function ModuleSelector({
                   </Card>
                 </div>
               </div>
-              
+
               <div className="bg-muted/40 p-3 rounded-md flex items-start space-x-2 text-sm">
                 <div className="text-primary font-medium min-w-[130px]">Guida fotografo:</div>
                 <div className="text-muted-foreground">
@@ -118,7 +136,7 @@ export default function ModuleSelector({
                   Indica chiaramente cosa include ogni pacchetto e il prezzo totale. Puoi applicare uno sconto all'intero modulo.
                 </div>
               </div>
-              
+
               <DialogFooter>
                 <Button
                   onClick={() => onSelectModuleType("fixed")}
@@ -128,7 +146,7 @@ export default function ModuleSelector({
                 </Button>
               </DialogFooter>
             </TabsContent>
-            
+
             <TabsContent value="variable" className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2 space-y-4">
@@ -138,7 +156,7 @@ export default function ModuleSelector({
                     Puoi creare diverse categorie di selezione e per ognuna definire
                     quali opzioni il cliente può selezionare.
                   </p>
-                  
+
                   <h4 className="text-sm font-medium mt-4">Ideale per:</h4>
                   <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
                     <li>Scelta tra diversi formati o materiali per prodotti</li>
@@ -146,7 +164,7 @@ export default function ModuleSelector({
                     <li>Extra che il cliente può aggiungere</li>
                     <li>Pacchetti flessibili con elementi opzionali</li>
                   </ul>
-                  
+
                   <h4 className="text-sm font-medium mt-4">Vantaggi:</h4>
                   <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
                     <li>Maggiore personalizzazione per il cliente</li>
@@ -154,7 +172,7 @@ export default function ModuleSelector({
                     <li>Evita di creare molti preventivi diversi per lo stesso cliente</li>
                   </ul>
                 </div>
-                
+
                 <div className="col-span-1">
                   <Card>
                     <CardHeader className="pb-2">
@@ -185,7 +203,7 @@ export default function ModuleSelector({
                   </Card>
                 </div>
               </div>
-              
+
               <div className="bg-muted/40 p-3 rounded-md flex items-start space-x-2 text-sm">
                 <div className="text-primary font-medium min-w-[130px]">Guida fotografo:</div>
                 <div className="text-muted-foreground">
@@ -193,7 +211,7 @@ export default function ModuleSelector({
                   Puoi impostare un'opzione come predefinita in ogni categoria di scelta e stabilire limiti minimi e massimi di selezioni.
                 </div>
               </div>
-              
+
               <DialogFooter>
                 <Button
                   onClick={() => onSelectModuleType("variable")}

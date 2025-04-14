@@ -206,7 +206,16 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   
   // Gestisce il salvataggio di un modulo
   const handleSaveModule = (moduleData: QuoteModuleData) => {
-    saveModuleMutation.mutate(moduleData);
+    console.log("Salvando modulo " + (moduleData.id ? "esistente" : "nuovo") + " di tipo " + moduleData.type);
+    const sanitizedData = {
+      ...moduleData,
+      id: moduleData.id || undefined // Rimuovi id se nuovo modulo
+    };
+    saveModuleMutation.mutate(sanitizedData, {
+      onSuccess: (data) => {
+        console.log("Modulo salvato con successo:", data);
+      }
+    });
   };
   
   // Gestisce la cancellazione dell'operazione corrente

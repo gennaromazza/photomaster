@@ -2,8 +2,8 @@
 import { QuoteModuleItemData } from "@/components/quotes/module-selector";
 
 export function calculateItemTotals(item: QuoteModuleItemData): QuoteModuleItemData {
-  const qty = item.quantity || 1;
-  const unitPrice = item.unitPrice || 0;
+  const qty = Math.max(1, item.quantity || 1); // Garantisci quantità minima 1
+  const unitPrice = Math.max(0, item.unitPrice || 0); // Garantisci prezzo non negativo
   
   if (!item.hasDiscount) {
     const total = qty * unitPrice;

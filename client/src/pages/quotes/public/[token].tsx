@@ -162,6 +162,30 @@ export default function PublicQuotePage() {
         throw new Error(error.message || "Errore durante la firma del preventivo");
       }
 
+      //Added code to create the event after successful quote signing.  Assumes /api/events endpoint exists.
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: quote.title,
+          description: quote.notes || '',
+          date: quote.eventDate,
+          location: quote.location,
+          clientId: quote.client.id, // Assuming client object has an id property. Adjust as needed
+          secondClientId: quote.secondClient?.id || null, //Handle optional second client
+          quoteId: quote.id,
+          status: "confirmed",
+          eventType: quote.eventType || "wedding",
+          categoryId: quote.category?.id, // Assuming category object has an id property. Adjust as needed.
+          leadSourceId: quote.leadSourceId,
+          ceremonyLocation: quote.ceremonyLocation,
+          ceremonyTime: quote.ceremonyTime
+        })
+      });
+
+
       toast({
         title: "Preventivo confermato",
         description: "Grazie per aver confermato il preventivo!",

@@ -6,71 +6,18 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, PlusCircle, Package, Loader2, ArrowRight } from "lucide-react";
-import ModuleList from "./module-list";
-import FixedModuleEditor from "./fixed-module-editor";
-import VariableModuleEditor from "./variable-module-editor";
+// Import le librerie e utility
 import { formatCurrency } from "@/lib/utils";
 import { roundToTwoDecimals } from "@/lib/moduleCalculations";
+
+// Import i componenti locali
+import ModuleList from "./module-list";
 import ModuleSelector from "./module-selector";
+import FixedModuleEditor from "./fixed-module-editor";
+import VariableModuleEditor from "./variable-module-editor";
 
-// Tipi base per i moduli
-interface ModuleItem {
-  id?: number;
-  moduleId?: number;
-  itemId: number;
-  itemType: 'service' | 'product';
-  name: string;
-  description?: string;
-  price: number;
-  quantity: number;
-  discount?: number;
-  discountType?: 'percentage' | 'amount';
-  total?: number;
-  note?: string;
-}
-
-interface SelectionOption {
-  id?: string;
-  selectionId?: string;
-  itemId: number;
-  itemType: 'service' | 'product';
-  name: string;
-  description?: string;
-  price: number;
-  isSelected?: boolean;
-  isDefault?: boolean;
-}
-
-interface ModuleSelection {
-  id?: string;
-  moduleId?: number;
-  name: string;
-  description?: string;
-  options: Array<SelectionOption>;
-  minOptions?: number;
-  maxOptions?: number;
-  isRequired?: boolean;
-}
-
-interface QuoteModuleData {
-  id?: number;
-  quoteId: number;
-  name: string;
-  description?: string;
-  type: 'fixed' | 'variable';
-  position?: number;
-  subtotal?: number;
-  discount?: number;
-  discountType?: 'percentage' | 'amount';
-  total?: number;
-  items?: Array<ModuleItem>;
-  selections?: Array<ModuleSelection>;
-  minSelections?: number;
-  maxSelections?: number;
-  isRequired?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+// Import i tipi condivisi
+import { QuoteModule } from "./types";
 
 // Enum per gli stati del ModuleManager
 enum ModuleManagerState {

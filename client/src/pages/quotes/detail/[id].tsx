@@ -495,35 +495,35 @@ export default function QuoteDetailPage() {
                             <Loader2 className="h-4 w-4 animate-spin text-primary/70" />
                             <span className="text-muted-foreground">Caricamento...</span>
                           </div>
-                        ) : client ? (
+                        ) : quote.client ? (
                           <div className="flex items-start space-x-3">
                             <Avatar className="h-10 w-10">
                               <AvatarImage src="/avatar.jpg" />
                               <AvatarFallback className="bg-primary/10 text-primary">
-                                {client.firstName?.charAt(0)}{client.lastName?.charAt(0)}
+                                {quote.client.firstName?.charAt(0)}{quote.client.lastName?.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="font-medium">
-                                {client.firstName} {client.lastName}
+                                {quote.client.firstName} {quote.client.lastName}
                               </div>
                               <div className="flex flex-col mt-1">
-                                {client.email && (
+                                {quote.client.email && (
                                   <div className="flex items-center text-sm text-muted-foreground">
                                     <Mail className="h-3.5 w-3.5 mr-1 opacity-70" />
-                                    <span>{client.email}</span>
+                                    <span>{quote.client.email}</span>
                                   </div>
                                 )}
-                                {client.phone && (
+                                {quote.client.phone && (
                                   <div className="flex items-center text-sm text-muted-foreground">
                                     <Phone className="h-3.5 w-3.5 mr-1 opacity-70" />
-                                    <span>{client.phone}</span>
+                                    <span>{quote.client.phone}</span>
                                   </div>
                                 )}
-                                {client.address && (
+                                {quote.client.address && (
                                   <div className="flex items-center text-sm text-muted-foreground">
                                     <MapPin className="h-3.5 w-3.5 mr-1 opacity-70" />
-                                    <span>{client.address}</span>
+                                    <span>{quote.client.address}</span>
                                   </div>
                                 )}
                               </div>

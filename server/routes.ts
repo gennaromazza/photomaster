@@ -2207,13 +2207,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
 
       // Aggiorna lo stato del modulo
-      const updateTime = new Date();
-      await db.update(quoteModules)
-        .set({
-          status: 'active', // Cambia da 'pending_selection' ad 'active' se necessario
-          updatedAt: updateTime
-        })
-        .where(eq(quoteModules.id, module.id));
+      await storage.updateQuoteModule(module.id, {
+        status: 'active' // Cambia da 'pending_selection' ad 'active' se necessario
+      });
 
       res.json({ message: "Selezioni salvate con successo" });
     } catch (err) {

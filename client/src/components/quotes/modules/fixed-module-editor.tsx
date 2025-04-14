@@ -72,6 +72,7 @@ interface ModuleItem {
   name: string;
   description?: string;
   price: number;
+  unitPrice?: number; // Prezzo unitario obbligatorio nel database
   quantity: number;
   discount?: number;
   discountType?: 'percentage' | 'amount';
@@ -206,6 +207,7 @@ export default function FixedModuleEditor({
         name: service.name,
         description: service.description,
         price: service.price,
+        unitPrice: service.price, // Aggiungiamo il prezzo unitario obbligatorio
         quantity: 1,
         total: service.price,
       };
@@ -237,6 +239,7 @@ export default function FixedModuleEditor({
         name: product.name,
         description: product.description,
         price: product.price,
+        unitPrice: product.price, // Aggiungiamo il prezzo unitario obbligatorio
         quantity: 1,
         total: product.price,
       };
@@ -345,10 +348,13 @@ export default function FixedModuleEditor({
     };
     
     // Assicurati che totali e sconti siano aggiornati
-    moduleData.items = moduleData.items.map(item => ({
-      ...item,
-      total: calculateItemTotal(item)
-    }));
+    if (moduleData.items) {
+      moduleData.items = moduleData.items.map(item => ({
+        ...item,
+        unitPrice: item.unitPrice || item.price, // Assicuriamoci che unitPrice sia sempre impostato
+        total: calculateItemTotal(item)
+      }));
+    }
     
     // Richiama la funzione di salvataggio
     onSave(moduleData);

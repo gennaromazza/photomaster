@@ -73,21 +73,27 @@ const QuotesPage = () => {
     { value: "rejected", label: "Rifiutato" },
   ];
 
+  const { data: quotes = [], isLoading, refetch } = useQuery<Quote[]>({
+    queryKey: ["/api/quotes"],
+  });
+
   const handleDeleteQuote = async () => {
     if (!quoteToDelete) return;
     try {
-      // Replace with your actual delete API call
       const response = await fetch(`/api/quotes/${quoteToDelete}`, { method: 'DELETE' });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      // Refresh data after successful delete
-      // ... (your data refresh logic here)
+      await refetch(); // Refresh the quotes list
       setQuoteToDelete(null);
       setIsModalOpen(false);
     } catch (error) {
       console.error("Error deleting quote:", error);
-      // Handle error appropriately, e.g., show an error message to the user.
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'eliminazione del preventivo",
+        variant: "destructive",
+      });
     }
   };
 
@@ -211,11 +217,11 @@ const QuotesPage = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setLocation(`/quotes/${quote.id}`)}>
+                            <DropdownMenuItem onClick={() => setLocation(`/quotes/detail/${quote.id}`)}>
                               <RiEyeLine className="mr-2 h-4 w-4" />
                               Visualizza
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setLocation(`/quotes/edit/${quote.id}`)}>
+                            <DropdownMenuItem onClick={() => setLocation(`/quotes/new-redesign?edit=${quote.id}`)}>
                               <RiEdit2Line className="mr-2 h-4 w-4" />
                               Modifica
                             </DropdownMenuItem>

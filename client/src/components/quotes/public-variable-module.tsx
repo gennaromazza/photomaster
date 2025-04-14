@@ -12,20 +12,57 @@ import {
   calculateItemTotal, 
   calculateModuleTotal, 
   getItemNameAndDescription,
-  getItemImagePath,
-  ImageLoadState
+  getItemImagePath
 } from "@/lib/module-utils";
 
+interface ModuleItem {
+  id: number;
+  total: number;
+  unitPrice: number;
+  quantity: number;
+  hasDiscount?: boolean;
+  discountType?: string;
+  discountValue?: number;
+  discountedPrice?: number;
+  serviceImagePath?: string;
+  productImagePath?: string;
+  bundleImagePath?: string;
+  serviceName?: string;
+  productName?: string;
+  bundleName?: string;
+  serviceDescription?: string;
+  productDescription?: string;
+  bundleDescription?: string;
+  minSelectCount?: number;
+}
+
+interface Module {
+  id: number;
+  name: string;
+  description?: string;
+  type: string;
+  expiryDate?: string;
+  minSelectCount?: number;
+  maxSelectCount?: number;
+  items: ModuleItem[];
+}
+
 interface PublicVariableModuleProps {
-  module: any;
+  module: Module;
   onSelectionChange?: (moduleId: number, selectedItems: number[]) => void;
 }
 
-// Interfaccia per gli elementi selezionati che usa gli ID effettivi degli elementi
-interface SelectedItemData {
+// Interfaccia per gli elementi selezionati
+interface SelectedItem {
   id: number;
   index: number;
   isRequired: boolean;
+}
+
+// Interfaccia per lo stato di caricamento delle immagini
+interface ImageLoadStateItem {
+  hasError: boolean;
+  isLoading: boolean;
 }
 
 export function PublicVariableModule({ module, onSelectionChange }: PublicVariableModuleProps) {
@@ -49,28 +86,28 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
   }
 
   // Stato per la selezione degli elementi (usando ID invece di indici)
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [total, setTotal] = useState(0);
 
   // Teniamo traccia dello stato di caricamento delle immagini
-  const [imageLoadState, setImageLoadState] = useState<Record<number, ImageLoadState>>({});
+  const [imageLoadState, setImageLoadState] = useState<{[key: number]: ImageLoadStateItem}>({});
 
   // Controlla se sono obbligatori item con minSelectCount
-  const hasRequiredItems = (module.items || []).some((item: any) => 
+  const hasRequiredItems = (module.items || []).some((item: ModuleItem) => 
     item && item.minSelectCount && item.minSelectCount > 0
   );
 
   // Funzione per controllare se un item è richiesto
-  const isItemRequired = (item: any): boolean => {
+  const isItemRequired = (item: ModuleItem): boolean => {
     return Boolean(item && item.minSelectCount && item.minSelectCount > 0);
   };
 
   // Inizializza gli item selezionati in base al minSelectCount
   useEffect(() => {
-    const initialSelected: SelectedItemData[] = [];
+    const initialSelected: SelectedItem[] = [];
 
     if (module.items && Array.isArray(module.items)) {
-      module.items.forEach((item: any, index: number) => {
+      module.items.forEach((item: ModuleItem, index: number) => {
         if (!item || !item.id) return;
 
         if (isItemRequired(item)) {
@@ -86,9 +123,9 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
     setSelectedItems(initialSelected);
 
     // Inizializza lo stato per il caricamento delle immagini
-    const initialImageLoadState: Record<number, ImageLoadState> = {};
+    const initialImageLoadState: {[key: number]: ImageLoadStateItem} = {};
     if (module.items && Array.isArray(module.items)) {
-      module.items.forEach((item: any) => {
+      module.items.forEach((item: ModuleItem) => {
         if (item && item.id) {
           initialImageLoadState[item.id] = {
             hasError: false,
@@ -105,7 +142,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
     // Calcola il totale degli elementi selezionati
     let sum = 0;
     selectedItems.forEach(selected => {
-      const item = module.items.find((item: any) => item.id === selected.id);
+      const item = module.items.find((item: ModuleItem) => item.id === selected.id);
       if (item) {
         sum += Number(item.total || 0);
       }

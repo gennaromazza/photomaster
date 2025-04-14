@@ -276,8 +276,8 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
           <>
             <ModuleList
               modules={modules}
-              onEdit={handleEditModule}
-              onDelete={handleDeleteModule}
+              onEditModule={handleEditModule}
+              onDeleteModule={handleDeleteModule}
             />
             
             {modules.length > 0 && (

@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Lock, BookOpen, Plus } from "lucide-react";
 
 interface ModuleSelectorProps {
-  onCreateModule: (type: "fixed" | "variable") => void;
+  onSelectModuleType: (type: "fixed" | "variable") => void;
 }
 
 /**
@@ -32,7 +32,7 @@ interface ModuleSelectorProps {
  * - Raccogliere la selezione dell'utente e richiamare la funzione per creare un nuovo modulo
  */
 export default function ModuleSelector({
-  onCreateModule,
+  onSelectModuleType,
 }: ModuleSelectorProps) {
   return (
     <Dialog>
@@ -121,7 +121,7 @@ export default function ModuleSelector({
               
               <DialogFooter>
                 <Button
-                  onClick={() => onCreateModule("fixed")}
+                  onClick={() => onSelectModuleType("fixed")}
                   className="w-full sm:w-auto"
                 >
                   Crea Modulo Fisso
@@ -196,7 +196,7 @@ export default function ModuleSelector({
               
               <DialogFooter>
                 <Button
-                  onClick={() => onCreateModule("variable")}
+                  onClick={() => onSelectModuleType("variable")}
                   className="w-full sm:w-auto"
                 >
                   Crea Modulo Variabile

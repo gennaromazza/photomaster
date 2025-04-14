@@ -407,42 +407,64 @@ export default function PublicQuotePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <p className="text-muted-foreground">
-                Firmando questo documento, confermi di accettare il preventivo e tutti i servizi/prodotti inclusi.
-              </p>
-
-              <div className="max-w-sm mx-auto space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signature">Nome e Cognome</Label>
-                  <Input
-                    id="signature"
-                    placeholder="Inserisci il tuo nome e cognome"
-                    value={signature}
-                    onChange={(e) => setSignature(e.target.value)}
-                  />
+            {quote.status === "approved" || quote.status === "confermato" ? (
+              <div className="text-center space-y-4">
+                <div className="max-w-sm mx-auto">
+                  <div className="border-2 border-primary/10 rounded-lg p-6 bg-primary/5">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Preventivo firmato da:
+                    </p>
+                    <p className="font-playfair text-2xl text-primary mb-2" style={{ fontFamily: 'Dancing Script, cursive' }}>
+                      {quote.signature}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Firmato il {quote.signedAt ? format(new Date(quote.signedAt), "dd/MM/yyyy 'alle' HH:mm", { locale: it }) : ""}
+                    </p>
+                  </div>
+                  <div className="mt-4 flex items-center justify-center text-sm text-green-600">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Preventivo confermato e firmato
+                  </div>
                 </div>
-
-                <Button 
-                  className="w-full" 
-                  size="lg"
-                  onClick={handleSignQuote}
-                  disabled={!signature.trim() || isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Elaborazione...
-                    </>
-                  ) : (
-                    <>
-                      <FileSignature className="mr-2 h-4 w-4" />
-                      Firma e Conferma
-                    </>
-                  )}
-                </Button>
               </div>
-            </div>
+            ) : (
+              <div className="text-center space-y-4">
+                <p className="text-muted-foreground">
+                  Firmando questo documento, confermi di accettare il preventivo e tutti i servizi/prodotti inclusi.
+                </p>
+
+                <div className="max-w-sm mx-auto space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signature">Nome e Cognome</Label>
+                    <Input
+                      id="signature"
+                      placeholder="Inserisci il tuo nome e cognome"
+                      value={signature}
+                      onChange={(e) => setSignature(e.target.value)}
+                    />
+                  </div>
+
+                  <Button 
+                    className="w-full" 
+                    size="lg"
+                    onClick={handleSignQuote}
+                    disabled={!signature.trim() || isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Elaborazione...
+                      </>
+                    ) : (
+                      <>
+                        <FileSignature className="mr-2 h-4 w-4" />
+                        Firma e Conferma
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

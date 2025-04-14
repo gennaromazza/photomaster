@@ -122,6 +122,16 @@ export default function PublicQuotePage() {
 
   // Gestione firma e conferma preventivo
   const handleSignQuote = async () => {
+    //Check if quote is already signed
+    if (quote && (quote.status === "approved" || quote.status === "confermato")) {
+      toast({
+        title: "Errore",
+        description: "Il preventivo è già stato firmato",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!signature.trim()) {
       toast({
         title: "Errore",

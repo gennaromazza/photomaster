@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -30,10 +31,6 @@ export interface MobileSidebarProps {
   onClose: () => void;
 }
 
-/**
- * Versione mobile della sidebar (si apre come un drawer)
- * Responsabilità: Fornire la navigazione principale per dispositivi mobili
- */
 export default function MobileSidebar({
   isOpen,
   onClose,
@@ -73,6 +70,14 @@ export default function MobileSidebar({
             />
             
             <NavItem
+              href="/calendar"
+              icon={<Calendar className="h-4 w-4" />}
+              label="Calendario"
+              isActive={isActive("/calendar")}
+              onClick={onClose}
+            />
+
+            <NavItem
               href="/quotes"
               icon={<FileText className="h-4 w-4" />}
               label="Preventivi"
@@ -95,36 +100,12 @@ export default function MobileSidebar({
               isActive={isActive("/clients")}
               onClick={onClose}
             />
-            
-            <NavItem
-              href="/events"
-              icon={<Calendar className="h-4 w-4" />}
-              label="Eventi"
-              isActive={isActive("/events")}
-              onClick={onClose}
-            />
-            
+
             <NavItem
               href="/services"
               icon={<Package className="h-4 w-4" />}
               label="Servizi"
               isActive={isActive("/services")}
-              onClick={onClose}
-            />
-            
-            <NavItem
-              href="/products"
-              icon={<ShoppingBag className="h-4 w-4" />}
-              label="Prodotti"
-              isActive={isActive("/products")}
-              onClick={onClose}
-            />
-            
-            <NavItem
-              href="/messages"
-              icon={<MessageSquare className="h-4 w-4" />}
-              label="Messaggi"
-              isActive={isActive("/messages")}
               onClick={onClose}
             />
             

@@ -67,6 +67,13 @@ export default function Sidebar() {
           text="Dashboard"
           isActive={isActive("/")}
         />
+
+        <SidebarLink
+          href="/calendar"
+          icon={<Calendar className="h-4 w-4" />}
+          text="Calendario"
+          isActive={isActive("/calendar")}
+        />
         
         <SidebarLink
           href="/quotes"
@@ -87,13 +94,6 @@ export default function Sidebar() {
           icon={<Users className="h-4 w-4" />}
           text="Clienti"
           isActive={isActive("/clients")}
-        />
-        
-        <SidebarLink
-          href="/events"
-          icon={<Calendar className="h-4 w-4" />}
-          text="Eventi"
-          isActive={isActive("/events")}
         />
         
         <SidebarLink

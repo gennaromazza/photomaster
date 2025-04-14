@@ -163,15 +163,28 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       }
 
       // Sanitizza e normalizza i dati
+      // Sanitizza e normalizza i dati
       const sanitizedData = {
         ...moduleData,
         id: moduleData.id || undefined,
+        quoteId: quoteId,
         name: moduleData.name.trim(),
         description: moduleData.description?.trim(),
+        type: "fixed",
+        status: "active",
         items: moduleData.items?.map((item: any) => ({
           ...item,
+          moduleId: moduleData.id,
           quantity: Math.max(1, item.quantity || 1),
-          price: Math.max(0, item.price || 0)
+          unitPrice: Math.max(0, item.unitPrice || 0),
+          total: item.total || 0,
+          hasDiscount: item.hasDiscount || false,
+          discountType: item.discountType || "percentage",
+          discountValue: item.discountValue || 0,
+          discountedPrice: item.discountedPrice || null,
+          isRequired: false,
+          isSelected: false,
+          position: 0
         }))
       };
 

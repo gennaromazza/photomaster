@@ -268,74 +268,12 @@ export default function PublicQuotePage() {
         </div>
 
         {/* Dettagli cliente */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Informazioni Cliente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Cliente Principale */}
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Cliente Principale</h3>
-                <div className="flex items-start space-x-4">
-                  <User className="h-8 w-8 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">{quote.client?.firstName} {quote.client?.lastName}</p>
-                    {quote.client?.email && (
-                      <p className="text-sm text-muted-foreground flex items-center mt-1">
-                        <Mail className="h-4 w-4 mr-1" />
-                        {quote.client.email}
-                      </p>
-                    )}
-                    {quote.client?.phone && (
-                      <p className="text-sm text-muted-foreground flex items-center mt-1">
-                        <Phone className="h-4 w-4 mr-1" />
-                        {quote.client.phone}
-                      </p>
-                    )}
-                    {quote.client?.address && (
-                      <p className="text-sm text-muted-foreground flex items-center mt-1">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {quote.client.address}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Secondo Cliente */}
-              {quote.secondClient && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Secondo Cliente</h3>
-                  <div className="flex items-start space-x-4">
-                    <User className="h-8 w-8 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{quote.secondClient.firstName} {quote.secondClient.lastName}</p>
-                      {quote.secondClient.email && (
-                        <p className="text-sm text-muted-foreground flex items-center mt-1">
-                          <Mail className="h-4 w-4 mr-1" />
-                          {quote.secondClient.email}
-                        </p>
-                      )}
-                      {quote.secondClient.phone && (
-                        <p className="text-sm text-muted-foreground flex items-center mt-1">
-                          <Phone className="h-4 w-4 mr-1" />
-                          {quote.secondClient.phone}
-                        </p>
-                      )}
-                      {quote.secondClient.address && (
-                        <p className="text-sm text-muted-foreground flex items-center mt-1">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          {quote.secondClient.address}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <ClientAddressDetails 
+          client={quote.client}
+          secondClient={quote.secondClient}
+          className="mb-6"
+          showAddresses={true}
+        />
 
         {/* Dettagli evento */}
         <Card className="mb-6">

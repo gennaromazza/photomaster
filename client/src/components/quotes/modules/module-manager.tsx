@@ -102,10 +102,20 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
     data: modules = [],
     isLoading,
     isError,
+    error,
     refetch,
   } = useQuery<QuoteModuleData[]>({
     queryKey: [`/api/quotes/${quoteId}/modules`],
     enabled: !!quoteId,
+    retry: 3,
+    onError: (error) => {
+      console.error("Error fetching modules:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i moduli. Riprova più tardi.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Mutation per salvare un modulo
@@ -272,8 +282,18 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
           <CardTitle>Moduli Preventivo</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-4 text-destructive">
-            Errore nel caricamento dei moduli. Riprova più tardi.
+          <div className="text-center py-4">
+            <p className="text-destructive mb-4">
+              Errore nel caricamento dei moduli.
+            </p>
+            <Button 
+              variant="outline"
+              onClick={() => refetch()}
+              className="mx-auto"
+            >
+              <ArrowRight className="mr-2 h-4 w-4" />
+              Riprova
+            </Button>
           </div>
         </CardContent>
       </Card>

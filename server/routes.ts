@@ -1829,11 +1829,47 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Ottieni tutti i moduli del preventivo
       const modules = await storage.getModulesByQuote(quoteId);
       
-      // Per ogni modulo, recupera anche i suoi elementi
+      // Per ogni modulo, recupera i suoi elementi con dettagli di servizi/prodotti
       const modulesWithItems = await Promise.all(
         modules.map(async (module) => {
           const items = await storage.getQuoteModuleItemsByModule(module.id);
-          return { ...module, items };
+          
+          // Arricchisci ogni item con i dettagli del servizio o bundle associato
+          const enrichedItems = await Promise.all(
+            items.map(async (item) => {
+              let enrichedItem = { ...item };
+              
+              // Se l'item ha un serviceId, aggiungi i dettagli del servizio
+              if (item.serviceId) {
+                const service = await storage.getService(item.serviceId);
+                if (service) {
+                  enrichedItem = {
+                    ...enrichedItem,
+                    serviceName: service.name,
+                    serviceDescription: service.description,
+                    serviceImagePath: service.imagePath
+                  };
+                }
+              }
+              
+              // Se l'item ha un bundleId, aggiungi i dettagli del bundle
+              if (item.bundleId) {
+                const bundle = await storage.getServiceBundle(item.bundleId);
+                if (bundle) {
+                  enrichedItem = {
+                    ...enrichedItem,
+                    bundleName: bundle.name,
+                    bundleDescription: bundle.description,
+                    bundleImagePath: bundle.imagePath
+                  };
+                }
+              }
+              
+              return enrichedItem;
+            })
+          );
+          
+          return { ...module, items: enrichedItems };
         })
       );
       
@@ -2022,11 +2058,46 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Recupera gli elementi del modulo
       const items = await storage.getQuoteModuleItemsByModule(module.id);
       
+      // Arricchisci gli elementi con i dettagli di servizi/prodotti
+      const enrichedItems = await Promise.all(
+        items.map(async (item) => {
+          let enrichedItem = { ...item };
+          
+          // Se l'item ha un serviceId, aggiungi i dettagli del servizio
+          if (item.serviceId) {
+            const service = await storage.getService(item.serviceId);
+            if (service) {
+              enrichedItem = {
+                ...enrichedItem,
+                serviceName: service.name,
+                serviceDescription: service.description,
+                serviceImagePath: service.imagePath
+              };
+            }
+          }
+          
+          // Se l'item ha un bundleId, aggiungi i dettagli del bundle
+          if (item.bundleId) {
+            const bundle = await storage.getServiceBundle(item.bundleId);
+            if (bundle) {
+              enrichedItem = {
+                ...enrichedItem,
+                bundleName: bundle.name,
+                bundleDescription: bundle.description,
+                bundleImagePath: bundle.imagePath
+              };
+            }
+          }
+          
+          return enrichedItem;
+        })
+      );
+      
       // Recupera il cliente associato al preventivo
       const client = await storage.getClient(quote.clientId);
       
       res.json({
-        module: { ...module, items },
+        module: { ...module, items: enrichedItems },
         quote: {
           id: quote.id,
           title: quote.title
@@ -2080,28 +2151,69 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Recupera tutti gli elementi del modulo
       const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
       
+      // Recuperiamo tutte le informazioni arricchite degli elementi
+      const enrichedItems = await Promise.all(
+        moduleItems.map(async (item) => {
+          let enrichedItem = { ...item };
+          
+          // Se l'item ha un serviceId, aggiungi i dettagli del servizio
+          if (item.serviceId) {
+            const service = await storage.getService(item.serviceId);
+            if (service) {
+              enrichedItem = {
+                ...enrichedItem,
+                serviceName: service.name,
+                serviceDescription: service.description,
+                serviceImagePath: service.imagePath
+              };
+            }
+          }
+          
+          // Se l'item ha un bundleId, aggiungi i dettagli del bundle
+          if (item.bundleId) {
+            const bundle = await storage.getServiceBundle(item.bundleId);
+            if (bundle) {
+              enrichedItem = {
+                ...enrichedItem,
+                bundleName: bundle.name,
+                bundleDescription: bundle.description,
+                bundleImagePath: bundle.imagePath
+              };
+            }
+          }
+          
+          return enrichedItem;
+        })
+      );
+
       // Aggiorna lo stato di ciascun elemento
       for (const item of moduleItems) {
         const isSelected = selectedItems.includes(item.id);
         
         // Verifica se un elemento obbligatorio non è stato selezionato
-        if (item.selectionRequired && !isSelected) {
+        if (item.isRequired && !isSelected) {
+          // Trova il nome dell'elemento dai dati arricchiti
+          const enrichedItem = enrichedItems.find(ei => ei.id === item.id);
+          const itemName = enrichedItem?.serviceName || enrichedItem?.bundleName || 'Opzione';
+          
           return res.status(400).json({ 
-            message: `È necessario selezionare l'opzione obbligatoria: ${item.serviceName || item.bundleName || 'Opzione'}`
+            message: `È necessario selezionare l'opzione obbligatoria: ${itemName}`
           });
         }
         
         await storage.updateQuoteModuleItem(item.id, {
-          isSelected,
-          selectionDate: isSelected ? new Date() : null
+          isSelected
         });
       }
 
       // Aggiorna lo stato del modulo
-      await storage.updateQuoteModule(module.id, {
-        status: 'active', // Cambia da 'pending_selection' ad 'active' se necessario
-        updatedAt: new Date()
-      });
+      const updateTime = new Date();
+      await db.update(quoteModules)
+        .set({
+          status: 'active', // Cambia da 'pending_selection' ad 'active' se necessario
+          updatedAt: updateTime
+        })
+        .where(eq(quoteModules.id, module.id));
 
       res.json({ message: "Selezioni salvate con successo" });
     } catch (err) {

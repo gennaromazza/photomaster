@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -8,11 +9,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery } from "@tanstack/react-query";
 import { Event, Client } from "@shared/schema";
 import { formatDate, getStatusBadge, getStatusText } from "@/lib/utils";
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Search,
+  FilterX,
+  Plus,
+} from "lucide-react";
 
 const EventsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
   
   const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
@@ -26,6 +36,26 @@ const EventsPage = () => {
     const client = clients.find(c => c.id === clientId);
     return client ? `${client.firstName} ${client.lastName}` : "Cliente sconosciuto";
   };
+
+  const filterByDate = (event: Event) => {
+    if (dateFilter === "all") return true;
+    const today = new Date();
+    const eventDate = new Date(event.date);
+    
+    switch (dateFilter) {
+      case "today":
+        return eventDate.toDateString() === today.toDateString();
+      case "week":
+        const nextWeek = new Date(today);
+        nextWeek.setDate(today.getDate() + 7);
+        return eventDate >= today && eventDate <= nextWeek;
+      case "month":
+        return eventDate.getMonth() === today.getMonth() && 
+               eventDate.getFullYear() === today.getFullYear();
+      default:
+        return true;
+    }
+  };
   
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -33,9 +63,17 @@ const EventsPage = () => {
     
     const matchesStatus = statusFilter === "all" || event.status === statusFilter;
     const matchesType = typeFilter === "all" || event.eventType === typeFilter;
+    const matchesDate = filterByDate(event);
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setTypeFilter("all");
+    setDateFilter("all");
+  };
   
   const eventTypes = [
     { value: "all", label: "Tutti i tipi" },
@@ -54,6 +92,13 @@ const EventsPage = () => {
     { value: "completed", label: "Completato" },
     { value: "cancelled", label: "Annullato" },
   ];
+
+  const dateFilters = [
+    { value: "all", label: "Tutte le date" },
+    { value: "today", label: "Oggi" },
+    { value: "week", label: "Questa settimana" },
+    { value: "month", label: "Questo mese" },
+  ];
   
   return (
     <div className="lg:px-8 px-4 mt-6 lg:mt-8">
@@ -64,30 +109,45 @@ const EventsPage = () => {
         </div>
         <div className="mt-4 lg:mt-0 flex space-x-3">
           <Link href="/events/new">
-            <Button className="inline-flex items-center">
-              <i className="ri-add-line mr-2"></i>
+            <Button className="inline-flex items-center gap-2">
+              <Plus className="h-4 w-4" />
               Nuovo Evento
             </Button>
           </Link>
         </div>
       </div>
       
-      <Card className="mb-8">
+      <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-medium">Tutti gli Eventi</CardTitle>
+          <CardTitle className="text-lg font-medium">Eventi</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <Input
-              placeholder="Cerca eventi..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-sm"
-            />
-            
-            <div className="flex gap-4">
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Cerca per titolo o cliente..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={clearFilters}
+                className="shrink-0"
+                title="Azzera filtri"
+              >
+                <FilterX className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-32 sm:w-40">
+                <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Tipo evento" />
                 </SelectTrigger>
                 <SelectContent>
@@ -100,13 +160,26 @@ const EventsPage = () => {
               </Select>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32 sm:w-40">
+                <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Stato" />
                 </SelectTrigger>
                 <SelectContent>
                   {statusTypes.map((status) => (
                     <SelectItem key={status.value} value={status.value}>
                       {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Periodo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dateFilters.map((filter) => (
+                    <SelectItem key={filter.value} value={filter.value}>
+                      {filter.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -120,17 +193,15 @@ const EventsPage = () => {
             </div>
           ) : filteredEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 text-center">
-              <div className="text-4xl text-gray-300 mb-2">
-                <i className="ri-calendar-line"></i>
-              </div>
+              <Calendar className="h-12 w-12 text-gray-300 mb-2" />
               <h3 className="text-lg font-medium text-gray-900 mb-1">Nessun evento trovato</h3>
-              {searchQuery || statusFilter !== "all" || typeFilter !== "all" ? (
+              {searchQuery || statusFilter !== "all" || typeFilter !== "all" || dateFilter !== "all" ? (
                 <p className="text-gray-500">Prova a modificare i filtri di ricerca</p>
               ) : (
                 <div className="mt-3">
                   <Link href="/events/new">
-                    <Button variant="outline">
-                      <i className="ri-add-line mr-2"></i>
+                    <Button variant="outline" className="gap-2">
+                      <Plus className="h-4 w-4" />
                       Aggiungi il primo evento
                     </Button>
                   </Link>
@@ -154,12 +225,16 @@ const EventsPage = () => {
                   {filteredEvents.map((event) => (
                     <tr 
                       key={event.id} 
-                      className="border-b border-gray-100 hover:bg-gray-50"
+                      className="group border-b border-gray-100 hover:bg-gray-50/70 transition-colors"
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center">
                           <div className="w-10 h-10 rounded-lg mr-3 bg-primary/10 flex items-center justify-center text-primary">
-                            <i className={event.eventType === "wedding" ? "ri-heart-line" : "ri-camera-line"}></i>
+                            {event.eventType === "wedding" ? (
+                              <Users className="h-4 w-4" />
+                            ) : (
+                              <Calendar className="h-4 w-4" />
+                            )}
                           </div>
                           <div>
                             <div className="font-medium text-gray-900">{event.title}</div>
@@ -167,14 +242,17 @@ const EventsPage = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-gray-700">
-                        {getClientName(event.clientId)}
+                      <td className="py-3 px-4">
+                        <div className="text-gray-700">{getClientName(event.clientId)}</div>
                       </td>
-                      <td className="py-3 px-4 text-gray-700">
-                        {formatDate(event.date)}
+                      <td className="py-3 px-4">
+                        <div className="text-gray-700">{formatDate(event.date)}</div>
                       </td>
-                      <td className="py-3 px-4 text-gray-700">
-                        {event.location || "-"}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1.5 text-gray-700">
+                          <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                          {event.location || "-"}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant={getStatusBadge(event.status)}>
@@ -183,7 +261,13 @@ const EventsPage = () => {
                       </td>
                       <td className="py-3 px-4 text-right">
                         <Link href={`/events/${event.id}`}>
-                          <Button variant="ghost" size="sm">Visualizza</Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            Visualizza
+                          </Button>
                         </Link>
                       </td>
                     </tr>

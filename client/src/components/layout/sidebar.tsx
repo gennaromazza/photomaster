@@ -109,6 +109,13 @@ export default function Sidebar() {
           text="Collaboratori"
           isActive={isActive("/collaborators")}
         />
+
+        <SidebarLink
+          href="/events"
+          icon={<Calendar className="h-4 w-4" />}
+          text="Eventi"
+          isActive={isActive("/events")}
+        />
         
         <SidebarLink
           href="/messages"

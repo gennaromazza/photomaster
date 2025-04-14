@@ -116,6 +116,14 @@ export default function MobileSidebar({
               isActive={isActive("/collaborators")}
               onClick={onClose}
             />
+
+            <NavItem
+              href="/events"
+              icon={<Calendar className="h-4 w-4" />}
+              label="Eventi"
+              isActive={isActive("/events")}
+              onClick={onClose}
+            />
             
             <NavItem
               href="/tasks"

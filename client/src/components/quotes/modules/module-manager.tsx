@@ -1,92 +1,137 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import ModuleSelector from "./module-selector";
+import { Plus, PlusCircle, Package, Loader2, ArrowRight } from "lucide-react";
 import ModuleList from "./module-list";
 import FixedModuleEditor from "./fixed-module-editor";
 import VariableModuleEditor from "./variable-module-editor";
-import RefreshQuoteTotals from "../utils/refresh-quote-totals";
-import { QuoteModuleData } from "@/types/module-types";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Package as PackageIcon, 
-  Loader2, 
-  PlusCircle 
-} from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { formatCurrency } from "@/lib/utils";
+import ModuleSelector from "./module-selector";
+
+// Tipi base per i moduli
+interface ModuleItem {
+  id?: number;
+  moduleId?: number;
+  itemId: number;
+  itemType: 'service' | 'product';
+  name: string;
+  description?: string;
+  price: number;
+  quantity: number;
+  discount?: number;
+  discountType?: 'percentage' | 'amount';
+  total?: number;
+  note?: string;
+}
+
+interface SelectionOption {
+  id?: string;
+  selectionId?: string;
+  itemId: number;
+  itemType: 'service' | 'product';
+  name: string;
+  description?: string;
+  price: number;
+  isSelected?: boolean;
+  isDefault?: boolean;
+}
+
+interface ModuleSelection {
+  id?: string;
+  moduleId?: number;
+  name: string;
+  description?: string;
+  options: Array<SelectionOption>;
+  minOptions?: number;
+  maxOptions?: number;
+  isRequired?: boolean;
+}
+
+interface QuoteModuleData {
+  id?: number;
+  quoteId: number;
+  name: string;
+  description?: string;
+  type: 'fixed' | 'variable';
+  position?: number;
+  subtotal?: number;
+  discount?: number;
+  discountType?: 'percentage' | 'amount';
+  total?: number;
+  items?: Array<ModuleItem>;
+  selections?: Array<ModuleSelection>;
+  minSelections?: number;
+  maxSelections?: number;
+  isRequired?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Enum per gli stati del ModuleManager
+enum ModuleManagerState {
+  LIST = "list",
+  SELECT = "select",
+  EDIT_FIXED = "edit_fixed",
+  EDIT_VARIABLE = "edit_variable",
+}
 
 interface ModuleManagerProps {
   quoteId: number;
-  refreshQuote: () => void;
+  refreshQuote?: () => void;
 }
 
 /**
  * Componente principale per la gestione dei moduli di un preventivo
- * Responsabilità:
- * - Visualizzazione moduli esistenti
- * - Aggiunta nuovi moduli
- * - Modifica/eliminazione moduli
- * - Calcolo totali
+ * Responsabilità: 
+ * - Coordinare la visualizzazione, creazione, modifica ed eliminazione dei moduli
+ * - Gestire la comunicazione con le API per il salvataggio dei moduli
  */
 export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerProps) {
-  const { toast } = useToast();
-  const [showAddSelector, setShowAddSelector] = useState(false);
-  const [activeEditor, setActiveEditor] = useState<'fixed' | 'variable' | null>(null);
+  // Stati per la gestione del ModuleManager
+  const [moduleManagerState, setModuleManagerState] = useState<ModuleManagerState>(ModuleManagerState.LIST);
   const [editingModule, setEditingModule] = useState<QuoteModuleData | null>(null);
-  const [isUpdatingTotals, setIsUpdatingTotals] = useState(false);
-
+  const { toast } = useToast();
+  
   // Query per ottenere i moduli del preventivo
-  const { 
-    data: modules = [], 
-    isLoading: isLoadingModules,
-    isError: isModulesError,
-    refetch: refetchModules
+  const {
+    data: modules = [],
+    isLoading,
+    isError,
+    refetch,
   } = useQuery<QuoteModuleData[]>({
-    queryKey: ["/api/quotes", quoteId, "modules"],
-    queryFn: async () => {
-      const res = await fetch(`/api/quotes/${quoteId}/modules`);
-      if (!res.ok) throw new Error("Errore nel caricamento dei moduli");
-      return res.json();
-    },
+    queryKey: [`/api/quotes/${quoteId}/modules`],
     enabled: !!quoteId,
   });
-
+  
   // Mutation per salvare un modulo
   const saveModuleMutation = useMutation({
-    mutationFn: async (module: QuoteModuleData) => {
-      const url = module.id && module.id > 0 
-        ? `/api/quotes/${quoteId}/modules/${module.id}`
+    mutationFn: async (moduleData: QuoteModuleData) => {
+      const url = moduleData.id
+        ? `/api/quotes/${quoteId}/modules/${moduleData.id}`
         : `/api/quotes/${quoteId}/modules`;
-      
-      const method = module.id && module.id > 0 ? "PATCH" : "POST";
-      console.log(`[LOG] Salvando modulo ${module.id ? 'esistente' : 'nuovo'} di tipo ${module.type}`);
-      
-      const res = await apiRequest(method, url, module);
-      const data = await res.json();
-      console.log("[LOG] Modulo salvato con successo:", data);
-      return data;
+      const method = moduleData.id ? "PUT" : "POST";
+      const res = await apiRequest(method, url, moduleData);
+      return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId, "modules"] });
-      refreshModuleTotals();
-      setActiveEditor(null);
+      toast({
+        title: "Modulo salvato",
+        description: "Il modulo è stato salvato con successo",
+      });
+      refetch();
+      
+      // Resetta lo stato dell'editor
+      setModuleManagerState(ModuleManagerState.LIST);
       setEditingModule(null);
       
-      toast({
-        title: editingModule ? "Modulo aggiornato" : "Modulo aggiunto",
-        description: editingModule 
-          ? "Il modulo è stato aggiornato con successo" 
-          : "Il modulo è stato aggiunto al preventivo",
-      });
+      // Aggiorna il preventivo principale
+      if (refreshQuote) {
+        refreshQuote();
+      }
     },
     onError: (error) => {
       console.error("Errore salvataggio modulo:", error);
@@ -105,13 +150,16 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       return res.ok;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId, "modules"] });
-      refreshModuleTotals();
-      
       toast({
         title: "Modulo eliminato",
-        description: "Il modulo è stato rimosso dal preventivo",
+        description: "Il modulo è stato eliminato con successo",
       });
+      refetch();
+      
+      // Aggiorna il preventivo principale
+      if (refreshQuote) {
+        refreshQuote();
+      }
     },
     onError: (error) => {
       console.error("Errore eliminazione modulo:", error);
@@ -122,181 +170,166 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       });
     },
   });
-
-  // Funzione per ricalcolare i totali del preventivo
-  const refreshModuleTotals = useCallback(async () => {
-    try {
-      setIsUpdatingTotals(true);
-      const refreshTotals = new RefreshQuoteTotals();
-      await refreshTotals.execute(quoteId);
-      refreshQuote(); // Aggiorna il preventivo dopo il ricalcolo
-    } catch (error) {
-      console.error("Errore durante il ricalcolo dei totali:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare i totali del preventivo",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingTotals(false);
+  
+  // Gestisce il click sul pulsante per aggiungere un nuovo modulo
+  const handleAddModule = () => {
+    setEditingModule(null);
+    setModuleManagerState(ModuleManagerState.SELECT);
+  };
+  
+  // Gestisce la selezione del tipo di modulo
+  const handleSelectModuleType = (type: "fixed" | "variable") => {
+    if (type === "fixed") {
+      setModuleManagerState(ModuleManagerState.EDIT_FIXED);
+    } else {
+      setModuleManagerState(ModuleManagerState.EDIT_VARIABLE);
     }
-  }, [quoteId, refreshQuote, toast]);
-
-  // Gestori degli eventi
-  const handleAddModuleClick = useCallback(() => {
-    setShowAddSelector(true);
-    setActiveEditor(null);
-    setEditingModule(null);
-  }, []);
-
-  const handleModuleTypeSelect = useCallback((type: 'fixed' | 'variable') => {
-    setActiveEditor(type);
-    setShowAddSelector(false);
-  }, []);
-
-  const handleSaveModule = useCallback((module: QuoteModuleData) => {
-    // Assicuriamoci che il modulo abbia l'ID del preventivo
-    const moduleToSave = {
-      ...module,
-      quoteId
-    };
-    saveModuleMutation.mutate(moduleToSave);
-  }, [quoteId, saveModuleMutation]);
-
-  const handleCancelEdit = useCallback(() => {
-    setActiveEditor(null);
-    setEditingModule(null);
-    setShowAddSelector(false);
-  }, []);
-
-  const handleEditModule = useCallback((module: QuoteModuleData) => {
+  };
+  
+  // Gestisce la modifica di un modulo esistente
+  const handleEditModule = (module: QuoteModuleData) => {
     setEditingModule(module);
-    setActiveEditor(module.type as 'fixed' | 'variable');
-    setShowAddSelector(false);
-  }, []);
-
-  const handleDeleteModule = useCallback((moduleId: number) => {
-    if (confirm("Sei sicuro di voler eliminare questo modulo? Questa azione non può essere annullata.")) {
+    
+    if (module.type === "fixed") {
+      setModuleManagerState(ModuleManagerState.EDIT_FIXED);
+    } else {
+      setModuleManagerState(ModuleManagerState.EDIT_VARIABLE);
+    }
+  };
+  
+  // Gestisce l'eliminazione di un modulo
+  const handleDeleteModule = (moduleId: number) => {
+    if (window.confirm("Sei sicuro di voler eliminare questo modulo?")) {
       deleteModuleMutation.mutate(moduleId);
     }
-  }, [deleteModuleMutation]);
-
-  // Ricalcola i totali quando i moduli cambiano
-  useEffect(() => {
-    if (modules.length > 0) {
-      refreshModuleTotals();
-    }
-  }, [modules, refreshModuleTotals]);
-
-  if (isModulesError) {
+  };
+  
+  // Gestisce il salvataggio di un modulo
+  const handleSaveModule = (moduleData: QuoteModuleData) => {
+    saveModuleMutation.mutate(moduleData);
+  };
+  
+  // Gestisce la cancellazione dell'operazione corrente
+  const handleCancel = () => {
+    setModuleManagerState(ModuleManagerState.LIST);
+    setEditingModule(null);
+  };
+  
+  // Calcola il totale di tutti i moduli
+  const calculateTotal = () => {
+    return modules.reduce((total, module) => total + (module.total || 0), 0);
+  };
+  
+  // Gestione errori
+  if (isError) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Errore</AlertTitle>
-        <AlertDescription>
-          Si è verificato un errore durante il caricamento dei moduli. 
-          Ricarica la pagina o contatta l'assistenza.
-        </AlertDescription>
-      </Alert>
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Moduli Preventivo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4 text-destructive">
+            Errore nel caricamento dei moduli. Riprova più tardi.
+          </div>
+        </CardContent>
+      </Card>
     );
   }
-
-  return (
-    <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-xl font-playfair">Moduli Preventivo</CardTitle>
-          <CardDescription>
-            Gestisci i moduli fissi e variabili di questo preventivo
-          </CardDescription>
-        </div>
-        {!activeEditor && !showAddSelector && (
-          <Button onClick={handleAddModuleClick} className="flex items-center gap-1">
-            <PlusCircle className="h-4 w-4 mr-1" />
-            Aggiungi Modulo
-          </Button>
-        )}
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Indicatore di caricamento */}
-        {isLoadingModules && (
-          <div className="flex justify-center py-8">
+  
+  // Durante il caricamento
+  if (isLoading) {
+    return (
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Moduli Preventivo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary/70" />
           </div>
-        )}
-        
-        {/* Visualizzazione moduli esistenti */}
-        {!isLoadingModules && modules.length === 0 && !activeEditor && !showAddSelector && (
-          <div className="text-center py-8 border border-dashed rounded-lg bg-muted/30">
-            <PackageIcon className="h-10 w-10 text-muted-foreground/60 mx-auto mb-3" />
-            <p className="text-muted-foreground mb-4">
-              Questo preventivo non ha ancora moduli. 
-              Aggiungi moduli per definire prodotti e servizi da offrire al cliente.
-            </p>
-            <Button onClick={handleAddModuleClick} variant="outline">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Aggiungi il tuo primo modulo
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Rendering condizionale in base allo stato
+  return (
+    <Card className="mb-8">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
+            <Package className="mr-2 h-5 w-5 text-primary/70" />
+            Moduli Preventivo
+          </CardTitle>
+          
+          {moduleManagerState === ModuleManagerState.LIST && (
+            <Button size="sm" onClick={handleAddModule}>
+              <Plus className="mr-1 h-4 w-4" />
+              Aggiungi Modulo
             </Button>
-          </div>
-        )}
-        
-        {/* Lista moduli esistenti */}
-        {!isLoadingModules && modules.length > 0 && !activeEditor && !showAddSelector && (
-          <ModuleList 
-            modules={modules} 
-            onEdit={handleEditModule} 
-            onDelete={handleDeleteModule}
-          />
-        )}
-        
-        {/* Selettore per scegliere il tipo di modulo */}
-        {showAddSelector && (
+          )}
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        {moduleManagerState === ModuleManagerState.LIST && (
           <>
-            <ModuleSelector onSelect={handleModuleTypeSelect} onCancel={() => setShowAddSelector(false)} />
+            <ModuleList
+              modules={modules}
+              onEdit={handleEditModule}
+              onDelete={handleDeleteModule}
+            />
+            
+            {modules.length > 0 && (
+              <>
+                <Separator className="my-4" />
+                
+                <div className="flex justify-between items-center">
+                  <div className="text-sm font-medium">Totale Moduli</div>
+                  <div className="text-xl font-semibold">
+                    {formatCurrency(calculateTotal())}
+                  </div>
+                </div>
+                
+                {modules.length === 0 && (
+                  <div className="flex justify-center mt-6">
+                    <Button
+                      size="lg"
+                      onClick={handleAddModule}
+                      className="gap-2"
+                    >
+                      <PlusCircle className="h-5 w-5" />
+                      Crea il Primo Modulo
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </>
         )}
         
-        {/* Editor moduli */}
-        {activeEditor === 'fixed' && (
+        {moduleManagerState === ModuleManagerState.SELECT && (
+          <ModuleSelector
+            onSelectModuleType={handleSelectModuleType}
+          />
+        )}
+        
+        {moduleManagerState === ModuleManagerState.EDIT_FIXED && (
           <FixedModuleEditor
             quoteId={quoteId}
             module={editingModule}
             onSave={handleSaveModule}
-            onCancel={handleCancelEdit}
+            onCancel={handleCancel}
           />
         )}
         
-        {activeEditor === 'variable' && (
+        {moduleManagerState === ModuleManagerState.EDIT_VARIABLE && (
           <VariableModuleEditor
             quoteId={quoteId}
             module={editingModule}
             onSave={handleSaveModule}
-            onCancel={handleCancelEdit}
+            onCancel={handleCancel}
           />
-        )}
-        
-        {/* Azioni moduli */}
-        {!activeEditor && !showAddSelector && modules.length > 0 && (
-          <div className="flex justify-between items-center mt-6">
-            <div className="text-sm text-muted-foreground">
-              {modules.length} {modules.length === 1 ? "modulo" : "moduli"} in questo preventivo
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={refreshModuleTotals} 
-              disabled={isUpdatingTotals}
-            >
-              {isUpdatingTotals ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Aggiornamento...
-                </>
-              ) : (
-                "Ricalcola Totali"
-              )}
-            </Button>
-          </div>
         )}
       </CardContent>
     </Card>

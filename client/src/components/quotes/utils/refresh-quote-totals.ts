@@ -1,64 +1,141 @@
 /**
- * Classe per il ricalcolo dei totali di un preventivo
- * Gestisce la logica di aggiornamento dei totali in modo isolato e riutilizzabile
+ * Utility per il calcolo dei totali di un preventivo e dei suoi moduli
+ * Centralizza la logica di calcolo per garantire consistenza
  */
-export default class RefreshQuoteTotals {
-  /**
-   * Ricalcola i totali di un preventivo basandosi sui suoi moduli
-   * @param quoteId - ID del preventivo da aggiornare
-   * @returns Promise che si risolve quando l'aggiornamento è completo
-   */
-  async execute(quoteId: number): Promise<void> {
-    try {
-      console.log("Ricalcolo totali preventivo...");
-      
-      // 1. Recupera tutti i moduli del preventivo
-      const modulesResponse = await fetch(`/api/quotes/${quoteId}/modules`);
-      if (!modulesResponse.ok) {
-        throw new Error(`Errore nel recupero dei moduli: ${modulesResponse.statusText}`);
-      }
-      
-      const modules = await modulesResponse.json();
-      
-      // 2. Calcola i totali
-      let subtotal = 0;
-      let total = 0;
-      
-      // Somma tutti i totali dei moduli
-      modules.forEach((module: any) => {
-        if (typeof module.subtotal === 'number') {
-          subtotal += module.subtotal;
-        }
-        
-        if (typeof module.total === 'number') {
-          total += module.total;
-        }
-      });
-      
-      console.log(`Nuovi totali calcolati - Subtotale: ${subtotal}, Totale: ${total}`);
-      
-      // 3. Aggiorna il preventivo con i nuovi totali
-      const updateResponse = await fetch(`/api/quotes/${quoteId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subtotal,
-          total,
-        }),
-      });
-      
-      if (!updateResponse.ok) {
-        throw new Error(`Errore nell'aggiornamento dei totali: ${updateResponse.statusText}`);
-      }
-      
-      console.log("[LOG] Aggiornamento totali preventivo - subtotal: " + subtotal + ", total: " + total);
-      
-      return;
-    } catch (error) {
-      console.error("Errore durante il ricalcolo dei totali:", error);
-      throw error;
-    }
+
+// Tipi semplificati per le funzioni di calcolo
+interface ModuleItem {
+  price: number;
+  quantity: number;
+}
+
+interface SelectionOption {
+  price: number;
+  isSelected?: boolean;
+}
+
+interface ModuleSelection {
+  options: SelectionOption[];
+}
+
+interface QuoteModule {
+  type: 'fixed' | 'variable';
+  items?: ModuleItem[];
+  selections?: ModuleSelection[];
+  subtotal?: number;
+  discount?: number;
+  discountType?: 'percentage' | 'amount';
+  total?: number;
+}
+
+interface Quote {
+  modules?: QuoteModule[];
+  subtotal?: number;
+  discount?: number;
+  discountType?: 'percentage' | 'amount';
+  total?: number;
+}
+
+/**
+ * Calcola il subtotale di un modulo fisso
+ * @param items - Array di elementi nel modulo
+ * @returns Subtotale del modulo
+ */
+export function calculateFixedModuleSubtotal(items: ModuleItem[] = []): number {
+  return items.reduce((sum, item) => {
+    return sum + (item.price * (item.quantity || 1));
+  }, 0);
+}
+
+/**
+ * Calcola il totale di un modulo fisso dopo l'applicazione di eventuali sconti
+ * @param subtotal - Subtotale del modulo
+ * @param discount - Valore dello sconto
+ * @param discountType - Tipo di sconto (percentuale o importo)
+ * @returns Totale del modulo scontato
+ */
+export function calculateModuleTotal(
+  subtotal: number,
+  discount?: number,
+  discountType?: 'percentage' | 'amount'
+): number {
+  if (!discount || discount <= 0) return subtotal;
+  
+  let total = subtotal;
+  
+  if (discountType === 'percentage') {
+    const discountAmount = (subtotal * discount) / 100;
+    total = subtotal - discountAmount;
+  } else if (discountType === 'amount') {
+    total = subtotal - discount;
   }
+  
+  return Math.max(0, total); // Evita totali negativi
+}
+
+/**
+ * Calcola il subtotale di un modulo variabile
+ * Nota: per i moduli variabili, il subtotale comprende solo opzioni selezionate
+ * @param selections - Array di selezioni nel modulo
+ * @returns Subtotale del modulo
+ */
+export function calculateVariableModuleSubtotal(selections: ModuleSelection[] = []): number {
+  return selections.reduce((sum, selection) => {
+    // Considera solo le opzioni selezionate
+    const selectedOptionsTotal = selection.options
+      .filter(option => option.isSelected)
+      .reduce((optionSum, option) => optionSum + option.price, 0);
+    
+    return sum + selectedOptionsTotal;
+  }, 0);
+}
+
+/**
+ * Calcola il totale di un preventivo basato sui suoi moduli
+ * @param quote - Preventivo da calcolare
+ * @returns Preventivo con totali aggiornati
+ */
+export function refreshQuoteTotals(quote: Quote): Quote {
+  const modules = (quote.modules || []).map(module => {
+    let moduleSubtotal = 0;
+    
+    // Calcola subtotale in base al tipo di modulo
+    if (module.type === 'fixed' && module.items) {
+      moduleSubtotal = calculateFixedModuleSubtotal(module.items);
+    } else if (module.type === 'variable' && module.selections) {
+      moduleSubtotal = calculateVariableModuleSubtotal(module.selections);
+    }
+    
+    // Calcola il totale del modulo applicando eventuali sconti
+    const moduleTotal = calculateModuleTotal(
+      moduleSubtotal,
+      module.discount,
+      module.discountType
+    );
+    
+    // Aggiorna e restituisci il modulo con i totali calcolati
+    return {
+      ...module,
+      subtotal: moduleSubtotal,
+      total: moduleTotal
+    };
+  });
+  
+  // Calcola il subtotale del preventivo sommando i totali dei moduli
+  const quoteSubtotal = modules.reduce((sum, module) => sum + (module.total || 0), 0);
+  
+  // Applica lo sconto al preventivo
+  const quoteTotal = calculateModuleTotal(
+    quoteSubtotal,
+    quote.discount,
+    quote.discountType
+  );
+  
+  // Restituisce il preventivo aggiornato
+  return {
+    ...quote,
+    modules,
+    subtotal: quoteSubtotal,
+    total: quoteTotal
+  };
 }

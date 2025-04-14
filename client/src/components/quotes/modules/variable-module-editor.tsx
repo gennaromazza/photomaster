@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
-import { QuoteModuleData, ModuleSelection, SelectionOption } from "@/types/module-types";
 import { v4 as uuidv4 } from "uuid";
 import {
   Form,
@@ -28,10 +27,9 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import {
   Table,
@@ -65,26 +63,61 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  Calculator,
   Loader2,
   Plus,
   Save,
   Trash2,
   X,
   ChevronDown,
-  ChevronRight,
   Edit,
   CheckCircle2,
   HelpCircle,
   Users2,
-  Settings2,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { formatCurrency } from "@/lib/utils";
+
+// Tipi base per il modulo
+interface SelectionOption {
+  id?: string; // Uso string come ID univoco generato lato client
+  selectionId?: string;
+  itemId: number;
+  itemType: 'service' | 'product';
+  name: string;
+  description?: string;
+  price: number;
+  isSelected?: boolean;
+  isDefault?: boolean;
+}
+
+interface ModuleSelection {
+  id?: string; // Uso string come ID univoco generato lato client
+  moduleId?: number;
+  name: string;
+  description?: string;
+  options: Array<SelectionOption>;
+  minOptions?: number;
+  maxOptions?: number;
+  isRequired?: boolean;
+}
+
+interface QuoteModuleData {
+  id?: number;
+  quoteId: number;
+  name: string;
+  description?: string;
+  type: 'fixed' | 'variable';
+  position?: number;
+  subtotal?: number;
+  discount?: number;
+  discountType?: 'percentage' | 'amount';
+  total?: number;
+  selections?: Array<ModuleSelection>;
+  minSelections?: number;
+  maxSelections?: number;
+  isRequired?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 // Schema di validazione per il modulo variabile
 const variableModuleSchema = z.object({
@@ -281,16 +314,6 @@ export default function VariableModuleEditor({
     }
   };
   
-  // Formatta un prezzo
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat("it-IT", {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(price / 100);
-  };
-  
   // Gestione submit form
   const onSubmit = (values: z.infer<typeof variableModuleSchema>) => {
     if (selections.length === 0) {
@@ -367,16 +390,15 @@ export default function VariableModuleEditor({
                     <FormItem>
                       <FormLabel>
                         Minimo Selezioni
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 ml-1 inline text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Numero minimo di selezioni che il cliente deve fare</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          type="button"
+                          className="ml-1 h-5 w-5 p-0 inline-flex"
+                          asChild
+                        >
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -405,16 +427,15 @@ export default function VariableModuleEditor({
                     <FormItem>
                       <FormLabel>
                         Massimo Selezioni
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 ml-1 inline text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Numero massimo di selezioni che il cliente può fare</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          type="button"
+                          className="ml-1 h-5 w-5 p-0 inline-flex"
+                          asChild
+                        >
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -602,7 +623,7 @@ export default function VariableModuleEditor({
                                         key={service.id}
                                         value={service.id.toString()}
                                       >
-                                        {service.name} - {formatPrice(service.price)}
+                                        {service.name} - {formatCurrency(service.price)}
                                       </SelectItem>
                                     ))
                                   : products.map((product: any) => (
@@ -610,7 +631,7 @@ export default function VariableModuleEditor({
                                         key={product.id}
                                         value={product.id.toString()}
                                       >
-                                        {product.name} - {formatPrice(product.price)}
+                                        {product.name} - {formatCurrency(product.price)}
                                       </SelectItem>
                                     ))}
                               </SelectContent>
@@ -661,7 +682,7 @@ export default function VariableModuleEditor({
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    {formatPrice(option.price)}
+                                    {formatCurrency(option.price)}
                                   </TableCell>
                                   <TableCell className="text-right">
                                     <Button
@@ -804,7 +825,7 @@ export default function VariableModuleEditor({
                                       </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      {formatPrice(option.price)}
+                                      {formatCurrency(option.price)}
                                     </TableCell>
                                   </TableRow>
                                 ))}
@@ -823,7 +844,7 @@ export default function VariableModuleEditor({
           {/* Istruzioni per il cliente */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Istruzioni per il Cliente</CardTitle>
+              <CardTitle className="text-base">Anteprima per il Cliente</CardTitle>
               <CardDescription>
                 Ecco come apparirà questo modulo al cliente
               </CardDescription>

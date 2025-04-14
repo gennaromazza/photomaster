@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
-import { QuoteModuleData, ModuleItem } from "@/types/module-types";
 import { v4 as uuidv4 } from "uuid";
 import {
   Form,
@@ -12,7 +11,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,8 +25,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -40,17 +36,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Tabs,
@@ -66,17 +51,40 @@ import {
   Save,
   Trash2,
   X,
-  PackageCheck,
-  Leaf,
-  Receipt,
-  HelpCircle,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { formatCurrency } from "@/lib/utils";
+
+// Tipi base per il modulo
+interface ModuleItem {
+  id?: number;
+  moduleId?: number;
+  itemId: number;
+  itemType: 'service' | 'product';
+  name: string;
+  description?: string;
+  price: number;
+  quantity: number;
+  discount?: number;
+  discountType?: 'percentage' | 'amount';
+  total?: number;
+  note?: string;
+}
+
+interface QuoteModuleData {
+  id?: number;
+  quoteId: number;
+  name: string;
+  description?: string;
+  type: 'fixed' | 'variable';
+  position?: number;
+  subtotal?: number;
+  discount?: number;
+  discountType?: 'percentage' | 'amount';
+  total?: number;
+  items?: Array<ModuleItem>;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 // Schema di validazione per il modulo fisso
 const fixedModuleSchema = z.object({
@@ -155,15 +163,15 @@ export default function FixedModuleEditor({
     setCalculating(true);
     try {
       let moduleSubtotal = 0;
-      let moduleTotal = 0;
       
       // Calcola il subtotale sommando tutti gli item
       items.forEach(item => {
-        const itemTotal = item.price * item.quantity;
+        const itemTotal = item.price * (item.quantity || 1);
         moduleSubtotal += itemTotal;
       });
       
       // Applica lo sconto
+      let moduleTotal = moduleSubtotal;
       const discount = form.watch("discount") || 0;
       const discountType = form.watch("discountType");
       
@@ -174,8 +182,6 @@ export default function FixedModuleEditor({
         } else {
           moduleTotal = moduleSubtotal - discount;
         }
-      } else {
-        moduleTotal = moduleSubtotal;
       }
       
       // Assicurati che il totale non sia negativo
@@ -227,16 +233,6 @@ export default function FixedModuleEditor({
     setSelectedItemId(null);
     setItemQuantity(1);
     setItemNote("");
-  };
-  
-  // Formatta un prezzo
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat("it-IT", {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(price / 100);
   };
   
   // Gestisce la submission del form
@@ -377,9 +373,6 @@ export default function FixedModuleEditor({
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Aggiungi Servizi e Prodotti</CardTitle>
-              <CardDescription>
-                Seleziona i servizi e i prodotti inclusi in questo modulo
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -417,12 +410,12 @@ export default function FixedModuleEditor({
                       {selectedItemType === "service"
                         ? services.map((service: any) => (
                             <SelectItem key={service.id} value={service.id.toString()}>
-                              {service.name} - {formatPrice(service.price)}
+                              {service.name} - {formatCurrency(service.price)}
                             </SelectItem>
                           ))
                         : products.map((product: any) => (
                             <SelectItem key={product.id} value={product.id.toString()}>
-                              {product.name} - {formatPrice(product.price)}
+                              {product.name} - {formatCurrency(product.price)}
                             </SelectItem>
                           ))}
                     </SelectContent>
@@ -469,9 +462,6 @@ export default function FixedModuleEditor({
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Elementi Inclusi</CardTitle>
-              <CardDescription>
-                Elementi inclusi in questo modulo: {items.length}
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {items.length === 0 ? (
@@ -507,7 +497,7 @@ export default function FixedModuleEditor({
                         </TableCell>
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell className="text-right">
-                          {formatPrice(item.price * item.quantity)}
+                          {formatCurrency(item.price * item.quantity)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -535,7 +525,7 @@ export default function FixedModuleEditor({
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Subtotale</span>
-                  <span>{formatPrice(subtotal)}</span>
+                  <span>{formatCurrency(subtotal)}</span>
                 </div>
                 {form.watch("discount") > 0 && (
                   <div className="flex justify-between text-muted-foreground">
@@ -548,15 +538,15 @@ export default function FixedModuleEditor({
                     <span>
                       -{" "}
                       {form.watch("discountType") === "percentage"
-                        ? formatPrice((subtotal * form.watch("discount")) / 100)
-                        : formatPrice(form.watch("discount"))}
+                        ? formatCurrency((subtotal * form.watch("discount")) / 100)
+                        : formatCurrency(form.watch("discount"))}
                     </span>
                   </div>
                 )}
                 <Separator />
                 <div className="flex justify-between font-medium">
                   <span>Totale</span>
-                  <span>{formatPrice(total)}</span>
+                  <span>{formatCurrency(total)}</span>
                 </div>
               </div>
             </CardContent>

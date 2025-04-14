@@ -1,26 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation, useRoute } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertQuoteSchema } from "@shared/schema";
-import Layout from "@/components/layout/layout";
 import { useToast } from "@/hooks/use-toast";
+import Layout from "@/components/layout/layout";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -38,434 +44,222 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  ArrowLeft,
+  CalendarIcon,
+  Clock,
+  Loader2,
+  Search,
+  UserPlus2,
+  User,
+  Church,
+  Map,
+  Save,
+  Scroll,
+  ArrowRight,
+} from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { 
-  Loader2, 
-  Search, 
-  Plus, 
-  Mail, 
-  Phone, 
-  CalendarIcon, 
-  Clock, 
-  MapPin,
-  Save,
-  Church,
-  Package as PackageIcon,
-  ArrowRight,
-  ChevronsUpDown
-} from "lucide-react";
-import { CeremonyDetails } from "@/components/quotes/ceremony-details";
-import { 
-  Command, 
-  CommandInput, 
-  CommandList, 
-  CommandItem, 
-  CommandGroup, 
-  CommandEmpty 
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import cn from 'classnames';
-
-// Estensione dello schema di validazione per il preventivo
-const quoteFormSchema = insertQuoteSchema.extend({
-  title: z.string().min(1, "Il titolo è obbligatorio"),
-  clientId: z.coerce.number().min(1, "Seleziona un cliente"),
-  secondClientId: z.coerce.number().optional(),
-  notes: z.string().optional(),
-  eventId: z.coerce.number().optional(),
-  eventDate: z.date().optional(),
-  isFullDay: z.boolean().optional().default(false),
-  eventTime: z.string().optional(),
-  eventEndTime: z.string().optional(),
-  location: z.string().optional(),
-  ceremonyLocation: z.string().optional(),
-  ceremonyTime: z.string().optional(),
-  eventType: z.string().optional(),
-  workflow: z.string().optional().default("default"),
-  categoryId: z.coerce.number().optional(),
-  leadSourceId: z.coerce.number().optional(),
-  assignedCollaborators: z.array(z.number()).optional().default([]),
-});
-
-type QuoteFormValues = z.infer<typeof quoteFormSchema>;
-
-// Schema per il form di creazione cliente rapido
-const clientFormSchema = z.object({
-  firstName: z.string().min(1, "Il nome è obbligatorio"),
-  lastName: z.string().min(1, "Il cognome è obbligatorio"),
-  email: z.string().email("Email non valida"),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-type ClientFormValues = z.infer<typeof clientFormSchema>;
+import { formatDate } from "@/lib/utils";
 
 /**
- * Componente per la creazione e modifica di un preventivo base
- * Responsabilità: Gestire solo le informazioni essenziali del preventivo
- * I moduli verranno gestiti nella pagina di dettaglio
+ * Componente per la creazione o modifica di un preventivo (step 1: informazioni di base)
+ * Responsabilità: 
+ * - Gestire la creazione del preventivo (dati cliente, data evento, note)
+ * - Passare al secondo step (ModuleManager) per la gestione dei moduli
  */
 export default function NewQuotePage() {
-  const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const search = useSearch();
-  const params = new URLSearchParams(search);
-  const editId = params.get('edit');
-  const isEditMode = !!editId;
-  
-  // Stati per UI
+  const [matched, params] = useRoute("/quotes/new-quote");
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
   const [isSecondClientDialogOpen, setIsSecondClientDialogOpen] = useState(false);
-  const [mainClientSearch, setMainClientSearch] = useState("");
+  const [clientSearch, setClientSearch] = useState("");
   const [secondClientSearch, setSecondClientSearch] = useState("");
-  const [showClientSuccess, setShowClientSuccess] = useState(false);
-  const [showSecondClientSuccess, setShowSecondClientSuccess] = useState(false);
-  const [filteredMainClients, setFilteredMainClients] = useState<any[]>([]);
-  const [filteredSecondClients, setFilteredSecondClients] = useState<any[]>([]);
-  const [isFullDayEvent, setIsFullDayEvent] = useState(false);
-  const [assignPhotographers, setAssignPhotographers] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [quoteId, setQuoteId] = useState<number | null>(null);
   
-  // Query per ottenere dati
-  const { data: clients = [], isLoading: isLoadingClients } = useQuery<any[]>({
+  // Query per lista clienti
+  const { data: clients = [] } = useQuery<any[]>({
     queryKey: ["/api/clients"],
   });
-
-  const { data: events = [], isLoading: isLoadingEvents } = useQuery<any[]>({
-    queryKey: ["/api/events"],
-  });
-
-  const { data: categories = [], isLoading: isLoadingCategories } = useQuery<any[]>({
-    queryKey: ["/api/service-categories"],
-  });
-
-  const { data: leadSources = [], isLoading: isLoadingLeadSources } = useQuery<any[]>({
-    queryKey: ["/api/lead-sources"],
-  });
-
-  const { data: collaborators = [], isLoading: isLoadingCollaborators } = useQuery<any[]>({
-    queryKey: ["/api/collaborators"],
+  
+  // Query per dati preventivo in caso di modifica
+  const { data: quoteData } = useQuery<any>({
+    queryKey: ["/api/quotes", quoteId],
+    enabled: !!quoteId && editMode,
   });
   
-  // Query per ottenere il preventivo in modalità modifica
-  const { data: quoteToEdit, isLoading: isLoadingQuote } = useQuery<any>({
-    queryKey: ["/api/quotes", editId],
-    enabled: !!editId,
+  // Schema validazione
+  const formSchema = z.object({
+    title: z.string().min(1, "Il titolo è obbligatorio"),
+    clientId: z.coerce.number().min(1, "Seleziona un cliente"),
+    secondClientId: z.coerce.number().optional(),
+    eventDate: z.date().optional(),
+    eventType: z.string().optional(),
+    location: z.string().optional(),
+    isFullDay: z.boolean().default(false),
+    eventTime: z.string().optional(),
+    eventEndTime: z.string().optional(),
+    ceremonyLocation: z.string().optional(),
+    ceremonyTime: z.string().optional(),
+    notes: z.string().optional(),
   });
-
-  // Form per il preventivo
-  const form = useForm<QuoteFormValues>({
-    resolver: zodResolver(quoteFormSchema),
+  
+  // Setup form
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      clientId: undefined,
+      clientId: 0,
       secondClientId: undefined,
-      eventId: undefined,
-      notes: "",
+      eventDate: undefined,
       eventType: "",
-      workflow: "default",
+      location: "",
+      isFullDay: false,
       eventTime: "",
       eventEndTime: "",
-      location: "",
       ceremonyLocation: "",
       ceremonyTime: "",
-      isFullDay: false,
-      assignedCollaborators: [],
-    },
-  });
-
-  // Form per il cliente principale
-  const clientForm = useForm<ClientFormValues>({
-    resolver: zodResolver(clientFormSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      address: "",
       notes: "",
     },
   });
-
-  // Form per il secondo cliente
-  const secondClientForm = useForm<ClientFormValues>({
-    resolver: zodResolver(clientFormSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      address: "",
-      notes: "",
-    },
-  });
-
-  // Filtraggio clienti principali basato sulla ricerca
-  useEffect(() => {
-    if (clients.length > 0 && mainClientSearch) {
-      const query = mainClientSearch.toLowerCase();
-      const filtered = clients.filter(
-        (client: any) =>
-          client.firstName.toLowerCase().includes(query) ||
-          client.lastName.toLowerCase().includes(query) ||
-          client.email.toLowerCase().includes(query) ||
-          (client.phone && client.phone.includes(query))
-      );
-      setFilteredMainClients(filtered);
-    } else {
-      setFilteredMainClients(clients);
-    }
-  }, [mainClientSearch, clients]);
-
-  // Filtraggio clienti secondari basato sulla ricerca
-  useEffect(() => {
-    if (clients.length > 0 && secondClientSearch) {
-      const query = secondClientSearch.toLowerCase();
-      const filtered = clients.filter(
-        (client: any) =>
-          client.firstName.toLowerCase().includes(query) ||
-          client.lastName.toLowerCase().includes(query) ||
-          client.email.toLowerCase().includes(query) ||
-          (client.phone && client.phone.includes(query))
-      );
-      setFilteredSecondClients(filtered);
-    } else {
-      setFilteredSecondClients(clients);
-    }
-  }, [secondClientSearch, clients]);
-
-  // Gestione dell'opzione "Evento tutto il giorno"
-  useEffect(() => {
-    if (isFullDayEvent) {
-      form.setValue("eventTime", "");
-      form.setValue("eventEndTime", "");
-    }
-    form.setValue("isFullDay", isFullDayEvent);
-  }, [isFullDayEvent, form]);
   
-  // Popola il form con i dati del preventivo esistente in modalità modifica
+  // Controlla se siamo in modalità modifica leggendo il parametro dell'URL
   useEffect(() => {
-    if (quoteToEdit && !isLoadingQuote) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get("edit");
+    
+    if (editId) {
+      setEditMode(true);
+      setQuoteId(parseInt(editId));
+    }
+  }, []);
+  
+  // Carica i dati del preventivo in caso di modifica
+  useEffect(() => {
+    if (quoteData && editMode) {
       form.reset({
-        title: quoteToEdit.title || "",
-        clientId: quoteToEdit.clientId,
-        secondClientId: quoteToEdit.secondClientId || undefined,
-        eventId: quoteToEdit.eventId || undefined,
-        notes: quoteToEdit.notes || "",
-        eventType: quoteToEdit.eventType || "",
-        workflow: quoteToEdit.workflow || "default",
-        eventDate: quoteToEdit.eventDate ? new Date(quoteToEdit.eventDate) : undefined,
-        eventTime: quoteToEdit.eventTime || "",
-        eventEndTime: quoteToEdit.eventEndTime || "",
-        location: quoteToEdit.location || "",
-        ceremonyLocation: quoteToEdit.ceremonyLocation || "",
-        ceremonyTime: quoteToEdit.ceremonyTime || "",
-        isFullDay: quoteToEdit.isFullDay || false,
-        categoryId: quoteToEdit.categoryId || undefined,
-        leadSourceId: quoteToEdit.leadSourceId || undefined,
-        assignedCollaborators: quoteToEdit.assignedCollaborators || [],
-        status: quoteToEdit.status || "draft"
+        title: quoteData.title || "",
+        clientId: quoteData.clientId || 0,
+        secondClientId: quoteData.secondClientId || undefined,
+        eventDate: quoteData.eventDate ? new Date(quoteData.eventDate) : undefined,
+        eventType: quoteData.eventType || "",
+        location: quoteData.location || "",
+        isFullDay: quoteData.isFullDay || false,
+        eventTime: quoteData.eventTime || "",
+        eventEndTime: quoteData.eventEndTime || "",
+        ceremonyLocation: quoteData.ceremonyLocation || "",
+        ceremonyTime: quoteData.ceremonyTime || "",
+        notes: quoteData.notes || "",
       });
-      
-      setIsFullDayEvent(quoteToEdit.isFullDay || false);
     }
-  }, [quoteToEdit, isLoadingQuote, form]);
-
-  // Mutations per operazioni CRUD
-  const createClientMutation = useMutation({
-    mutationFn: async (data: ClientFormValues) => {
-      const res = await apiRequest("POST", "/api/clients", data);
+  }, [quoteData, editMode, form]);
+  
+  // Mutation per salvare il preventivo
+  const saveQuoteMutation = useMutation({
+    mutationFn: async (quoteData: any) => {
+      const url = quoteId ? `/api/quotes/${quoteId}` : "/api/quotes";
+      const method = quoteId ? "PUT" : "POST";
+      const res = await apiRequest(method, url, quoteData);
       return res.json();
     },
-    onSuccess: (newClient) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      clientForm.reset();
+    onSuccess: (data) => {
+      toast({
+        title: editMode ? "Preventivo aggiornato" : "Preventivo creato",
+        description: editMode 
+          ? "Il preventivo è stato aggiornato con successo" 
+          : "Il preventivo è stato creato con successo. Ora puoi aggiungere moduli.",
+      });
       
-      form.setValue("clientId", newClient.id);
-      
-      setShowClientSuccess(true);
-      setTimeout(() => {
-        setShowClientSuccess(false);
-        setIsClientDialogOpen(false);
-      }, 2000);
+      // Redirect alla pagina di dettaglio del preventivo
+      setLocation(`/quotes/detail/${data.id}`);
     },
     onError: (error) => {
-      console.error("Errore creazione cliente:", error);
+      console.error("Errore salvataggio preventivo:", error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante la creazione del cliente",
+        description: "Si è verificato un errore durante il salvataggio del preventivo",
         variant: "destructive",
       });
-    },
-  });
-
-  const createSecondClientMutation = useMutation({
-    mutationFn: async (data: ClientFormValues) => {
-      const res = await apiRequest("POST", "/api/clients", data);
-      return res.json();
-    },
-    onSuccess: (newClient) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      secondClientForm.reset();
-      
-      form.setValue("secondClientId", newClient.id);
-      
-      setShowSecondClientSuccess(true);
-      setTimeout(() => {
-        setShowSecondClientSuccess(false);
-        setIsSecondClientDialogOpen(false);
-      }, 2000);
-    },
-    onError: (error) => {
-      console.error("Errore creazione secondo cliente:", error);
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante la creazione del secondo cliente",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const createQuoteMutation = useMutation({
-    mutationFn: async (data: QuoteFormValues) => {
-      const res = await apiRequest("POST", "/api/quotes", data);
-      return res.json();
-    },
-    onSuccess: (newQuote) => {
-      toast({
-        title: "Preventivo creato",
-        description: "Il preventivo è stato creato con successo",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-      // Reindirizza alla pagina di dettaglio per gestire i moduli
-      setLocation(`/quotes/detail/${newQuote.id}`);
-    },
-    onError: (error) => {
-      console.error("Error creating quote:", error);
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante la creazione del preventivo",
-        variant: "destructive",
-      });
+      setIsLoading(false);
     },
   });
   
-  const updateQuoteMutation = useMutation({
-    mutationFn: async (data: QuoteFormValues) => {
-      const res = await apiRequest("PATCH", `/api/quotes/${editId}`, data);
-      return res.json();
-    },
-    onSuccess: (updatedQuote) => {
-      toast({
-        title: "Preventivo aggiornato",
-        description: "Il preventivo è stato aggiornato con successo",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes", editId] });
-      // Reindirizza alla pagina di dettaglio del preventivo aggiornato
-      setLocation(`/quotes/detail/${updatedQuote.id}`);
-    },
-    onError: (error) => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'aggiornamento del preventivo",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Gestione submit dei form
-  const onSubmit = (data: QuoteFormValues) => {
-    if (isEditMode) {
-      updateQuoteMutation.mutate(data);
-    } else {
-      createQuoteMutation.mutate(data);
-    }
+  // Gestione submit form
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    
+    // Preparo i dati da inviare
+    const formattedValues = {
+      ...values,
+      status: editMode ? undefined : "draft", // Solo per nuovi preventivi
+    };
+    
+    saveQuoteMutation.mutate(formattedValues);
   };
-
-  const onClientSubmit = (data: ClientFormValues) => {
-    createClientMutation.mutate(data);
+  
+  // Funzioni di ricerca cliente
+  const filteredClients = clients.filter((client) =>
+    (`${client.firstName} ${client.lastName}`).toLowerCase().includes(clientSearch.toLowerCase())
+  );
+  
+  const filteredSecondClients = clients.filter((client) =>
+    (`${client.firstName} ${client.lastName}`).toLowerCase().includes(secondClientSearch.toLowerCase())
+  );
+  
+  // Trova cliente per ID
+  const findClientById = (id: number) => {
+    return clients.find((client) => client.id === id);
   };
-
-  const onSecondClientSubmit = (data: ClientFormValues) => {
-    createSecondClientMutation.mutate(data);
-  };
-
-  // Gestione della selezione dei clienti
-  const handleClientSelect = (clientId: number, isSecondClient = false) => {
-    if (isSecondClient) {
-      form.setValue("secondClientId", clientId);
-      setSecondClientSearch("");
-    } else {
-      form.setValue("clientId", clientId);
-      setMainClientSearch("");
-    }
+  
+  // Etichette per i clienti visualizzati nei campi
+  const getClientLabel = (id: number) => {
+    const client = findClientById(id);
+    return client ? `${client.firstName} ${client.lastName}` : "Seleziona cliente";
   };
   
   return (
     <Layout>
-      <div className="container mx-auto py-6 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Colonna sinistra - 8/12 */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-playfair font-bold">
-                  {isEditMode ? "Modifica Preventivo" : "Nuovo Preventivo"}
-                </h1>
-                <p className="text-muted-foreground">
-                  {isEditMode ? "Modifica i dettagli del preventivo esistente" : "Crea un nuovo preventivo per un cliente"}
-                </p>
-              </div>
-              <Button 
-                onClick={form.handleSubmit(onSubmit)}
-                disabled={isEditMode ? updateQuoteMutation.isPending : createQuoteMutation.isPending}
-              >
-                {isEditMode ? (
-                  updateQuoteMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Aggiornamento...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Aggiorna Preventivo
-                    </>
-                  )
-                ) : (
-                  createQuoteMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creazione...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Salva Preventivo
-                    </>
-                  )
-                )}
-              </Button>
+      <div className="container py-6">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center">
+            <Button variant="outline" onClick={() => setLocation("/quotes")} className="mr-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Indietro
+            </Button>
+            <div>
+              <h1 className="text-3xl font-playfair font-bold">
+                {editMode ? "Modifica Preventivo" : "Nuovo Preventivo"}
+              </h1>
+              <p className="text-muted-foreground">
+                {editMode 
+                  ? "Modifica le informazioni del preventivo" 
+                  : "Crea un nuovo preventivo, inserisci i dati principali e continua per aggiungere moduli"}
+              </p>
             </div>
-
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                {/* CARD PRINCIPALE */}
-                <Card>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <Card className="mb-6">
                   <CardHeader>
-                    <CardTitle>Informazioni Cliente e Preventivo</CardTitle>
-                    <CardDescription>Inserisci le informazioni di base del preventivo</CardDescription>
+                    <CardTitle>Informazioni Generali</CardTitle>
+                    <CardDescription>
+                      Inserisci il titolo e le informazioni di base del preventivo
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Titolo preventivo */}
                     <FormField
                       control={form.control}
                       name="title"
@@ -473,388 +267,228 @@ export default function NewQuotePage() {
                         <FormItem>
                           <FormLabel>Titolo Preventivo</FormLabel>
                           <FormControl>
-                            <Input placeholder="es. Servizio Matrimonio" {...field} />
+                            <Input placeholder="es. Matrimonio Rossi" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
-                    {/* Selezione cliente principale e secondario */}
-                    <div className="flex flex-col md:flex-row gap-4">
-                      <div className="flex-1">
-                        <FormField
-                          control={form.control}
-                          name="clientId"
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormLabel>Cliente Principale</FormLabel>
-                              <div className="flex items-center space-x-2">
-                                <div className="relative flex-1">
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <FormControl>
-                                        <Button
-                                          variant="outline"
-                                          role="combobox"
-                                          className={cn(
-                                            "w-full justify-between",
-                                            !field.value && "text-muted-foreground"
-                                          )}
-                                        >
-                                          {field.value ? (
-                                            clients.find((client) => client.id === field.value)
-                                              ? `${clients.find((client) => client.id === field.value)?.firstName} ${
-                                                  clients.find((client) => client.id === field.value)?.lastName
-                                                }`
-                                              : "Seleziona un cliente"
-                                          ) : (
-                                            "Seleziona un cliente"
-                                          )}
-                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                      </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[300px] p-0">
-                                      <Command>
-                                        <CommandInput placeholder="Cerca cliente..." />
-                                        <CommandEmpty>Nessun cliente trovato</CommandEmpty>
-                                        <CommandGroup>
-                                          {clients.map((client) => (
-                                            <CommandItem
-                                              key={client.id}
-                                              value={`${client.firstName} ${client.lastName}`}
-                                              onSelect={() => {
-                                                form.setValue("clientId", client.id);
-                                              }}
-                                            >
-                                              {client.firstName} {client.lastName}
-                                            </CommandItem>
-                                          ))}
-                                        </CommandGroup>
-                                      </Command>
-                                    </PopoverContent>
-                                  </Popover>
-                                  <FormMessage />
-                                </div>
-                                <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" size="icon" type="button">
-                                      <Plus className="h-4 w-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Aggiungi nuovo cliente</DialogTitle>
-                                      <DialogDescription>
-                                        Inserisci i dati del nuovo cliente per aggiungerlo al sistema
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    {showClientSuccess ? (
-                                      <Alert className="bg-green-50 border-green-200">
-                                        <AlertTitle>Cliente aggiunto con successo!</AlertTitle>
-                                        <AlertDescription>
-                                          Il cliente è stato creato e selezionato per questo preventivo.
-                                        </AlertDescription>
-                                      </Alert>
-                                    ) : (
-                                      <Form {...clientForm}>
-                                        <form onSubmit={clientForm.handleSubmit(onClientSubmit)} className="space-y-4">
-                                          <div className="grid grid-cols-2 gap-4">
-                                            <FormField
-                                              control={clientForm.control}
-                                              name="firstName"
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Nome</FormLabel>
-                                                  <FormControl>
-                                                    <Input placeholder="Mario" {...field} />
-                                                  </FormControl>
-                                                  <FormMessage />
-                                                </FormItem>
-                                              )}
-                                            />
-                                            <FormField
-                                              control={clientForm.control}
-                                              name="lastName"
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Cognome</FormLabel>
-                                                  <FormControl>
-                                                    <Input placeholder="Rossi" {...field} />
-                                                  </FormControl>
-                                                  <FormMessage />
-                                                </FormItem>
-                                              )}
-                                            />
-                                          </div>
-                                          <FormField
-                                            control={clientForm.control}
-                                            name="email"
-                                            render={({ field }) => (
-                                              <FormItem>
-                                                <FormLabel>Email</FormLabel>
-                                                <FormControl>
-                                                  <Input type="email" placeholder="mario.rossi@example.com" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                              </FormItem>
-                                            )}
-                                          />
-                                          <FormField
-                                            control={clientForm.control}
-                                            name="phone"
-                                            render={({ field }) => (
-                                              <FormItem>
-                                                <FormLabel>Telefono</FormLabel>
-                                                <FormControl>
-                                                  <Input placeholder="+39 123 456 7890" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                              </FormItem>
-                                            )}
-                                          />
-                                          <FormField
-                                            control={clientForm.control}
-                                            name="address"
-                                            render={({ field }) => (
-                                              <FormItem>
-                                                <FormLabel>Indirizzo</FormLabel>
-                                                <FormControl>
-                                                  <Input placeholder="Via Roma 123, Milano" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                              </FormItem>
-                                            )}
-                                          />
-                                          <DialogFooter>
-                                            <Button type="submit" disabled={createClientMutation.isPending}>
-                                              {createClientMutation.isPending ? (
-                                                <>
-                                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                  Salvataggio...
-                                                </>
-                                              ) : (
-                                                "Salva Cliente"
-                                              )}
-                                            </Button>
-                                          </DialogFooter>
-                                        </form>
-                                      </Form>
-                                    )}
-                                  </DialogContent>
-                                </Dialog>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      {/* Secondo cliente */}
-                      <div className="flex-1">
-                        <FormField
-                          control={form.control}
-                          name="secondClientId"
-                          render={({ field }) => (
-                            <FormItem className="flex-1">
-                              <FormLabel>Secondo Cliente (opzionale)</FormLabel>
-                              <div className="flex items-center space-x-2">
-                                <div className="relative flex-1">
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <FormControl>
-                                        <Button
-                                          variant="outline"
-                                          role="combobox"
-                                          className={cn(
-                                            "w-full justify-between",
-                                            !field.value && "text-muted-foreground"
-                                          )}
-                                        >
-                                          {field.value ? (
-                                            clients.find((client) => client.id === field.value)
-                                              ? `${clients.find((client) => client.id === field.value)?.firstName} ${
-                                                  clients.find((client) => client.id === field.value)?.lastName
-                                                }`
-                                              : "Seleziona un cliente"
-                                          ) : (
-                                            "Seleziona un cliente"
-                                          )}
-                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                      </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[300px] p-0">
-                                      <Command>
-                                        <CommandInput placeholder="Cerca secondo cliente..." />
-                                        <CommandEmpty>Nessun cliente trovato</CommandEmpty>
-                                        <CommandGroup>
-                                          {clients.map((client) => (
-                                            <CommandItem
-                                              key={client.id}
-                                              value={`${client.firstName} ${client.lastName}`}
-                                              onSelect={() => {
-                                                form.setValue("secondClientId", client.id);
-                                              }}
-                                            >
-                                              {client.firstName} {client.lastName}
-                                            </CommandItem>
-                                          ))}
-                                        </CommandGroup>
-                                      </Command>
-                                    </PopoverContent>
-                                  </Popover>
-                                  <FormMessage />
-                                </div>
-                                <Dialog open={isSecondClientDialogOpen} onOpenChange={setIsSecondClientDialogOpen}>
-                                  <DialogTrigger asChild>
-                                    <Button variant="outline" size="icon" type="button">
-                                      <Plus className="h-4 w-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Aggiungi secondo cliente</DialogTitle>
-                                      <DialogDescription>
-                                        Inserisci i dati del secondo cliente per aggiungerlo al sistema
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    {showSecondClientSuccess ? (
-                                      <Alert className="bg-green-50 border-green-200">
-                                        <AlertTitle>Cliente aggiunto con successo!</AlertTitle>
-                                        <AlertDescription>
-                                          Il cliente è stato creato e selezionato come secondo cliente per questo preventivo.
-                                        </AlertDescription>
-                                      </Alert>
-                                    ) : (
-                                      <Form {...secondClientForm}>
-                                        <form onSubmit={secondClientForm.handleSubmit(onSecondClientSubmit)} className="space-y-4">
-                                          <div className="grid grid-cols-2 gap-4">
-                                            <FormField
-                                              control={secondClientForm.control}
-                                              name="firstName"
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Nome</FormLabel>
-                                                  <FormControl>
-                                                    <Input placeholder="Maria" {...field} />
-                                                  </FormControl>
-                                                  <FormMessage />
-                                                </FormItem>
-                                              )}
-                                            />
-                                            <FormField
-                                              control={secondClientForm.control}
-                                              name="lastName"
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Cognome</FormLabel>
-                                                  <FormControl>
-                                                    <Input placeholder="Bianchi" {...field} />
-                                                  </FormControl>
-                                                  <FormMessage />
-                                                </FormItem>
-                                              )}
-                                            />
-                                          </div>
-                                          <FormField
-                                            control={secondClientForm.control}
-                                            name="email"
-                                            render={({ field }) => (
-                                              <FormItem>
-                                                <FormLabel>Email</FormLabel>
-                                                <FormControl>
-                                                  <Input type="email" placeholder="maria.bianchi@example.com" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                              </FormItem>
-                                            )}
-                                          />
-                                          <FormField
-                                            control={secondClientForm.control}
-                                            name="phone"
-                                            render={({ field }) => (
-                                              <FormItem>
-                                                <FormLabel>Telefono</FormLabel>
-                                                <FormControl>
-                                                  <Input placeholder="+39 123 456 7890" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                              </FormItem>
-                                            )}
-                                          />
-                                          <FormField
-                                            control={secondClientForm.control}
-                                            name="address"
-                                            render={({ field }) => (
-                                              <FormItem>
-                                                <FormLabel>Indirizzo</FormLabel>
-                                                <FormControl>
-                                                  <Input placeholder="Via Roma 123, Milano" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                              </FormItem>
-                                            )}
-                                          />
-                                          <DialogFooter>
-                                            <Button type="submit" disabled={createSecondClientMutation.isPending}>
-                                              {createSecondClientMutation.isPending ? (
-                                                <>
-                                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                  Salvataggio...
-                                                </>
-                                              ) : (
-                                                "Salva Cliente"
-                                              )}
-                                            </Button>
-                                          </DialogFooter>
-                                        </form>
-                                      </Form>
-                                    )}
-                                  </DialogContent>
-                                </Dialog>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Tipo di evento e workflow */}
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Cliente principale */}
                       <FormField
                         control={form.control}
-                        name="eventType"
+                        name="clientId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Tipo di Evento</FormLabel>
-                            <FormControl>
-                              <Input placeholder="es. Matrimonio" {...field} />
-                            </FormControl>
+                            <FormLabel>Cliente</FormLabel>
+                            <div className="relative">
+                              <Dialog open={isClientDialogOpen} onOpenChange={setIsClientDialogOpen}>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-between"
+                                    type="button"
+                                  >
+                                    {field.value
+                                      ? getClientLabel(field.value)
+                                      : "Seleziona cliente"}
+                                    <User className="h-4 w-4 ml-2" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Seleziona Cliente</DialogTitle>
+                                    <DialogDescription>
+                                      Cerca e seleziona un cliente esistente
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="py-4">
+                                    <div className="relative mb-4">
+                                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                      <Input
+                                        placeholder="Cerca cliente..."
+                                        className="pl-8"
+                                        value={clientSearch}
+                                        onChange={(e) => setClientSearch(e.target.value)}
+                                      />
+                                    </div>
+                                    
+                                    <div className="max-h-[300px] overflow-y-auto">
+                                      {filteredClients.length === 0 ? (
+                                        <div className="text-center py-4 text-muted-foreground">
+                                          Nessun cliente trovato.
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-1">
+                                          {filteredClients.map((client) => (
+                                            <div
+                                              key={client.id}
+                                              className="flex items-center p-2 hover:bg-secondary rounded-md cursor-pointer"
+                                              onClick={() => {
+                                                field.onChange(client.id);
+                                                setIsClientDialogOpen(false);
+                                              }}
+                                            >
+                                              <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-medium flex items-center justify-center mr-2">
+                                                {client.firstName.charAt(0)}
+                                                {client.lastName.charAt(0)}
+                                              </div>
+                                              <div>
+                                                <div className="font-medium">
+                                                  {client.firstName} {client.lastName}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                  {client.email || client.phone || "Nessun contatto"}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button 
+                                      variant="outline" 
+                                      onClick={() => setIsClientDialogOpen(false)}
+                                    >
+                                      Annulla
+                                    </Button>
+                                    <Button 
+                                      onClick={() => setLocation("/clients/new")}
+                                    >
+                                      <UserPlus2 className="mr-2 h-4 w-4" />
+                                      Nuovo Cliente
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+                      
+                      {/* Secondo cliente (opzionale) */}
                       <FormField
                         control={form.control}
-                        name="workflow"
+                        name="secondClientId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Workflow</FormLabel>
-                            <FormControl>
-                              <Input placeholder="es. Standard" {...field} />
-                            </FormControl>
+                            <FormLabel>Secondo Cliente (opzionale)</FormLabel>
+                            <div className="relative">
+                              <Dialog
+                                open={isSecondClientDialogOpen}
+                                onOpenChange={setIsSecondClientDialogOpen}
+                              >
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-between"
+                                    type="button"
+                                  >
+                                    {field.value
+                                      ? getClientLabel(field.value)
+                                      : "Seleziona secondo cliente"}
+                                    <User className="h-4 w-4 ml-2" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Seleziona Secondo Cliente</DialogTitle>
+                                    <DialogDescription>
+                                      Cerca e seleziona un cliente esistente come partner
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="py-4">
+                                    <div className="relative mb-4">
+                                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                      <Input
+                                        placeholder="Cerca cliente..."
+                                        className="pl-8"
+                                        value={secondClientSearch}
+                                        onChange={(e) => setSecondClientSearch(e.target.value)}
+                                      />
+                                    </div>
+                                    
+                                    <div className="max-h-[300px] overflow-y-auto">
+                                      {filteredSecondClients.length === 0 ? (
+                                        <div className="text-center py-4 text-muted-foreground">
+                                          Nessun cliente trovato.
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-1">
+                                          {filteredSecondClients.map((client) => (
+                                            <div
+                                              key={client.id}
+                                              className={`flex items-center p-2 hover:bg-secondary rounded-md cursor-pointer ${
+                                                client.id === form.getValues("clientId")
+                                                  ? "opacity-40 pointer-events-none"
+                                                  : ""
+                                              }`}
+                                              onClick={() => {
+                                                if (client.id !== form.getValues("clientId")) {
+                                                  field.onChange(client.id);
+                                                  setIsSecondClientDialogOpen(false);
+                                                }
+                                              }}
+                                            >
+                                              <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-medium flex items-center justify-center mr-2">
+                                                {client.firstName.charAt(0)}
+                                                {client.lastName.charAt(0)}
+                                              </div>
+                                              <div>
+                                                <div className="font-medium">
+                                                  {client.firstName} {client.lastName}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                  {client.email || client.phone || "Nessun contatto"}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <DialogFooter>
+                                    <Button 
+                                      variant="outline" 
+                                      onClick={() => {
+                                        field.onChange(undefined);
+                                        setIsSecondClientDialogOpen(false);
+                                      }}
+                                    >
+                                      Rimuovi
+                                    </Button>
+                                    <Button 
+                                      variant="outline" 
+                                      onClick={() => setIsSecondClientDialogOpen(false)}
+                                    >
+                                      Chiudi
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
-
-                    <Separator className="my-4" />
-
-                    {/* Data e orari evento */}
-                    <h3 className="text-lg font-medium mb-2">Data e Orari Evento</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  </CardContent>
+                </Card>
+                
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Dettagli Evento</CardTitle>
+                    <CardDescription>
+                      Informazioni sull'evento, data, orario e location
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="eventDate"
@@ -865,14 +499,15 @@ export default function NewQuotePage() {
                               <PopoverTrigger asChild>
                                 <FormControl>
                                   <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
+                                    variant={"outline"}
+                                    className={`w-full pl-3 text-left font-normal ${
+                                      !field.value ? "text-muted-foreground" : ""
+                                    }`}
                                   >
                                     {field.value ? (
-                                      format(field.value, "PPP", { locale: it })
+                                      <span>
+                                        {formatDate(field.value, "d MMMM yyyy")}
+                                      </span>
                                     ) : (
                                       <span>Seleziona data</span>
                                     )}
@@ -880,14 +515,13 @@ export default function NewQuotePage() {
                                   </Button>
                                 </FormControl>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="center">
+                              <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={field.value}
                                   onSelect={field.onChange}
-                                  disabled={(date) => date < new Date("1900-01-01")}
-                                  initialFocus
                                   locale={it}
+                                  initialFocus
                                 />
                               </PopoverContent>
                             </Popover>
@@ -895,109 +529,170 @@ export default function NewQuotePage() {
                           </FormItem>
                         )}
                       />
-
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="isFullDay"
-                            checked={isFullDayEvent}
-                            onCheckedChange={setIsFullDayEvent}
-                          />
-                          <label
-                            htmlFor="isFullDay"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Evento tutto il giorno
-                          </label>
-                        </div>
-                        {!isFullDayEvent && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <FormField
-                              control={form.control}
-                              name="eventTime"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Ora inizio</FormLabel>
-                                  <FormControl>
-                                    <Input type="time" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="eventEndTime"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Ora fine</FormLabel>
-                                  <FormControl>
-                                    <Input type="time" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        )}
-                      </div>
-
+                      
                       <FormField
                         control={form.control}
-                        name="location"
+                        name="eventType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Location Evento</FormLabel>
+                            <FormLabel>Tipo Evento</FormLabel>
                             <FormControl>
-                              <Input placeholder="es. Villa Rossi, Milano" {...field} />
+                              <Input
+                                placeholder="es. Matrimonio, Battesimo, ecc."
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
-
-                    {/* Dettagli cerimonia */}
-                    <div>
-                      <h3 className="text-lg font-medium mb-2 flex items-center">
-                        <Church className="h-5 w-5 mr-2" />
-                        Dettagli Cerimonia
-                      </h3>
-                      <CeremonyDetails form={form} />
-                    </div>
-
-                    <Separator className="my-4" />
-
-                    {/* Moduli */}
-                    <h3 className="text-lg font-medium mb-2 flex items-center">
-                      <PackageIcon className="h-5 w-5 mr-2" />
-                      Moduli Preventivo
-                    </h3>
                     
-                    <div className="p-4 border rounded-md bg-muted/30">
-                      <div className="flex flex-col items-center justify-center text-center py-4">
-                        <p className="text-muted-foreground mb-2">
-                          {isEditMode ? 
-                            "I moduli di questo preventivo possono essere gestiti nella pagina di dettaglio, dopo aver salvato le modifiche." :
-                            "I moduli potranno essere aggiunti dopo aver creato il preventivo"
-                          }
-                        </p>
-                        {isEditMode && (
-                          <Button 
-                            variant="outline" 
-                            onClick={() => setLocation(`/quotes/detail/${editId}`)}
-                          >
-                            <ArrowRight className="mr-2 h-4 w-4" />
-                            Vai alla pagina di dettaglio
-                          </Button>
-                        )}
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Location</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Map className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Indirizzo location dell'evento"
+                                className="pl-8"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="isFullDay"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
+                          <div className="space-y-0.5">
+                            <FormLabel>Evento Tutto il Giorno</FormLabel>
+                            <FormDescription>
+                              Seleziona se l'evento dura tutto il giorno
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {!form.watch("isFullDay") && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="eventTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Orario Inizio</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    type="time"
+                                    className="pl-8"
+                                    {...field}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="eventEndTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Orario Fine (opzionale)</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    type="time"
+                                    className="pl-8"
+                                    {...field}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
-                    </div>
+                    )}
                     
-                    <Separator className="my-4" />
-
-                    {/* Note di lavoro */}
-                    <h3 className="text-lg font-medium mb-2">Note di Lavoro</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="ceremonyLocation"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Rito/Cerimonia (opzionale)</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Church className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="es. Chiesa di San Pietro"
+                                  className="pl-8"
+                                  {...field}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormDescription>
+                              Location della cerimonia o rito
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="ceremonyTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Orario Cerimonia (opzionale)</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="time"
+                                  className="pl-8"
+                                  {...field}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Note</CardTitle>
+                    <CardDescription>
+                      Eventuali note o informazioni aggiuntive
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <FormField
                       control={form.control}
                       name="notes"
@@ -1005,8 +700,8 @@ export default function NewQuotePage() {
                         <FormItem>
                           <FormControl>
                             <Textarea
-                              placeholder="Inserisci qui eventuali note o richieste specifiche del cliente"
-                              className="min-h-32"
+                              placeholder="Scrivi qui eventuali note o dettagli aggiuntivi..."
+                              rows={5}
                               {...field}
                             />
                           </FormControl>
@@ -1015,115 +710,84 @@ export default function NewQuotePage() {
                       )}
                     />
                   </CardContent>
-                  <CardFooter className="flex justify-end">
-                    <Button 
-                      variant="outline" 
-                      type="button" 
-                      className="mr-2"
-                      onClick={() => setLocation("/quotes")}
-                    >
-                      Annulla
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={isEditMode ? updateQuoteMutation.isPending : createQuoteMutation.isPending}
-                    >
-                      {isEditMode ? (
-                        updateQuoteMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Aggiornamento...
-                          </>
-                        ) : (
-                          "Aggiorna Preventivo"
-                        )
-                      ) : (
-                        createQuoteMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Creazione...
-                          </>
-                        ) : (
-                          "Crea Preventivo"
-                        )
-                      )}
-                    </Button>
-                  </CardFooter>
                 </Card>
+                
+                <div className="flex justify-between items-center mt-8">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setLocation("/quotes")}
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Annulla
+                  </Button>
+                  
+                  <Button
+                    type="submit"
+                    disabled={isLoading || saveQuoteMutation.isPending}
+                  >
+                    {isLoading || saveQuoteMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Salvataggio...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        {editMode ? "Aggiorna Preventivo" : "Salva e Continua"}
+                      </>
+                    )}
+                  </Button>
+                </div>
               </form>
             </Form>
           </div>
           
-          {/* Colonna destra - 4/12 */}
           <div className="lg:col-span-4">
             <Card>
               <CardHeader>
-                <CardTitle>Workflow</CardTitle>
-                <CardDescription>Stato avanzamento preventivo</CardDescription>
+                <CardTitle>Guida Rapida</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">1</div>
-                    <div className="flex-1">
-                      <p className="font-medium">Creazione Preventivo</p>
-                      <p className="text-sm text-muted-foreground">In corso...</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4 opacity-50">
-                    <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center">2</div>
-                    <div className="flex-1">
-                      <p className="font-medium">Configurazione Moduli</p>
-                      <p className="text-sm text-muted-foreground">Prossimo passo dopo la creazione</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4 opacity-50">
-                    <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center">3</div>
-                    <div className="flex-1">
-                      <p className="font-medium">Condivisione con Cliente</p>
-                      <p className="text-sm text-muted-foreground">In attesa</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4 opacity-50">
-                    <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center">4</div>
-                    <div className="flex-1">
-                      <p className="font-medium">Conferma Cliente</p>
-                      <p className="text-sm text-muted-foreground">In attesa</p>
-                    </div>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">1. Informazioni di Base</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Inserisci titolo e seleziona i clienti associati al preventivo.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">2. Dettagli Evento</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Specifica tipo evento, data, orario e location.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">3. Moduli e Servizi</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Dopo il salvataggio, potrai aggiungere moduli con servizi e prodotti.
+                  </p>
+                </div>
+                
+                <div className="relative mt-6 p-4 border border-dashed rounded-md">
+                  <div className="flex flex-col items-center text-center space-y-2">
+                    <Scroll className="h-8 w-8 text-primary/50 mb-2" />
+                    <h3 className="font-medium">Procedura completa</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Dopo aver creato il preventivo, puoi configurare moduli fissi
+                      o variabili, per poi condividere il tutto con il cliente.
+                    </p>
                   </div>
                 </div>
               </CardContent>
+              <CardFooter className="border-t bg-muted/50 flex justify-center">
+                <Button variant="ghost" onClick={() => window.open("/docs/quotes", "_blank")}>
+                  Maggiori informazioni
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardFooter>
             </Card>
-
-            <div className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Suggerimenti</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-sm">
-                      <p className="font-medium mb-1">👤 Cliente Principale</p>
-                      <p className="text-muted-foreground">
-                        Seleziona un cliente esistente o creane uno nuovo.
-                      </p>
-                    </div>
-                    <div className="text-sm">
-                      <p className="font-medium mb-1">📅 Data Evento</p>
-                      <p className="text-muted-foreground">
-                        Specifica sempre la data dell'evento per una migliore organizzazione.
-                      </p>
-                    </div>
-                    <div className="text-sm">
-                      <p className="font-medium mb-1">⚙️ Configurazione Moduli</p>
-                      <p className="text-muted-foreground">
-                        Dopo aver creato il preventivo base, potrai configurare i moduli nella pagina di dettaglio.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         </div>
       </div>

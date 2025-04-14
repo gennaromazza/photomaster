@@ -1,19 +1,22 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import Layout from "@/components/layout/layout";
-import CeremonyDetails from "@/components/quotes/ceremony-details";
-import { ModuleSelector, QuoteModuleData } from "@/components/quotes/module-selector";
-import { ModuleDialog } from "@/components/quotes/module-dialog";
+import ModuleManager from "@/components/quotes/modules/module-manager";
+import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -22,151 +25,114 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  ArrowLeft,
+  Calendar,
+  MapPin,
+  Info,
+  MoreVertical,
+  Download,
+  Share,
+  Pencil,
+  Trash2,
+  Copy,
+  Check,
+  ExternalLink,
+  Mail,
+  Phone,
+  ClipboardCopy,
+  Loader2,
+  User,
+  ArrowRight,
+  Church,
+  Package as PackageIcon,
+  Users,
+  FileText,
+  FileSignature,
+  Clock,
+} from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { 
-  User, 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  Mail, 
-  Phone, 
-  FileText, 
-  CheckCircle2, 
-  Circle, 
-  Edit, 
-  Trash, 
-  Download, 
-  Send, 
-  Share2,
-  Copy,
-  ArrowLeft,
-  Euro,
-  Camera,
-  ClipboardCheck,
-  Info,
-  Plus,
-  Link,
-  Loader2,
-  Check,
-  Church
-} from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
+/**
+ * Pagina di dettaglio di un preventivo
+ * Responsabilità: 
+ * - Visualizzare i dettagli del preventivo
+ * - Gestire i moduli attraverso il ModuleManager
+ * - Fornire azioni sul preventivo (modifica, condivisione, eliminazione)
+ */
 export default function QuoteDetailPage() {
-  // Hooks di base
   const { id } = useParams();
-  const { toast } = useToast();
   const [, setLocation] = useLocation();
-
-  // Hooks per gli stati
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { toast } = useToast();
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
-  const [shareUrl, setShareUrl] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Stati per gestione moduli
-  const [modules, setModules] = useState<QuoteModuleData[]>([]);
-  const [editingModule, setEditingModule] = useState<QuoteModuleData | null>(null);
-  const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
-  const [moduleType, setModuleType] = useState<'fixed' | 'variable' | null>(null);
-
-  // Stato per gestire le fasi del workflow
-  const [workflowSteps, setWorkflowSteps] = useState([
-    { id: 1, name: "Data di creazione", date: "", completed: true, current: false },
-    { id: 2, name: "Primo appuntamento", date: "", completed: false, current: true },
-    { id: 3, name: "Modulo di prenotazione", date: "", completed: false, current: false },
-    { id: 4, name: "Lavoro confermato", date: "", completed: false, current: false },
-    { id: 5, name: "Data del lavoro", date: "", completed: false, current: false },
-    { id: 6, name: "Inizio lavorazione", date: "", completed: false, current: false },
-    { id: 7, name: "Appuntamento visione file", date: "", completed: false, current: false },
-    { id: 8, name: "Lavoro Completo", date: "", completed: false, current: false },
-    { id: 9, name: "App. Consegna/Archivio", date: "", completed: false, current: false },
-  ]);
-
-  // Carica i dati del preventivo
-  const { data: quote, isLoading: isLoadingQuote } = useQuery({
-    queryKey: ["/api/quotes", parseInt(id)],
-    queryFn: async () => {
-      const res = await fetch(`/api/quotes/${id}`);
-      if (!res.ok) throw new Error("Errore nel caricamento del preventivo");
-      return res.json();
-    },
-  });
-
-  // Carica i moduli del preventivo
-  const { data: quoteModules = [], isLoading: isLoadingModules } = useQuery<QuoteModuleData[]>({
-    queryKey: ["/api/quotes", parseInt(id), "modules"],
-    queryFn: async () => {
-      const res = await fetch(`/api/quotes/${id}/modules`);
-      if (!res.ok) throw new Error("Errore nel caricamento dei moduli");
-      return res.json();
-    },
+  const [shareLink, setShareLink] = useState("");
+  const [expiryDays, setExpiryDays] = useState(30);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
+  const [activeTab, setActiveTab] = useState("details");
+  
+  // Query per ottenere i dati del preventivo
+  const { 
+    data: quote, 
+    isLoading, 
+    isError, 
+    refetch
+  } = useQuery<any>({
+    queryKey: ["/api/quotes", id],
     enabled: !!id,
   });
-
-  // Mutations
-  const updateQuoteTotalsMutation = useMutation({
-    mutationFn: async ({ subtotal, total }: { subtotal: number, total: number }) => {
-      try {
-        console.log(`[LOG] Aggiornamento totali preventivo - subtotal: ${subtotal}, total: ${total}`);
-        const res = await fetch(`/api/quotes/${id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("auth_token")}`
-          },
-          body: JSON.stringify({ subtotal, total }),
-          credentials: "include"
-        });
-
-        // Non tentiamo di fare il parsing del JSON se la risposta è vuota o non è JSON
-        if (!res.ok) {
-          const text = await res.text();
-          if (text.includes("<!DOCTYPE html>")) {
-            console.error("[LOG] Ricevuta risposta HTML invece di JSON");
-            // Return senza errore per non bloccare l'aggiornamento
-            return { subtotal, total };
-          }
-          throw new Error(`Errore nell'aggiornamento dei totali: ${text}`);
-        }
-
-        // Non facciamo res.json() perché potrebbe non restituire JSON valido
-        return { subtotal, total };
-      } catch (error) {
-        console.error(`[ERRORE] Aggiornamento totali preventivo fallito:`, error);
-        // Non lanciamo l'errore per evitare interruzioni
-        return { subtotal, total };
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
-
-      // Se è il primo aggiornamento, mostra un toast
-      if (!window.localStorage.getItem('totalsUpdated')) {
-        window.localStorage.setItem('totalsUpdated', 'true');
-        toast({
-          title: "Totali aggiornati",
-          description: "I totali del preventivo sono stati aggiornati in base ai moduli",
-        });
-      }
-    },
-    onError: (error) => {
-      console.error("[ERRORE] Errore nell'aggiornamento dei totali:", error);
-      // Non mostriamo errori all'utente per questa operazione di background
-    },
+  
+  // Query per ottenere le info del cliente
+  const { 
+    data: client,
+    isLoading: isClientLoading
+  } = useQuery<any>({
+    queryKey: ["/api/clients", quote?.clientId],
+    enabled: !!quote?.clientId,
   });
-
+  
+  // Query per ottenere le info del secondo cliente (se presente)
+  const { 
+    data: secondClient,
+    isLoading: isSecondClientLoading
+  } = useQuery<any>({
+    queryKey: ["/api/clients", quote?.secondClientId],
+    enabled: !!quote?.secondClientId,
+  });
+  
+  // Mutation per eliminare il preventivo
   const deleteQuoteMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("DELETE", `/api/quotes/${id}`);
-      if (!res.ok) throw new Error("Errore nell'eliminazione del preventivo");
-      return true;
+      return res.ok;
     },
     onSuccess: () => {
       toast({
@@ -174,474 +140,123 @@ export default function QuoteDetailPage() {
         description: "Il preventivo è stato eliminato con successo",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      // Redirect alla lista preventivi
       setLocation("/quotes");
     },
     onError: (error) => {
+      console.error("Errore eliminazione preventivo:", error);
       toast({
         title: "Errore",
-        description: error.message,
+        description: "Si è verificato un errore durante l'eliminazione del preventivo",
         variant: "destructive",
       });
     },
   });
-
-  const updateWorkflowStepMutation = useMutation({
-    mutationFn: async ({ stepId, completed }: { stepId: number, completed: boolean }) => {
-      // Esempio: in un'implementazione reale, salverebbe lo stato dello step nel DB
-      return { stepId, completed };
-    },
-    onSuccess: (data) => {
-      const { stepId, completed } = data;
-      const updatedSteps = [...workflowSteps];
-
-      // Aggiorna lo step corrente
-      updatedSteps[stepId - 1].completed = completed;
-      updatedSteps[stepId - 1].current = false;
-
-      // Se completato, aggiorna il prossimo step come corrente
-      if (completed && stepId < updatedSteps.length) {
-        updatedSteps[stepId].current = true;
-      }
-
-      setWorkflowSteps(updatedSteps);
-
-      toast({
-        title: "Workflow aggiornato",
-        description: `Fase "${updatedSteps[stepId - 1].name}" completata.`,
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il workflow",
-        variant: "destructive",
-      });
-    },
-  });
-
+  
+  // Mutation per generare il link di condivisione
   const generateShareLinkMutation = useMutation({
     mutationFn: async () => {
-      setIsLoading(true);
-      const res = await apiRequest("POST", `/api/quotes/${id}/share`);
-      if (!res.ok) throw new Error("Errore nella generazione del link di condivisione");
-      return await res.json();
-    },
-    onSuccess: (data) => {
-      // Utilizziamo l'URL fornito dal backend oppure costruiamolo correttamente
-      const baseUrl = window.location.origin; // Corrected line
-      if (data.shareUrl) {
-        // Rimuoviamo eventuali slash iniziali per evitare doppi slash
-        const shareUrl = data.shareUrl.startsWith('/') ? data.shareUrl.substring(1) : data.shareUrl;
-        setShareUrl(`${baseUrl}/${shareUrl}`);
-      } else {
-        setShareUrl(`${baseUrl}/quotes/public/${data.token}`);
-      }
-      setIsShareDialogOpen(true);
-      setIsLoading(false);
-      toast({
-        title: "Link di condivisione generato",
-        description: "Ora puoi condividere il preventivo con il cliente",
+      const res = await apiRequest("POST", `/api/quotes/${id}/share`, {
+        expiryDays
       });
-    },
-    onError: (error) => {
-      setIsLoading(false);
-      toast({
-        title: "Errore",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const disableShareMutation = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
-      const res = await apiRequest("DELETE", `/api/quotes/${id}/share`);
-      if (!res.ok) throw new Error("Errore nella disattivazione della condivisione");
-      return await res.json();
-    },
-    onSuccess: () => {
-      setIsLoading(false);
-      setIsShareDialogOpen(false);
-      setShareUrl('');
-      toast({
-        title: "Condivisione disattivata",
-        description: "Il preventivo non è più condivisibile",
-      });
-    },
-    onError: (error) => {
-      setIsLoading(false);
-      toast({
-        title: "Errore",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Effetti
-  useEffect(() => {
-    if (quote) {
-      try {
-        // Aggiorna la data di creazione nel workflow
-        const updatedSteps = [...workflowSteps];
-
-        // Data di creazione
-        if (quote.createdAt) {
-          updatedSteps[0].date = format(new Date(quote.createdAt), "dd/MM/yyyy HH:mm", { locale: it });
-        }
-
-        // Data evento
-        if (quote.eventDate) {
-          updatedSteps[4].date = format(new Date(quote.eventDate), "dd/MM/yyyy", { locale: it });
-          if (quote.eventTime) {
-            updatedSteps[4].date += ` ${quote.eventTime}`;
-          }
-        }
-
-        // Se lo stato è confermato, aggiorna anche la fase 4
-        if (quote.status === "approved" || quote.status === "confermato") {
-          updatedSteps[3].completed = true;
-          updatedSteps[3].current = false;
-          updatedSteps[4].current = true;
-        }
-
-        setWorkflowSteps(updatedSteps);
-      } catch (error) {
-        console.error("Errore nell'aggiornamento del workflow:", error);
-      }
-    }
-  }, [quote]);
-
-  // Effetto per caricare i moduli esistenti quando cambiano
-  useEffect(() => {
-    if (quoteModules && quoteModules.length > 0) {
-      setModules(quoteModules);
-    }
-  }, [quoteModules]);
-
-  // Effetto per ricalcolare il totale quando cambiano i moduli
-  useEffect(() => {
-    if (quote && modules && modules.length > 0) {
-      // Calcola il totale dei moduli
-      let moduleTotal = 0;
-      modules.forEach(module => {
-        if (module.items && module.items.length > 0) {
-          module.items.forEach(item => {
-            if (item.price) {
-              moduleTotal += Number(item.price);
-            }
-          });
-        }
-      });
-
-      // Calcola il nuovo subtotale: totale dei moduli + eventuali prodotti/servizi diretti
-      const servicesTotal = quote.services?.reduce((acc, service) => acc + (Number(service.price) || 0), 0) || 0;
-      const productsTotal = quote.products?.reduce((acc, product) => acc + (Number(product.price) || 0), 0) || 0;
-      const newSubtotal = moduleTotal + servicesTotal + productsTotal;
-
-      // Calcola il nuovo totale applicando lo sconto
-      const newTotal = quote.discountType === 'percentage' 
-        ? newSubtotal - (newSubtotal * (Number(quote.discountValue) || 0) / 100)
-        : newSubtotal - (Number(quote.discountValue) || 0);
-
-      // Se il totale è cambiato, aggiorna il preventivo
-      if (newSubtotal !== quote.subtotal || newTotal !== quote.total) {
-        updateQuoteTotalsMutation.mutate({
-          subtotal: newSubtotal,
-          total: newTotal
-        });
-      }
-    }
-  }, [quote, modules]);
-
-  // Handler di eventi
-  const handleDeleteClick = () => {
-    setIsDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    deleteQuoteMutation.mutate();
-    setIsDeleteDialogOpen(false);
-  };
-
-  const completeWorkflowStep = (stepId: number) => {
-    updateWorkflowStepMutation.mutate({ stepId, completed: true });
-  };
-
-  const handleShareClick = () => {
-    generateShareLinkMutation.mutate();
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(shareUrl);
-    toast({
-      title: "Link copiato",
-      description: "Il link è stato copiato negli appunti",
-    });
-  };
-
-  // Handlers per la gestione dei moduli
-  const handleAddModuleClick = () => {
-    const dialogDiv = document.createElement('div');
-    dialogDiv.innerHTML = `
-      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md">
-          <h2 class="text-xl font-semibold mb-4">Seleziona tipo di modulo</h2>
-          <div class="grid grid-cols-2 gap-4">
-            <button id="fixed-module-btn" class="p-4 border rounded-md hover:bg-gray-100">
-              <div class="font-medium">Modulo Fisso</div>
-              <div class="text-sm text-muted-foreground">Decidi tu i prodotti e servizi</div>
-            </button>
-            <button id="variable-module-btn" class="p-4 border rounded-md hover:bg-gray-100">
-              <div class="font-medium">Modulo Variabile</div>
-              <div class="text-sm text-muted-foreground">Cliente sceglie dai prodotti</div>
-            </button>
-          </div>
-          <div class="flex justify-end mt-4">
-            <button id="cancel-module-btn" class="px-4 py-2 text-sm">Annulla</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(dialogDiv);
-
-    document.getElementById('fixed-module-btn')?.addEventListener('click', () => {
-      document.body.removeChild(dialogDiv);
-      setEditingModule(null);
-      setModuleType('fixed');
-      setIsModuleDialogOpen(true);
-    });
-
-    document.getElementById('variable-module-btn')?.addEventListener('click', () => {
-      document.body.removeChild(dialogDiv);
-      setEditingModule(null);
-      setModuleType('variable');
-      setIsModuleDialogOpen(true);
-    });
-
-    document.getElementById('cancel-module-btn')?.addEventListener('click', () => {
-      document.body.removeChild(dialogDiv);
-    });
-  };
-
-  const handleEditModule = (module: QuoteModuleData) => {
-    setEditingModule(module);
-    setModuleType(module.type as 'fixed' | 'variable');
-    setIsModuleDialogOpen(true);
-  };
-
-  // Funzione per forzare il ricalcolo del totale
-  const refreshQuoteTotals = () => {
-    if (!quote || !modules) return;
-
-    console.log("Ricalcolo totali preventivo...");
-
-    let moduleTotal = 0;
-    // Escludiamo i moduli variabili non confermati
-    modules.forEach(module => {
-      if (module.type === 'variable' && module.status !== 'confirmed') {
-        console.log(`Modulo variabile ${module.id} non confermato, escluso dal totale`);
-        return;
-      }
-
-      if (module.items && module.items.length > 0) {
-        module.items.forEach(item => {
-          const itemTotal = Number(item.total || 0);
-          console.log(`Aggiunto ${itemTotal} dal modulo ${module.id}, item ${item.id || 'nuovo'}`);
-          moduleTotal += itemTotal;
-        });
-      }
-    });
-
-    // Calcola il nuovo subtotale e totale
-    const servicesTotal = quote.services?.reduce((acc, service) => 
-      acc + (Number(service.total || service.price) || 0), 0) || 0;
-    const productsTotal = quote.products?.reduce((acc, product) => 
-      acc + (Number(product.total || product.price) || 0), 0) || 0;
-
-    const newSubtotal = moduleTotal + servicesTotal + productsTotal;
-
-    // Applica lo sconto
-    let newTotal = newSubtotal;
-    if (quote.hasDiscount && quote.discountValue) {
-      if (quote.discountType === 'percentage') {
-        newTotal = newSubtotal - (newSubtotal * (Number(quote.discountValue) || 0) / 100);
-      } else {
-        newTotal = newSubtotal - (Number(quote.discountValue) || 0);
-      }
-    }
-
-    console.log(`Nuovi totali calcolati - Subtotale: ${newSubtotal}, Totale: ${newTotal}`);
-
-    // Utilizza la mutation esistente
-    updateQuoteTotalsMutation.mutate({
-      subtotal: newSubtotal,
-      total: newTotal
-    });
-  };
-
-  const handleDeleteModule = async (moduleId: number) => {
-    if (confirm('Sei sicuro di voler eliminare questo modulo?')) {
-      try {
-        setIsLoading(true);
-        console.log(`Eliminazione modulo con ID: ${moduleId}`);
-
-        // Esegui prima la chiamata al server
-        await deleteModuleMutation.mutateAsync(moduleId);
-
-        // Se l'eliminazione ha successo, aggiorna lo stato locale
-        setModules(prev => prev?.filter(m => m.id !== moduleId));
-
-        // Forza il ricalcolo dei totali
-        setTimeout(() => {
-          refreshQuoteTotals();
-        }, 500);
-
-      } catch (error) {
-        console.error("Errore durante l'eliminazione del modulo:", error);
-        toast({
-          title: "Errore",
-          description: "Impossibile eliminare il modulo",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const handleSaveModule = (module: QuoteModuleData) => {
-    saveModuleMutation.mutate(module);
-  };
-
-  // Mutation per salvare un modulo
-  const saveModuleMutation = useMutation({
-    mutationFn: async (module: QuoteModuleData) => {
-      const url = module.id && module.id > 0 
-        ? `/api/quotes/${id}/modules/${module.id}`
-        : `/api/quotes/${id}/modules`;
-      const method = module.id && module.id > 0 ? "PATCH" : "POST";
-
-      console.log(`[LOG] Salvando modulo ${module.id || 'nuovo'} di tipo ${module.type}`);
-      const res = await apiRequest(method, url, module);
       return res.json();
     },
     onSuccess: (data) => {
-      console.log(`[LOG] Modulo salvato con successo:`, data);
-      // Invalidiamo le query per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
-
-      // Ricalcolo dei totali dopo il salvataggio di un modulo
-      setTimeout(() => refreshQuoteTotals(), 500);
-
-      toast({
-        title: "Modulo salvato",
-        description: "Il modulo è stato salvato con successo",
-      });
-    },
-    onError: (error) => {
-      console.error(`[ERRORE] Salvataggio modulo fallito:`, error);
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante il salvataggio del modulo",
-        variant: "destructive",
-      });
-    },
-  });
-
-
-
-  // Mutation per eliminare un modulo
-  const deleteModuleMutation = useMutation({
-    mutationFn: async (moduleId: number) => {
-      console.log(`[LOG] Eliminazione modulo con ID: ${moduleId}`);
-      const res = await apiRequest("DELETE", `/api/quotes/${id}/modules/${moduleId}`);
-      if (!res.ok) {
-        throw new Error(`Errore HTTP ${res.status}: Impossibile eliminare il modulo`);
+      // Verifica che data.token esista prima di costruire il link
+      if (data.token) {
+        // Costruisci l'URL completo per la condivisione
+        const shareUrl = `${window.location.origin}/quotes/public/${data.token}`;
+        setShareLink(shareUrl);
+        toast({
+          title: "Link generato",
+          description: "Il link di condivisione è stato generato con successo",
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: "Impossibile generare il link di condivisione",
+          variant: "destructive",
+        });
       }
-      // Forziamo un breve ritardo per garantire che il backend abbia completato tutte le operazioni
-      await new Promise(resolve => setTimeout(resolve, 300));
-      return res.ok;
-    },
-    onSuccess: () => {
-      console.log(`[LOG] Modulo eliminato con successo`);
-
-      // Invalidiamo le query per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id), "modules"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes", parseInt(id)] });
-
-      // Utilizziamo setTimeout per assicurarci che l'aggiornamento dello stato avvenga dopo che 
-      // React ha aggiornato lo stato locale (setModules) e le query sono state invalidate
-      setTimeout(() => {
-        console.log(`[LOG] Ricalcolo totali dopo eliminazione modulo...`);
-        // Esegui il ricalcolo dei totali
-        refreshQuoteTotals();
-
-        // Ripristina lo stato di caricamento
-        setIsLoading(false);
-      }, 500);
-
-      toast({
-        title: "Modulo eliminato",
-        description: "Il modulo è stato eliminato con successo",
-      });
     },
     onError: (error) => {
-      console.error(`[ERRORE] Eliminazione modulo fallita:`, error);
-      // Ripristina lo stato di caricamento
-      setIsLoading(false);
-
+      console.error("Errore generazione link:", error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante l'eliminazione del modulo",
+        description: "Si è verificato un errore durante la generazione del link di condivisione",
         variant: "destructive",
       });
     },
   });
-
-  // Rendering condizionale per stati di caricamento o assenza di dati
-  if (isLoadingQuote) {
+  
+  // Funzione per copiare il link negli appunti
+  const copyLinkToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setCopyStatus("copied");
+      
+      // Reset status after 2 seconds
+      setTimeout(() => {
+        setCopyStatus("idle");
+      }, 2000);
+      
+      toast({
+        title: "Link copiato",
+        description: "Link copiato negli appunti",
+      });
+    } catch (err) {
+      console.error("Errore copia link:", err);
+      setCopyStatus("error");
+      
+      toast({
+        title: "Errore",
+        description: "Impossibile copiare il link negli appunti",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Callback per aggiornare il preventivo dopo modifiche ai moduli
+  const refreshQuote = useCallback(() => {
+    refetch();
+  }, [refetch]);
+  
+  // Gestione errori di caricamento
+  if (isError) {
     return (
       <Layout>
-        <div className="container py-6">
-          <div className="flex justify-center items-center min-h-[60vh]">
-            <div className="animate-pulse text-center">
-              <div className="h-8 w-64 bg-gray-200 rounded mb-4 mx-auto"></div>
-              <div className="h-4 w-40 bg-gray-200 rounded mb-8 mx-auto"></div>
-              <div className="h-32 w-full max-w-3xl bg-gray-200 rounded mx-auto"></div>
-            </div>
-          </div>
+        <div className="container py-10 text-center">
+          <h1 className="text-2xl font-bold mb-4">Errore</h1>
+          <p className="mb-6">Impossibile caricare i dettagli del preventivo.</p>
+          <Button onClick={() => setLocation("/quotes")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Torna alla lista preventivi
+          </Button>
         </div>
       </Layout>
     );
   }
-
-  if (!quote) {
+  
+  // Caricamento dati
+  if (isLoading || !quote) {
     return (
       <Layout>
-        <div className="container py-6">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-2">Preventivo non trovato</h2>
-            <p className="text-muted-foreground mb-4">
-              Il preventivo richiesto non esiste o è stato eliminato.
-            </p>
-            <Button onClick={() => setLocation("/quotes")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Torna ai preventivi
-            </Button>
-          </div>
+        <div className="container py-10 flex justify-center items-center min-h-[50vh]">
+          <Loader2 className="h-12 w-12 animate-spin text-primary/70" />
         </div>
       </Layout>
     );
   }
-
+  
+  // Formattazione data
+  const eventDate = quote.eventDate ? new Date(quote.eventDate) : null;
+  const formattedEventDate = eventDate
+    ? format(eventDate, "d MMMM yyyy", { locale: it })
+    : "Data non specificata";
+  
   return (
     <Layout>
       <div className="container py-6">
-        {/* Header con informazioni preventivo e pulsanti azione */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <Button 
@@ -653,7 +268,7 @@ export default function QuoteDetailPage() {
               Indietro
             </Button>
             <div>
-              <h1 className="text-3xl font-playfair font-bold">{quote.title || "Preventivo"}</h1>
+              <h1 className="text-3xl font-playfair font-bold">{quote.title}</h1>
               <div className="flex items-center mt-1">
                 <Badge 
                   variant={quote.status === "confermato" || quote.status === "approved" ? "success" : 
@@ -669,417 +284,622 @@ export default function QuoteDetailPage() {
                 </Badge>
                 <div className="flex items-center text-muted-foreground">
                   <Info className="h-4 w-4 mr-1" />
-                  <p>Creato il {quote.createdAt ? format(new Date(quote.createdAt), "dd/MM/yyyy", { locale: it }) : ""}</p>
+                  <span className="text-sm">
+                    Creato: {format(new Date(quote.createdAt), "dd/MM/yyyy")}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => setLocation(`/quotes/new-redesign?edit=${id}`)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Modifica
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleShareClick}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Share2 className="mr-2 h-4 w-4" />
-              )}
-              Condividi
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteClick}>
-              <Trash className="mr-2 h-4 w-4" />
-              Elimina
-            </Button>
-          </div>
-        </div>
-
-        {/* Notifica stato */}
-        <div className="bg-muted/50 border rounded-md px-4 py-3 mb-6 text-center">
-          <p>Cambiando lo stato da "Preventivo" a "Confermato" automaticamente il modulo sarà trasferito in Eventi al momento nel calendario.</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Colonna principale con informazioni preventivo */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Sezione Clienti */}
-            <Tabs defaultValue="client1" className="w-full">
-              <TabsList className="w-full">
-                <TabsTrigger value="client1" className="flex-1">Cliente Principale</TabsTrigger>
-                <TabsTrigger value="client2" className="flex-1">Secondo Cliente</TabsTrigger>
-              </TabsList>
-              <TabsContent value="client1" className="mt-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start">
-                      <div className="bg-gray-200 rounded-full h-20 w-20 flex items-center justify-center">
-                        <User className="h-10 w-10 text-gray-500" />
+          
+          <div className="flex items-center gap-2">
+            <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="secondary">
+                  <Share className="mr-2 h-4 w-4" />
+                  Condividi
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Condividi preventivo</DialogTitle>
+                  <DialogDescription>
+                    Crea un link per condividere questo preventivo con il cliente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <div className="mb-4">
+                    <label className="text-sm font-medium mb-1 block">
+                      Validità link (giorni)
+                    </label>
+                    <div className="flex items-center">
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        value={expiryDays}
+                        onChange={(e) => setExpiryDays(parseInt(e.target.value))}
+                      >
+                        <option value={7}>7 giorni</option>
+                        <option value={15}>15 giorni</option>
+                        <option value={30}>30 giorni</option>
+                        <option value={60}>60 giorni</option>
+                        <option value={90}>90 giorni</option>
+                      </select>
+                      <Button
+                        className="ml-2"
+                        onClick={() => generateShareLinkMutation.mutate()}
+                        disabled={generateShareLinkMutation.isPending}
+                      >
+                        {generateShareLinkMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generazione...
+                          </>
+                        ) : (
+                          "Genera link"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {shareLink && (
+                    <div className="mt-4">
+                      <label className="text-sm font-medium mb-1 block">
+                        Link di condivisione
+                      </label>
+                      <div className="flex items-center mt-1">
+                        <input
+                          type="text"
+                          value={shareLink}
+                          readOnly
+                          className="flex h-10 w-full rounded-md rounded-r-none border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                        <Button
+                          variant="outline"
+                          className="rounded-l-none border-l-0"
+                          onClick={copyLinkToClipboard}
+                        >
+                          {copyStatus === "copied" ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <ClipboardCopy className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
-                      <div className="ml-6">
-                        <h3 className="text-xl font-semibold">
-                          {quote.client?.firstName} {quote.client?.lastName}
-                        </h3>
-                        <div className="mt-2 space-y-1">
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Phone className="mr-2 h-4 w-4" />
-                            {quote.client?.phone || "Nessun telefono"}
-                          </div>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Mail className="mr-2 h-4 w-4" />
-                            {quote.client?.email || "Nessuna email"}
-                          </div>
-                        </div>
+                      <div className="flex gap-x-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => {
+                            copyLinkToClipboard();
+                            setIsShareDialogOpen(false);
+                          }}
+                        >
+                          <ClipboardCopy className="mr-1 h-3 w-3" />
+                          Copia e chiudi
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => window.open(shareLink, '_blank')}
+                        >
+                          <ExternalLink className="mr-1 h-3 w-3" />
+                          Apri in nuova scheda
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex justify-end mt-4 space-x-2">
-                      <Button size="sm" variant="ghost" className="text-xs">
-                        <Copy className="mr-1 h-3 w-3" />
-                        Copia Cliente
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-xs">
-                        Modifica Cliente
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-xs">
-                        <Send className="mr-1 h-3 w-3" />
-                        Invia Email
-                      </Button>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsShareDialogOpen(false)}
+                  >
+                    Chiudi
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Azioni preventivo</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setLocation(`/quotes/new-quote?edit=${id}`)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Modifica
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  const newId = crypto.randomUUID();
+                  setLocation(`/quotes/${newId}`);
+                }}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Duplica
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  // PDF export
+                  toast({
+                    title: "Funzionalità non implementata",
+                    description: "L'esportazione in PDF sarà disponibile a breve",
+                  });
+                }}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Esporta PDF
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem 
+                      className="text-destructive focus:text-destructive"
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Elimina
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Elimina preventivo</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Sei sicuro di voler eliminare questo preventivo? Questa azione non può essere annullata.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annulla</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => deleteQuoteMutation.mutate()}
+                      >
+                        {deleteQuoteMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Eliminazione...
+                          </>
+                        ) : (
+                          "Elimina"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Colonna principale - 8/12 */}
+          <div className="lg:col-span-8 space-y-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="details">Dettagli</TabsTrigger>
+                <TabsTrigger value="modules">Moduli</TabsTrigger>
+                <TabsTrigger value="attachments">Allegati</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="details" className="mt-6 space-y-6">
+                {/* Informazioni cliente */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl flex items-center">
+                      <Users className="h-5 w-5 mr-2 text-primary/80" />
+                      Informazioni Cliente
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Cliente principale */}
+                      <div className="space-y-3">
+                        <h3 className="font-medium text-sm">Cliente Principale</h3>
+                        {isClientLoading ? (
+                          <div className="flex items-center space-x-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-primary/70" />
+                            <span className="text-muted-foreground">Caricamento...</span>
+                          </div>
+                        ) : client ? (
+                          <div className="flex items-start space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src="/avatar.jpg" />
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {client.firstName?.charAt(0)}{client.lastName?.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">
+                                {client.firstName} {client.lastName}
+                              </div>
+                              <div className="flex flex-col mt-1">
+                                {client.email && (
+                                  <div className="flex items-center text-sm text-muted-foreground">
+                                    <Mail className="h-3.5 w-3.5 mr-1 opacity-70" />
+                                    <span>{client.email}</span>
+                                  </div>
+                                )}
+                                {client.phone && (
+                                  <div className="flex items-center text-sm text-muted-foreground">
+                                    <Phone className="h-3.5 w-3.5 mr-1 opacity-70" />
+                                    <span>{client.phone}</span>
+                                  </div>
+                                )}
+                                {client.address && (
+                                  <div className="flex items-center text-sm text-muted-foreground">
+                                    <MapPin className="h-3.5 w-3.5 mr-1 opacity-70" />
+                                    <span>{client.address}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2 text-muted-foreground">
+                            <User className="h-4 w-4" />
+                            <span>Cliente non trovato</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Secondo cliente */}
+                      <div className="space-y-3">
+                        <h3 className="font-medium text-sm">Secondo Cliente</h3>
+                        {quote.secondClientId ? (
+                          isSecondClientLoading ? (
+                            <div className="flex items-center space-x-2">
+                              <Loader2 className="h-4 w-4 animate-spin text-primary/70" />
+                              <span className="text-muted-foreground">Caricamento...</span>
+                            </div>
+                          ) : secondClient ? (
+                            <div className="flex items-start space-x-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src="/avatar.jpg" />
+                                <AvatarFallback className="bg-primary/10 text-primary">
+                                  {secondClient.firstName?.charAt(0)}{secondClient.lastName?.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">
+                                  {secondClient.firstName} {secondClient.lastName}
+                                </div>
+                                <div className="flex flex-col mt-1">
+                                  {secondClient.email && (
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <Mail className="h-3.5 w-3.5 mr-1 opacity-70" />
+                                      <span>{secondClient.email}</span>
+                                    </div>
+                                  )}
+                                  {secondClient.phone && (
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <Phone className="h-3.5 w-3.5 mr-1 opacity-70" />
+                                      <span>{secondClient.phone}</span>
+                                    </div>
+                                  )}
+                                  {secondClient.address && (
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <MapPin className="h-3.5 w-3.5 mr-1 opacity-70" />
+                                      <span>{secondClient.address}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2 text-muted-foreground">
+                              <User className="h-4 w-4" />
+                              <span>Cliente non trovato</span>
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-muted-foreground text-sm italic">
+                            Nessun secondo cliente associato
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
-              <TabsContent value="client2" className="mt-4">
+                
+                {/* Informazioni evento */}
                 <Card>
-                  <CardContent className="pt-6">
-                    {quote.secondClient ? (
-                      <div className="flex items-start">
-                        <div className="bg-gray-200 rounded-full h-20 w-20 flex items-center justify-center">
-                          <User className="h-10 w-10 text-gray-500" />
-                        </div>
-                        <div className="ml-6">
-                          <h3 className="text-xl font-semibold">
-                            {quote.secondClient.firstName} {quote.secondClient.lastName}
-                          </h3>
-                          <div className="mt-2 space-y-1">
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <Phone className="mr-2 h-4 w-4" />
-                              {quote.secondClient.phone || "Nessun telefono"}
-                            </div>
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <Mail className="mr-2 h-4 w-4" />
-                              {quote.secondClient.email || "Nessuna email"}
-                            </div>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl flex items-center">
+                      <Calendar className="h-5 w-5 mr-2 text-primary/80" />
+                      Dettagli Evento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <dl className="space-y-3">
+                          <div>
+                            <dt className="text-sm font-medium">Data Evento</dt>
+                            <dd className="text-base">
+                              {eventDate ? (
+                                formattedEventDate
+                              ) : (
+                                <span className="text-muted-foreground text-sm italic">Non specificata</span>
+                              )}
+                            </dd>
                           </div>
-                        </div>
+                          <div>
+                            <dt className="text-sm font-medium">Tipo Evento</dt>
+                            <dd className="text-base">
+                              {quote.eventType || (
+                                <span className="text-muted-foreground text-sm italic">Non specificato</span>
+                              )}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-sm font-medium">Location</dt>
+                            <dd className="text-base">
+                              {quote.location ? (
+                                <div className="flex items-center">
+                                  <MapPin className="h-4 w-4 mr-1 text-primary/70" />
+                                  {quote.location}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm italic">Non specificata</span>
+                              )}
+                            </dd>
+                          </div>
+                        </dl>
                       </div>
+                      
+                      <div>
+                        <dl className="space-y-3">
+                          <div>
+                            <dt className="text-sm font-medium">Orario</dt>
+                            <dd className="text-base">
+                              {quote.isFullDay ? (
+                                <span>Tutto il giorno</span>
+                              ) : quote.eventTime ? (
+                                <div className="flex items-center">
+                                  <Clock className="h-4 w-4 mr-1 text-primary/70" />
+                                  {quote.eventTime}
+                                  {quote.eventEndTime && (
+                                    <span> - {quote.eventEndTime}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm italic">Non specificato</span>
+                              )}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-sm font-medium">Cerimonia</dt>
+                            <dd className="text-base">
+                              {quote.ceremonyLocation ? (
+                                <div className="space-y-1">
+                                  <div className="flex items-center">
+                                    <Church className="h-4 w-4 mr-1 text-primary/70" />
+                                    {quote.ceremonyLocation}
+                                  </div>
+                                  {quote.ceremonyTime && (
+                                    <div className="flex items-center text-sm text-muted-foreground">
+                                      <Clock className="h-3.5 w-3.5 mr-1 opacity-70" />
+                                      Ore {quote.ceremonyTime}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm italic">Non specificata</span>
+                              )}
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                {/* Note */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl flex items-center">
+                      <FileText className="h-5 w-5 mr-2 text-primary/80" />
+                      Note e Documentazione
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {quote.notes ? (
+                      <div className="whitespace-pre-wrap">{quote.notes}</div>
                     ) : (
-                      <div className="text-center py-8">
-                        <User className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                        <h3 className="text-muted-foreground">Nessun secondo cliente associato</h3>
-                        <Button variant="outline" size="sm" className="mt-2">
-                          <User className="mr-2 h-4 w-4" />
-                          Aggiungi secondo cliente
-                        </Button>
+                      <div className="text-muted-foreground text-sm italic">
+                        Nessuna nota aggiunta
                       </div>
                     )}
                   </CardContent>
                 </Card>
               </TabsContent>
+              
+              <TabsContent value="modules" className="mt-6 space-y-6">
+                {/* Moduli preventivo */}
+                <ModuleManager quoteId={parseInt(id)} refreshQuote={refreshQuote} />
+              </TabsContent>
+              
+              <TabsContent value="attachments" className="mt-6 space-y-6">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl">Allegati</CardTitle>
+                    <CardDescription>
+                      Documenti, contratti e altri allegati relativi a questo preventivo
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <FileText className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                      <p className="text-lg font-medium mb-1">Nessun allegato</p>
+                      <p className="text-muted-foreground mb-4">
+                        Non ci sono ancora allegati per questo preventivo
+                      </p>
+                      <Button variant="outline">
+                        Carica un allegato
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
-
-            {/* Dettagli servizio */}
+          </div>
+          
+          {/* Colonna laterale - 4/12 */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Riepilogo finanziario */}
             <Card>
               <CardHeader>
-                <CardTitle>Servizio</CardTitle>
+                <CardTitle>Riepilogo Finanziario</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Tipo Lavoro</h4>
-                    <p className="font-medium">{quote.category?.name || "Non specificato"}</p>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotale</span>
+                    <span>{formatCurrency(quote.subtotal || 0)}</span>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Data Evento</h4>
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <p className="font-medium">
-                        {quote.eventDate ? format(new Date(quote.eventDate), "dd/MM/yyyy", { locale: it }) : "Non specificata"}
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Orario</h4>
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <p className="font-medium">
-                        {quote.isFullDay ? "Giornata intera" : 
-                         (quote.eventTime ? quote.eventTime : "Non specificato") +
-                         (quote.eventEndTime ? ` - ${quote.eventEndTime}` : "")}
-                      </p>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Location</h4>
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <p className="font-medium">{quote.location || "Non specificata"}</p>
-                    </div>
-                  </div>
-
-                  {/* Informazioni sul rito religioso */}
-                  {(quote.ceremonyLocation || quote.ceremonyTime) && (
-                    <div className="col-span-2 md:col-span-3 border-t pt-4 mt-2">
-                      <h4 className="text-sm font-semibold mb-2 flex items-center">
-                        <Church className="h-4 w-4 mr-2 text-muted-foreground" />
-                        Dettagli Rito / Cerimonia
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {quote.ceremonyLocation && (
-                          <div>
-                            <h5 className="text-sm font-medium text-muted-foreground mb-1">Luogo</h5>
-                            <div className="flex items-center">
-                              <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <p className="font-medium">{quote.ceremonyLocation}</p>
-                            </div>
-                          </div>
+                  
+                  {/* Mostro lo sconto solo se presente */}
+                  {quote.discount > 0 && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>
+                        Sconto
+                        {quote.discountType === "percentage" && 
+                         ` (${quote.discountValue}%)`}
+                      </span>
+                      <span>
+                        - {formatCurrency(
+                          quote.discountType === "percentage"
+                            ? ((quote.subtotal || 0) * quote.discountValue) / 100
+                            : quote.discountValue || 0
                         )}
-                        {quote.ceremonyTime && (
-                          <div>
-                            <h5 className="text-sm font-medium text-muted-foreground mb-1">Orario</h5>
-                            <div className="flex items-center">
-                              <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <p className="font-medium">{quote.ceremonyTime}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      </span>
                     </div>
                   )}
-
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Provenienza</h4>
-                    <p className="font-medium">{quote.leadSource?.name || "Non specificata"}</p>
-                  </div>
-
-
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Workflow</h4>
-                    <p className="font-medium">{quote.workflow || "Default"}</p>
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Operatori</h4>
-                    <p className="font-medium">{quote.assignedCollaborators?.length ? "Assegnati" : "Nessun operatore assegnato"}</p>
+                  
+                  {/* Eventuali altre voci */}
+                  
+                  <Separator />
+                  <div className="flex justify-between font-medium text-lg">
+                    <span>Totale</span>
+                    <span>{formatCurrency(quote.total || 0)}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Moduli */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Moduli</CardTitle>
-                <Button variant="outline" size="sm" onClick={handleAddModuleClick}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Aggiungi Modulo
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {modules && modules.length > 0 ? (
-                  <div className="space-y-4">
-                    {modules.map((module) => (
-                      <Card key={module.id} className="border border-muted">
-                        <CardHeader className="py-3 px-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <div className="flex flex-col">
-                                <CardTitle className="text-base">{module.name}</CardTitle>
-                                <CardDescription className="text-xs">
-                                  {module.type === 'fixed' ? 'Modulo fisso' : 'Modulo variabile'} · 
-                                  {module.items?.length || 0} {module.items?.length === 1 ? 'elemento' : 'elementi'}
-                                </CardDescription>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleEditModule(module)}
-                              >
-                                Modifica
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteModule(module.id!)}
-                              >
-                                Elimina
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 border rounded-md">
-                    <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-muted-foreground">Nessun modulo aggiunto</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-2"
-                      onClick={handleAddModuleClick}
-                    >
-                      Aggiungi primo modulo
-                    </Button>
-                  </div>
-                )}
-
-                {/* Dialog modale per modifica/creazione moduli */}
-                <ModuleDialog
-                  open={isModuleDialogOpen}
-                  onOpenChange={setIsModuleDialogOpen}
-                  moduleType={moduleType}
-                  quoteId={parseInt(id)}
-                  module={editingModule || undefined}
-                  onSave={handleSaveModule}
-                  onDelete={handleDeleteModule}
-                />
-              </CardContent>
-              <CardFooter className="flex justify-between border-t pt-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Totale Moduli</p>
-                  <p className="font-medium text-xl">€ {(quote.subtotal || 0).toLocaleString()}</p>
+                
+                <div className="text-sm text-muted-foreground mt-2">
+                  Preventivo {quote.status === "draft" ? "in bozza" : quote.status}
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Totale Preventivo</p>
-                  <p className="font-medium text-xl">€ {(quote.total || 0).toLocaleString()}</p>
+              </CardContent>
+              <CardFooter>
+                <div className="w-full flex flex-col gap-2">
+                  <Button 
+                    className="w-full" 
+                    onClick={() => {
+                      setIsShareDialogOpen(true);
+                      generateShareLinkMutation.mutate();
+                    }}
+                  >
+                    <Share className="mr-2 h-4 w-4" />
+                    Condividi con Cliente
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setLocation(`/quotes/contract/${id}`)}
+                  >
+                    <FileSignature className="mr-2 h-4 w-4" />
+                    Genera Contratto
+                  </Button>
                 </div>
               </CardFooter>
             </Card>
-
-            {/* Riepilogo preventivo */}
-            <Card className="my-4 bg-gradient-to-br from-primary/5 to-background border border-primary/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center text-base">
-                  <FileText className="h-4 w-4 mr-2 text-primary" />
-                  Riepilogo Preventivo
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="py-4">
-                <div className="text-sm text-muted-foreground mb-4">
-                  Tutti i servizi, pacchetti e prodotti sono inclusi nei moduli sopra.
-                </div>
-
-                <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2">
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Subtotale</p>
-                    <p className="text-xl font-medium">€ {(quote.subtotal || 0).toLocaleString()}</p>
-                  </div>
-
-                  {quote.discount > 0 && (
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Sconto</p>
-                      <p className="text-xl font-medium text-green-600">-€ {(quote.discount || 0).toLocaleString()}</p>
-                    </div>
-                  )}
-
-                  <div className="bg-primary/10 px-5 py-3 rounded-md border border-primary/20">
-                    <p className="text-xs uppercase tracking-wider text-primary font-medium">Totale Preventivo</p>
-                    <p className="text-2xl font-bold">€ {(quote.total || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Acconti */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Acconti</CardTitle>
-                <Button variant="outline" size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Registra Acconto
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 border rounded-md">
-                  <Euro className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-muted-foreground">Nessun acconto registrato</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Note */}
+            
+            {/* Timeline/stato */}
             <Card>
               <CardHeader>
-                <CardTitle>Note</CardTitle>
+                <CardTitle>Stato Preventivo</CardTitle>
               </CardHeader>
               <CardContent>
-                {quote.notes ? (
-                  <p className="text-sm">{quote.notes}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">Nessuna nota</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Colonna laterale con timeline del workflow */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-20">
-              <CardHeader className="bg-primary text-primary-foreground">
-                <CardTitle>Workflow</CardTitle>
-                <CardDescription className="text-primary-foreground/80">
-                  Stato del preventivo
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="relative">
-                  {/* Linea verticale */}
-                  <div className="absolute left-3 top-0 h-full w-0.5 bg-gray-200"></div>
-
-                  {/* Steps */}
-                  <div className="space-y-6">
-                    {workflowSteps.map((step) => (
-                      <div key={step.id} className="relative flex items-start pl-10">
-                        <div className="absolute left-0 flex items-center justify-center w-7 h-7">
-                          <div className={`absolute w-7 h-7 rounded-full flex items-center justify-center
-                            ${step.completed ? 'bg-primary text-primary-foreground' : 
-                              step.current ? 'border-2 border-primary bg-white' : 
-                              'bg-gray-200'}`}>
-                            {step.completed ? <Check className="w-4 h-4" /> : null}
-                          </div>
-                        </div>
-                        <div className={`flex-1 pb-2 ${step.current ? 'text-primary font-medium' : ''}`}>
-                          <h4 className={`text-sm font-medium ${step.current ? 'text-primary' : ''}`}>
-                            {step.name}
-                          </h4>
-                          {step.date && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {step.date}
-                            </p>
-                          )}
-
-                          {step.current && (
-                            <div className="mt-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="text-xs"
-                                onClick={() => completeWorkflowStep(step.id)}
-                              >
-                                Completa fase
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
+                      <Check className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Creazione Preventivo</p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(quote.createdAt), "d MMM yyyy, HH:mm", { locale: it })}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      quote.status !== "draft" 
+                        ? "bg-primary text-white" 
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {quote.status !== "draft" ? <Check className="h-4 w-4" /> : "2"}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Configurazione Moduli</p>
+                      <p className="text-sm text-muted-foreground">
+                        {quote.status !== "draft" 
+                          ? format(new Date(quote.updatedAt), "d MMM yyyy, HH:mm", { locale: it })
+                          : "In corso..."}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      (quote.status === "pending" || quote.status === "in attesa" ||
+                       quote.status === "approved" || quote.status === "confermato" ||
+                       quote.status === "rejected" || quote.status === "rifiutato") 
+                        ? "bg-primary text-white" 
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {(quote.status === "pending" || quote.status === "in attesa" ||
+                        quote.status === "approved" || quote.status === "confermato" ||
+                        quote.status === "rejected" || quote.status === "rifiutato") 
+                        ? <Check className="h-4 w-4" /> 
+                        : "3"}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Condivisione con Cliente</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(quote.status === "pending" || quote.status === "in attesa" ||
+                          quote.status === "approved" || quote.status === "confermato" ||
+                          quote.status === "rejected" || quote.status === "rifiutato") 
+                          ? "Completato"
+                          : "In attesa"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      (quote.status === "approved" || quote.status === "confermato" ||
+                       quote.status === "rejected" || quote.status === "rifiutato") 
+                        ? "bg-primary text-white" 
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {(quote.status === "approved" || quote.status === "confermato" ||
+                        quote.status === "rejected" || quote.status === "rifiutato") 
+                        ? <Check className="h-4 w-4" /> 
+                        : "4"}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Risposta Cliente</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(quote.status === "approved" || quote.status === "confermato")
+                          ? "Accettato"
+                          : (quote.status === "rejected" || quote.status === "rifiutato")
+                            ? "Rifiutato"
+                            : "In attesa"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -1087,100 +907,6 @@ export default function QuoteDetailPage() {
           </div>
         </div>
       </div>
-
-      {/* Dialog di conferma per l'eliminazione */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Conferma eliminazione</DialogTitle>
-            <DialogDescription>
-              Sei sicuro di voler eliminare il preventivo "{quote?.title}"? 
-              Questa azione non può essere annullata.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Annulla
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmDelete}
-              disabled={deleteQuoteMutation.isPending}
-            >
-              {deleteQuoteMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Eliminazione...
-                </>
-              ) : (
-                <>
-                  <Trash className="mr-2 h-4 w-4" />
-                  Elimina Preventivo
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog per la condivisione */}
-      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Condividi preventivo</DialogTitle>
-            <DialogDescription>
-              Puoi condividere questo preventivo con il cliente utilizzando il link qui sotto.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-4">
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">Link di condivisione:</p>
-              <div className="flex items-center">
-                <Input
-                  value={shareUrl}
-                  readOnly
-                  className="flex-1 mr-2"
-                  onClick={(e) => e.currentTarget.select()}
-                />
-                <Button size="icon" variant="outline" onClick={copyToClipboard}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Il cliente potrà visualizzare il preventivo senza necessità di accesso.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <Link className="h-4 w-4 text-primary" />
-                <p className="text-sm font-medium">Opzioni di condivisione</p>
-              </div>
-              <div className="ml-6">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Il link di condivisione resterà attivo fino a quando non viene disabilitato.
-                </p>
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  onClick={() => disableShareMutation.mutate()}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  ) : null}
-                  Disattiva condivisione
-                </Button>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsShareDialogOpen(false)}>
-              Chiudi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 }

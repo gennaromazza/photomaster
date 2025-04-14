@@ -41,7 +41,7 @@ interface ModuleManagerProps {
 export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerProps) {
   // Stati per la gestione del ModuleManager
   const [moduleManagerState, setModuleManagerState] = useState<ModuleManagerState>(ModuleManagerState.LIST);
-  const [editingModule, setEditingModule] = useState<QuoteModuleData | null>(null);
+  const [editingModule, setEditingModule] = useState<QuoteModule | null>(null);
   const { toast } = useToast();
 
   // Query per ottenere i moduli del preventivo
@@ -51,7 +51,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
     isError,
     error,
     refetch,
-  } = useQuery<QuoteModuleData[]>({
+  } = useQuery<QuoteModule[]>({
     queryKey: [`/api/quotes/${quoteId}/modules`],
     enabled: !!quoteId,
     retry: 3
@@ -59,7 +59,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
 
   // Mutation per salvare un modulo
   const saveModuleMutation = useMutation({
-    mutationFn: async (moduleData: QuoteModuleData) => {
+    mutationFn: async (moduleData: QuoteModule) => {
       const url = moduleData.id
         ? `/api/quotes/${quoteId}/modules/${moduleData.id}`
         : `/api/quotes/${quoteId}/modules`;
@@ -137,7 +137,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   };
 
   // Gestisce la modifica di un modulo esistente
-  const handleEditModule = (module: QuoteModuleData) => {
+  const handleEditModule = (module: QuoteModule) => {
     setEditingModule(module);
 
     if (module.type === "fixed") {
@@ -155,7 +155,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   };
 
   // Gestisce il salvataggio di un modulo
-  const handleSaveModule = (moduleData: QuoteModuleData) => {
+  const handleSaveModule = (moduleData: QuoteModule) => {
     try {
       // Validazione dati
       if (!moduleData.name?.trim()) {
@@ -168,7 +168,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
         id: moduleData.id || undefined,
         name: moduleData.name.trim(),
         description: moduleData.description?.trim(),
-        items: moduleData.items?.map(item => ({
+        items: moduleData.items?.map((item: any) => ({
           ...item,
           quantity: Math.max(1, item.quantity || 1),
           price: Math.max(0, item.price || 0)
@@ -209,7 +209,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   const calculateTotal = (): number => {
     if (!Array.isArray(modules)) return 0;
     
-    return modules.reduce((total: number, module: QuoteModuleData) => {
+    return modules.reduce((total: number, module: QuoteModule) => {
       const moduleTotal = module.total || module.subtotal || 0;
       return roundToTwoDecimals(total + moduleTotal);
     }, 0);

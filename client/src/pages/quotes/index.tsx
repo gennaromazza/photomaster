@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Eye, Edit, Trash2, MoreVertical } from "react-icons/ri";
+import { RiEyeLine, RiEdit2Line, RiDeleteBinLine, RiMoreLine } from "react-icons/ri";
 import { useState as useState2 } from 'react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
 
@@ -211,16 +211,16 @@ const QuotesPage = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setLocation(`/quotes/${quote.id}`)}>
-                              <Eye className="mr-2 h-4 w-4" />
+                              <RiEyeLine className="mr-2 h-4 w-4" />
                               Visualizza
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setLocation(`/quotes/edit/${quote.id}`)}>
-                              <Edit className="mr-2 h-4 w-4" />
+                              <RiEdit2Line className="mr-2 h-4 w-4" />
                               Modifica
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => {setIsModalOpen(true); setQuoteToDelete(quote.id)}}>
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <RiDeleteBinLine className="mr-2 h-4 w-4" />
                               Elimina
                             </DropdownMenuItem>
                           </DropdownMenuContent>

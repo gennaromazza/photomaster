@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from "@headlessui/react";
+} from "@/components/ui/dropdown-menu";
 import { Eye, Edit, Trash2, MoreVertical } from "react-icons/ri";
 import { useState as useState2 } from 'react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";

@@ -117,12 +117,16 @@ export default function JobsPage() {
     queryKey: ["/api/clients"],
   });
 
-
-
   // Funzione per ottenere il nome del cliente
   const getClientName = (clientId: number) => {
     const client = clients.find((c: Client) => c.id === clientId);
     return client ? `${client.firstName} ${client.lastName}` : "Cliente non trovato";
+  };
+
+  // Funzione per formattare la data con gestione di undefined
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "N/D";
+    return format(new Date(dateString), "d MMM yyyy", { locale: it });
   };
 
   // Combiniamo preventivi ed eventi in un unico array di lavori
@@ -183,6 +187,8 @@ export default function JobsPage() {
 
   // Ordina per data (più recenti prima)
   const sortedJobs = [...displayedJobs].sort((a, b) => {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 
@@ -318,7 +324,7 @@ export default function JobsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {job.date ? format(new Date(job.date), "d MMM yyyy", { locale: it }) : "N/D"}
+                            {formatDate(job.date)}
                           </TableCell>
                           <TableCell>
                             {job.type === "quote" ? (
@@ -371,7 +377,7 @@ export default function JobsPage() {
                                     Visualizza
                                   </DropdownMenuItem>
                                   
-                                  {job.type === "quote" && !job.status !== "signed" && (
+                                  {job.type === "quote" && job.status !== "signed" && (
                                     <DropdownMenuItem onClick={() => navigate(`/quotes/new-quote?edit=${job.id}`)}>
                                       <Pencil className="h-4 w-4 mr-2" />
                                       Modifica
@@ -411,10 +417,9 @@ export default function JobsPage() {
             </CardContent>
           </TabsContent>
 
-          {/* I contenuti sono gli stessi per tutti i tab, si filtrano in base al valore del tab */}
+          {/* Gli altri tab usano lo stesso contenuto con filtri diversi */}
           <TabsContent value="quotes" className="m-0">
             <CardContent className="p-0">
-              {/* stesso contenuto di "all" */}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -487,7 +492,7 @@ export default function JobsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {job.date ? format(new Date(job.date), "d MMM yyyy", { locale: it }) : "N/D"}
+                            {formatDate(job.date)}
                           </TableCell>
                           <TableCell>
                             {job.type === "quote" ? (
@@ -540,7 +545,7 @@ export default function JobsPage() {
                                     Visualizza
                                   </DropdownMenuItem>
                                   
-                                  {job.type === "quote" && !job.status !== "signed" && (
+                                  {job.type === "quote" && job.status !== "signed" && (
                                     <DropdownMenuItem onClick={() => navigate(`/quotes/new-quote?edit=${job.id}`)}>
                                       <Pencil className="h-4 w-4 mr-2" />
                                       Modifica
@@ -560,13 +565,6 @@ export default function JobsPage() {
                                       Vai all'Evento
                                     </DropdownMenuItem>
                                   )}
-                                  
-                                  {job.type === "event" && job.quoteId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.quoteId}`)}>
-                                      <FileText className="h-4 w-4 mr-2" />
-                                      Vai al Preventivo
-                                    </DropdownMenuItem>
-                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -582,7 +580,6 @@ export default function JobsPage() {
 
           <TabsContent value="events" className="m-0">
             <CardContent className="p-0">
-              {/* stesso contenuto di "all" */}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -655,7 +652,7 @@ export default function JobsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {job.date ? format(new Date(job.date), "d MMM yyyy", { locale: it }) : "N/D"}
+                            {formatDate(job.date)}
                           </TableCell>
                           <TableCell>
                             {job.type === "quote" ? (
@@ -708,27 +705,6 @@ export default function JobsPage() {
                                     Visualizza
                                   </DropdownMenuItem>
                                   
-                                  {job.type === "quote" && !job.status !== "signed" && (
-                                    <DropdownMenuItem onClick={() => navigate(`/quotes/new-quote?edit=${job.id}`)}>
-                                      <Pencil className="h-4 w-4 mr-2" />
-                                      Modifica
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "quote" && !job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/events/new?quoteId=${job.id}`)}>
-                                      <CalendarPlus className="h-4 w-4 mr-2" />
-                                      Crea Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "quote" && job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.eventId}`)}>
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      Vai all'Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                  
                                   {job.type === "event" && job.quoteId && (
                                     <DropdownMenuItem onClick={() => navigate(`/jobs/${job.quoteId}`)}>
                                       <FileText className="h-4 w-4 mr-2" />
@@ -750,7 +726,6 @@ export default function JobsPage() {
 
           <TabsContent value="signed" className="m-0">
             <CardContent className="p-0">
-              {/* stesso contenuto di "all" */}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -823,7 +798,7 @@ export default function JobsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {job.date ? format(new Date(job.date), "d MMM yyyy", { locale: it }) : "N/D"}
+                            {formatDate(job.date)}
                           </TableCell>
                           <TableCell>
                             {job.type === "quote" ? (
@@ -876,20 +851,6 @@ export default function JobsPage() {
                                     Visualizza
                                   </DropdownMenuItem>
                                   
-                                  {job.type === "quote" && !job.status !== "signed" && (
-                                    <DropdownMenuItem onClick={() => navigate(`/quotes/new-quote?edit=${job.id}`)}>
-                                      <Pencil className="h-4 w-4 mr-2" />
-                                      Modifica
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "quote" && !job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/events/new?quoteId=${job.id}`)}>
-                                      <CalendarPlus className="h-4 w-4 mr-2" />
-                                      Crea Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                  
                                   {job.type === "quote" && job.eventId && (
                                     <DropdownMenuItem onClick={() => navigate(`/jobs/${job.eventId}`)}>
                                       <Calendar className="h-4 w-4 mr-2" />
@@ -918,7 +879,6 @@ export default function JobsPage() {
 
           <TabsContent value="pending" className="m-0">
             <CardContent className="p-0">
-              {/* stesso contenuto di "all" */}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -949,7 +909,7 @@ export default function JobsPage() {
                               <FileText className="h-6 w-6 text-gray-400" />
                             </div>
                           </div>
-                          <p className="text-gray-500">Nessun preventivo in attesa di firma</p>
+                          <p className="text-gray-500">Nessun preventivo in attesa trovato</p>
                           {search && (
                             <Button 
                               variant="link" 
@@ -983,44 +943,15 @@ export default function JobsPage() {
                                   <span>Evento</span>
                                 </>
                               )}
-                              {job.fromSignedQuote && (
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  Da preventivo
-                                </Badge>
-                              )}
                             </div>
                           </TableCell>
                           <TableCell>
-                            {job.date ? format(new Date(job.date), "d MMM yyyy", { locale: it }) : "N/D"}
+                            {formatDate(job.date)}
                           </TableCell>
                           <TableCell>
-                            {job.type === "quote" ? (
-                              <Badge className={
-                                job.quoteBadgeColor === "green" 
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200" 
-                                  : "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                              }>
-                                {job.quoteBadge}
-                              </Badge>
-                            ) : (
-                              <Badge className={
-                                job.status === "upcoming"
-                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                  : job.status === "in-progress"
-                                  ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                  : job.status === "completed"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                  : "bg-red-100 text-red-800 hover:bg-red-200"
-                              }>
-                                {job.status === "upcoming"
-                                  ? "Prossimo"
-                                  : job.status === "in-progress"
-                                  ? "In Corso"
-                                  : job.status === "completed"
-                                  ? "Completato"
-                                  : "Annullato"}
-                              </Badge>
-                            )}
+                            <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">
+                              {job.quoteBadge}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -1044,7 +975,7 @@ export default function JobsPage() {
                                     Visualizza
                                   </DropdownMenuItem>
                                   
-                                  {job.type === "quote" && !job.status !== "signed" && (
+                                  {job.type === "quote" && job.status !== "signed" && (
                                     <DropdownMenuItem onClick={() => navigate(`/quotes/new-quote?edit=${job.id}`)}>
                                       <Pencil className="h-4 w-4 mr-2" />
                                       Modifica
@@ -1055,20 +986,6 @@ export default function JobsPage() {
                                     <DropdownMenuItem onClick={() => navigate(`/events/new?quoteId=${job.id}`)}>
                                       <CalendarPlus className="h-4 w-4 mr-2" />
                                       Crea Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "quote" && job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.eventId}`)}>
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      Vai all'Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "event" && job.quoteId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.quoteId}`)}>
-                                      <FileText className="h-4 w-4 mr-2" />
-                                      Vai al Preventivo
                                     </DropdownMenuItem>
                                   )}
                                 </DropdownMenuContent>

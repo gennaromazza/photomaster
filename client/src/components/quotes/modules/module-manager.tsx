@@ -60,18 +60,38 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   // Mutation per salvare un modulo
   const saveModuleMutation = useMutation({
     mutationFn: async (moduleData: QuoteModule) => {
-      const url = moduleData.id
-        ? `/api/quotes/${quoteId}/modules/${moduleData.id}`
-        : `/api/quotes/${quoteId}/modules`;
+      // Correzione URL per il salvataggio del modulo
+      let url;
+      if (moduleData.id) {
+        // Se il modulo ha un ID, usa l'URL per l'aggiornamento
+        url = `/api/modules/${moduleData.id}`;
+      } else {
+        // Se il modulo è nuovo, usa l'URL per la creazione
+        url = `/api/quotes/${quoteId}/modules`;
+      }
+      
+      // Usa PUT per aggiornare, POST per creare
       const method = moduleData.id ? "PUT" : "POST";
+      
+      console.log(`Salvando modulo con metodo ${method} all'URL ${url}`, moduleData);
+      
       const res = await apiRequest(method, url, moduleData);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Modulo salvato",
         description: "Il modulo è stato salvato con successo",
       });
+      
+      console.log("Modulo salvato con successo:", data);
+      
+      // Aggiorna la cache per una risposta immediata
+      if (data.id) {
+        queryClient.invalidateQueries([`/api/quotes/${quoteId}/modules`]);
+      }
+      
+      // Ricarica i dati per essere sicuri di avere l'ultimo stato
       refetch();
 
       // Resetta lo stato dell'editor
@@ -96,7 +116,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   // Mutation per eliminare un modulo
   const deleteModuleMutation = useMutation({
     mutationFn: async (moduleId: number) => {
-      const res = await apiRequest("DELETE", `/api/quotes/${quoteId}/modules/${moduleId}`);
+      const res = await apiRequest("DELETE", `/api/modules/${moduleId}`);
       return res.ok;
     },
     onSuccess: () => {
@@ -151,16 +171,32 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   const handleDeleteModule = async (moduleId: number) => {
     if (window.confirm("Sei sicuro di voler eliminare questo modulo?")) {
       try {
+        // Aggiorna immediatamente l'UI prima della chiamata al server
+        // Rimuovi il modulo dalla lista locale
+        const updatedModules = modules.filter(module => module.id !== moduleId);
+        queryClient.setQueryData([`/api/quotes/${quoteId}/modules`], updatedModules);
+        
+        // Chiama il server per eliminare effettivamente il modulo
         await deleteModuleMutation.mutateAsync(moduleId);
+        
         // Invalida la cache per forzare il refresh dei dati
         queryClient.invalidateQueries(['quotes']);
         queryClient.invalidateQueries(['quote', quoteId]);
-        queryClient.invalidateQueries(['quoteModules', quoteId]);
+        queryClient.invalidateQueries([`/api/quotes/${quoteId}/modules`]);
+        
         toast({
           title: "Modulo eliminato",
           description: "Il modulo è stato eliminato con successo",
         });
+        
+        // Aggiorna il preventivo principale se necessario
+        if (refreshQuote) {
+          refreshQuote();
+        }
       } catch (error) {
+        // In caso di errore, ripristina i dati originali
+        refetch();
+        
         toast({
           title: "Errore",
           description: "Si è verificato un errore durante l'eliminazione del modulo",
@@ -179,18 +215,18 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       }
 
       // Sanitizza e normalizza i dati
-      // Sanitizza e normalizza i dati
       const sanitizedData = {
         ...moduleData,
         id: moduleData.id || undefined,
         quoteId: quoteId,
         name: moduleData.name.trim(),
         description: moduleData.description?.trim(),
-        type: "fixed",
-        status: "active",
+        type: moduleData.type as "fixed" | "variable", // Corregge il tipo per TypeScript
+        status: "active" as "active", // Corregge il tipo per TypeScript
         items: moduleData.items?.map((item: any) => ({
           ...item,
-          moduleId: moduleData.id,
+          id: item.id || undefined, // Preserviamo l'ID se esiste, altrimenti undefined per nuovo item
+          moduleId: moduleData.id, // Associamo l'item al modulo
           quantity: Math.max(1, item.quantity || 1),
           unitPrice: Math.max(0, item.unitPrice || 0),
           total: item.total || 0,
@@ -198,9 +234,9 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
           discountType: item.discountType || "percentage",
           discountValue: item.discountValue || 0,
           discountedPrice: item.discountedPrice || null,
-          isRequired: false,
-          isSelected: false,
-          position: 0
+          isRequired: item.isRequired || false,
+          isSelected: item.isSelected || false,
+          position: item.position || 0
         }))
       };
 

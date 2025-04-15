@@ -189,9 +189,8 @@ export default function VariableModuleEditor({
     service.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  const filteredProducts = services.filter(service => 
-    service.type === 'product' && 
-    service.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   // Ottiene la selezione attiva

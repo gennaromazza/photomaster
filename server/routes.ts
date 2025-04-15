@@ -702,6 +702,20 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch services" });
     }
   });
+  
+  // Products routes - Restituisce tutti i servizi di tipo 'product'
+  apiRouter.get("/products", async (req, res) => {
+    try {
+      console.log("Fetching all products...");
+      const services = await storage.getAllServices();
+      const products = services.filter(service => service.type === 'product');
+      console.log(`Products fetched:`, products);
+      res.json(products);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
 
   apiRouter.get("/services/:id", async (req, res) => {
     try {

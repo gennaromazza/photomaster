@@ -3,6 +3,7 @@ import { db } from "../db";
 import { settings, insertSettingsSchema } from "@shared/schema";
 import { isAuthenticated, isAdmin } from "../auth";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 const router = Router();
 
@@ -40,7 +41,30 @@ router.get("/", async (req, res) => {
 // Aggiorna le impostazioni dello studio fotografico
 router.put("/", isAuthenticated, isAdmin, async (req, res) => {
   try {
-    const validatedData = insertSettingsSchema.parse(req.body);
+    console.log("Dati ricevuti per aggiornamento settings:", req.body);
+    
+    // Crea uno schema più permissivo per l'aggiornamento parziale
+    const updateSettingsSchema = z.object({
+      companyName: z.string().optional(),
+      companyEmail: z.string().optional(),
+      companyPhone: z.string().optional().nullable(),
+      companyAddress: z.string().optional().nullable(),
+      companyLogo: z.string().optional().nullable(),
+      contractTemplate: z.string().optional().nullable(),
+      quoteTemplate: z.string().optional().nullable(),
+      emailQuoteSignedAdmin: z.string().optional().nullable(),
+      emailQuoteSignedClient: z.string().optional().nullable(),
+      emailRegistrationNotification: z.string().optional().nullable(),
+      emailApprovalNotification: z.string().optional().nullable(),
+      emailDisabledNotification: z.string().optional().nullable(),
+      emailPasswordReset: z.string().optional().nullable(),
+      taxRate: z.number().optional(),
+      defaultCurrency: z.string().optional(),
+      colorTheme: z.string().optional(),
+      additionalSettings: z.any().optional(),
+    });
+    
+    const validatedData = updateSettingsSchema.parse(req.body);
     
     // Verifica se esistono già impostazioni
     const existingSettings = await db.query.settings.findFirst();
@@ -54,16 +78,25 @@ router.put("/", isAuthenticated, isAdmin, async (req, res) => {
         .where(eq(settings.id, existingSettings.id))
         .returning();
     } else {
-      // Crea nuove impostazioni
+      // Crea nuove impostazioni - qui serviranno campi obbligatori
+      const requiredFields = {
+        companyName: validatedData.companyName || "Studio Fotografico",
+        companyEmail: validatedData.companyEmail || "info@studiofotografico.it",
+        taxRate: validatedData.taxRate || 22,
+        defaultCurrency: validatedData.defaultCurrency || "EUR",
+        colorTheme: validatedData.colorTheme || "default",
+        ...validatedData,
+      };
+      
       [result] = await db.insert(settings)
-        .values(validatedData)
+        .values(requiredFields)
         .returning();
     }
     
     res.json(result);
   } catch (error) {
     console.error("Errore nell'aggiornamento delle impostazioni:", error);
-    res.status(500).json({ error: "Errore nell'aggiornamento delle impostazioni" });
+    res.status(500).json({ error: "Errore nell'aggiornamento delle impostazioni", details: error });
   }
 });
 

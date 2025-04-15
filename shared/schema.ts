@@ -72,6 +72,7 @@ export const events = pgTable("events", {
   clientId: integer("client_id").notNull(),
   secondClientId: integer("second_client_id"), // per sposo/sposa o secondo cliente
   quoteId: integer("quote_id"), // Relazione con i preventivi
+  fromSignedQuote: boolean("from_signed_quote").default(false), // Indica se l'evento è stato creato da un preventivo firmato
   categoryId: integer("category_id"),
   leadSourceId: integer("lead_source_id"),
   date: timestamp("date").notNull(),

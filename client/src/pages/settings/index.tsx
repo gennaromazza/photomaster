@@ -275,7 +275,176 @@ const SettingsPage = () => {
           </Card>
         </TabsContent>
         
+        <TabsContent value="emails">
+          <Card>
+            <CardHeader>
+              <CardTitle>Template Email</CardTitle>
+              <CardDescription>
+                Personalizza i template per le email automatiche inviate dal sistema.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Email di Conferma Preventivo</h3>
+                  <div className="rounded-md border border-muted p-4 mb-4 bg-muted/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <p className="text-sm font-medium">Email inviata al cliente dopo la firma di un preventivo</p>
+                    </div>
+                    <Textarea 
+                      id="emailQuoteSignedClient"
+                      className="min-h-32 font-mono text-sm"
+                      placeholder="Gentile {cliente_nome}, grazie per aver confermato il preventivo '{preventivo_titolo}'..."
+                      defaultValue={settings?.emailQuoteSignedClient || `Gentile {cliente_nome},
 
+Grazie per aver firmato il preventivo "{preventivo_titolo}".
+
+Confermiamo di aver ricevuto la tua accettazione e procederemo con l'organizzazione del servizio fotografico.
+Ti contatteremo a breve per definire tutti i dettagli.
+
+Cordiali saluti,
+{studio_nome}
+{studio_telefono}
+{studio_email}`}
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Variabili disponibili: {'{cliente_nome}'}, {'{preventivo_titolo}'}, {'{studio_nome}'}, {'{studio_email}'}, {'{studio_telefono}'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Notifica Amministratore per Firma Preventivo</h3>
+                  <div className="rounded-md border border-muted p-4 mb-4 bg-muted/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                      <p className="text-sm font-medium">Email inviata all'amministratore quando un cliente firma un preventivo</p>
+                    </div>
+                    <Textarea 
+                      id="emailQuoteSignedAdmin"
+                      className="min-h-32 font-mono text-sm"
+                      placeholder="Nuovo preventivo firmato da {cliente_nome}..."
+                      defaultValue={settings?.emailQuoteSignedAdmin || `Nuovo preventivo firmato!
+
+Il preventivo "{preventivo_titolo}" è stato firmato da {cliente_nome}.
+
+Dettagli:
+- Cliente: {cliente_nome}
+- Preventivo: {preventivo_titolo}
+- Data firma: {data_firma}
+- Firma: {firma}
+
+Accedi alla piattaforma per visualizzare tutti i dettagli.`}
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Variabili disponibili: {'{cliente_nome}'}, {'{preventivo_titolo}'}, {'{data_firma}'}, {'{firma}'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Notifica Registrazione Utente</h3>
+                  <div className="rounded-md border border-muted p-4 mb-4 bg-muted/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <p className="text-sm font-medium">Email inviata all'amministratore quando un nuovo utente si registra</p>
+                    </div>
+                    <Textarea 
+                      id="emailRegistrationNotification"
+                      className="min-h-32 font-mono text-sm"
+                      placeholder="Nuovo utente registrato: {utente_nome}..."
+                      defaultValue={settings?.emailRegistrationNotification || `Nuovo utente registrato!
+
+Un nuovo utente si è registrato alla piattaforma.
+
+Dettagli:
+- Nome: {utente_nome}
+- Email: {utente_email}
+- Username: {utente_username}
+
+Accedi alla piattaforma per approvare o rifiutare questa registrazione.`}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Notifica Approvazione Account</h3>
+                  <div className="rounded-md border border-muted p-4 mb-4 bg-muted/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <p className="text-sm font-medium">Email inviata all'utente quando il suo account viene approvato</p>
+                    </div>
+                    <Textarea 
+                      id="emailApprovalNotification"
+                      className="min-h-32 font-mono text-sm"
+                      placeholder="Gentile {utente_nome}, il tuo account è stato approvato..."
+                      defaultValue={settings?.emailApprovalNotification || `Gentile {utente_nome},
+
+Siamo lieti di informarti che il tuo account è stato approvato!
+
+Ora puoi accedere alla piattaforma utilizzando le tue credenziali.
+
+Studio {studio_nome}
+{studio_email}
+{studio_telefono}`}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Notifica Reset Password</h3>
+                  <div className="rounded-md border border-muted p-4 bg-muted/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      <p className="text-sm font-medium">Email inviata all'utente per il reset della password</p>
+                    </div>
+                    <Textarea 
+                      id="emailPasswordReset"
+                      className="min-h-32 font-mono text-sm"
+                      placeholder="Gentile {utente_nome}, ecco il link per resettare la tua password..."
+                      defaultValue={settings?.emailPasswordReset || `Gentile {utente_nome},
+
+Abbiamo ricevuto una richiesta di reset della password per il tuo account.
+
+Per procedere con il reset della password, clicca sul seguente link:
+{reset_url}
+
+Se non hai richiesto questo reset, ignora questa email.
+
+Il link scadrà tra 4 ore.
+
+Cordiali saluti,
+Studio {studio_nome}`}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button 
+                onClick={() => {
+                  const data = {
+                    emailQuoteSignedClient: (document.getElementById('emailQuoteSignedClient') as HTMLTextAreaElement)?.value,
+                    emailQuoteSignedAdmin: (document.getElementById('emailQuoteSignedAdmin') as HTMLTextAreaElement)?.value,
+                    emailRegistrationNotification: (document.getElementById('emailRegistrationNotification') as HTMLTextAreaElement)?.value,
+                    emailApprovalNotification: (document.getElementById('emailApprovalNotification') as HTMLTextAreaElement)?.value,
+                    emailPasswordReset: (document.getElementById('emailPasswordReset') as HTMLTextAreaElement)?.value,
+                  };
+                  updateSettingsMutation.mutate(data);
+                }}
+                disabled={updateSettingsMutation.isPending}
+              >
+                {updateSettingsMutation.isPending ? (
+                  <span className="flex items-center">
+                    <i className="ri-loader-4-line animate-spin mr-2"></i>
+                    Salvataggio...
+                  </span>
+                ) : "Salva Template Email"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
         
         <TabsContent value="config">
           <div className="grid md:grid-cols-2 gap-8">

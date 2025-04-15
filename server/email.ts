@@ -1,5 +1,8 @@
 import { MailService } from '@sendgrid/mail';
 import { User } from "../shared/schema";
+import { storage } from './storage';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 // Configura il servizio SendGrid
 const mailService = new MailService();
@@ -24,6 +27,51 @@ type SendGridEmailParams = {
   text: string;
   html: string;
 };
+
+// Interfaccia per i dati sostituibili nei template
+interface TemplateData {
+  [key: string]: string | number | Date | undefined | null;
+}
+
+/**
+ * Sostituisce le variabili in un template
+ */
+async function processTemplate(template: string | undefined | null, data: TemplateData): Promise<string> {
+  if (!template) return '';
+  
+  // Ottieni le impostazioni dello studio
+  const settings = await storage.getSettings();
+  
+  // Aggiungi le variabili dello studio
+  const studioData = {
+    studio_nome: settings?.companyName || 'Studio Arte',
+    studio_email: settings?.companyEmail || 'info@studioarte.it',
+    studio_telefono: settings?.companyPhone || '',
+    studio_indirizzo: settings?.companyAddress || '',
+    ...data
+  };
+  
+  // Sostituisci le variabili nel template
+  let processedTemplate = template;
+  for (const [key, value] of Object.entries(studioData)) {
+    if (value !== undefined && value !== null) {
+      // Gestisci le date in modo speciale
+      let formattedValue: string;
+      // Verifica se è una data controllando se ha il metodo getMonth
+      if (value && typeof value === 'object' && 'getMonth' in value) {
+        formattedValue = format(value as Date, 'dd/MM/yyyy', { locale: it });
+      } else {
+        formattedValue = String(value);
+      }
+        
+      // Sostituisci tutti gli occorrimenti
+      const regex = new RegExp(`{${key}}`, 'g');
+      processedTemplate = processedTemplate.replace(regex, formattedValue);
+    }
+  }
+  
+  return processedTemplate;
+}
 
 /**
  * Invia una email utilizzando il servizio SendGrid
@@ -153,24 +201,34 @@ Studio Arte
  * Invia una notifica all'amministratore quando un preventivo viene firmato
  */
 export async function sendQuoteSignedNotification(quote: any, clientName: string, signature: string): Promise<boolean> {
+  const settings = await storage.getSettings();
   const subject = `Preventivo firmato: ${quote.title}`;
-  const text = `
-Ciao Admin,
+  
+  // Prepara i dati per il template
+  const today = new Date();
+  const templateData: TemplateData = {
+    cliente_nome: clientName,
+    preventivo_titolo: quote.title,
+    preventivo_id: quote.id,
+    firma: signature,
+    data_firma: today
+  };
+  
+  // Ottieni il template dalle impostazioni o usa quello predefinito
+  const defaultTemplate = `Nuovo preventivo firmato!
 
-Un preventivo è stato firmato da un cliente.
+Il preventivo "{preventivo_titolo}" è stato firmato da {cliente_nome}.
 
-Dettagli del preventivo:
-- Titolo: ${quote.title}
-- ID: ${quote.id}
-- Cliente: ${clientName}
-- Firmato da: ${signature}
-- Data di firma: ${new Date().toLocaleDateString('it-IT')}
+Dettagli:
+- Cliente: {cliente_nome}
+- Preventivo: {preventivo_titolo}
+- Data firma: {data_firma}
+- Firma: {firma}
 
-Puoi visualizzare tutti i dettagli dal pannello amministrativo.
+Accedi alla piattaforma per visualizzare tutti i dettagli.`;
 
-Saluti,
-Studio Arte
-`;
+  // Processa il template con le variabili
+  const text = await processTemplate(settings?.emailQuoteSignedAdmin || defaultTemplate, templateData);
 
   return await sendEmail({
     to: ADMIN_EMAIL,
@@ -185,19 +243,30 @@ Studio Arte
 export async function sendQuoteSignedConfirmation(clientEmail: string, clientName: string, quote: any): Promise<boolean> {
   if (!clientEmail) return false;
   
+  const settings = await storage.getSettings();
   const subject = `Conferma firma: ${quote.title}`;
-  const text = `
-Ciao ${clientName},
+  
+  // Prepara i dati per il template
+  const templateData: TemplateData = {
+    cliente_nome: clientName,
+    preventivo_titolo: quote.title
+  };
+  
+  // Ottieni il template dalle impostazioni o usa quello predefinito
+  const defaultTemplate = `Gentile {cliente_nome},
 
-Grazie per aver firmato il preventivo "${quote.title}".
+Grazie per aver firmato il preventivo "{preventivo_titolo}".
 
-Una copia del contratto firmato è disponibile nel tuo profilo. Ti contatteremo a breve per i prossimi passi.
-
-Se hai domande, non esitare a contattarci.
+Confermiamo di aver ricevuto la tua accettazione e procederemo con l'organizzazione del servizio fotografico.
+Ti contatteremo a breve per definire tutti i dettagli.
 
 Cordiali saluti,
-Studio Arte
-`;
+{studio_nome}
+{studio_telefono}
+{studio_email}`;
+
+  // Processa il template con le variabili
+  const text = await processTemplate(settings?.emailQuoteSignedClient || defaultTemplate, templateData);
 
   return await sendEmail({
     to: clientEmail,

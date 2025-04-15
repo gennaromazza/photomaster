@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { ServiceBundle, Service } from '@shared/schema';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { TemplatePreviews } from '@/components/bundles/template-preview';
 import {
   Card,
@@ -54,7 +55,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+// Rimuovo l'importazione diretta di toast perché useremo const { toast } = useToast();
 import { Badge } from '@/components/ui/badge';
 import { useLocation, Link } from 'wouter';
 import { ImageUpload } from '@/components/ui/image-upload';
@@ -101,6 +102,7 @@ const ServiceBundlesPage = () => {
   const [selectedTemplateStyle, setSelectedTemplateStyle] = useState<'elegant' | 'modern' | 'minimal' | 'bold'>('elegant');
   
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   
   // Recupera tutti i pacchetti
   const bundlesQuery = useQuery<ServiceBundle[]>({

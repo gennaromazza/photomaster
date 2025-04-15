@@ -2,7 +2,12 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, hashPassword } from "./auth";
-import { sendPasswordResetEmail } from "./email";
+import { 
+  sendPasswordResetEmail, 
+  sendQuoteSignedNotification, 
+  sendQuoteSignedConfirmation,
+  sendEmail
+} from "./email";
 import { setupUploadRoutes } from "./upload";
 import bundleLeadsRouter from "./routes/bundle-leads";
 import settingsRouter from "./routes/settings";
@@ -1306,7 +1311,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       };
 
       // Importa la funzione sendEmail
-      const { sendEmail } = require('./email');
+      // Usa l'importazione di sendEmail già presente all'inizio del file
       const emailSent = await sendEmail(emailParams);
 
       if (!emailSent) {
@@ -1503,7 +1508,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       });
       
       // Invia email di notifica all'amministratore
-      const { sendQuoteSignedNotification, sendQuoteSignedConfirmation } = require('./email');
+      // Usa le importazioni già disponibili all'inizio del file
       const clientName = client ? `${client.firstName} ${client.lastName}`.trim() : "Cliente";
       
       try {

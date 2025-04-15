@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
+import { getQueryParams } from "@/lib/utils";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { insertTaskSchema } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -33,13 +33,22 @@ const NewTaskPage = () => {
     queryKey: ["/api/events"],
   });
   
+  // Ottieni eventId dai parametri di query, se presente
+  const params = getQueryParams();
+  const eventIdFromQuery = params.eventId ? parseInt(params.eventId) : undefined;
+  
+  // Trova l'evento corrispondente per mostrare info aggiuntive
+  const selectedEvent = eventIdFromQuery && events 
+    ? events.find(e => e.id === eventIdFromQuery) 
+    : undefined;
+  
   const form = useForm<NewTaskFormValues>({
     resolver: zodResolver(newTaskSchema),
     defaultValues: {
       title: "",
-      description: "",
-      dueDate: null,
-      eventId: undefined,
+      description: selectedEvent ? `Attività per evento: ${selectedEvent.title}` : "",
+      dueDate: selectedEvent?.date ? new Date(selectedEvent.date) : null,
+      eventId: eventIdFromQuery,
       status: "pending",
       completed: false,
       priority: "medium",
@@ -58,18 +67,27 @@ const NewTaskPage = () => {
       const response = await apiRequest("POST", "/api/tasks", payload);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tasks/uncompleted"] });
+      
+      // Se la task è stata creata da un evento, invalida anche quella query
+      if (eventIdFromQuery) {
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks/event", eventIdFromQuery] });
+      }
       
       toast({
         title: "Task creato",
         description: "Il task è stato creato con successo",
       });
       
-      // Torna alla lista task
-      navigate("/tasks");
+      // Torna alla pagina appropriata in base alla provenienza
+      if (eventIdFromQuery) {
+        navigate(`/events/${eventIdFromQuery}`);
+      } else {
+        navigate("/tasks");
+      }
     },
     onError: (error) => {
       toast({
@@ -90,13 +108,17 @@ const NewTaskPage = () => {
         <Button 
           variant="ghost" 
           className="mr-4 p-0 hover:bg-transparent"
-          onClick={() => navigate("/tasks")}
+          onClick={() => eventIdFromQuery ? navigate(`/events/${eventIdFromQuery}`) : navigate("/tasks")}
         >
           <ArrowLeft className="h-5 w-5 text-gray-400" />
         </Button>
         <div>
           <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-900">Nuovo Task</h1>
-          <p className="mt-1 text-gray-500">Crea una nuova attività da completare</p>
+          <p className="mt-1 text-gray-500">
+            {eventIdFromQuery && selectedEvent 
+              ? `Crea una nuova attività per l'evento "${selectedEvent.title}"` 
+              : "Crea una nuova attività da completare"}
+          </p>
         </div>
       </div>
       
@@ -131,7 +153,11 @@ const NewTaskPage = () => {
                       <Textarea
                         placeholder="Descrivi l'attività da completare"
                         className="min-h-[100px]"
-                        {...field}
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
                       />
                     </FormControl>
                     <FormMessage />
@@ -146,11 +172,17 @@ const NewTaskPage = () => {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Data di scadenza</FormLabel>
-                      <DatePicker
-                        date={field.value}
-                        setDate={field.onChange}
-                        className="w-full"
-                      />
+                      <FormControl>
+                        <Input 
+                          type="date"
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          onChange={(e) => {
+                            const date = e.target.value ? new Date(e.target.value) : null;
+                            field.onChange(date);
+                          }}
+                          className="w-full"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -216,7 +248,7 @@ const NewTaskPage = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate("/tasks")}
+                  onClick={() => eventIdFromQuery ? navigate(`/events/${eventIdFromQuery}`) : navigate("/tasks")}
                 >
                   Annulla
                 </Button>

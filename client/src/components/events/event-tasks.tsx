@@ -20,8 +20,22 @@ export default function EventTasks({ eventId, className }: EventTasksProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Definisce l'interfaccia per le attività
+  interface Task {
+    id: number;
+    title: string;
+    description?: string;
+    dueDate?: string;
+    completed: boolean;
+    priority?: string;
+    estimatedHours?: number;
+    assignedTo?: number;
+    assignedToName?: string;
+    eventId?: number;
+  }
+  
   // Carica le attività associate all'evento
-  const { data: tasks = [], isLoading } = useQuery({
+  const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: ["/api/tasks", { eventId }],
     enabled: !!eventId,
   });
@@ -74,7 +88,7 @@ export default function EventTasks({ eventId, className }: EventTasksProps) {
       case "alta":
         return "destructive";
       case "media":
-        return "orange";
+        return "amber"; // Cambio da orange a amber per compatibilità con il sistema di Badge
       case "bassa":
         return "green";
       default:
@@ -120,7 +134,7 @@ export default function EventTasks({ eventId, className }: EventTasksProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {tasks.map((task: any) => (
+            {tasks.map((task: Task) => (
               <div key={task.id} className="border rounded-lg p-4 relative hover:border-primary/50 transition-colors">
                 <div className="flex items-start gap-3">
                   <button

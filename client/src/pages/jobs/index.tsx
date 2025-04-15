@@ -123,7 +123,7 @@ export default function JobsPage() {
   };
 
   // Ottieni l'icona in base al tipo di lavoro
-  const getTypeIcon = (job: any) => {
+  const getTypeIcon = (job: Job) => {
     if (job.type === "quote") {
       return <FileText className="h-4 w-4" />;
     } else {
@@ -224,7 +224,7 @@ export default function JobsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredJobs.map((job: any) => (
+                      {filteredJobs.map((job: Job) => (
                         <TableRow 
                           key={`${job.type}-${job.id}`}
                           className="cursor-pointer hover:bg-muted/50"

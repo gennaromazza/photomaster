@@ -1804,21 +1804,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     } catch (err) {
       res.status(500).json({ message: "Failed to update settings" });
     }
-  });Parse(req.body);
-
-      if (!parseResult.success) {
-        const errorMessage = fromZodError(parseResult.error).message;
-        return res.status(400).json({ message: errorMessage });
-      }
-
-      const updatedSettings = await storage.updateSettings(parseResult.data);
-      res.json(updatedSettings);
-    } catch (err) {
-      res.status(500).json({ message: "Failed to update settings" });
-    }
-  });
-
-    // Reset Password routes
+  });// Reset Password routes
   apiRouter.post("/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;

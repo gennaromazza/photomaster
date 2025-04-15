@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Loader2, ArrowLeft, Calendar, FileText, ClipboardList, 
   Users, MoreVertical, Check, X, Send, Clock,
-  Link as LinkIcon, RefreshCw, CheckCircle2
+  Link as LinkIcon, RefreshCw, CheckCircle2, Package
 } from "lucide-react";
 import {
   DropdownMenu,

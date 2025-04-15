@@ -186,13 +186,21 @@ export default function PublicQuotePage() {
       });
 
 
+      // Salviamo i dati nel localStorage per la pagina di conferma
+      if (quote.client) {
+        localStorage.setItem('signedQuoteClient', `${quote.client.firstName} ${quote.client.lastName}`.trim());
+      }
+      if (quote.title) {
+        localStorage.setItem('signedQuoteTitle', quote.title);
+      }
+
       toast({
         title: "Preventivo confermato",
         description: "Grazie per aver confermato il preventivo!",
       });
 
       // Reindirizza alla pagina di conferma
-      setLocation(`/quotes/public/confirmation/${token}`);
+      setLocation(`/quotes/sign-success?token=${token}`);
     } catch (error) {
       console.error("Errore firma preventivo:", error);
       toast({

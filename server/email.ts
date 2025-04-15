@@ -148,3 +148,60 @@ Studio Arte
     text,
   });
 }
+
+/**
+ * Invia una notifica all'amministratore quando un preventivo viene firmato
+ */
+export async function sendQuoteSignedNotification(quote: any, clientName: string, signature: string): Promise<boolean> {
+  const subject = `Preventivo firmato: ${quote.title}`;
+  const text = `
+Ciao Admin,
+
+Un preventivo è stato firmato da un cliente.
+
+Dettagli del preventivo:
+- Titolo: ${quote.title}
+- ID: ${quote.id}
+- Cliente: ${clientName}
+- Firmato da: ${signature}
+- Data di firma: ${new Date().toLocaleDateString('it-IT')}
+
+Puoi visualizzare tutti i dettagli dal pannello amministrativo.
+
+Saluti,
+Studio Arte
+`;
+
+  return await sendEmail({
+    to: ADMIN_EMAIL,
+    subject,
+    text,
+  });
+}
+
+/**
+ * Invia una conferma al cliente dopo la firma del preventivo
+ */
+export async function sendQuoteSignedConfirmation(clientEmail: string, clientName: string, quote: any): Promise<boolean> {
+  if (!clientEmail) return false;
+  
+  const subject = `Conferma firma: ${quote.title}`;
+  const text = `
+Ciao ${clientName},
+
+Grazie per aver firmato il preventivo "${quote.title}".
+
+Una copia del contratto firmato è disponibile nel tuo profilo. Ti contatteremo a breve per i prossimi passi.
+
+Se hai domande, non esitare a contattarci.
+
+Cordiali saluti,
+Studio Arte
+`;
+
+  return await sendEmail({
+    to: clientEmail,
+    subject,
+    text,
+  });
+}

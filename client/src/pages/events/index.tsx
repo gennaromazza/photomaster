@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,7 @@ const EventsPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
@@ -283,7 +283,7 @@ const EventsPage = () => {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Link href={`/events/detail/${event.id}`}>
+                        <Link href={`/jobs/new-${event.id}`}>
                           <Button 
                             variant="ghost" 
                             size="sm"

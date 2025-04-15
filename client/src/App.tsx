@@ -47,6 +47,7 @@ import BundleDetailPage from "@/pages/bundles/detail/[id]";
 import NewQuotePage from "@/pages/quotes/new-redesign";
 import QuoteDetailPage from "@/pages/quotes/detail/[id]";
 import QuotePublicPage from "@/pages/quotes/public/[token]";
+import SignSuccessPage from "@/pages/quotes/sign-success";
 
 function Router() {
   return (
@@ -81,6 +82,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/reset-password/:token" component={ResetPasswordPage} />
       <Route path="/quotes/public/:token" component={QuotePublicPage} />
+      <Route path="/quotes/sign-success" component={SignSuccessPage} />
       <Route component={NotFound} />
     </Switch>
   );

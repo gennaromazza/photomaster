@@ -201,3 +201,20 @@ export function getDaysLeftText(days: number): string {
   
   return days === 1 ? "Scade domani" : `Scade tra ${days} giorni`;
 }
+
+/**
+ * Estrae i parametri dalla query string dell'URL corrente
+ * @returns Oggetto con i parametri della query string
+ */
+export function getQueryParams(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  
+  const params = new URLSearchParams(window.location.search);
+  const result: Record<string, string> = {};
+  
+  params.forEach((value, key) => {
+    result[key] = value;
+  });
+  
+  return result;
+}

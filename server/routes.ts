@@ -2091,10 +2091,14 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         });
       }
 
+      // Estrai i campi selections dalle proprietà del modulo se ci sono
+      const { selections, updatedAt, ...moduleBaseData } = req.body;
+      
       // Crea il modulo con gestione corretta della data di scadenza
       const moduleData = {
-        ...req.body,
+        ...moduleBaseData,
         quoteId,
+        updatedAt: new Date(),
         expiryDate: req.body.expiryDate 
           ? new Date(req.body.expiryDate) 
           : (req.body.type === 'variable' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : undefined)
@@ -2105,7 +2109,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         throw new Error("Errore nella creazione del modulo");
       }
 
-      // Se ci sono elementi nel modulo, li creiamo
+      // Se ci sono elementi nel modulo fisso, li creiamo
       if (req.body.items && Array.isArray(req.body.items)) {
         await Promise.all(req.body.items.map(item => 
           storage.createQuoteModuleItem({
@@ -2113,6 +2117,39 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
             moduleId: newModule.id
           })
         ));
+      }
+      
+      // Se è un modulo variabile con selezioni, processiamo le selections e creiamo items appropriati
+      if (moduleData.type === 'variable' && selections && Array.isArray(selections)) {
+        console.log("Processando selections per modulo variabile", selections);
+        
+        try {
+          // Per ogni selezione, processiamo le opzioni come elementi del modulo
+          for (const selection of selections) {
+            if (selection.options && Array.isArray(selection.options)) {
+              // Crea item per ogni opzione nella selezione
+              for (const option of selection.options) {
+                await storage.createQuoteModuleItem({
+                  moduleId: newModule.id,
+                  serviceId: option.itemType === 'service' ? option.itemId : null,
+                  bundleId: option.itemType === 'bundle' ? option.itemId : null,
+                  productId: option.itemType === 'product' ? option.itemId : null,
+                  quantity: 1,
+                  unitPrice: option.price || 0,
+                  isRequired: option.isRequired || false,
+                  isSelected: option.isDefault || false,
+                  position: option.position || 0,
+                  hasDiscount: false,
+                  total: option.price || 0,
+                  notes: `${selection.name}: ${option.name}`
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Errore nella creazione degli item per il modulo variabile:", error);
+          throw new Error("Errore nella creazione degli item per il modulo variabile");
+        }
       }
 
       // Recupera il modulo completo con i suoi elementi
@@ -2140,7 +2177,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Rimuoviamo campi problematici e prepariamo i dati per l'aggiornamento
       const { 
-        createdAt, updatedAt, items: itemsFromBody, expiryDate, 
+        createdAt, updatedAt, items: itemsFromBody, selections, expiryDate, 
         ...moduleDataToUpdate 
       } = req.body;
 
@@ -2159,20 +2196,53 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Aggiorna il modulo
       const updatedModule = await storage.updateQuoteModule(moduleId, updateData);
 
-      // Gestisci gli elementi del modulo
+      // Elimina tutti gli elementi esistenti
+      const existingItems = await storage.getQuoteModuleItemsByModule(moduleId);
+      for (const item of existingItems) {
+        await storage.deleteQuoteModuleItem(item.id);
+      }
+      
+      // Gestisci gli elementi del modulo fisso
       if (itemsFromBody && Array.isArray(itemsFromBody)) {
-        // Elimina gli elementi esistenti
-        const existingItems = await storage.getQuoteModuleItemsByModule(moduleId);
-        for (const item of existingItems) {
-          await storage.deleteQuoteModuleItem(item.id);
-        }
-
         // Crea i nuovi elementi
         for (const item of itemsFromBody) {
           await storage.createQuoteModuleItem({
             ...item,
             moduleId
           });
+        }
+      }
+      
+      // Se è un modulo variabile, processa la struttura selections
+      if (updateData.type === 'variable' && selections && Array.isArray(selections)) {
+        console.log("Aggiornamento modulo variabile: processamento delle selections", selections);
+        
+        try {
+          // Per ogni selezione, processa le opzioni come elementi del modulo
+          for (const selection of selections) {
+            if (selection.options && Array.isArray(selection.options)) {
+              // Crea item per ogni opzione nella selezione
+              for (const option of selection.options) {
+                await storage.createQuoteModuleItem({
+                  moduleId: moduleId,
+                  serviceId: option.itemType === 'service' ? option.itemId : null,
+                  bundleId: option.itemType === 'bundle' ? option.itemId : null,
+                  productId: option.itemType === 'product' ? option.itemId : null,
+                  quantity: 1,
+                  unitPrice: option.price || 0,
+                  isRequired: option.isRequired || false,
+                  isSelected: option.isDefault || false,
+                  position: option.position || 0,
+                  hasDiscount: false,
+                  total: option.price || 0,
+                  notes: `${selection.name}: ${option.name}`
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Errore nella creazione degli item per il modulo variabile (update):", error);
+          throw new Error("Errore nell'aggiornamento degli item per il modulo variabile");
         }
       }
 

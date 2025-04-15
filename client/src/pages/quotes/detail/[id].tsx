@@ -124,8 +124,6 @@ export default function QuoteDetailPage() {
 
   // Mutation per eliminare il preventivo  
   const deleteQuoteMutation = useMutation({
-
-  const deleteQuoteMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("DELETE", `/api/quotes/${id}`);
       if (!res.ok) {

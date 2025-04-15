@@ -5,7 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { 
-  Loader2, ArrowLeft, Calendar, FileText, ClipboardList, 
+  Loader2, ArrowLeft, CalendarIcon, FileText, ClipboardList, 
   Users, MoreVertical, Check, X, Send, Clock, PlusCircle,
   Link as LinkIcon, RefreshCw, CheckCircle2, Package, Info
 } from "lucide-react";
@@ -217,7 +217,7 @@ export default function NewJobDetailPage() {
       case "confirmed":
         return job.type === "quote" 
           ? [
-              { label: "Crea evento", action: "create_event", icon: <Calendar className="h-4 w-4 mr-2" /> },
+              { label: "Crea evento", action: "create_event", icon: <CalendarIcon className="h-4 w-4 mr-2" /> },
               { label: "Riattiva", status: "pending", icon: <RefreshCw className="h-4 w-4 mr-2" /> },
               { label: "Annulla", status: "cancelled", icon: <X className="h-4 w-4 mr-2" /> },
             ]
@@ -562,7 +562,7 @@ export default function NewJobDetailPage() {
             
             {hasEventTab && (
               <TabsTrigger value="event" className="flex items-center">
-                <Calendar className="mr-2 h-4 w-4" />
+                <CalendarIcon className="mr-2 h-4 w-4" />
                 Evento
               </TabsTrigger>
             )}
@@ -607,7 +607,7 @@ export default function NewJobDetailPage() {
                       {job.type === "quote" ? (
                         <FileText className="h-3 w-3" />
                       ) : (
-                        <Calendar className="h-3 w-3" />
+                        <CalendarIcon className="h-3 w-3" />
                       )}
                       {job.type === "quote" ? "Preventivo" : "Evento"}
                     </Badge>
@@ -664,7 +664,7 @@ export default function NewJobDetailPage() {
                   {job.type === "quote" && job.eventId && (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Evento #{job.eventId}</p>
                           <p className="text-xs text-muted-foreground">Evento creato da questo preventivo</p>

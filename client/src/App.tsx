@@ -61,7 +61,7 @@ function Router() {
       <ProtectedRoute path="/calendar" component={Calendar} />
       <ProtectedRoute path="/events" component={EventsPage} />
       <ProtectedRoute path="/events/new" component={NewEventPage} />
-      <ProtectedRoute path="/events/detail/:id" component={EventDetail} />
+      <ProtectedRoute path="/events/:id" component={EventDetail} />
       <ProtectedRoute path="/tasks" component={TasksPage} />
       <ProtectedRoute path="/collaborators" component={CollaboratorsPage} />
       <ProtectedRoute path="/collaborators/new" component={NewCollaboratorPage} />

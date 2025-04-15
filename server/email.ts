@@ -99,23 +99,32 @@ export async function sendEmail(params: BaseEmailParams): Promise<boolean> {
  * Invia una notifica all'amministratore per una nuova registrazione
  */
 export async function sendRegistrationNotification(user: User): Promise<boolean> {
+  const settings = await storage.getSettings();
   const subject = "Nuova registrazione utente";
-  const text = `
-Ciao Admin,
+  
+  // Prepara i dati per il template
+  const templateData: TemplateData = {
+    utente_nome: user.fullName,
+    utente_username: user.username,
+    utente_email: user.email,
+    utente_ruolo: user.role
+  };
+  
+  // Ottieni il template dalle impostazioni o usa quello predefinito
+  const defaultTemplate = `Nuovo utente registrato!
 
-Un nuovo utente si è registrato sulla piattaforma Studio Arte.
+Un nuovo utente si è registrato alla piattaforma.
 
-Dettagli dell'utente:
-- Nome completo: ${user.fullName}
-- Username: ${user.username}
-- Email: ${user.email}
-- Ruolo richiesto: ${user.role}
+Dettagli:
+- Nome: {utente_nome}
+- Email: {utente_email}
+- Username: {utente_username}
+- Ruolo: {utente_ruolo}
 
-Per approvare o rifiutare questa richiesta, accedi al pannello di amministrazione.
+Accedi alla piattaforma per approvare o rifiutare questa registrazione.`;
 
-Saluti,
-Studio Arte
-`;
+  // Processa il template con le variabili
+  const text = await processTemplate(settings?.emailRegistrationNotification || defaultTemplate, templateData);
 
   return await sendEmail({
     to: ADMIN_EMAIL,
@@ -128,17 +137,29 @@ Studio Arte
  * Invia una notifica all'utente quando il suo account viene approvato
  */
 export async function sendApprovalNotification(user: User): Promise<boolean> {
+  const settings = await storage.getSettings();
   const subject = "Account Studio Arte approvato";
-  const text = `
-Ciao ${user.fullName},
+  
+  // Prepara i dati per il template
+  const templateData: TemplateData = {
+    utente_nome: user.fullName,
+    utente_email: user.email,
+    utente_username: user.username
+  };
+  
+  // Ottieni il template dalle impostazioni o usa quello predefinito
+  const defaultTemplate = `Gentile {utente_nome},
 
-Il tuo account su Studio Arte è stato approvato e ora è attivo.
+Siamo lieti di informarti che il tuo account è stato approvato!
 
-Puoi accedere utilizzando le tue credenziali.
+Ora puoi accedere alla piattaforma utilizzando le tue credenziali.
 
-Saluti,
-Studio Arte
-`;
+Studio {studio_nome}
+{studio_email}
+{studio_telefono}`;
+
+  // Processa il template con le variabili
+  const text = await processTemplate(settings?.emailApprovalNotification || defaultTemplate, templateData);
 
   return await sendEmail({
     to: user.email,
@@ -151,17 +172,28 @@ Studio Arte
  * Invia una notifica all'utente quando il suo account viene disabilitato
  */
 export async function sendDisabledNotification(user: User): Promise<boolean> {
+  const settings = await storage.getSettings();
   const subject = "Account Studio Arte disabilitato";
-  const text = `
-Ciao ${user.fullName},
+  
+  // Prepara i dati per il template
+  const templateData: TemplateData = {
+    utente_nome: user.fullName,
+    utente_email: user.email
+  };
+  
+  // Ottieni il template dalle impostazioni o usa quello predefinito
+  const defaultTemplate = `Gentile {utente_nome},
 
-Il tuo account su Studio Arte è stato disabilitato.
+Ti informiamo che il tuo account è stato temporaneamente disabilitato.
 
-Per maggiori informazioni, contatta l'amministratore.
+Per maggiori informazioni, contatta l'amministratore della piattaforma.
 
-Saluti,
-Studio Arte
-`;
+Studio {studio_nome}
+{studio_email}
+{studio_telefono}`;
+
+  // Processa il template con le variabili
+  const text = await processTemplate(settings?.emailDisabledNotification || defaultTemplate, templateData);
 
   return await sendEmail({
     to: user.email,
@@ -174,21 +206,34 @@ Studio Arte
  * Invia un'email con il link per il reset della password
  */
 export async function sendPasswordResetEmail(user: User, resetUrl: string): Promise<boolean> {
+  const settings = await storage.getSettings();
   const subject = "Reset Password Studio Arte";
-  const text = `
-Ciao ${user.fullName},
+  
+  // Prepara i dati per il template
+  const templateData: TemplateData = {
+    utente_nome: user.fullName,
+    utente_email: user.email,
+    reset_url: resetUrl
+  };
+  
+  // Ottieni il template dalle impostazioni o usa quello predefinito
+  const defaultTemplate = `Gentile {utente_nome},
 
-Hai richiesto il reset della password per il tuo account su Studio Arte.
+Abbiamo ricevuto una richiesta di reset della password per il tuo account.
 
 Per completare il reset della password, clicca sul seguente link:
-${resetUrl}
+{reset_url}
 
 Questo link è valido per 24 ore.
 Se non hai richiesto il reset della password, puoi ignorare questa email.
 
-Saluti,
-Studio Arte
-`;
+Cordiali saluti,
+{studio_nome}
+{studio_email}
+{studio_telefono}`;
+
+  // Processa il template con le variabili
+  const text = await processTemplate(settings?.emailPasswordReset || defaultTemplate, templateData);
 
   return await sendEmail({
     to: user.email,

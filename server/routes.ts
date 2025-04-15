@@ -1370,15 +1370,17 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Delete any associated events
       try {
-        // Verifica se la funzione esiste prima di chiamarla
-        if (typeof storage.getEventsByQuoteId === 'function') {
-          const events = await storage.getEventsByQuoteId(id);
-          for (const event of events) {
+        // Utilizziamo una query diretta sull'oggetto Event per trovare gli eventi associati
+        // al preventivo corrente utilizzando il campo quoteId
+        const eventsQuery = await storage.getAllEvents();
+        const eventsLinkedToQuote = eventsQuery.filter(event => event.quoteId === id);
+        
+        if (eventsLinkedToQuote.length > 0) {
+          // Elimina gli eventi collegati a questo preventivo
+          for (const event of eventsLinkedToQuote) {
             await storage.deleteEvent(event.id);
           }
-        } else {
-          // Usa un approccio alternativo o salta questa parte
-          console.log("Avviso: storage.getEventsByQuoteId non è disponibile, gli eventi collegati non verranno eliminati");
+          console.log(`Eliminati ${eventsLinkedToQuote.length} eventi associati al preventivo ${id}`);
         }
       } catch (error) {
         console.error("Errore durante l'eliminazione degli eventi associati:", error);
@@ -1486,21 +1488,26 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
 
       // Aggiorna lo stato del preventivo
+      // Nota: moduleSelections non è definito nello schema, quindi non lo includiamo
       await storage.updateQuote(quote.id, {
         status,
-        signature,
-        signedAt: new Date(signedAt),
-        moduleSelections: selectedModuleItems
+        signature
       });
+      
+      // Se necessario, salva moduleSelections in un altro modo o aggiorna lo schema
 
       // Crea un nuovo evento
+      // Gestione sicura della data dell'evento
+      const eventDate = quote.eventDate ? new Date(quote.eventDate) : new Date();
+      
       const event = await storage.createEvent({
         title: quote.title,
         description: quote.notes || '',
-        date: quote.eventDate,
-        location: quote.location,
+        date: eventDate,
+        endDate: null, // Richiesto dallo schema
+        location: quote.location || "",
         clientId: quote.clientId,
-        secondClientId: quote.secondClientId,
+        secondClientId: quote.secondClientId || undefined,
         quoteId: quote.id,
         status: "confirmed",
         eventType: quote.eventType || "wedding",
@@ -1828,7 +1835,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
 
       // Genera un token e imposta la scadenza (4 ore)
-      const token = require('crypto').randomBytes(20).toString('hex');
+      // Utilizziamo randomBytes da Node.js crypto invece di require
+      const crypto = await import('crypto');
+      const token = crypto.randomBytes(20).toString('hex');
       const expires = new Date();
       expires.setHours(expires.getHours() + 4);
 

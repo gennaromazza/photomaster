@@ -57,7 +57,23 @@ const EventsPage = () => {
     }
   };
   
-  const filteredEvents = events.filter(event => {
+  // Group events by date and title to identify duplicates
+  const groupedEvents = events.reduce((acc, event) => {
+    const key = `${event.date}_${event.title}`;
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(event);
+    return acc;
+  }, {} as Record<string, Event[]>);
+
+  // For each group, prefer the signed event if available
+  const deduplicatedEvents = Object.values(groupedEvents).map(group => {
+    const signedEvent = group.find(e => e.fromSignedQuote);
+    return signedEvent || group[0];
+  });
+
+  const filteredEvents = deduplicatedEvents.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          getClientName(event.clientId).toLowerCase().includes(searchQuery.toLowerCase());
     

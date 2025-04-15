@@ -99,7 +99,7 @@ export default function QuoteDetailPage() {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const [activeTab, setActiveTab] = useState("details");
 
-  // Query per ottenere i dati del preventivo
+  // Query per ottenere i dati del preventivo (include già i dati del cliente)
   const { 
     data: quote, 
     isLoading, 
@@ -109,18 +109,12 @@ export default function QuoteDetailPage() {
     queryKey: ["/api/quotes", id],
     enabled: !!id,
   });
-
-  // Query per ottenere le info del cliente
-  const { data: client, isLoading: isClientLoading } = useQuery<any>({
-    queryKey: [`/api/clients/${quote?.clientId}`],
-    enabled: !!quote?.clientId,
-  });
-
-  // Query per ottenere le info del secondo cliente (se presente)
-  const { data: secondClient, isLoading: isSecondClientLoading } = useQuery<any>({
-    queryKey: [`/api/clients/${quote?.secondClientId}`],
-    enabled: !!quote?.secondClientId,
-  });
+  
+  // Estrai i dati del cliente e del secondo cliente direttamente dall'oggetto quote
+  const client = quote?.client;
+  const secondClient = quote?.secondClient;
+  const isClientLoading = isLoading;
+  const isSecondClientLoading = isLoading;
 
   // Mutation per eliminare il preventivo  
   const deleteQuoteMutation = useMutation({

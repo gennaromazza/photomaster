@@ -465,7 +465,7 @@ export default function NewJobDetailPage() {
           ) : (
             <>
               <h3 className="text-lg font-semibold mb-4 flex items-center">
-                <Calendar className="h-5 w-5 mr-2 text-primary/80" />
+                <CalendarIcon className="h-5 w-5 mr-2 text-primary/80" />
                 Evento
               </h3>
               

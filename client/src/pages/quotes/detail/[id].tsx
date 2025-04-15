@@ -122,10 +122,8 @@ export default function QuoteDetailPage() {
     enabled: !!quote?.secondClientId,
   });
 
-  // Mutation per eliminare il preventivo
-  import { useToast } from "@/hooks/use-toast";
-  
-  const { toast } = useToast();
+  // Mutation per eliminare il preventivo  
+  const deleteQuoteMutation = useMutation({
 
   const deleteQuoteMutation = useMutation({
     mutationFn: async () => {

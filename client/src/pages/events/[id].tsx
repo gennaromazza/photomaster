@@ -270,11 +270,9 @@ export default function EventDetailPage() {
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Cliente</h3>
                 {client ? (
-                  <Link href={`/clients/${client.id}`}>
-                    <a className="mt-1 flex items-center text-primary hover:underline">
-                      <i className="ri-user-line mr-2"></i>
-                      {client.firstName} {client.lastName}
-                    </a>
+                  <Link href={`/clients/${client.id}`} className="mt-1 flex items-center text-primary hover:underline">
+                    <i className="ri-user-line mr-2"></i>
+                    {client.firstName} {client.lastName}
                   </Link>
                 ) : (
                   <p className="mt-1 text-gray-700">Cliente non disponibile</p>
@@ -311,7 +309,7 @@ export default function EventDetailPage() {
               
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Stato</h3>
-                <p className="mt-1">
+                <div className="mt-1">
                   <Badge 
                     variant={
                       event.status === "upcoming" ? "gray" :
@@ -323,7 +321,7 @@ export default function EventDetailPage() {
                      event.status === "in-progress" ? "In Corso" :
                      event.status === "completed" ? "Completato" : "Annullato"}
                   </Badge>
-                </p>
+                </div>
               </div>
               
               {event.description && (

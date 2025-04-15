@@ -1467,6 +1467,12 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       if (quote.status === "approved") {
         return res.status(400).json({ message: "Il preventivo è già stato firmato" });
       }
+      
+      // Recupera i dati del cliente
+      const client = await storage.getClient(quote.clientId);
+      if (!client) {
+        console.error("Cliente non trovato per il preventivo:", quote.id);
+      }
 
       // Aggiorna lo stato del preventivo
       await storage.updateQuote(quote.id, {
@@ -1479,14 +1485,32 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Crea un nuovo evento
       const event = await storage.createEvent({
         title: quote.title,
-        description: quote.description,
+        description: quote.notes || '',
         date: quote.eventDate,
         location: quote.location,
         clientId: quote.clientId,
         quoteId: quote.id,
         status: "confirmed",
-        eventType: quote.category?.name || "wedding",
+        eventType: quote.eventType || "wedding",
+        categoryId: quote.categoryId
       });
+      
+      // Invia email di notifica all'amministratore
+      const { sendQuoteSignedNotification, sendQuoteSignedConfirmation } = require('./email');
+      const clientName = client ? `${client.firstName} ${client.lastName}`.trim() : "Cliente";
+      
+      try {
+        // Invia notifica all'amministratore
+        await sendQuoteSignedNotification(quote, clientName, signature);
+        
+        // Invia conferma al cliente se è disponibile l'email
+        if (client && client.email) {
+          await sendQuoteSignedConfirmation(client.email, client.firstName, quote);
+        }
+      } catch (emailError) {
+        console.error("Errore nell'invio delle email di notifica:", emailError);
+        // Non blocchiamo il flusso in caso di errore nell'invio email
+      }
 
       res.json({ success: true, event });
     } catch (err) {

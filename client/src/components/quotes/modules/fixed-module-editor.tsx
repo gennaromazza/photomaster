@@ -150,9 +150,8 @@ export default function FixedModuleEditor({
     service.name.toLowerCase().includes(search.toLowerCase())
   );
   
-  const filteredProducts = services.filter(service => 
-    service.type === 'product' && 
-    service.name.toLowerCase().includes(search.toLowerCase())
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(search.toLowerCase())
   );
   
   // Aggiunge un servizio al modulo

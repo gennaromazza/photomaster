@@ -246,7 +246,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.delete("/events/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // Delete all related tasks
       const tasks = await storage.getTasksByEvent(id);
       for (const task of tasks) {
@@ -1339,7 +1339,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.delete("/quotes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // Delete any associated events first
       const events = await storage.getEventsByQuoteId(id);
       for (const event of events) {

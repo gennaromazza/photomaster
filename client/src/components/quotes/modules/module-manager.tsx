@@ -148,9 +148,25 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   };
 
   // Gestisce l'eliminazione di un modulo
-  const handleDeleteModule = (moduleId: number) => {
+  const handleDeleteModule = async (moduleId: number) => {
     if (window.confirm("Sei sicuro di voler eliminare questo modulo?")) {
-      deleteModuleMutation.mutate(moduleId);
+      try {
+        await deleteModuleMutation.mutateAsync(moduleId);
+        // Invalida la cache per forzare il refresh dei dati
+        queryClient.invalidateQueries(['quotes']);
+        queryClient.invalidateQueries(['quote', quoteId]);
+        queryClient.invalidateQueries(['quoteModules', quoteId]);
+        toast({
+          title: "Modulo eliminato",
+          description: "Il modulo è stato eliminato con successo",
+        });
+      } catch (error) {
+        toast({
+          title: "Errore",
+          description: "Si è verificato un errore durante l'eliminazione del modulo",
+          variant: "destructive",
+        });
+      }
     }
   };
 

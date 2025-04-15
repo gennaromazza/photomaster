@@ -6,12 +6,14 @@ import SignConfirmation from "@/components/quotes/sign-confirmation";
 export default function SignSuccessPage() {
   const [clientName, setClientName] = useState<string>("");
   const [quoteTitle, setQuoteTitle] = useState<string>("");
+  const [clientEmail, setClientEmail] = useState<string>("");
   const [, setLocation] = useLocation();
   
   useEffect(() => {
     // Tenta di recuperare i dati dal localStorage
     const storedClientName = localStorage.getItem('signedQuoteClient');
     const storedQuoteTitle = localStorage.getItem('signedQuoteTitle');
+    const storedClientEmail = localStorage.getItem('signedQuoteEmail');
     
     if (storedClientName) {
       setClientName(storedClientName);
@@ -22,6 +24,11 @@ export default function SignSuccessPage() {
     if (storedQuoteTitle) {
       setQuoteTitle(storedQuoteTitle);
       localStorage.removeItem('signedQuoteTitle');
+    }
+    
+    if (storedClientEmail) {
+      setClientEmail(storedClientEmail);
+      localStorage.removeItem('signedQuoteEmail');
     }
     
     // Se non ci sono dati nel localStorage, potrebbe essere che l'utente è arrivato
@@ -36,6 +43,10 @@ export default function SignSuccessPage() {
   }, [setLocation]);
   
   return (
-    <SignConfirmation clientName={clientName} quoteTitle={quoteTitle} />
+    <SignConfirmation 
+      clientName={clientName} 
+      quoteTitle={quoteTitle} 
+      clientEmail={clientEmail}
+    />
   );
 }

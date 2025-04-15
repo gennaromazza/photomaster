@@ -1468,10 +1468,16 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(400).json({ message: "Il preventivo è già stato firmato" });
       }
       
-      // Recupera i dati del cliente
+      // Recupera i dati del cliente principale
       const client = await storage.getClient(quote.clientId);
       if (!client) {
         console.error("Cliente non trovato per il preventivo:", quote.id);
+      }
+      
+      // Recupera i dati del cliente secondario, se presente
+      let secondClient = null;
+      if (quote.secondClientId) {
+        secondClient = await storage.getClient(quote.secondClientId);
       }
 
       // Aggiorna lo stato del preventivo
@@ -1489,6 +1495,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         date: quote.eventDate,
         location: quote.location,
         clientId: quote.clientId,
+        secondClientId: quote.secondClientId,
         quoteId: quote.id,
         status: "confirmed",
         eventType: quote.eventType || "wedding",
@@ -1503,9 +1510,16 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         // Invia notifica all'amministratore
         await sendQuoteSignedNotification(quote, clientName, signature);
         
-        // Invia conferma al cliente se è disponibile l'email
+        // Invia conferma al cliente principale se è disponibile l'email
         if (client && client.email) {
           await sendQuoteSignedConfirmation(client.email, client.firstName, quote);
+          console.log(`Email di conferma inviata al cliente principale: ${client.email}`);
+        }
+        
+        // Invia conferma anche al cliente secondario, se presente
+        if (secondClient && secondClient.email) {
+          await sendQuoteSignedConfirmation(secondClient.email, secondClient.firstName, quote);
+          console.log(`Email di conferma inviata al secondo cliente: ${secondClient.email}`);
         }
       } catch (emailError) {
         console.error("Errore nell'invio delle email di notifica:", emailError);

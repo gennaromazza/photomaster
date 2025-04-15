@@ -189,6 +189,9 @@ export default function PublicQuotePage() {
       // Salviamo i dati nel localStorage per la pagina di conferma
       if (quote.client) {
         localStorage.setItem('signedQuoteClient', `${quote.client.firstName} ${quote.client.lastName}`.trim());
+        if (quote.client.email) {
+          localStorage.setItem('signedQuoteEmail', quote.client.email);
+        }
       }
       if (quote.title) {
         localStorage.setItem('signedQuoteTitle', quote.title);

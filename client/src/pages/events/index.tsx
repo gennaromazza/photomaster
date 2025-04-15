@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useNavigate } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,15 +22,16 @@ const EventsPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
-  
+  const navigate = useNavigate();
+
   const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
   });
-  
+
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
   });
-  
+
   const getClientName = (clientId: number) => {
     const client = clients.find(c => c.id === clientId);
     return client ? `${client.firstName} ${client.lastName}` : "Cliente sconosciuto";
@@ -41,7 +41,7 @@ const EventsPage = () => {
     if (dateFilter === "all") return true;
     const today = new Date();
     const eventDate = new Date(event.date);
-    
+
     switch (dateFilter) {
       case "today":
         return eventDate.toDateString() === today.toDateString();
@@ -56,7 +56,7 @@ const EventsPage = () => {
         return true;
     }
   };
-  
+
   // Group events by date and title to identify duplicates
   const groupedEvents = events.reduce((acc, event) => {
     const key = `${event.date}_${event.title}`;
@@ -76,11 +76,11 @@ const EventsPage = () => {
   const filteredEvents = deduplicatedEvents.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          getClientName(event.clientId).toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "all" || event.status === statusFilter;
     const matchesType = typeFilter === "all" || event.eventType === typeFilter;
     const matchesDate = filterByDate(event);
-    
+
     return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
@@ -90,7 +90,7 @@ const EventsPage = () => {
     setTypeFilter("all");
     setDateFilter("all");
   };
-  
+
   const eventTypes = [
     { value: "all", label: "Tutti i tipi" },
     { value: "wedding", label: "Matrimonio" },
@@ -99,7 +99,7 @@ const EventsPage = () => {
     { value: "event", label: "Evento" },
     { value: "other", label: "Altro" },
   ];
-  
+
   const statusTypes = [
     { value: "all", label: "Tutti gli stati" },
     { value: "pending", label: "In Attesa" },
@@ -115,7 +115,7 @@ const EventsPage = () => {
     { value: "week", label: "Questa settimana" },
     { value: "month", label: "Questo mese" },
   ];
-  
+
   return (
     <div className="lg:px-8 px-4 mt-6 lg:mt-8">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
@@ -132,7 +132,7 @@ const EventsPage = () => {
           </Link>
         </div>
       </div>
-      
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-medium">Eventi</CardTitle>
@@ -149,7 +149,7 @@ const EventsPage = () => {
                   className="pl-8"
                 />
               </div>
-              
+
               <Button
                 variant="outline"
                 size="icon"
@@ -174,7 +174,7 @@ const EventsPage = () => {
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Stato" />
@@ -202,7 +202,7 @@ const EventsPage = () => {
               </Select>
             </div>
           </div>
-          
+
           {isLoading ? (
             <div className="flex justify-center p-8">
               <div className="animate-pulse text-gray-500">Caricamento eventi...</div>
@@ -283,7 +283,7 @@ const EventsPage = () => {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Link href={`/events/${event.id}`}>
+                        <Link href={`/events/detail/${event.id}`}>
                           <Button 
                             variant="ghost" 
                             size="sm"

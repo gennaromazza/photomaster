@@ -43,6 +43,12 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   const [moduleManagerState, setModuleManagerState] = useState<ModuleManagerState>(ModuleManagerState.LIST);
   const [editingModule, setEditingModule] = useState<QuoteModule | null>(null);
   const { toast } = useToast();
+  
+  // Query per ottenere le informazioni del preventivo per verificare se è firmato
+  const { data: quote } = useQuery({
+    queryKey: [`/api/quotes/${quoteId}`],
+    enabled: !!quoteId,
+  });
 
   // Query per ottenere i moduli del preventivo
   const {
@@ -326,6 +332,32 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
     );
   }
 
+  // Verifica se il preventivo è firmato
+  const isQuoteSigned = quote?.status === "approved";
+
+  // Messaggio di avviso per preventivi firmati
+  const renderSignedWarning = () => {
+    if (isQuoteSigned) {
+      return (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-4 rounded">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-8.414l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414L9 9.586V5a1 1 0 112 0v4.586z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-amber-700">
+                Questo preventivo è stato firmato e non può essere modificato.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   // Rendering condizionale in base allo stato
   return (
     <Card className="mb-8">
@@ -336,7 +368,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
             Moduli Preventivo
           </CardTitle>
 
-          {moduleManagerState === ModuleManagerState.LIST && (
+          {moduleManagerState === ModuleManagerState.LIST && !isQuoteSigned && (
             <Button size="sm" onClick={handleAddModule}>
               <Plus className="mr-1 h-4 w-4" />
               Aggiungi Modulo
@@ -346,12 +378,15 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
       </CardHeader>
 
       <CardContent>
+        {/* Mostra il messaggio di avviso per i preventivi firmati */}
+        {renderSignedWarning()}
+        
         {moduleManagerState === ModuleManagerState.LIST && (
           <>
             <ModuleList
               modules={modules}
-              onEditModule={handleEditModule}
-              onDeleteModule={handleDeleteModule}
+              onEditModule={isQuoteSigned ? undefined : handleEditModule}
+              onDeleteModule={isQuoteSigned ? undefined : handleDeleteModule}
             />
 
             {modules.length > 0 && (

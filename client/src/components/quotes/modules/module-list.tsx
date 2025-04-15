@@ -6,8 +6,8 @@ import { formatCurrency } from "@/lib/utils";
 
 interface ModuleListProps {
   modules: QuoteModule[];
-  onEditModule: (module: QuoteModule) => void;
-  onDeleteModule: (moduleId: number) => void;
+  onEditModule?: (module: QuoteModule) => void;
+  onDeleteModule?: (moduleId: number) => void;
 }
 
 /**
@@ -90,23 +90,27 @@ export default function ModuleList({
               </div>
               
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEditModule(module)}
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  Modifica
-                </Button>
+                {onEditModule && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEditModule(module)}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Modifica
+                  </Button>
+                )}
                 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => module.id && onDeleteModule(module.id)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {onDeleteModule && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => module.id && onDeleteModule(module.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>

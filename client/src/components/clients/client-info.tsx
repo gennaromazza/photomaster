@@ -1,120 +1,140 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Mail, MapPin, Phone, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Mail, PhoneCall, User, MapPin } from "lucide-react";
 
 interface ClientInfoProps {
-  client: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-    notes?: string;
-  };
-  minimal?: boolean;
+  clientId: number;
+  mode?: "compact" | "full";
+  className?: string;
 }
 
-export default function ClientInfo({ client, minimal = false }: ClientInfoProps) {
+export default function ClientInfo({ clientId, mode = "compact", className }: ClientInfoProps) {
   const [, navigate] = useLocation();
 
-  const handleViewDetails = () => {
-    navigate(`/clients/${client.id}`);
-  };
+  // Carica le informazioni del cliente
+  const { data: client, isLoading } = useQuery({
+    queryKey: ["/api/clients", clientId],
+    enabled: !!clientId,
+  });
 
-  if (minimal) {
+  if (isLoading) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-medium">{client.firstName} {client.lastName}</h3>
-            {client.email && (
-              <p className="text-sm text-gray-500 truncate">{client.email}</p>
-            )}
-          </div>
-        </div>
-        
-        {client.phone && (
-          <div className="flex items-center gap-2 text-sm">
-            <Phone className="h-3.5 w-3.5 text-gray-500" />
-            <span>{client.phone}</span>
-          </div>
-        )}
-        
-        {client.address && (
-          <div className="flex items-start gap-2 text-sm">
-            <MapPin className="h-3.5 w-3.5 text-gray-500 mt-0.5" />
-            <span className="text-gray-700">{client.address}</span>
-          </div>
-        )}
-      </div>
+      <Card className={className}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Caricamento...</CardTitle>
+        </CardHeader>
+      </Card>
     );
   }
 
+  if (!client) {
+    return (
+      <Card className={className}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Cliente non trovato</CardTitle>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  // Modalità compatta (per sidebar o schede)
+  if (mode === "compact") {
+    return (
+      <Card className={className}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Cliente</CardTitle>
+          <CardDescription>Dettagli cliente</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="font-medium text-lg mb-2">
+            {client.firstName} {client.lastName}
+          </div>
+          <div className="space-y-1 text-sm">
+            {client.email && (
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <span>{client.email}</span>
+              </div>
+            )}
+            {client.phone && (
+              <div className="flex items-center gap-2">
+                <PhoneCall className="h-4 w-4 text-muted-foreground" />
+                <span>{client.phone}</span>
+              </div>
+            )}
+            {client.address && (
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span className="truncate">{client.address}</span>
+              </div>
+            )}
+          </div>
+          <Separator className="my-3" />
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate(`/clients/${client.id}`)}
+            >
+              <User className="h-4 w-4 mr-2" />
+              Scheda Cliente
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Modalità completa (per pagina dedicata)
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-          <User className="h-8 w-8 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold">{client.firstName} {client.lastName}</h2>
-          {client.email && (
-            <div className="flex items-center gap-1.5 text-gray-600 mt-1">
-              <Mail className="h-4 w-4" />
-              <a href={`mailto:${client.email}`} className="hover:underline">
-                {client.email}
-              </a>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>Informazioni Cliente</CardTitle>
+        <CardDescription>Dettagli completi del cliente</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-xl font-semibold mb-1">
+              {client.firstName} {client.lastName}
+            </h3>
+            <div className="flex flex-col gap-2">
+              {client.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <a href={`mailto:${client.email}`} className="text-blue-600 hover:underline">
+                    {client.email}
+                  </a>
+                </div>
+              )}
+              {client.phone && (
+                <div className="flex items-center gap-2">
+                  <PhoneCall className="h-4 w-4 text-muted-foreground" />
+                  <a href={`tel:${client.phone}`} className="text-blue-600 hover:underline">
+                    {client.phone}
+                  </a>
+                </div>
+              )}
+              {client.address && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span>{client.address}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {client.notes && (
+            <div>
+              <h4 className="font-medium text-muted-foreground mb-1">Note</h4>
+              <p className="whitespace-pre-line">{client.notes}</p>
             </div>
           )}
         </div>
-      </div>
-
-      <div className="rounded-lg border bg-card p-4 space-y-3">
-        <h3 className="font-medium text-sm uppercase text-gray-500">Informazioni di contatto</h3>
-        
-        {client.phone && (
-          <div className="flex items-center gap-3">
-            <Phone className="h-4 w-4 text-gray-500" />
-            <div>
-              <div className="text-sm text-gray-500">Telefono</div>
-              <div className="font-medium">
-                <a href={`tel:${client.phone}`} className="hover:underline">
-                  {client.phone}
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {client.address && (
-          <div className="flex items-start gap-3">
-            <MapPin className="h-4 w-4 text-gray-500 mt-1" />
-            <div>
-              <div className="text-sm text-gray-500">Indirizzo</div>
-              <div className="font-medium">{client.address}</div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {client.notes && (
-        <div>
-          <h3 className="font-medium text-sm uppercase text-gray-500 mb-2">Note</h3>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="whitespace-pre-line text-gray-700">{client.notes}</div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex justify-start">
-        <Button onClick={handleViewDetails}>
-          Visualizza dettagli completi
-        </Button>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

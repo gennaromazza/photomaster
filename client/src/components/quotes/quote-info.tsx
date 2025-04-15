@@ -236,10 +236,12 @@ export default function QuoteInfo({ quote }: QuoteInfoProps) {
             </CardHeader>
             <CardContent>
               <CeremonyDetails 
-                readOnly 
-                ceremonyLocation={quote.ceremonyLocation} 
-                ceremonyTime={quote.ceremonyTime}
-                ceremonyNotes={quote.ceremonyNotes}
+                readOnly
+                ceremony={{
+                  location: quote.ceremonyLocation,
+                  time: quote.ceremonyTime,
+                  notes: quote.ceremonyNotes
+                }}
               />
             </CardContent>
           </Card>

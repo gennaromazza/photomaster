@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
@@ -11,15 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
   Table,
   TableBody,
   TableCell,
@@ -27,981 +18,244 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Icons
 import {
-  Calendar,
-  FileText,
-  MoreHorizontal,
   Search,
   Plus,
-  Eye,
-  Pencil,
-  Trash2,
-  CalendarPlus,
+  FileText,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  Filter,
 } from "lucide-react";
 
-/**
- * Pagina Jobs (Lavori)
- * Mostra un elenco unificato di preventivi ed eventi, organizzati come "lavori"
- */
 export default function JobsPage() {
   const [, navigate] = useLocation();
-  const [search, setSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  
-  // Definiamo le interfacce per i dati
-  interface Client {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email?: string;
-  }
 
-  interface Quote {
-    id: number;
-    title: string;
-    eventDate?: string;
-    createdAt?: string;
-    clientId: number;
-    isSigned?: boolean;
-    eventId?: number;
-    status?: string;
-  }
-
-  interface Event {
-    id: number;
-    title: string;
-    date: string;
-    clientId: number;
-    status: string;
-    fromSignedQuote?: boolean;
-    quoteId?: number;
-  }
-
-  // Definiamo l'interfaccia Job che rappresenta la vista unificata
-  interface Job {
-    id: number;
-    type: "quote" | "event";
-    title: string;
-    date: string | undefined;
-    clientId: number;
-    status: string;
-    eventId?: number;
-    quoteId?: number;
-    fromSignedQuote?: boolean;
-    quoteBadge?: string;
-    quoteBadgeColor?: string;
-  }
-
-  // Carica preventivi
-  const { data: quotes = [], isLoading: isLoadingQuotes } = useQuery<Quote[]>({
-    queryKey: ["/api/quotes"],
+  // Carica tutti i lavori (preventivi ed eventi)
+  const { data: jobs = [], isLoading } = useQuery({
+    queryKey: ["/api/jobs"],
   });
 
-  // Carica eventi
-  const { data: events = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
+  // Filtra i lavori in base al termine di ricerca e al tab attivo
+  const filteredJobs = jobs.filter((job: any) => {
+    // Filtra in base al termine di ricerca
+    const matchesSearch = 
+      !searchTerm || 
+      job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filtra in base al tab attivo
+    const matchesTab = 
+      activeTab === "all" ||
+      (activeTab === "quotes" && job.type === "quote") ||
+      (activeTab === "events" && job.type === "event");
+    
+    return matchesSearch && matchesTab;
   });
 
-  // Carica clienti per mostrare informazioni cliente
-  const { data: clients = [], isLoading: isLoadingClients } = useQuery<Client[]>({
-    queryKey: ["/api/clients"],
-  });
-
-  // Funzione per ottenere il nome del cliente
-  const getClientName = (clientId: number) => {
-    const client = clients.find((c: Client) => c.id === clientId);
-    return client ? `${client.firstName} ${client.lastName}` : "Cliente non trovato";
-  };
-
-  // Funzione per formattare la data con gestione di undefined
-  const formatDate = (dateString: string | undefined) => {
+  // Formatta la data
+  const formatDate = (dateString: string) => {
     if (!dateString) return "N/D";
     return format(new Date(dateString), "d MMM yyyy", { locale: it });
   };
 
-  // Combiniamo preventivi ed eventi in un unico array di lavori
-  const jobs: Job[] = [
-    ...quotes.map((quote: Quote) => ({
-      id: quote.id,
-      type: "quote" as const,
-      title: quote.title,
-      date: quote.eventDate || quote.createdAt,
-      clientId: quote.clientId,
-      status: quote.isSigned ? "signed" : "pending",
-      eventId: quote.eventId,
-      fromSignedQuote: false,
-      quoteBadge: quote.isSigned ? "Firmato" : "In attesa",
-      quoteBadgeColor: quote.isSigned ? "green" : "amber",
-    })),
-    ...events
-      .filter((event: Event) => {
-        // Escludiamo gli eventi già associati a preventivi che abbiamo già elencato
-        const quoteHasEvent = quotes.some((q: Quote) => q.eventId === event.id);
-        return !quoteHasEvent;
-      })
-      .map((event: Event) => ({
-        id: event.id,
-        type: "event" as const,
-        title: event.title,
-        date: event.date,
-        clientId: event.clientId,
-        status: event.status,
-        fromSignedQuote: event.fromSignedQuote,
-        quoteId: event.quoteId,
-      })),
-  ];
+  // Ottieni il colore del badge in base allo stato del lavoro
+  const getStatusColor = (job: any) => {
+    if (job.type === "quote") {
+      return job.isSigned ? "green" : "amber";
+    } else {
+      switch (job.status?.toLowerCase()) {
+        case "completed":
+          return "green";
+        case "in progress":
+          return "blue";
+        case "scheduled":
+          return "amber";
+        case "cancelled":
+          return "destructive";
+        default:
+          return "secondary";
+      }
+    }
+  };
 
-  // Filtra in base alla ricerca
-  const filteredJobs = jobs.filter((job) => {
-    if (!search) return true;
-    
-    // Cerca nel titolo
-    if (job.title.toLowerCase().includes(search.toLowerCase())) return true;
-    
-    // Cerca nel nome cliente
-    const clientName = job.clientId ? getClientName(job.clientId).toLowerCase() : "";
-    if (clientName.includes(search.toLowerCase())) return true;
-    
-    return false;
-  });
+  // Ottieni il testo dello stato in base al tipo e allo stato del lavoro
+  const getStatusText = (job: any) => {
+    if (job.type === "quote") {
+      return job.isSigned ? "Firmato" : "In Attesa";
+    } else {
+      switch (job.status?.toLowerCase()) {
+        case "completed":
+          return "Completato";
+        case "in progress":
+          return "In Corso";
+        case "scheduled":
+          return "Programmato";
+        case "cancelled":
+          return "Annullato";
+        default:
+          return "N/D";
+      }
+    }
+  };
 
-  // Filtra in base al tab attivo
-  const displayedJobs = filteredJobs.filter((job) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "quotes") return job.type === "quote";
-    if (activeTab === "events") return job.type === "event";
-    if (activeTab === "signed") return job.status === "signed" || job.fromSignedQuote;
-    if (activeTab === "pending") return job.type === "quote" && job.status === "pending";
-    return true;
-  });
-
-  // Ordina per data (più recenti prima)
-  const sortedJobs = [...displayedJobs].sort((a, b) => {
-    if (!a.date) return 1;
-    if (!b.date) return -1;
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
+  // Ottieni l'icona in base al tipo di lavoro
+  const getTypeIcon = (job: any) => {
+    if (job.type === "quote") {
+      return <FileText className="h-4 w-4" />;
+    } else {
+      return <Calendar className="h-4 w-4" />;
+    }
+  };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+    <div className="container py-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-display font-semibold mb-2">Lavori</h1>
-          <p className="text-gray-500">
-            Gestione unificata di preventivi ed eventi
+          <h1 className="text-3xl font-bold">Lavori</h1>
+          <p className="text-muted-foreground">
+            Gestisci preventivi, eventi e tutti i tuoi lavori in un unico posto
           </p>
         </div>
-
-        <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-          <Button onClick={() => navigate("/quotes/new-quote")}>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button onClick={() => navigate("/quotes/new")}>
             <FileText className="h-4 w-4 mr-2" />
             Nuovo Preventivo
           </Button>
-          <Button variant="outline" onClick={() => navigate("/events/new")}>
+          <Button onClick={() => navigate("/events/new")}>
             <Calendar className="h-4 w-4 mr-2" />
             Nuovo Evento
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <CardTitle>Tutti i Lavori</CardTitle>
-              <CardDescription>
-                Visualizza e gestisci preventivi ed eventi in un'unica vista
-              </CardDescription>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                <Input
-                  type="search"
-                  placeholder="Cerca..."
-                  className="pl-8"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+      <div className="grid gap-4 mb-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>I Tuoi Lavori</CardTitle>
+            <CardDescription>
+              Visualizza e gestisci tutti i tuoi lavori in corso e programmati
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Cerca per titolo, cliente..."
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+                  <TabsList>
+                    <TabsTrigger value="all">Tutti</TabsTrigger>
+                    <TabsTrigger value="quotes">Preventivi</TabsTrigger>
+                    <TabsTrigger value="events">Eventi</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
-            </div>
-          </div>
-        </CardHeader>
 
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <div className="px-6">
-            <TabsList className="w-full md:w-auto">
-              <TabsTrigger value="all" className="flex-1 md:flex-initial">Tutti</TabsTrigger>
-              <TabsTrigger value="quotes" className="flex-1 md:flex-initial">Preventivi</TabsTrigger>
-              <TabsTrigger value="events" className="flex-1 md:flex-initial">Eventi</TabsTrigger>
-              <TabsTrigger value="signed" className="flex-1 md:flex-initial">Firmati</TabsTrigger>
-              <TabsTrigger value="pending" className="flex-1 md:flex-initial">In Attesa</TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="all" className="m-0">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Titolo</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingQuotes || isLoadingEvents || isLoadingClients ? (
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Caricamento lavori in corso...
+                </div>
+              ) : filteredJobs.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="max-w-md mx-auto">
+                    <div className="flex justify-center">
+                      <Filter className="h-12 w-12 text-muted-foreground opacity-50" />
+                    </div>
+                    <h3 className="mt-4 text-lg font-semibold">Nessun lavoro trovato</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {searchTerm
+                        ? "Nessun lavoro corrisponde ai criteri di ricerca. Prova a modificare i filtri."
+                        : "Nessun lavoro presente. Crea un nuovo preventivo o evento per iniziare."}
+                    </p>
+                    <div className="mt-6 flex flex-wrap justify-center gap-3">
+                      <Button onClick={() => navigate("/quotes/new")}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuovo Preventivo
+                      </Button>
+                      <Button variant="outline" onClick={() => navigate("/events/new")}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuovo Evento
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center">
-                            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                          </div>
-                          <p className="mt-2 text-sm text-gray-500">Caricamento in corso...</p>
-                        </TableCell>
+                        <TableHead>Titolo</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Stato</TableHead>
+                        <TableHead className="text-right">Azioni</TableHead>
                       </TableRow>
-                    ) : sortedJobs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center mb-2">
-                            <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                              <FileText className="h-6 w-6 text-gray-400" />
-                            </div>
-                          </div>
-                          <p className="text-gray-500">Nessun lavoro trovato</p>
-                          {search && (
-                            <Button 
-                              variant="link" 
-                              className="mt-1"
-                              onClick={() => setSearch("")}
-                            >
-                              Cancella la ricerca
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      sortedJobs.map((job) => (
-                        <TableRow key={`${job.type}-${job.id}`}>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredJobs.map((job: any) => (
+                        <TableRow 
+                          key={`${job.type}-${job.id}`}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/jobs/${job.id}`)}
+                        >
+                          <TableCell className="font-medium">{job.title}</TableCell>
+                          <TableCell>{job.clientName}</TableCell>
                           <TableCell>
-                            <div className="font-medium">{job.title}</div>
+                            <Badge variant="outline" className="flex w-fit items-center gap-1">
+                              {getTypeIcon(job)}
+                              {job.type === "quote" ? "Preventivo" : "Evento"}
+                            </Badge>
                           </TableCell>
+                          <TableCell>{job.eventDate ? formatDate(job.eventDate) : "N/D"}</TableCell>
                           <TableCell>
-                            {job.clientId ? getClientName(job.clientId) : "N/D"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              {job.type === "quote" ? (
-                                <>
-                                  <FileText className="h-4 w-4 mr-1.5 text-primary" />
-                                  <span>Preventivo</span>
-                                </>
+                            <Badge variant={getStatusColor(job)}>
+                              {job.isSigned ? (
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
                               ) : (
-                                <>
-                                  <Calendar className="h-4 w-4 mr-1.5 text-blue-500" />
-                                  <span>Evento</span>
-                                </>
+                                <Clock className="h-3 w-3 mr-1" />
                               )}
-                              {job.fromSignedQuote && (
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  Da preventivo
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {formatDate(job.date)}
-                          </TableCell>
-                          <TableCell>
-                            {job.type === "quote" ? (
-                              <Badge className={
-                                job.quoteBadgeColor === "green" 
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200" 
-                                  : "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                              }>
-                                {job.quoteBadge}
-                              </Badge>
-                            ) : (
-                              <Badge className={
-                                job.status === "upcoming"
-                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                  : job.status === "in-progress"
-                                  ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                  : job.status === "completed"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                  : "bg-red-100 text-red-800 hover:bg-red-200"
-                              }>
-                                {job.status === "upcoming"
-                                  ? "Prossimo"
-                                  : job.status === "in-progress"
-                                  ? "In Corso"
-                                  : job.status === "completed"
-                                  ? "Completato"
-                                  : "Annullato"}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate(`/jobs/${job.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => navigate(`/jobs/${job.id}`)}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Visualizza
-                                  </DropdownMenuItem>
-                                  
-                                  {job.type === "quote" && job.status !== "signed" && (
-                                    <DropdownMenuItem onClick={() => navigate(`/quotes/new-quote?edit=${job.id}`)}>
-                                      <Pencil className="h-4 w-4 mr-2" />
-                                      Modifica
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "quote" && !job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/events/new?quoteId=${job.id}`)}>
-                                      <CalendarPlus className="h-4 w-4 mr-2" />
-                                      Crea Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "quote" && job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.eventId}`)}>
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      Vai all'Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "event" && job.quoteId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.quoteId}`)}>
-                                      <FileText className="h-4 w-4 mr-2" />
-                                      Vai al Preventivo
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </TabsContent>
-
-          {/* Gli altri tab usano lo stesso contenuto con filtri diversi */}
-          <TabsContent value="quotes" className="m-0">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Titolo</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingQuotes || isLoadingEvents || isLoadingClients ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center">
-                            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                          </div>
-                          <p className="mt-2 text-sm text-gray-500">Caricamento in corso...</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : sortedJobs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center mb-2">
-                            <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                              <FileText className="h-6 w-6 text-gray-400" />
-                            </div>
-                          </div>
-                          <p className="text-gray-500">Nessun preventivo trovato</p>
-                          {search && (
-                            <Button 
-                              variant="link" 
-                              className="mt-1"
-                              onClick={() => setSearch("")}
-                            >
-                              Cancella la ricerca
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      sortedJobs.map((job) => (
-                        <TableRow key={`${job.type}-${job.id}`}>
-                          <TableCell>
-                            <div className="font-medium">{job.title}</div>
-                          </TableCell>
-                          <TableCell>
-                            {job.clientId ? getClientName(job.clientId) : "N/D"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              {job.type === "quote" ? (
-                                <>
-                                  <FileText className="h-4 w-4 mr-1.5 text-primary" />
-                                  <span>Preventivo</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Calendar className="h-4 w-4 mr-1.5 text-blue-500" />
-                                  <span>Evento</span>
-                                </>
-                              )}
-                              {job.fromSignedQuote && (
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  Da preventivo
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {formatDate(job.date)}
-                          </TableCell>
-                          <TableCell>
-                            {job.type === "quote" ? (
-                              <Badge className={
-                                job.quoteBadgeColor === "green" 
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200" 
-                                  : "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                              }>
-                                {job.quoteBadge}
-                              </Badge>
-                            ) : (
-                              <Badge className={
-                                job.status === "upcoming"
-                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                  : job.status === "in-progress"
-                                  ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                  : job.status === "completed"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                  : "bg-red-100 text-red-800 hover:bg-red-200"
-                              }>
-                                {job.status === "upcoming"
-                                  ? "Prossimo"
-                                  : job.status === "in-progress"
-                                  ? "In Corso"
-                                  : job.status === "completed"
-                                  ? "Completato"
-                                  : "Annullato"}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate(`/jobs/${job.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => navigate(`/jobs/${job.id}`)}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Visualizza
-                                  </DropdownMenuItem>
-                                  
-                                  {job.type === "quote" && job.status !== "signed" && (
-                                    <DropdownMenuItem onClick={() => navigate(`/quotes/new-quote?edit=${job.id}`)}>
-                                      <Pencil className="h-4 w-4 mr-2" />
-                                      Modifica
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "quote" && !job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/events/new?quoteId=${job.id}`)}>
-                                      <CalendarPlus className="h-4 w-4 mr-2" />
-                                      Crea Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "quote" && job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.eventId}`)}>
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      Vai all'Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </TabsContent>
-
-          <TabsContent value="events" className="m-0">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Titolo</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingQuotes || isLoadingEvents || isLoadingClients ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center">
-                            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                          </div>
-                          <p className="mt-2 text-sm text-gray-500">Caricamento in corso...</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : sortedJobs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center mb-2">
-                            <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                              <Calendar className="h-6 w-6 text-gray-400" />
-                            </div>
-                          </div>
-                          <p className="text-gray-500">Nessun evento trovato</p>
-                          {search && (
-                            <Button 
-                              variant="link" 
-                              className="mt-1"
-                              onClick={() => setSearch("")}
-                            >
-                              Cancella la ricerca
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      sortedJobs.map((job) => (
-                        <TableRow key={`${job.type}-${job.id}`}>
-                          <TableCell>
-                            <div className="font-medium">{job.title}</div>
-                          </TableCell>
-                          <TableCell>
-                            {job.clientId ? getClientName(job.clientId) : "N/D"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              {job.type === "quote" ? (
-                                <>
-                                  <FileText className="h-4 w-4 mr-1.5 text-primary" />
-                                  <span>Preventivo</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Calendar className="h-4 w-4 mr-1.5 text-blue-500" />
-                                  <span>Evento</span>
-                                </>
-                              )}
-                              {job.fromSignedQuote && (
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  Da preventivo
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {formatDate(job.date)}
-                          </TableCell>
-                          <TableCell>
-                            {job.type === "quote" ? (
-                              <Badge className={
-                                job.quoteBadgeColor === "green" 
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200" 
-                                  : "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                              }>
-                                {job.quoteBadge}
-                              </Badge>
-                            ) : (
-                              <Badge className={
-                                job.status === "upcoming"
-                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                  : job.status === "in-progress"
-                                  ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                  : job.status === "completed"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                  : "bg-red-100 text-red-800 hover:bg-red-200"
-                              }>
-                                {job.status === "upcoming"
-                                  ? "Prossimo"
-                                  : job.status === "in-progress"
-                                  ? "In Corso"
-                                  : job.status === "completed"
-                                  ? "Completato"
-                                  : "Annullato"}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate(`/jobs/${job.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => navigate(`/jobs/${job.id}`)}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Visualizza
-                                  </DropdownMenuItem>
-                                  
-                                  {job.type === "event" && job.quoteId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.quoteId}`)}>
-                                      <FileText className="h-4 w-4 mr-2" />
-                                      Vai al Preventivo
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </TabsContent>
-
-          <TabsContent value="signed" className="m-0">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Titolo</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingQuotes || isLoadingEvents || isLoadingClients ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center">
-                            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                          </div>
-                          <p className="mt-2 text-sm text-gray-500">Caricamento in corso...</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : sortedJobs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center mb-2">
-                            <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                              <FileText className="h-6 w-6 text-gray-400" />
-                            </div>
-                          </div>
-                          <p className="text-gray-500">Nessun lavoro firmato trovato</p>
-                          {search && (
-                            <Button 
-                              variant="link" 
-                              className="mt-1"
-                              onClick={() => setSearch("")}
-                            >
-                              Cancella la ricerca
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      sortedJobs.map((job) => (
-                        <TableRow key={`${job.type}-${job.id}`}>
-                          <TableCell>
-                            <div className="font-medium">{job.title}</div>
-                          </TableCell>
-                          <TableCell>
-                            {job.clientId ? getClientName(job.clientId) : "N/D"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              {job.type === "quote" ? (
-                                <>
-                                  <FileText className="h-4 w-4 mr-1.5 text-primary" />
-                                  <span>Preventivo</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Calendar className="h-4 w-4 mr-1.5 text-blue-500" />
-                                  <span>Evento</span>
-                                </>
-                              )}
-                              {job.fromSignedQuote && (
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  Da preventivo
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {formatDate(job.date)}
-                          </TableCell>
-                          <TableCell>
-                            {job.type === "quote" ? (
-                              <Badge className={
-                                job.quoteBadgeColor === "green" 
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200" 
-                                  : "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                              }>
-                                {job.quoteBadge}
-                              </Badge>
-                            ) : (
-                              <Badge className={
-                                job.status === "upcoming"
-                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                                  : job.status === "in-progress"
-                                  ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                  : job.status === "completed"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                  : "bg-red-100 text-red-800 hover:bg-red-200"
-                              }>
-                                {job.status === "upcoming"
-                                  ? "Prossimo"
-                                  : job.status === "in-progress"
-                                  ? "In Corso"
-                                  : job.status === "completed"
-                                  ? "Completato"
-                                  : "Annullato"}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate(`/jobs/${job.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => navigate(`/jobs/${job.id}`)}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Visualizza
-                                  </DropdownMenuItem>
-                                  
-                                  {job.type === "quote" && job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.eventId}`)}>
-                                      <Calendar className="h-4 w-4 mr-2" />
-                                      Vai all'Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "event" && job.quoteId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/jobs/${job.quoteId}`)}>
-                                      <FileText className="h-4 w-4 mr-2" />
-                                      Vai al Preventivo
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </TabsContent>
-
-          <TabsContent value="pending" className="m-0">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Titolo</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingQuotes || isLoadingEvents || isLoadingClients ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center">
-                            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                          </div>
-                          <p className="mt-2 text-sm text-gray-500">Caricamento in corso...</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : sortedJobs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex justify-center mb-2">
-                            <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-                              <FileText className="h-6 w-6 text-gray-400" />
-                            </div>
-                          </div>
-                          <p className="text-gray-500">Nessun preventivo in attesa trovato</p>
-                          {search && (
-                            <Button 
-                              variant="link" 
-                              className="mt-1"
-                              onClick={() => setSearch("")}
-                            >
-                              Cancella la ricerca
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      sortedJobs.map((job) => (
-                        <TableRow key={`${job.type}-${job.id}`}>
-                          <TableCell>
-                            <div className="font-medium">{job.title}</div>
-                          </TableCell>
-                          <TableCell>
-                            {job.clientId ? getClientName(job.clientId) : "N/D"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              {job.type === "quote" ? (
-                                <>
-                                  <FileText className="h-4 w-4 mr-1.5 text-primary" />
-                                  <span>Preventivo</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Calendar className="h-4 w-4 mr-1.5 text-blue-500" />
-                                  <span>Evento</span>
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {formatDate(job.date)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">
-                              {job.quoteBadge}
+                              {getStatusText(job)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate(`/jobs/${job.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => navigate(`/jobs/${job.id}`)}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Visualizza
-                                  </DropdownMenuItem>
-                                  
-                                  {job.type === "quote" && job.status !== "signed" && (
-                                    <DropdownMenuItem onClick={() => navigate(`/quotes/new-quote?edit=${job.id}`)}>
-                                      <Pencil className="h-4 w-4 mr-2" />
-                                      Modifica
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  {job.type === "quote" && !job.eventId && (
-                                    <DropdownMenuItem onClick={() => navigate(`/events/new?quoteId=${job.id}`)}>
-                                      <CalendarPlus className="h-4 w-4 mr-2" />
-                                      Crea Evento
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/jobs/${job.id}`);
+                              }}
+                            >
+                              <ArrowRight className="h-4 w-4" />
+                              <span className="sr-only">Visualizza dettagli</span>
+                            </Button>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </TabsContent>
-        </Tabs>
-      </Card>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

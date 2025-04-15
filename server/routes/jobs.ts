@@ -143,12 +143,12 @@ router.patch("/:id/status", isAuthenticated, async (req: Request, res: Response)
         .set({ status: quoteStatus })
         .where(eq(quotes.id, jobId));
         
-      // Se lo stato è "confirmed", aggiorna anche isSigned se non lo è già
+      // Se lo stato è "confirmed", mettiamo un commento nel campo notes che indica la firma
       if (status === "confirmed") {
+        // Aggiungiamo una nota al preventivo per indicare che è stato firmato tramite la gestione stati
         await db.update(quotes)
           .set({ 
-            isSigned: true, 
-            signedAt: new Date() 
+            notes: sql`CONCAT(COALESCE(notes, ''), '\n[CONFERMATO]: Preventivo firmato tramite cambio stato il ', NOW()::text)`
           })
           .where(eq(quotes.id, jobId));
       }

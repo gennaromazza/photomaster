@@ -229,7 +229,7 @@ const EventsPage = () => {
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-lg mr-3 bg-primary/10 flex items-center justify-center text-primary">
+                          <div className={`w-10 h-10 rounded-lg mr-3 ${event.fromSignedQuote ? "bg-green-100" : "bg-primary/10"} flex items-center justify-center ${event.fromSignedQuote ? "text-green-600" : "text-primary"}`}>
                             {event.eventType === "wedding" ? (
                               <Users className="h-4 w-4" />
                             ) : (

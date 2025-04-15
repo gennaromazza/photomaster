@@ -1509,6 +1509,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         clientId: quote.clientId,
         secondClientId: quote.secondClientId || undefined,
         quoteId: quote.id,
+        fromSignedQuote: true, // Indica che l'evento è stato creato da un preventivo firmato
         status: "confirmed",
         eventType: quote.eventType || "wedding",
         categoryId: quote.categoryId

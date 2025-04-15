@@ -221,8 +221,12 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
         quoteId: quoteId,
         name: moduleData.name.trim(),
         description: moduleData.description?.trim(),
-        type: moduleData.type as "fixed" | "variable", // Corregge il tipo per TypeScript
-        status: "active" as "active", // Corregge il tipo per TypeScript
+        type: moduleData.type as "fixed" | "variable",
+        status: "active" as "active",
+        // Ensure dates are properly formatted
+        createdAt: moduleData.createdAt ? new Date(moduleData.createdAt) : undefined,
+        updatedAt: new Date(),
+        expiryDate: moduleData.expiryDate ? new Date(moduleData.expiryDate) : null,
         items: moduleData.items?.map((item: any) => ({
           ...item,
           id: item.id || undefined, // Preserviamo l'ID se esiste, altrimenti undefined per nuovo item

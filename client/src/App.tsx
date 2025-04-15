@@ -74,6 +74,7 @@ function Router() {
       <ProtectedRoute path="/services/:id" component={ServiceDetailPage} />
       <ProtectedRoute path="/bundles" component={ServiceBundlesPage} />
       <Route path="/bundles/detail/:id" component={BundleDetailPage} />
+      <ProtectedRoute path="/profile" component={SettingsPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/settings/categories" component={CategoriesPage} />
       <ProtectedRoute path="/settings/origins" component={OriginsPage} />

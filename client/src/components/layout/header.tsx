@@ -86,9 +86,15 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profilo</DropdownMenuItem>
-              <DropdownMenuItem>Impostazioni</DropdownMenuItem>
-              <DropdownMenuItem>Aiuto</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/profile">Profilo</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings">Impostazioni</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/help">Aiuto</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Logout</DropdownMenuItem>
             </DropdownMenuContent>

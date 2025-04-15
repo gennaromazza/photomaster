@@ -11,7 +11,7 @@ import {
 import { setupUploadRoutes } from "./upload";
 import bundleLeadsRouter from "./routes/bundle-leads";
 import settingsRouter from "./routes/settings";
-import jobsRouter from "./routes/jobs";
+
 import { 
   insertClientSchema, 
   insertEventSchema,
@@ -2646,7 +2646,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Registrazione dei router modulari
   app.use("/api/bundle-leads", bundleLeadsRouter);
   app.use("/api/settings", settingsRouter);
-  app.use("/api/jobs", jobsRouter);
+  
 
   app.use("/api", apiRouter);
 

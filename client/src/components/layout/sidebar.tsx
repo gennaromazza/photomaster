@@ -77,13 +77,6 @@ export default function Sidebar() {
         />
         
         <SidebarLink
-          href="/jobs"
-          icon={<Briefcase className="h-4 w-4" />}
-          text="Lavori"
-          isActive={isActive("/jobs")}
-        />
-        
-        <SidebarLink
           href="/quotes"
           icon={<FileText className="h-4 w-4" />}
           text="Preventivi"

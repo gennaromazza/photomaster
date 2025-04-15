@@ -2138,14 +2138,23 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(404).json({ message: "Modulo non trovato" });
       }
 
-      // Prepara i dati per l'aggiornamento con gestione corretta della data
+      // Rimuoviamo campi problematici e prepariamo i dati per l'aggiornamento
+      const { 
+        createdAt, updatedAt, items, expiryDate, 
+        ...moduleDataToUpdate 
+      } = req.body;
+
+      // Prepara i dati per l'aggiornamento con gestione corretta delle date
       const updateData = {
-        ...req.body,
-        // Assicuriamoci che expiryDate sia nel formato corretto
-        expiryDate: req.body.expiryDate 
-          ? new Date(req.body.expiryDate) 
-          : existingModule.expiryDate
+        ...moduleDataToUpdate,
+        // Se expiryDate è fornito, lo convertiamo in Date oppure lo impostiamo a null
+        ...(expiryDate ? { expiryDate: new Date(expiryDate) } : { expiryDate: null }),
+        // Aggiorniamo la data di modifica
+        updatedAt: new Date()
       };
+
+      // Log dei dati che verranno inviati all'update
+      console.log("Dati per aggiornamento modulo:", updateData);
 
       // Aggiorna il modulo
       const updatedModule = await storage.updateQuoteModule(moduleId, updateData);

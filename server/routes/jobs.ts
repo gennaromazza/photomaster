@@ -32,8 +32,8 @@ router.get("/", async (req, res) => {
       eventDate: quote.eventDate,
       createdAt: quote.createdAt,
       updatedAt: quote.updatedAt,
-      isSigned: quote.isSigned,
-      status: quote.isSigned ? "signed" : "pending",
+      isSigned: quote.status === "signed",
+      status: quote.status === "signed" ? "signed" : "pending",
       quoteId: quote.id
     }));
     
@@ -45,8 +45,8 @@ router.get("/", async (req, res) => {
       clientId: event.clientId,
       clientName: event.client ? `${event.client.firstName} ${event.client.lastName}` : "Cliente sconosciuto",
       eventDate: event.date,
-      createdAt: event.createdAt,
-      updatedAt: event.updatedAt,
+      createdAt: new Date(event.date.getTime()),
+      updatedAt: new Date(event.date.getTime()),
       eventId: event.id,
       status: event.status || "scheduled",
       quoteId: event.quoteId || null
@@ -94,8 +94,8 @@ router.get("/:id", async (req, res) => {
         eventDate: quote.eventDate,
         createdAt: quote.createdAt,
         updatedAt: quote.updatedAt,
-        isSigned: quote.isSigned,
-        status: quote.isSigned ? "signed" : "pending",
+        isSigned: quote.status === "signed",
+        status: quote.status === "signed" ? "signed" : "pending",
         quoteId: quote.id,
         // Controlla se esiste un evento collegato a questo preventivo
         eventId: quote.eventId
@@ -121,8 +121,8 @@ router.get("/:id", async (req, res) => {
         clientId: event.clientId,
         clientName: event.client ? `${event.client.firstName} ${event.client.lastName}` : "Cliente sconosciuto",
         eventDate: event.date,
-        createdAt: event.createdAt,
-        updatedAt: event.updatedAt,
+        createdAt: new Date(event.date.getTime()),
+        updatedAt: new Date(event.date.getTime()),
         eventId: event.id,
         status: event.status || "scheduled",
         quoteId: event.quoteId || null

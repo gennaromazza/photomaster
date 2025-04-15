@@ -38,13 +38,29 @@ export default function JobsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
+  // Definisce l'interfaccia per i job
+  interface Job {
+    id: number;
+    type: "quote" | "event";
+    title: string;
+    clientId: number;
+    clientName: string;
+    eventDate?: string;
+    createdAt: string;
+    updatedAt: string;
+    isSigned?: boolean;
+    status: string;
+    quoteId?: number;
+    eventId?: number;
+  }
+  
   // Carica tutti i lavori (preventivi ed eventi)
-  const { data: jobs = [], isLoading } = useQuery({
+  const { data: jobs = [], isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
   });
 
   // Filtra i lavori in base al termine di ricerca e al tab attivo
-  const filteredJobs = jobs.filter((job: any) => {
+  const filteredJobs = jobs.filter((job: Job) => {
     // Filtra in base al termine di ricerca
     const matchesSearch = 
       !searchTerm || 
@@ -67,7 +83,7 @@ export default function JobsPage() {
   };
 
   // Ottieni il colore del badge in base allo stato del lavoro
-  const getStatusColor = (job: any) => {
+  const getStatusColor = (job: Job) => {
     if (job.type === "quote") {
       return job.isSigned ? "green" : "amber";
     } else {
@@ -87,7 +103,7 @@ export default function JobsPage() {
   };
 
   // Ottieni il testo dello stato in base al tipo e allo stato del lavoro
-  const getStatusText = (job: any) => {
+  const getStatusText = (job: Job) => {
     if (job.type === "quote") {
       return job.isSigned ? "Firmato" : "In Attesa";
     } else {

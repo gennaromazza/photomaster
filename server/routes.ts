@@ -2646,6 +2646,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Registrazione dei router modulari
   app.use("/api/bundle-leads", bundleLeadsRouter);
   app.use("/api/settings", settingsRouter);
+  app.use("/api/jobs", jobsRouter);
 
   app.use("/api", apiRouter);
 

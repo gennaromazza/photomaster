@@ -112,13 +112,13 @@ export default function QuoteDetailPage() {
 
   // Query per ottenere i dati del cliente in modo esplicito quando il preventivo è caricato
   const { data: client, isLoading: isClientLoading } = useQuery<any>({
-    queryKey: [`/api/clients/${quote?.clientId}`],
+    queryKey: ["/api/clients", quote?.clientId],
     enabled: !!quote && !!quote.clientId,
   });
 
   // Query per ottenere i dati del secondo cliente in modo esplicito quando il preventivo è caricato
   const { data: secondClient, isLoading: isSecondClientLoading } = useQuery<any>({
-    queryKey: [`/api/clients/${quote?.secondClientId}`],
+    queryKey: ["/api/clients", quote?.secondClientId],
     enabled: !!quote && !!quote.secondClientId,
   });
 

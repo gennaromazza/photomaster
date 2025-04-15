@@ -56,7 +56,15 @@ export const getQueryFn: <T>(options: {
       headers["Authorization"] = `Bearer ${token}`;
     }
     
-    const res = await fetch(queryKey[0] as string, {
+    // Costruisci l'URL completo in base alla queryKey
+    let url = queryKey[0] as string;
+    
+    // Se c'è un secondo elemento nella queryKey, è l'id da aggiungere all'URL
+    if (queryKey.length > 1 && queryKey[1] !== undefined) {
+      url = `${url}/${queryKey[1]}`;
+    }
+    
+    const res = await fetch(url, {
       headers,
       credentials: "include", // Manteniamo per compatibilità con sessioni
     });

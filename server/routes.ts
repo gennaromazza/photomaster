@@ -1128,6 +1128,10 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch quotes" });
     }
   });
+  
+  // API per recuperare un preventivo in base all'ID dell'evento associato
+  // Nota: questa rotta deve venire PRIMA della rotta parametrica /:id
+  apiRouter.get("/quotes/by-event/:eventId", async (req, res) => {
 
   apiRouter.get("/quotes/:id", async (req, res) => {
     try {
@@ -1141,6 +1145,39 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.json(quote);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch quote" });
+    }
+  });
+    try {
+      const eventId = parseInt(req.params.eventId);
+      
+      // Trova l'evento per verificare se esiste
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Evento non trovato" });
+      }
+      
+      // Se l'evento ha un quoteId, recupera il preventivo
+      if (event.quoteId) {
+        const quote = await storage.getQuote(event.quoteId);
+        if (!quote) {
+          return res.status(404).json({ message: "Preventivo non trovato" });
+        }
+        return res.json(quote);
+      }
+      
+      // Verifica se c'è un preventivo che ha questo eventId
+      const quotes = await storage.getAllQuotes();
+      const associatedQuote = quotes.find(q => q.eventId === eventId);
+      
+      if (associatedQuote) {
+        return res.json(associatedQuote);
+      }
+      
+      // Nessun preventivo associato
+      return res.status(404).json({ message: "Nessun preventivo associato a questo evento" });
+    } catch (err) {
+      console.error("Errore nel recuperare preventivo per evento:", err);
+      res.status(500).json({ message: "Errore nel recuperare il preventivo" });
     }
   });
 

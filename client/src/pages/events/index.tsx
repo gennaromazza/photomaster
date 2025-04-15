@@ -283,7 +283,7 @@ const EventsPage = () => {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Link href={`/jobs/new-${event.id}`}>
+                        <Link href={`/events/${event.id}`}>
                           <Button 
                             variant="ghost" 
                             size="sm"

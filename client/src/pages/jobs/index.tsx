@@ -58,32 +58,78 @@ export default function JobsPage() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   
+  // Definiamo le interfacce per i dati
+  interface Client {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email?: string;
+  }
+
+  interface Quote {
+    id: number;
+    title: string;
+    eventDate?: string;
+    createdAt?: string;
+    clientId: number;
+    isSigned?: boolean;
+    eventId?: number;
+    status?: string;
+  }
+
+  interface Event {
+    id: number;
+    title: string;
+    date: string;
+    clientId: number;
+    status: string;
+    fromSignedQuote?: boolean;
+    quoteId?: number;
+  }
+
+  // Definiamo l'interfaccia Job che rappresenta la vista unificata
+  interface Job {
+    id: number;
+    type: "quote" | "event";
+    title: string;
+    date: string | undefined;
+    clientId: number;
+    status: string;
+    eventId?: number;
+    quoteId?: number;
+    fromSignedQuote?: boolean;
+    quoteBadge?: string;
+    quoteBadgeColor?: string;
+  }
+
   // Carica preventivi
-  const { data: quotes = [], isLoading: isLoadingQuotes } = useQuery({
+  const { data: quotes = [], isLoading: isLoadingQuotes } = useQuery<Quote[]>({
     queryKey: ["/api/quotes"],
   });
 
   // Carica eventi
-  const { data: events = [], isLoading: isLoadingEvents } = useQuery({
+  const { data: events = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
     queryKey: ["/api/events"],
   });
 
   // Carica clienti per mostrare informazioni cliente
-  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
   });
 
+
+
   // Funzione per ottenere il nome del cliente
   const getClientName = (clientId: number) => {
-    const client = clients.find((c: any) => c.id === clientId);
+    const client = clients.find((c: Client) => c.id === clientId);
     return client ? `${client.firstName} ${client.lastName}` : "Cliente non trovato";
   };
 
   // Combiniamo preventivi ed eventi in un unico array di lavori
-  const jobs = [
-    ...quotes.map((quote: any) => ({
+  const jobs: Job[] = [
+    ...quotes.map((quote: Quote) => ({
       id: quote.id,
-      type: "quote",
+      type: "quote" as const,
       title: quote.title,
       date: quote.eventDate || quote.createdAt,
       clientId: quote.clientId,
@@ -94,14 +140,14 @@ export default function JobsPage() {
       quoteBadgeColor: quote.isSigned ? "green" : "amber",
     })),
     ...events
-      .filter((event: any) => {
+      .filter((event: Event) => {
         // Escludiamo gli eventi già associati a preventivi che abbiamo già elencato
-        const quoteHasEvent = quotes.some((q: any) => q.eventId === event.id);
+        const quoteHasEvent = quotes.some((q: Quote) => q.eventId === event.id);
         return !quoteHasEvent;
       })
-      .map((event: any) => ({
+      .map((event: Event) => ({
         id: event.id,
-        type: "event",
+        type: "event" as const,
         title: event.title,
         date: event.date,
         clientId: event.clientId,

@@ -2121,19 +2121,40 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       
       // Se è un modulo variabile con selezioni, processiamo le selections e creiamo items appropriati
       if (moduleData.type === 'variable' && selections && Array.isArray(selections)) {
-        console.log("Processando selections per modulo variabile", selections);
+        console.log("Processando selections per modulo variabile", JSON.stringify(selections, null, 2));
         
         try {
           // Per ogni selezione, processiamo le opzioni come elementi del modulo
           for (const selection of selections) {
+            console.log("Processando selezione:", JSON.stringify(selection, null, 2));
+            
             if (selection.options && Array.isArray(selection.options)) {
               // Crea item per ogni opzione nella selezione
               for (const option of selection.options) {
-                await storage.createQuoteModuleItem({
+                console.log("Processando opzione:", JSON.stringify(option, null, 2));
+                
+                // Conversione di itemId a numero se è una stringa
+                const itemId = typeof option.itemId === 'string' ? parseInt(option.itemId) : option.itemId;
+                
+                // Aggiungiamo controllo per il tipo di elemento
+                let serviceId = null;
+                let bundleId = null;
+                let productId = null;
+                
+                if (option.itemType === 'service') {
+                  serviceId = itemId;
+                } else if (option.itemType === 'bundle') {
+                  bundleId = itemId;
+                } else if (option.itemType === 'product') {
+                  serviceId = itemId; // i prodotti sono servizi con type='product'
+                }
+                
+                console.log(`Creazione item: moduleId=${newModule.id}, serviceId=${serviceId}, bundleId=${bundleId}, productId=${productId}`);
+                
+                const moduleItem = {
                   moduleId: newModule.id,
-                  serviceId: option.itemType === 'service' ? option.itemId : null,
-                  bundleId: option.itemType === 'bundle' ? option.itemId : null,
-                  productId: option.itemType === 'product' ? option.itemId : null,
+                  serviceId: serviceId,
+                  bundleId: bundleId,
                   quantity: 1,
                   unitPrice: option.price || 0,
                   isRequired: option.isRequired || false,
@@ -2142,7 +2163,12 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                   hasDiscount: false,
                   total: option.price || 0,
                   notes: `${selection.name}: ${option.name}`
-                });
+                };
+                
+                console.log("Creando item:", JSON.stringify(moduleItem, null, 2));
+                
+                const createdItem = await storage.createQuoteModuleItem(moduleItem);
+                console.log("Item creato:", JSON.stringify(createdItem, null, 2));
               }
             }
           }
@@ -2215,19 +2241,39 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       
       // Se è un modulo variabile, processa la struttura selections
       if (updateData.type === 'variable' && selections && Array.isArray(selections)) {
-        console.log("Aggiornamento modulo variabile: processamento delle selections", selections);
+        console.log("Aggiornamento modulo variabile: processamento delle selections", JSON.stringify(selections, null, 2));
         
         try {
           // Per ogni selezione, processa le opzioni come elementi del modulo
           for (const selection of selections) {
+            console.log("Processando selezione (update):", JSON.stringify(selection, null, 2));
+            
             if (selection.options && Array.isArray(selection.options)) {
               // Crea item per ogni opzione nella selezione
               for (const option of selection.options) {
-                await storage.createQuoteModuleItem({
+                console.log("Processando opzione (update):", JSON.stringify(option, null, 2));
+                
+                // Conversione di itemId a numero se è una stringa
+                const itemId = typeof option.itemId === 'string' ? parseInt(option.itemId) : option.itemId;
+                
+                // Aggiungiamo controllo per il tipo di elemento
+                let serviceId = null;
+                let bundleId = null;
+                
+                if (option.itemType === 'service') {
+                  serviceId = itemId;
+                } else if (option.itemType === 'bundle') {
+                  bundleId = itemId;
+                } else if (option.itemType === 'product') {
+                  serviceId = itemId; // i prodotti sono servizi con type='product'
+                }
+                
+                console.log(`Creazione item (update): moduleId=${moduleId}, serviceId=${serviceId}, bundleId=${bundleId}`);
+                
+                const moduleItem = {
                   moduleId: moduleId,
-                  serviceId: option.itemType === 'service' ? option.itemId : null,
-                  bundleId: option.itemType === 'bundle' ? option.itemId : null,
-                  productId: option.itemType === 'product' ? option.itemId : null,
+                  serviceId: serviceId,
+                  bundleId: bundleId,
                   quantity: 1,
                   unitPrice: option.price || 0,
                   isRequired: option.isRequired || false,
@@ -2236,7 +2282,12 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                   hasDiscount: false,
                   total: option.price || 0,
                   notes: `${selection.name}: ${option.name}`
-                });
+                };
+                
+                console.log("Creando item (update):", JSON.stringify(moduleItem, null, 2));
+                
+                const createdItem = await storage.createQuoteModuleItem(moduleItem);
+                console.log("Item creato (update):", JSON.stringify(createdItem, null, 2));
               }
             }
           }

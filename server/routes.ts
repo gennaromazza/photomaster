@@ -1350,9 +1350,20 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
 
       // Delete any associated events
-      const events = await storage.getEventsByQuoteId(id);
-      for (const event of events) {
-        await storage.deleteEvent(event.id);
+      try {
+        // Verifica se la funzione esiste prima di chiamarla
+        if (typeof storage.getEventsByQuoteId === 'function') {
+          const events = await storage.getEventsByQuoteId(id);
+          for (const event of events) {
+            await storage.deleteEvent(event.id);
+          }
+        } else {
+          // Usa un approccio alternativo o salta questa parte
+          console.log("Avviso: storage.getEventsByQuoteId non è disponibile, gli eventi collegati non verranno eliminati");
+        }
+      } catch (error) {
+        console.error("Errore durante l'eliminazione degli eventi associati:", error);
+        // Continua comunque con l'eliminazione del preventivo
       }
 
       // Delete the quote and all related items

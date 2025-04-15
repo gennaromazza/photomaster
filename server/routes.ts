@@ -11,6 +11,7 @@ import {
 import { setupUploadRoutes } from "./upload";
 import bundleLeadsRouter from "./routes/bundle-leads";
 import settingsRouter from "./routes/settings";
+import jobsRouter from "./routes/jobs";
 import { 
   insertClientSchema, 
   insertEventSchema,

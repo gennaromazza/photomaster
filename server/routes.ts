@@ -1927,7 +1927,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         modules.map(async (module) => {
           const items = await storage.getQuoteModuleItemsByModule(module.id);
 
-          // Arricchisci ogni item con i dettagli del servizio o bundle associato
+          // Arricchisci ogni item con i dettagli del servizio, prodotto o bundle associato
           const enrichedItems = await Promise.all(
             items.map(async (item) => {
               let enrichedItem = { ...item };
@@ -1954,6 +1954,19 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                     bundleName: bundle.name,
                     bundleDescription: bundle.description,
                     bundleImagePath: bundle.imagePath
+                  };
+                }
+              }
+
+              // Se l'item ha un productId, aggiungi i dettagli del prodotto
+              if (item.productId) {
+                const product = await storage.getService(item.productId);
+                if (product) {
+                  enrichedItem = {
+                    ...enrichedItem,
+                    productName: product.name,
+                    productDescription: product.description,
+                    productImagePath: product.imagePath
                   };
                 }
               }

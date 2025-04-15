@@ -237,7 +237,14 @@ const EventsPage = () => {
                             )}
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">{event.title}</div>
+                            <div className="font-medium text-gray-900">
+                              {event.title}
+                              {event.fromSignedQuote && (
+                                <span className="ml-2 text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
+                                  Preventivo Firmato
+                                </span>
+                              )}
+                            </div>
                             <div className="text-sm text-gray-500 capitalize">{event.eventType}</div>
                           </div>
                         </div>

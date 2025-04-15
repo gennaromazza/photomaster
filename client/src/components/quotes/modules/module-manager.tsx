@@ -349,6 +349,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
             <div className="ml-3">
               <p className="text-sm text-amber-700">
                 Questo preventivo è stato firmato e non può essere modificato.
+                I moduli sono bloccati per garantire la validità legale del contratto.
               </p>
             </div>
           </div>

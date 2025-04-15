@@ -2140,7 +2140,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Rimuoviamo campi problematici e prepariamo i dati per l'aggiornamento
       const { 
-        createdAt, updatedAt, items, expiryDate, 
+        createdAt, updatedAt, items: itemsFromBody, expiryDate, 
         ...moduleDataToUpdate 
       } = req.body;
 
@@ -2160,7 +2160,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       const updatedModule = await storage.updateQuoteModule(moduleId, updateData);
 
       // Gestisci gli elementi del modulo
-      if (req.body.items && Array.isArray(req.body.items)) {
+      if (itemsFromBody && Array.isArray(itemsFromBody)) {
         // Elimina gli elementi esistenti
         const existingItems = await storage.getQuoteModuleItemsByModule(moduleId);
         for (const item of existingItems) {
@@ -2168,7 +2168,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         }
 
         // Crea i nuovi elementi
-        for (const item of req.body.items) {
+        for (const item of itemsFromBody) {
           await storage.createQuoteModuleItem({
             ...item,
             moduleId
@@ -2177,9 +2177,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
 
       // Recupera il modulo aggiornato con i suoi elementi
-      const items = await storage.getQuoteModuleItemsByModule(moduleId);
+      const updatedItems = await storage.getQuoteModuleItemsByModule(moduleId);
 
-      res.json({ ...updatedModule, items });
+      res.json({ ...updatedModule, items: updatedItems });
     } catch (err) {
       console.error("Error updating module:", err);
       res.status(500).json({ message: "Errore nell'aggiornamento del modulo" });

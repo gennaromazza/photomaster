@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,7 +25,7 @@ const newTaskSchema = insertTaskSchema.extend({
 type NewTaskFormValues = z.infer<typeof newTaskSchema>;
 
 const NewTaskPage = () => {
-  const [_, navigate] = useNavigate();
+  const [_, navigate] = useLocation();
   const { toast } = useToast();
   
   // Recupera gli eventi per la selezione

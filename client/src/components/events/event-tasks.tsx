@@ -157,7 +157,11 @@ const EventTasks = ({ eventId }: EventTasksProps) => {
                 {task.dueDate && (
                   <div className="flex items-center text-xs text-gray-500 mt-2">
                     <i className="ri-time-line mr-1"></i>
-                    <span>Scadenza: {getDaysLeftText(task.dueDate)}</span>
+                    <span>Scadenza: {new Date(task.dueDate).toLocaleDateString('it-IT', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })}</span>
                   </div>
                 )}
               </div>

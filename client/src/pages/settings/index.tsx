@@ -95,6 +95,7 @@ const SettingsPage = () => {
         <TabsList className="mb-8">
           <TabsTrigger value="general">Generali</TabsTrigger>
           <TabsTrigger value="templates">Template</TabsTrigger>
+          <TabsTrigger value="emails">Email</TabsTrigger>
           <TabsTrigger value="config">Configurazioni</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>

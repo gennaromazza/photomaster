@@ -18,6 +18,7 @@ import {
 import { RiEyeLine, RiEdit2Line, RiDeleteBinLine } from "react-icons/ri";
 import { MoreVertical } from "lucide-react";
 import { useState as useState2 } from 'react';
+import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 
@@ -28,6 +29,7 @@ const QuotesPage = () => {
   const [, setLocation] = useLocation();
   const [quoteToDelete, setQuoteToDelete] = useState2<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState2(false);
+  const { toast } = useToast();
 
   const { data: quotes = [], isLoading, refetch } = useQuery<Quote[]>({
     queryKey: ["/api/quotes"],

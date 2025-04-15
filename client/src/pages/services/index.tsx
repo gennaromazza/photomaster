@@ -4,6 +4,7 @@ import { useLocation } from 'wouter';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Service } from '@shared/schema';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import {
   Card,
   CardContent,
@@ -63,7 +64,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+// Rimuovo l'importazione diretta di toast perché useremo const { toast } = useToast();
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'wouter';
 
@@ -106,6 +107,7 @@ const ServicesPage = () => {
   const [autoCalculatePrice, setAutoCalculatePrice] = useState(true);
   
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   
   // Recupera tutti i servizi
   const servicesQuery = useQuery<Service[]>({

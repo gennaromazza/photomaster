@@ -6,8 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import ModuleDisplay from "@/components/quotes/modules/module-display";
-import CeremonyDetails from "@/components/quotes/ceremony-details";
+import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { FileText, Share2, Users } from "lucide-react";
 
 interface QuoteInfoProps {
@@ -254,7 +253,10 @@ export default function QuoteInfo({ quote }: QuoteInfoProps) {
             <CardDescription>Prodotti e servizi inclusi nel preventivo</CardDescription>
           </CardHeader>
           <CardContent>
-            <ModuleDisplay modules={modules} readOnly />
+            <div className="text-sm text-gray-500">
+              Questo preventivo contiene {modules.length} {modules.length === 1 ? 'modulo' : 'moduli'}.
+              Per visualizzare i dettagli completi, usa "Vista Dettagliata".
+            </div>
           </CardContent>
         </Card>
       )}

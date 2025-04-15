@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   FileSignature,
   MessageSquare,
+  Briefcase,
   BookMarked,
 } from "lucide-react";
 
@@ -73,6 +74,13 @@ export default function Sidebar() {
           icon={<Calendar className="h-4 w-4" />}
           text="Calendario"
           isActive={isActive("/calendar")}
+        />
+        
+        <SidebarLink
+          href="/jobs"
+          icon={<Briefcase className="h-4 w-4" />}
+          text="Lavori"
+          isActive={isActive("/jobs")}
         />
         
         <SidebarLink

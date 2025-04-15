@@ -111,7 +111,7 @@ export function getInitials(firstName?: string, lastName?: string): string {
  * @param status - Stato del preventivo/contratto
  * @returns Variante del badge (per styling UI)
  */
-export function getStatusBadge(status?: string): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" {
+export function getStatusBadge(status?: string): "default" | "secondary" | "destructive" | "outline" | "blue" | "green" | "amber" | "red" {
   if (!status) return "default";
   
   const normalizedStatus = status.toLowerCase();
@@ -119,12 +119,12 @@ export function getStatusBadge(status?: string): "default" | "secondary" | "dest
   if (normalizedStatus === "approvato" || normalizedStatus === "approved" || 
       normalizedStatus === "confermato" || normalizedStatus === "completed" ||
       normalizedStatus === "completato") {
-    return "success";
+    return "green";
   }
   
   if (normalizedStatus === "in attesa" || normalizedStatus === "pending" ||
       normalizedStatus === "in corso" || normalizedStatus === "in progress") {
-    return "warning";
+    return "amber";
   }
   
   if (normalizedStatus === "rifiutato" || normalizedStatus === "rejected" ||

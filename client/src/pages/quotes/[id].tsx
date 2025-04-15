@@ -180,6 +180,10 @@ export default function QuoteDetailPage() {
     setShowDeleteDialog(true);
   };
 
+  import { useToast } from "@/hooks/use-toast";
+
+  const { toast } = useToast();
+
   const handleConfirmDelete = () => {
     deleteQuoteMutation.mutate();
     setShowDeleteDialog(false);

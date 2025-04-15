@@ -123,9 +123,16 @@ export default function QuoteDetailPage() {
   });
 
   // Mutation per eliminare il preventivo
+  import { useToast } from "@/hooks/use-toast";
+  
+  const { toast } = useToast();
+
   const deleteQuoteMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("DELETE", `/api/quotes/${id}`);
+      if (!res.ok) {
+        throw new Error("Errore nell'eliminazione del preventivo");
+      }
       return res.ok;
     },
     onSuccess: () => {

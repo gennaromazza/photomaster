@@ -83,6 +83,13 @@ export default function Sidebar() {
         />
         
         <SidebarLink
+          href="/events"
+          icon={<Calendar className="h-4 w-4" />}
+          text="Eventi"
+          isActive={isActive("/events")}
+        />
+
+        <SidebarLink
           href="/contracts"
           icon={<FileSignature className="h-4 w-4" />}
           text="Contratti"

@@ -1339,8 +1339,17 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.delete("/quotes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid quote ID" });
+      }
 
-      // Delete any associated events first
+      // Delete any associated modules first
+      const modules = await storage.getModulesByQuote(id);
+      for (const module of modules) {
+        await storage.deleteQuoteModule(module.id);
+      }
+
+      // Delete any associated events
       const events = await storage.getEventsByQuoteId(id);
       for (const event of events) {
         await storage.deleteEvent(event.id);
@@ -1348,14 +1357,17 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Delete the quote and all related items
       const success = await storage.deleteQuote(id);
-
       if (!success) {
         return res.status(404).json({ message: "Quote not found" });
       }
 
       res.status(204).send();
     } catch (err) {
-      res.status(500).json({ message: "Failed to delete quote" });
+      console.error("Error deleting quote:", err);
+      res.status(500).json({ 
+        message: "Failed to delete quote",
+        error: err instanceof Error ? err.message : "Unknown error"
+      });
     }
   });
 

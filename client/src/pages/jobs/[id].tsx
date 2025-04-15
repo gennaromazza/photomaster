@@ -6,8 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { 
   Loader2, ArrowLeft, Calendar, FileText, ClipboardList, 
-  Users, MoreVertical, Check, X, Send, Clock,
-  Link as LinkIcon, RefreshCw, CheckCircle2, Package
+  Users, MoreVertical, Check, X, Send, Clock, PlusCircle,
+  Link as LinkIcon, RefreshCw, CheckCircle2, Package, Info
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,6 +23,9 @@ import EventInfo from "@/components/events/event-info";
 import EventTasks from "@/components/events/event-tasks";
 import EventCollaborators from "@/components/events/event-collaborators";
 import ClientInfo from "@/components/clients/client-info";
+import ModuleManager from "@/components/quotes/modules/module-manager";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
 // Definisce i tipi di stato unificati per i lavori
 type JobStatus = 

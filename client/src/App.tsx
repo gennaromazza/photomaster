@@ -50,6 +50,8 @@ import QuotePublicPage from "@/pages/quotes/public/[token]";
 import SignSuccessPage from "@/pages/quotes/sign-success";
 import JobsPage from "@/pages/jobs/index";
 import JobDetailPage from "@/pages/jobs/[id]";
+import NewJobDetailPage from "@/pages/jobs/new-[id]";
+import NewJobPage from "@/pages/jobs/new";
 
 function Router() {
   return (
@@ -73,7 +75,9 @@ function Router() {
       <ProtectedRoute path="/quotes/new" component={NewQuotePage} />
       <ProtectedRoute path="/quotes/detail/:id" component={QuoteDetailPage} />
       <ProtectedRoute path="/jobs" component={JobsPage} />
+      <ProtectedRoute path="/jobs/new" component={NewJobPage} />
       <ProtectedRoute path="/jobs/:id" component={JobDetailPage} />
+      <ProtectedRoute path="/jobs/new-detail/:id" component={NewJobDetailPage} />
       <ProtectedRoute path="/services" component={ServicesPage} />
       <ProtectedRoute path="/services/:id" component={ServiceDetailPage} />
       <ProtectedRoute path="/bundles" component={ServiceBundlesPage} />

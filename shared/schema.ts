@@ -732,25 +732,40 @@ export const settings = pgTable("settings", {
   additionalSettings: jsonb("additional_settings"),
 });
 
-export const insertSettingsSchema = createInsertSchema(settings).pick({
-  companyName: true,
-  companyEmail: true,
-  companyPhone: true,
-  companyAddress: true,
-  companyLogo: true,
-  contractTemplate: true,
-  quoteTemplate: true,
-  emailQuoteSignedAdmin: true,
-  emailQuoteSignedClient: true,
-  emailRegistrationNotification: true,
-  emailApprovalNotification: true,
-  emailDisabledNotification: true,
-  emailPasswordReset: true,
-  taxRate: true,
-  defaultCurrency: true,
-  colorTheme: true,
-  additionalSettings: true,
-});
+export const insertSettingsSchema = createInsertSchema(settings)
+  .pick({
+    companyName: true,
+    companyEmail: true,
+    companyPhone: true,
+    companyAddress: true,
+    companyLogo: true,
+    contractTemplate: true,
+    quoteTemplate: true,
+    emailQuoteSignedAdmin: true,
+    emailQuoteSignedClient: true,
+    emailRegistrationNotification: true,
+    emailApprovalNotification: true,
+    emailDisabledNotification: true,
+    emailPasswordReset: true,
+    taxRate: true,
+    defaultCurrency: true,
+    colorTheme: true,
+    additionalSettings: true,
+  })
+  .partial({
+    companyPhone: true,
+    companyAddress: true,
+    companyLogo: true,
+    contractTemplate: true,
+    quoteTemplate: true,
+    emailQuoteSignedAdmin: true,
+    emailQuoteSignedClient: true,
+    emailRegistrationNotification: true,
+    emailApprovalNotification: true,
+    emailDisabledNotification: true,
+    emailPasswordReset: true,
+    additionalSettings: true,
+  });
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;

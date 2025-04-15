@@ -45,6 +45,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import CollaboratorsCard from "@/components/events/collaborators-card";
+import EventTasks from "@/components/events/event-tasks";
 
 const formSchema = z.object({
   title: z.string().min(1, "Il titolo è obbligatorio"),
@@ -534,27 +535,10 @@ export default function EventDetailPage() {
 
             <TabsContent value="tasks" className="m-0">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-medium">Attività</h3>
-                  <Button size="sm">
-                    <i className="ri-add-line mr-2"></i>
-                    Nuova Attività
-                  </Button>
-                </div>
-                
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="text-4xl text-gray-300 mb-2">
-                    <i className="ri-task-line"></i>
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">Nessuna attività</h3>
-                  <p className="text-gray-500 mb-4">
-                    Non ci sono attività associate a questo evento
-                  </p>
-                  <Button variant="outline">
-                    <i className="ri-add-line mr-2"></i>
-                    Crea nuova attività
-                  </Button>
-                </div>
+                {/* Utilizziamo il componente EventTasks per gestire le attività */}
+                {eventId && (
+                  <EventTasks eventId={parseInt(eventId)} />
+                )}
               </CardContent>
             </TabsContent>
 

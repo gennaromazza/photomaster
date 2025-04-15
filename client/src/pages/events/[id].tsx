@@ -57,6 +57,26 @@ export default function EventDetailPage() {
           </h1>
           <p className="mt-1 text-gray-500">Dettagli evento</p>
         </div>
+        <div className="flex mt-4 lg:mt-0 space-x-3">
+          {event.quoteId ? (
+            <Link href={`/quotes/detail/${event.quoteId}`}>
+              <Button>
+                Visualizza Preventivo
+              </Button>
+            </Link>
+          ) : (
+            <Link href={`/quotes/new?fromEventId=${event.id}`}>
+              <Button>
+                Crea Preventivo
+              </Button>
+            </Link>
+          )}
+          <Link href={`/events/edit/${event.id}`}>
+            <Button variant="outline">
+              Modifica
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

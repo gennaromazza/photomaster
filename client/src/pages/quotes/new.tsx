@@ -103,7 +103,7 @@ type ClientFormValues = z.infer<typeof clientFormSchema>;
 
 export default function NewQuotePage() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
   const [clientSearchQuery, setClientSearchQuery] = useState("");
   const [showClientSuccess, setShowClientSuccess] = useState(false);
@@ -172,6 +172,37 @@ export default function NewQuotePage() {
       notes: "",
     },
   });
+
+  // Estrai eventId dalla query string se esiste
+  const fromEventId = new URLSearchParams(location.split("?")[1]).get("fromEventId");
+  
+  // Carica i dati dell'evento quando viene passato un fromEventId
+  useEffect(() => {
+    if (fromEventId && events.length > 0) {
+      const eventId = parseInt(fromEventId);
+      const event = events.find((e: any) => e.id === eventId);
+      
+      if (event) {
+        form.setValue("title", event.title || "");
+        form.setValue("clientId", event.clientId);
+        form.setValue("eventId", event.id);
+        form.setValue("eventType", event.eventType || "");
+        form.setValue("location", event.location || "");
+        form.setValue("eventDate", event.date ? new Date(event.date) : undefined);
+        form.setValue("notes", event.notes || "");
+        form.setValue("categoryId", event.categoryId);
+        form.setValue("leadSourceId", event.leadSourceId);
+        
+        // Imposta il timestamp delle ore se disponibile
+        if (event.date) {
+          const date = new Date(event.date);
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          form.setValue("eventTime", `${hours}:${minutes}`);
+        }
+      }
+    }
+  }, [fromEventId, events, form]);
 
   // Filtraggio clienti basato sulla ricerca
   useEffect(() => {

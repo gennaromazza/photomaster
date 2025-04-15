@@ -283,15 +283,27 @@ const EventsPage = () => {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Link href={`/quotes/detail/${event.quoteId}`}>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            Visualizza
-                          </Button>
-                        </Link>
+                        {event.quoteId ? (
+                          <Link href={`/quotes/detail/${event.quoteId}`}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              Visualizza
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Link href={`/events/${event.id}`}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              Visualizza
+                            </Button>
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   ))}

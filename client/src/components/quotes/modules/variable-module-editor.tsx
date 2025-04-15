@@ -185,11 +185,13 @@ export default function VariableModuleEditor({
   
   // Filtra servizi e prodotti in base alla ricerca
   const filteredServices = services.filter(service => 
+    service.type === 'service' && 
     service.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = services.filter(service => 
+    service.type === 'product' && 
+    service.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   // Ottiene la selezione attiva

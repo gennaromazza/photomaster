@@ -393,10 +393,34 @@ Studio {studio_nome}
                 </div>
                 
                 <div>
+                  <h3 className="text-lg font-medium mb-2">Notifica Disabilitazione Account</h3>
+                  <div className="rounded-md border border-muted p-4 mb-4 bg-muted/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      <p className="text-sm font-medium">Email inviata all'utente quando il suo account viene disabilitato</p>
+                    </div>
+                    <Textarea 
+                      id="emailDisabledNotification"
+                      className="min-h-32 font-mono text-sm"
+                      placeholder="Gentile {utente_nome}, il tuo account è stato disabilitato..."
+                      defaultValue={settings?.emailDisabledNotification || `Gentile {utente_nome},
+
+Ti informiamo che il tuo account è stato temporaneamente disabilitato.
+
+Per maggiori informazioni, contatta l'amministratore della piattaforma.
+
+Studio {studio_nome}
+{studio_email}
+{studio_telefono}`}
+                    />
+                  </div>
+                </div>
+                
+                <div>
                   <h3 className="text-lg font-medium mb-2">Notifica Reset Password</h3>
                   <div className="rounded-md border border-muted p-4 bg-muted/20">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
                       <p className="text-sm font-medium">Email inviata all'utente per il reset della password</p>
                     </div>
                     <Textarea 
@@ -429,6 +453,7 @@ Studio {studio_nome}`}
                     emailQuoteSignedAdmin: (document.getElementById('emailQuoteSignedAdmin') as HTMLTextAreaElement)?.value,
                     emailRegistrationNotification: (document.getElementById('emailRegistrationNotification') as HTMLTextAreaElement)?.value,
                     emailApprovalNotification: (document.getElementById('emailApprovalNotification') as HTMLTextAreaElement)?.value,
+                    emailDisabledNotification: (document.getElementById('emailDisabledNotification') as HTMLTextAreaElement)?.value,
                     emailPasswordReset: (document.getElementById('emailPasswordReset') as HTMLTextAreaElement)?.value,
                   };
                   updateSettingsMutation.mutate(data);

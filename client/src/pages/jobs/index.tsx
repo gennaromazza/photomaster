@@ -141,11 +141,15 @@ export default function JobsPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={() => navigate("/quotes/new")}>
+          <Button variant="default" onClick={() => navigate("/jobs/new")} className="bg-primary">
+            <Plus className="h-4 w-4 mr-2" />
+            Nuovo Lavoro
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/quotes/new")}>
             <FileText className="h-4 w-4 mr-2" />
             Nuovo Preventivo
           </Button>
-          <Button onClick={() => navigate("/events/new")}>
+          <Button variant="outline" onClick={() => navigate("/events/new")}>
             <Calendar className="h-4 w-4 mr-2" />
             Nuovo Evento
           </Button>
@@ -199,7 +203,11 @@ export default function JobsPage() {
                         : "Nessun lavoro presente. Crea un nuovo preventivo o evento per iniziare."}
                     </p>
                     <div className="mt-6 flex flex-wrap justify-center gap-3">
-                      <Button onClick={() => navigate("/quotes/new")}>
+                      <Button variant="default" onClick={() => navigate("/jobs/new")} className="bg-primary">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuovo Lavoro
+                      </Button>
+                      <Button variant="outline" onClick={() => navigate("/quotes/new")}>
                         <Plus className="h-4 w-4 mr-2" />
                         Nuovo Preventivo
                       </Button>

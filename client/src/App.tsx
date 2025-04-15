@@ -76,8 +76,8 @@ function Router() {
       <ProtectedRoute path="/quotes/detail/:id" component={QuoteDetailPage} />
       <ProtectedRoute path="/jobs" component={JobsPage} />
       <ProtectedRoute path="/jobs/new" component={NewJobPage} />
-      <ProtectedRoute path="/jobs/:id" component={JobDetailPage} />
       <ProtectedRoute path="/jobs/new-detail/:id" component={NewJobDetailPage} />
+      <ProtectedRoute path="/jobs/:id" component={JobDetailPage} />
       <ProtectedRoute path="/services" component={ServicesPage} />
       <ProtectedRoute path="/services/:id" component={ServiceDetailPage} />
       <ProtectedRoute path="/bundles" component={ServiceBundlesPage} />

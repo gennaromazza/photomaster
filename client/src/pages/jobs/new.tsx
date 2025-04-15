@@ -209,7 +209,7 @@ export default function NewJobPage() {
                 Preventivo
               </TabsTrigger>
               <TabsTrigger value="event" className="flex items-center justify-center gap-2">
-                <Calendar className="h-4 w-4" />
+                <CalendarIcon className="h-4 w-4" />
                 Evento
               </TabsTrigger>
             </TabsList>
@@ -326,7 +326,7 @@ export default function NewJobPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
+                  <CalendarIcon className="h-5 w-5" />
                   Nuovo Evento
                 </CardTitle>
                 <CardDescription>

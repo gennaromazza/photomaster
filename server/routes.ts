@@ -1999,7 +1999,55 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
 
       // Recupera anche gli elementi del modulo
-      const items = await storage.getQuoteModuleItemsByModule(moduleId);
+      const baseItems = await storage.getQuoteModuleItemsByModule(moduleId);
+      
+      // Arricchisci gli elementi con i dettagli di servizi, prodotti e pacchetti
+      const items = await Promise.all(
+        baseItems.map(async (item) => {
+          let enrichedItem = { ...item };
+
+          // Se l'item ha un serviceId, aggiungi i dettagli del servizio
+          if (item.serviceId) {
+            const service = await storage.getService(item.serviceId);
+            if (service) {
+              enrichedItem = {
+                ...enrichedItem,
+                serviceName: service.name,
+                serviceDescription: service.description,
+                serviceImagePath: service.imagePath
+              };
+            }
+          }
+
+          // Se l'item ha un bundleId, aggiungi i dettagli del bundle
+          if (item.bundleId) {
+            const bundle = await storage.getServiceBundle(item.bundleId);
+            if (bundle) {
+              enrichedItem = {
+                ...enrichedItem,
+                bundleName: bundle.name,
+                bundleDescription: bundle.description,
+                bundleImagePath: bundle.imagePath
+              };
+            }
+          }
+          
+          // Se l'item ha un productId, aggiungi i dettagli del prodotto
+          if (item.productId) {
+            const product = await storage.getService(item.productId);
+            if (product) {
+              enrichedItem = {
+                ...enrichedItem,
+                productName: product.name,
+                productDescription: product.description,
+                productImagePath: product.imagePath
+              };
+            }
+          }
+
+          return enrichedItem;
+        })
+      );
 
       res.json({ ...module, items });
     } catch (err) {
@@ -2175,7 +2223,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Recupera gli elementi del modulo
       const items = await storage.getQuoteModuleItemsByModule(module.id);
 
-      // Arricchisci gli elementi con i dettagli di servizi/prodotti
+      // Arricchisci gli elementi con i dettagli di servizi, prodotti e pacchetti
       const enrichedItems = await Promise.all(
         items.map(async (item) => {
           let enrichedItem = { ...item };
@@ -2202,6 +2250,19 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                 bundleName: bundle.name,
                 bundleDescription: bundle.description,
                 bundleImagePath: bundle.imagePath
+              };
+            }
+          }
+          
+          // Se l'item ha un productId, aggiungi i dettagli del prodotto
+          if (item.productId) {
+            const product = await storage.getService(item.productId);
+            if (product) {
+              enrichedItem = {
+                ...enrichedItem,
+                productName: product.name,
+                productDescription: product.description,
+                productImagePath: product.imagePath
               };
             }
           }
@@ -2298,6 +2359,19 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
               };
             }
           }
+          
+          // Se l'item ha un productId, aggiungi i dettagli del prodotto
+          if (item.productId) {
+            const product = await storage.getService(item.productId);
+            if (product) {
+              enrichedItem = {
+                ...enrichedItem,
+                productName: product.name,
+                productDescription: product.description,
+                productImagePath: product.imagePath
+              };
+            }
+          }
 
           return enrichedItem;
         })
@@ -2311,7 +2385,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         if (item.isRequired && !isSelected) {
           // Trova il nome dell'elemento dai dati arricchiti
           const enrichedItem = enrichedItems.find(ei => ei.id === item.id);
-          const itemName = enrichedItem?.serviceName || enrichedItem?.bundleName || 'Opzione';
+          const itemName = enrichedItem?.serviceName || enrichedItem?.productName || enrichedItem?.bundleName || 'Opzione';
 
           return res.status(400).json({ 
             message: `È necessario selezionare l'opzione obbligatoria: ${itemName}`

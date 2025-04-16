@@ -152,13 +152,18 @@ const EventsPage = () => {
     setDateFilter("all");
   };
 
+  // Otteniamo le categorie di servizi configurate nelle impostazioni
+  const { data: serviceCategories = [] } = useQuery({
+    queryKey: ['/api/service-categories/active'],
+  });
+  
+  // Convertiamo le categorie al formato richiesto per il select e aggiungiamo l'opzione "Tutti i tipi"
   const eventTypes = [
     { value: "all", label: "Tutti i tipi" },
-    { value: "wedding", label: "Matrimonio" },
-    { value: "portrait", label: "Ritratto" },
-    { value: "fashion", label: "Moda" },
-    { value: "event", label: "Evento" },
-    { value: "other", label: "Altro" },
+    ...serviceCategories.map(category => ({
+      value: category.name.toLowerCase().replace(/\s+/g, '-'),
+      label: category.name
+    }))
   ];
 
   const statusTypes = [

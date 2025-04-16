@@ -7,6 +7,7 @@ import { useLocation, useSearch } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { insertQuoteSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { RichTextEditor } from "@/components/rich-text-editor";
 // Rimuovo import Layout per evitare la duplicazione del layout
 import {
   Form,
@@ -1541,12 +1542,15 @@ export default function NewQuotePage() {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel>Note e richieste specifiche</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="Inserisci qui eventuali note o richieste specifiche del cliente"
-                          className="min-h-32"
-                          {...field}
-                        />
+                        <div className="mt-1">
+                          <RichTextEditor
+                            content={field.value || ''}
+                            onChange={field.onChange}
+                            placeholder="Inserisci qui eventuali note o richieste specifiche del cliente..."
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -143,6 +143,9 @@ export async function handleFileUpload(req: Request, res: Response): Promise<voi
 }
 
 // Importa clienti da un file con la mappatura dei campi specificata
+/**
+ * Gestisce l'importazione dei clienti da un file caricato sul server
+ */
 export async function importClients(req: Request, res: Response): Promise<void> {
   try {
     const { filePath, fieldMapping } = req.body;
@@ -194,6 +197,58 @@ export async function importClients(req: Request, res: Response): Promise<void> 
 }
 
 // Esporta tutti i clienti in formato CSV
+/**
+ * Gestisce l'importazione diretta dei clienti (i dati vengono inviati direttamente dal frontend)
+ */
+export async function importDirectClients(req: Request, res: Response): Promise<void> {
+  try {
+    const { clients } = req.body;
+    
+    if (!clients || !Array.isArray(clients) || clients.length === 0) {
+      res.status(400).json({ error: "Nessun cliente da importare" });
+      return;
+    }
+    
+    const importedClients: Client[] = [];
+    const errors: any[] = [];
+    
+    // Inserisci i clienti nel database
+    for (const client of clients) {
+      try {
+        // Valida i campi obbligatori (nome e cognome)
+        if (!client.firstName || !client.lastName) {
+          errors.push({
+            client,
+            error: "Nome e cognome sono campi obbligatori"
+          });
+          continue;
+        }
+        
+        const newClient = await storage.createClient(client);
+        importedClients.push(newClient);
+      } catch (error) {
+        errors.push({
+          client,
+          error: (error as Error).message
+        });
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      imported: importedClients.length,
+      total: clients.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error("Errore durante l'importazione diretta dei clienti:", error);
+    res.status(500).json({ error: "Errore durante l'importazione dei clienti" });
+  }
+}
+
+/**
+ * Esporta tutti i clienti in formato Excel
+ */
 export async function exportClientsCSV(req: Request, res: Response): Promise<void> {
   try {
     const clients = await storage.getAllClients();

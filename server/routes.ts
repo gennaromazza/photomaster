@@ -11,7 +11,7 @@ import {
 import { setupUploadRoutes } from "./upload";
 import bundleLeadsRouter from "./routes/bundle-leads";
 import settingsRouter from "./routes/settings";
-import { handleFileUpload, importClients, exportClientsCSV } from "./import-export";
+import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
 import multer from "multer";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -2711,6 +2711,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Rotte per l'importazione ed esportazione dei clienti
   app.post('/api/clients/upload', isAuthenticated, upload.single('file'), handleFileUpload);
   app.post('/api/clients/import', isAuthenticated, importClients);
+  app.post('/api/clients/direct-import', isAuthenticated, importDirectClients);
   app.get('/api/clients/export', isAuthenticated, exportClientsCSV);
 
   app.use("/api", apiRouter);

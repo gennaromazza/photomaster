@@ -281,13 +281,30 @@ const ClientsPage = () => {
           <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-900">Clienti</h1>
           <p className="mt-1 text-gray-500">Gestisci i tuoi clienti</p>
         </div>
-        <div className="mt-4 lg:mt-0 flex space-x-3">
+        <div className="mt-4 lg:mt-0 flex flex-wrap gap-3">
           <Link href="/clients/new">
             <Button className="inline-flex items-center">
-              <i className="ri-user-add-line mr-2"></i>
+              <UserPlus className="mr-2 h-4 w-4" />
               Nuovo Cliente
             </Button>
           </Link>
+          <Button 
+            variant="outline" 
+            className="inline-flex items-center" 
+            onClick={() => setIsImportDialogOpen(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Importa
+          </Button>
+          <Button 
+            variant="outline" 
+            className="inline-flex items-center" 
+            onClick={handleExportClients}
+            disabled={isExporting || clients.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {isExporting ? 'Esportazione...' : 'Esporta'}
+          </Button>
         </div>
       </div>
       
@@ -493,6 +510,254 @@ const ClientsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Dialog per l'importazione dei clienti */}
+      <Dialog open={isImportDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          resetImport();
+        }
+        setIsImportDialogOpen(open);
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {importStep === "upload" ? "Importa Clienti" : "Mappatura dei campi"}
+            </DialogTitle>
+            <DialogDescription>
+              {importStep === "upload" 
+                ? "Carica un file Excel o CSV con i tuoi clienti." 
+                : "Associa le colonne del file ai campi del sistema."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {importStep === "upload" ? (
+            // Step 1: Caricamento del file
+            <form onSubmit={handleFileUpload} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="file">File Excel o CSV</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <div className="flex justify-center mb-4">
+                    <FileSpreadsheet className="h-10 w-10 text-gray-400" />
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Trascina qui il tuo file o clicca per selezionarlo
+                  </p>
+                  <Input
+                    id="file"
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(e) => {
+                      // Visualizza il nome del file selezionato
+                      const fileInput = document.getElementById('selected-file');
+                      if (fileInput && e.target.files && e.target.files[0]) {
+                        fileInput.textContent = e.target.files[0].name;
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Seleziona File
+                  </Button>
+                  <div id="selected-file" className="mt-2 text-sm text-gray-500"></div>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsImportDialogOpen(false)}
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={uploadFileMutation.isPending}
+                >
+                  {uploadFileMutation.isPending ? 'Caricamento...' : 'Carica e Continua'}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            // Step 2: Mappatura dei campi
+            <div className="space-y-6">
+              {uploadedFile && (
+                <>
+                  <div className="bg-primary/5 p-3 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      <span className="font-medium">File caricato:</span> {uploadedFile.originalName}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-700">Mappatura dei campi</h3>
+                    <p className="text-sm text-gray-500">
+                      Associa le colonne del tuo file ai campi del sistema per importare correttamente i clienti.
+                      I campi nome e cognome sono obbligatori.
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName" className="text-sm font-medium">
+                          Nome <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={fieldMapping.firstName || ''}
+                          onValueChange={(value) => updateFieldMapping('firstName', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName" className="text-sm font-medium">
+                          Cognome <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={fieldMapping.lastName || ''}
+                          onValueChange={(value) => updateFieldMapping('lastName', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-sm font-medium">
+                          Email
+                        </Label>
+                        <Select
+                          value={fieldMapping.email || ''}
+                          onValueChange={(value) => updateFieldMapping('email', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-sm font-medium">
+                          Telefono
+                        </Label>
+                        <Select
+                          value={fieldMapping.phone || ''}
+                          onValueChange={(value) => updateFieldMapping('phone', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="address" className="text-sm font-medium">
+                          Indirizzo
+                        </Label>
+                        <Select
+                          value={fieldMapping.address || ''}
+                          onValueChange={(value) => updateFieldMapping('address', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="notes" className="text-sm font-medium">
+                          Note
+                        </Label>
+                        <Select
+                          value={fieldMapping.notes || ''}
+                          onValueChange={(value) => updateFieldMapping('notes', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={resetImport}
+                    >
+                      Torna indietro
+                    </Button>
+                    <Button 
+                      type="button"
+                      onClick={handleImportClients}
+                      disabled={importClientsMutation.isPending}
+                    >
+                      {importClientsMutation.isPending ? 'Importazione in corso...' : 'Importa Clienti'}
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

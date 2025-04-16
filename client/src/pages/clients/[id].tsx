@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Client, Event, Quote } from "@shared/schema";
-import { getInitials, formatCurrency, formatDate } from "@/lib/utils";
+import { getInitials, formatCurrency, formatDate, formatClientName } from "@/lib/utils";
 
 const ClientDetailPage = () => {
   const { id } = useParams();
@@ -142,7 +142,7 @@ const ClientDetailPage = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-900">
-            {client.firstName} {client.lastName}
+            {formatClientName(client)}
           </h1>
           <p className="mt-1 text-gray-500">Dettagli cliente</p>
         </div>
@@ -219,7 +219,7 @@ const ClientDetailPage = () => {
             <CardContent className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Nome completo</h3>
-                <p className="mt-1">{client.firstName} {client.lastName}</p>
+                <p className="mt-1">{formatClientName(client)}</p>
               </div>
               
               <div>

@@ -16,6 +16,9 @@ import EventDetail from "@/pages/events/[id]";
 import ClientDetail from "@/pages/clients/[id]";
 import EditClientPage from "@/pages/clients/edit/[id]";
 
+// Importa callback per autenticazione Google
+import AuthCallback from "@/pages/auth/callback";
+
 // Importa tutte le pagine dal barrel file
 import {
   NotFound,
@@ -80,6 +83,7 @@ function Router() {
       <ProtectedRoute path="/settings/categories" component={CategoriesPage} />
       <ProtectedRoute path="/settings/origins" component={OriginsPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/reset-password/:token" component={ResetPasswordPage} />

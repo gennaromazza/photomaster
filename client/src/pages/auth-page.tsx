@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { FcGoogle } from "react-icons/fc";
 
 // Schema di validazione per il login
 const loginSchema = z.object({
@@ -43,7 +45,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, loginMutation, registerMutation, loginWithGoogle } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("login");
   const [, setLocation] = useLocation();
 
@@ -153,6 +155,22 @@ export default function AuthPage() {
                           Password dimenticata?
                         </Button>
                       </div>
+                      
+                      <div className="mt-6">
+                        <Separator className="mb-4">
+                          <span className="px-2 text-muted-foreground text-sm">oppure</span>
+                        </Separator>
+                        
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="w-full flex items-center justify-center gap-2" 
+                          onClick={loginWithGoogle}
+                        >
+                          <FcGoogle className="h-5 w-5" />
+                          <span>Accedi con Google</span>
+                        </Button>
+                      </div>
                     </form>
                   </Form>
                 </TabsContent>
@@ -222,6 +240,22 @@ export default function AuthPage() {
                           "Registrati"
                         )}
                       </Button>
+                      
+                      <div className="mt-6">
+                        <Separator className="mb-4">
+                          <span className="px-2 text-muted-foreground text-sm">oppure</span>
+                        </Separator>
+                        
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="w-full flex items-center justify-center gap-2" 
+                          onClick={loginWithGoogle}
+                        >
+                          <FcGoogle className="h-5 w-5" />
+                          <span>Registrati con Google</span>
+                        </Button>
+                      </div>
                     </form>
                   </Form>
                 </TabsContent>

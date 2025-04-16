@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useQuery } from "@tanstack/react-query";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay, parseISO } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay, parseISO, isSameDay, addDays, startOfWeek, endOfWeek } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Event, Client, Collaborator, Quote, insertEventSchema } from "@shared/schema";
@@ -108,11 +109,27 @@ const CalendarPage = () => {
              eventDate.getFullYear() === day.getFullYear();
     });
     
+    // Rimuoviamo possibili eventi duplicati usando l'ID
+    const uniqueEvents = dayEvents.reduce<Event[]>((acc, event) => {
+      if (!acc.some(e => e.id === event.id)) {
+        acc.push(event);
+      }
+      return acc;
+    }, []);
+    
     // Poi recuperiamo i preventivi con data evento impostata
     const dayQuotes = getQuotesForDay(day);
     
+    // Rimuoviamo preventivi duplicati
+    const uniqueQuotes = dayQuotes.reduce<Quote[]>((acc, quote) => {
+      if (!acc.some(q => q.id === quote.id)) {
+        acc.push(quote);
+      }
+      return acc;
+    }, []);
+    
     // Creiamo gli elementi di calendario dai preventivi
-    const quoteCalendarItems: CalendarItem[] = dayQuotes.map(quote => ({
+    const quoteCalendarItems: QuoteCalendarItem[] = uniqueQuotes.map(quote => ({
       id: `quote-${quote.id}`,
       title: quote.title || "Preventivo senza titolo",
       eventType: quote.eventType || "quote",
@@ -122,7 +139,7 @@ const CalendarPage = () => {
     }));
     
     // Combiniamo tutto in un unico array
-    return [...dayEvents, ...quoteCalendarItems];
+    return [...uniqueEvents, ...quoteCalendarItems];
   };
 
   const handleDayClick = (day: Date) => {
@@ -217,7 +234,8 @@ const CalendarPage = () => {
                     {format(day, "d")}
                   </div>
                   
-                  {dayEvents.slice(0, 2).map((event, eventIndex) => {
+                  {/* Mostriamo fino a 3 eventi per giorno */}
+                  {dayEvents.slice(0, 3).map((event, eventIndex) => {
                     // Verifichiamo se l'elemento è un preventivo usando typeguard
                     const isQuoteItem = (item: CalendarItem): item is QuoteCalendarItem => 
                       'isQuote' in item && item.isQuote === true;
@@ -256,9 +274,17 @@ const CalendarPage = () => {
                     );
                   })}
                   
-                  {dayEvents.length > 2 && (
-                    <div className="mt-1 text-xs text-gray-500 text-center">
-                      +{dayEvents.length - 2} altri
+                  {/* Se ci sono più di 3 eventi, mostriamo un indicatore */}
+                  {dayEvents.length > 3 && (
+                    <div
+                      className="mt-1 text-xs text-gray-500 text-center cursor-pointer hover:text-primary-dark transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Evita di aprire il dialog per creare un evento
+                        // Qui possiamo mostrare un dialog con tutti gli eventi del giorno
+                        console.log("Mostra tutti gli eventi per", format(day, "dd/MM/yyyy"));
+                      }}
+                    >
+                      +{dayEvents.length - 3} altri
                     </div>
                   )}
                 </div>

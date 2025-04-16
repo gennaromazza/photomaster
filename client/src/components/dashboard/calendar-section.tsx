@@ -57,12 +57,23 @@ const CalendarSection = () => {
   
   // Function to get events for a specific day
   const getEventsForDay = (day: Date) => {
-    return events.filter(event => {
+    const dayEvents = events.filter(event => {
+      if (!event.date) return false;
       const eventDate = new Date(event.date);
       return eventDate.getDate() === day.getDate() && 
              eventDate.getMonth() === day.getMonth() && 
              eventDate.getFullYear() === day.getFullYear();
     });
+    
+    // Rimuoviamo possibili eventi duplicati usando l'ID
+    const uniqueEvents = dayEvents.reduce<Event[]>((acc, event) => {
+      if (!acc.some(e => e.id === event.id)) {
+        acc.push(event);
+      }
+      return acc;
+    }, []);
+    
+    return uniqueEvents;
   };
   
   return (

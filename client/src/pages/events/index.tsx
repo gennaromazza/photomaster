@@ -5,7 +5,26 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 import { Event, Client } from "@shared/schema";
 import { formatDate, getStatusBadge, getStatusText } from "@/lib/utils";
 import {
@@ -15,6 +34,10 @@ import {
   Search,
   FilterX,
   Plus,
+  Trash2,
+  MoreVertical,
+  Eye,
+  Clock,
 } from "lucide-react";
 
 const EventsPage = () => {
@@ -22,7 +45,10 @@ const EventsPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
   const [, navigate] = useLocation();
+  const { toast } = useToast();
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
@@ -31,6 +57,41 @@ const EventsPage = () => {
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
   });
+  
+  // Mutation per eliminare un evento
+  const deleteEventMutation = useMutation({
+    mutationFn: async (eventId: number) => {
+      const res = await apiRequest("DELETE", `/api/events/${eventId}`);
+      if (!res.ok) {
+        throw new Error("Errore nell'eliminazione dell'evento");
+      }
+      return res.ok;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Evento eliminato",
+        description: "L'evento è stato eliminato con successo",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      setIsDeleteDialogOpen(false);
+      setEventToDelete(null);
+    },
+    onError: (error) => {
+      console.error("Errore eliminazione evento:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'eliminazione dell'evento",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Funzione per gestire l'eliminazione dell'evento
+  const handleDeleteEvent = () => {
+    if (eventToDelete) {
+      deleteEventMutation.mutate(eventToDelete);
+    }
+  };
 
   const getClientName = (clientId: number) => {
     const client = clients.find(c => c.id === clientId);
@@ -270,6 +331,14 @@ const EventsPage = () => {
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-gray-700">{formatDate(event.date)}</div>
+                        <div className="text-xs text-gray-500 flex items-center mt-1">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {event.status === "completed" || event.fromSignedQuote ? (
+                            <span>Firmato: {formatDate(event.date)}</span>
+                          ) : (
+                            <span>Creato: {formatDate(event.date)}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-1.5 text-gray-700">
@@ -283,27 +352,37 @@ const EventsPage = () => {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {event.quoteId ? (
-                          <Link href={`/quotes/detail/${event.quoteId}`}>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              Visualizza
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreVertical className="h-4 w-4" />
                             </Button>
-                          </Link>
-                        ) : (
-                          <Link href={`/events/${event.id}`}>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {event.quoteId ? (
+                              <DropdownMenuItem onClick={() => navigate(`/quotes/detail/${event.quoteId}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Visualizza preventivo
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => navigate(`/events/${event.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Visualizza evento
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setEventToDelete(event.id);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              className="text-destructive focus:text-destructive"
                             >
-                              Visualizza
-                            </Button>
-                          </Link>
-                        )}
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Elimina
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -313,6 +392,30 @@ const EventsPage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialogo di conferma eliminazione */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogDescription>
+            Sei sicuro di voler eliminare questo evento? Questa azione è irreversibile.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteEvent}
+              disabled={deleteEventMutation.isPending}
+            >
+              {deleteEventMutation.isPending ? 'Eliminazione...' : 'Elimina'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

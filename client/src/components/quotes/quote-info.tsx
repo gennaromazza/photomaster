@@ -8,7 +8,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { FileText, Share2, Users } from "lucide-react";
-import { formatClientName } from "@/lib/utils";
+import { formatClientName, formatAddress } from "@/lib/utils";
 
 interface QuoteInfoProps {
   quote: any; // Utilizziamo 'any' per ora, ma idealmente dovremmo definire un'interfaccia più precisa
@@ -149,10 +149,18 @@ export default function QuoteInfo({ quote }: QuoteInfoProps) {
                     <dd>{client.phone}</dd>
                   </div>
                 )}
-                {client.address && (
+                {(client.address || client.city || client.zipCode || client.province || client.state) && (
                   <div className="flex justify-between">
                     <dt className="font-medium text-gray-500">Indirizzo:</dt>
-                    <dd className="truncate">{client.address}</dd>
+                    <dd className="truncate text-right">
+                      {formatAddress(
+                        client.address,
+                        client.city,
+                        client.zipCode || client.postalCode,
+                        client.province,
+                        client.state
+                      )}
+                    </dd>
                   </div>
                 )}
               </dl>
@@ -195,10 +203,18 @@ export default function QuoteInfo({ quote }: QuoteInfoProps) {
                     <dd>{secondClient.phone}</dd>
                   </div>
                 )}
-                {secondClient.address && (
+                {(secondClient.address || secondClient.city || secondClient.zipCode || secondClient.province || secondClient.state) && (
                   <div className="flex justify-between">
                     <dt className="font-medium text-gray-500">Indirizzo:</dt>
-                    <dd className="truncate">{secondClient.address}</dd>
+                    <dd className="truncate text-right">
+                      {formatAddress(
+                        secondClient.address,
+                        secondClient.city,
+                        secondClient.zipCode || secondClient.postalCode,
+                        secondClient.province,
+                        secondClient.state
+                      )}
+                    </dd>
                   </div>
                 )}
               </dl>

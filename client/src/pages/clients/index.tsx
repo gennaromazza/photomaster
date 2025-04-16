@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Client } from "@shared/schema";
-import { getInitials } from "@/lib/utils";
+import { getInitials, formatClientName } from "@/lib/utils";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -85,7 +85,7 @@ const ClientsPage = () => {
   const filteredClients = clients.filter(client => {
     if (searchQuery.length < 2) return true; // Mostra tutti i clienti se la query è troppo corta
     
-    return `${client.firstName} ${client.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    return formatClientName(client).toLowerCase().includes(searchQuery.toLowerCase()) ||
       client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (client.phone && client.phone.toLowerCase().includes(searchQuery.toLowerCase()));
   });
@@ -486,7 +486,7 @@ const ClientsPage = () => {
                           </div>
                           <div>
                             <div className="font-medium text-gray-900">
-                              {client.firstName} {client.lastName}
+                              {formatClientName(client)}
                             </div>
                           </div>
                         </div>

@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Collaborator, EventCollaborator } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { getInitials } from "@/lib/utils";
+import { getInitials, formatFullName } from "@/lib/utils";
 import { Link } from "wouter";
 
 interface CollaboratorsCardProps {
@@ -199,7 +199,7 @@ export default function CollaboratorsCard({ eventId }: CollaboratorsCardProps) {
                           key={collaborator.id}
                           value={collaborator.id.toString()}
                         >
-                          {collaborator.firstName} {collaborator.lastName} ({collaborator.role})
+                          {formatFullName(collaborator.firstName, collaborator.lastName)} ({collaborator.role})
                         </SelectItem>
                       ))}
                     </SelectContent>

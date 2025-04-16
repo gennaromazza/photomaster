@@ -47,13 +47,16 @@ const NewEventPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const eventTypes = [
-    { value: "wedding", label: "Matrimonio" },
-    { value: "portrait", label: "Ritratto" },
-    { value: "fashion", label: "Moda" },
-    { value: "event", label: "Evento" },
-    { value: "other", label: "Altro" },
-  ];
+  // Utilizziamo le categorie di servizi configurate nelle impostazioni
+  const { data: serviceCategories = [] } = useQuery({
+    queryKey: ['/api/service-categories/active'],
+  });
+  
+  // Convertiamo le categorie al formato richiesto per il select
+  const eventTypes = serviceCategories.map(category => ({
+    value: category.name.toLowerCase().replace(/\s+/g, '-'),
+    label: category.name
+  }));
   
   const statusTypes = [
     { value: "pending", label: "In Attesa" },

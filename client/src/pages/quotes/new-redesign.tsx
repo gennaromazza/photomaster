@@ -61,7 +61,9 @@ import {
   Save,
   Church,
   Package as PackageIcon,
-  ArrowRight
+  ArrowRight,
+  Download,
+  ChevronsUpDown
 } from "lucide-react";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { QuoteModuleData } from "@/components/quotes/module-selector";
@@ -78,7 +80,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format, parse } from "date-fns";
 import { it } from "date-fns/locale";
-import { ChevronsUpDown } from "lucide-react";
 import cn from 'classnames';
 
 // Estensione dello schema di validazione per il preventivo
@@ -491,6 +492,78 @@ export default function NewQuotePage() {
     }
   };
   
+  // Funzione per recuperare i dati dell'evento dall'API e popolare il form
+  const fetchEventDataFromApi = async (eventId: number) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}`);
+      if (!response.ok) throw new Error('Errore nel recupero dati evento');
+      const event = await response.json();
+      console.log("Dati evento recuperati da API:", event);
+      
+      return populateFormWithEventData(event);
+    } catch (error) {
+      console.error("Errore nel caricamento dati evento dall'API:", error);
+      return false;
+    }
+  };
+  
+  // Funzione unificata per popolare il form con i dati di un evento
+  const populateFormWithEventData = (event: any) => {
+    try {
+      // Mappa completa e dettagliata dei campi evento → preventivo
+      form.setValue("title", `Preventivo ${event.eventType ? event.eventType + ' - ' : ''}${event.title || ''}`);
+      form.setValue("clientId", event.clientId);
+      form.setValue("secondClientId", event.secondClientId);
+      form.setValue("eventId", event.id);
+      form.setValue("eventType", event.eventType || "");
+      form.setValue("location", event.location || "");
+      form.setValue("eventDate", event.date ? new Date(event.date) : undefined);
+      form.setValue("notes", event.notes || "");
+      form.setValue("categoryId", event.categoryId);
+      form.setValue("leadSourceId", event.leadSourceId);
+      form.setValue("workflow", event.workflow || "default");
+      form.setValue("isFullDay", event.isFullDay || false);
+      form.setValue("ceremonyLocation", event.ceremonyLocation || "");
+      
+      // Imposta il timestamp delle ore se disponibile
+      if (event.date) {
+        const date = new Date(event.date);
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        form.setValue("eventTime", `${hours}:${minutes}`);
+        
+        // Se c'è una data di fine o durata, calcola l'orario di fine
+        if (event.endDate) {
+          const endDate = new Date(event.endDate);
+          const endHours = String(endDate.getHours()).padStart(2, '0');
+          const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+          form.setValue("eventEndTime", `${endHours}:${endMinutes}`);
+        } else if (event.duration) {
+          // Calcola orario di fine in base alla durata (in minuti)
+          const endTime = new Date(date.getTime() + event.duration * 60000);
+          const endHours = String(endTime.getHours()).padStart(2, '0');
+          const endMinutes = String(endTime.getMinutes()).padStart(2, '0');
+          form.setValue("eventEndTime", `${endHours}:${endMinutes}`);
+        }
+      }
+      
+      // Aggiorna lo stato per il toggle "tutto il giorno"
+      setIsFullDayEvent(event.isFullDay || false);
+      
+      // Forza l'aggiornamento dei valori nel form
+      Object.keys(form.getValues()).forEach(key => {
+        form.trigger(key as any);
+      });
+      
+      console.log("Valori impostati nel form:", form.getValues());
+      
+      return true;
+    } catch (error) {
+      console.error("Errore nella compilazione dei dati:", error);
+      return false;
+    }
+  };
+  
   // La gestione dei moduli è stata spostata nella pagina di dettaglio del preventivo
 
   return (
@@ -507,6 +580,57 @@ export default function NewQuotePage() {
             <p className="text-muted-foreground">
               {isEditMode ? "Modifica i dettagli del preventivo esistente" : "Crea un nuovo preventivo per un cliente"}
             </p>
+            
+            {!isEditMode && events.length > 0 && (
+              <div className="mt-4">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="flex items-center">
+                      <Download className="h-4 w-4 mr-2" />
+                      Importa Dati da Evento
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-sm">Seleziona un evento</h4>
+                      <Select
+                        onValueChange={(value) => {
+                          if (value !== "0") {
+                            const eventId = parseInt(value);
+                            fetchEventDataFromApi(eventId).then((success) => {
+                              if (success) {
+                                toast({
+                                  title: "Dati importati",
+                                  description: "I dati dell'evento sono stati importati nel preventivo",
+                                });
+                              } else {
+                                toast({
+                                  title: "Errore",
+                                  description: "Impossibile importare i dati dell'evento",
+                                  variant: "destructive",
+                                });
+                              }
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona evento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Seleziona</SelectItem>
+                          {events.map((event: any) => (
+                            <SelectItem key={event.id} value={event.id.toString()}>
+                              {event.title} - {event.eventType || "Evento"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
           </div>
           <Button 
             onClick={form.handleSubmit(onSubmit)}

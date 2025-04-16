@@ -253,15 +253,25 @@ export default function NewQuotePage() {
     }
   }, [form]);
   
-  // Funzione per recuperare i dati dell'evento dall'API (come fallback)
+  // Funzione per recuperare i dati dell'evento dall'API e popolare il form
   const fetchEventDataFromApi = async (eventId: number) => {
     try {
       const response = await fetch(`/api/events/${eventId}`);
       if (!response.ok) throw new Error('Errore nel recupero dati evento');
       const event = await response.json();
-      console.log("Dati evento recuperati da API (fallback):", event);
+      console.log("Dati evento recuperati da API:", event);
       
-      // Mappa completa e dettagliata dei campi evento → preventivo (come nella versione localStorage)
+      return populateFormWithEventData(event);
+    } catch (error) {
+      console.error("Errore nel caricamento dati evento dall'API:", error);
+      return false;
+    }
+  };
+  
+  // Funzione unificata per popolare il form con i dati di un evento
+  const populateFormWithEventData = (event: any) => {
+    try {
+      // Mappa completa e dettagliata dei campi evento → preventivo
       form.setValue("title", event.title || "");
       form.setValue("clientId", event.clientId);
       form.setValue("secondClientId", event.secondClientId);
@@ -307,11 +317,11 @@ export default function NewQuotePage() {
         form.trigger(key as any);
       });
       
-      console.log("Valori impostati nel form da API:", form.getValues());
+      console.log("Valori impostati nel form:", form.getValues());
       
       return true;
     } catch (error) {
-      console.error("Errore nel caricamento dati evento dall'API:", error);
+      console.error("Errore nella compilazione dei dati:", error);
       return false;
     }
   };
@@ -456,6 +466,60 @@ export default function NewQuotePage() {
         <div className="mb-6">
           <h1 className="text-3xl font-playfair font-bold">Nuovo Preventivo</h1>
           <p className="text-muted-foreground">Crea un nuovo preventivo per un cliente</p>
+          
+          {events.length > 0 && (
+            <div className="mt-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex items-center">
+                    <FileImport className="h-4 w-4 mr-2" />
+                    Importa Dati da Evento
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80">
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-sm">Seleziona un evento</h4>
+                    <Select
+                      onValueChange={(value) => {
+                        if (value !== "0") {
+                          const eventId = parseInt(value);
+                          fetchEventDataFromApi(eventId).then((success) => {
+                            if (success) {
+                              toast({
+                                title: "Dati importati",
+                                description: "I dati dell'evento sono stati importati nel preventivo",
+                              });
+                            } else {
+                              toast({
+                                title: "Errore",
+                                description: "Impossibile importare i dati dell'evento",
+                                variant: "destructive",
+                              });
+                            }
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona un evento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Seleziona evento...</SelectItem>
+                        {events.map((event: any) => (
+                          <SelectItem key={event.id} value={event.id.toString()}>
+                            {event.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Seleziona un evento per precompilare i dati del preventivo. L'evento originale non verrà eliminato.
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
         </div>
 
         <Form {...form}>

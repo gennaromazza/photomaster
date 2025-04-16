@@ -458,6 +458,31 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Rotte per autenticazione Google
+  app.get("/api/auth/google", passport.authenticate("google", { 
+    scope: [
+      "profile", 
+      "email",
+      "https://www.googleapis.com/auth/calendar.readonly"
+    ],
+    accessType: "offline",
+    prompt: "consent", // Force per ottenere sempre il refresh token
+  }));
+  
+  app.get("/api/auth/google/callback", 
+    passport.authenticate("google", { 
+      failureRedirect: "/auth" 
+    }),
+    (req, res) => {
+      // Generazione token JWT dopo autenticazione con Google
+      const user = req.user as SelectUser;
+      const token = generateToken(user);
+      
+      // Redirect con token come query parameter
+      res.redirect(`/auth/callback?token=${token}`);
+    }
+  );
+  
   // Get utente corrente - supporta sia sessioni che JWT
   app.get("/api/user", (req, res, next) => {
     try {

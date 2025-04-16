@@ -16,6 +16,8 @@ export const users = pgTable("users", {
   resetPasswordToken: text("reset_password_token"),
   resetPasswordExpires: timestamp("reset_password_expires"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  googleId: text("google_id").unique(),
+  googleTokens: text("google_tokens"), // JSON string con access_token, refresh_token, ecc.
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -28,6 +30,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   profileImage: true,
   resetPasswordToken: true,
   resetPasswordExpires: true,
+  googleId: true,
+  googleTokens: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

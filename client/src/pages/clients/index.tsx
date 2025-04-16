@@ -607,14 +607,14 @@ const ClientsPage = () => {
                           Nome <span className="text-red-500">*</span>
                         </Label>
                         <Select
-                          value={fieldMapping.firstName || ''}
-                          onValueChange={(value) => updateFieldMapping('firstName', value)}
+                          value={fieldMapping.firstName || 'none'}
+                          onValueChange={(value) => updateFieldMapping('firstName', value === 'none' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nessuno</SelectItem>
+                            <SelectItem value="none">Nessuno</SelectItem>
                             {uploadedFile.headers.map((header) => (
                               <SelectItem key={header} value={header}>
                                 {header}
@@ -629,14 +629,14 @@ const ClientsPage = () => {
                           Cognome <span className="text-red-500">*</span>
                         </Label>
                         <Select
-                          value={fieldMapping.lastName || ''}
-                          onValueChange={(value) => updateFieldMapping('lastName', value)}
+                          value={fieldMapping.lastName || 'none'}
+                          onValueChange={(value) => updateFieldMapping('lastName', value === 'none' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nessuno</SelectItem>
+                            <SelectItem value="none">Nessuno</SelectItem>
                             {uploadedFile.headers.map((header) => (
                               <SelectItem key={header} value={header}>
                                 {header}
@@ -651,14 +651,14 @@ const ClientsPage = () => {
                           Email
                         </Label>
                         <Select
-                          value={fieldMapping.email || ''}
-                          onValueChange={(value) => updateFieldMapping('email', value)}
+                          value={fieldMapping.email || 'none'}
+                          onValueChange={(value) => updateFieldMapping('email', value === 'none' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nessuno</SelectItem>
+                            <SelectItem value="none">Nessuno</SelectItem>
                             {uploadedFile.headers.map((header) => (
                               <SelectItem key={header} value={header}>
                                 {header}
@@ -673,14 +673,14 @@ const ClientsPage = () => {
                           Telefono
                         </Label>
                         <Select
-                          value={fieldMapping.phone || ''}
-                          onValueChange={(value) => updateFieldMapping('phone', value)}
+                          value={fieldMapping.phone || 'none'}
+                          onValueChange={(value) => updateFieldMapping('phone', value === 'none' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nessuno</SelectItem>
+                            <SelectItem value="none">Nessuno</SelectItem>
                             {uploadedFile.headers.map((header) => (
                               <SelectItem key={header} value={header}>
                                 {header}
@@ -695,14 +695,14 @@ const ClientsPage = () => {
                           Indirizzo
                         </Label>
                         <Select
-                          value={fieldMapping.address || ''}
-                          onValueChange={(value) => updateFieldMapping('address', value)}
+                          value={fieldMapping.address || 'none'}
+                          onValueChange={(value) => updateFieldMapping('address', value === 'none' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nessuno</SelectItem>
+                            <SelectItem value="none">Nessuno</SelectItem>
                             {uploadedFile.headers.map((header) => (
                               <SelectItem key={header} value={header}>
                                 {header}
@@ -717,14 +717,14 @@ const ClientsPage = () => {
                           Note
                         </Label>
                         <Select
-                          value={fieldMapping.notes || ''}
-                          onValueChange={(value) => updateFieldMapping('notes', value)}
+                          value={fieldMapping.notes || 'none'}
+                          onValueChange={(value) => updateFieldMapping('notes', value === 'none' ? '' : value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nessuno</SelectItem>
+                            <SelectItem value="none">Nessuno</SelectItem>
                             {uploadedFile.headers.map((header) => (
                               <SelectItem key={header} value={header}>
                                 {header}

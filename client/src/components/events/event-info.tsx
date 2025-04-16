@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, FileText, Map, Pencil, Users } from "lucide-react";
-import { formatClientName } from "@/lib/utils";
+import { formatClientName, formatAddress } from "@/lib/utils";
 
 interface EventInfoProps {
   event: any; // Utilizziamo 'any' per ora, ma idealmente dovremmo definire un'interfaccia più precisa
@@ -153,10 +153,18 @@ export default function EventInfo({ event }: EventInfoProps) {
                     <dd>{client.phone}</dd>
                   </div>
                 )}
-                {client.address && (
+                {(client.address || client.city || client.zipCode || client.province || client.state) && (
                   <div className="flex justify-between">
                     <dt className="font-medium text-gray-500">Indirizzo:</dt>
-                    <dd className="truncate">{client.address}</dd>
+                    <dd className="truncate text-right">
+                      {formatAddress(
+                        client.address,
+                        client.city,
+                        client.zipCode,
+                        client.province,
+                        client.state
+                      )}
+                    </dd>
                   </div>
                 )}
               </dl>

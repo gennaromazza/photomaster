@@ -127,10 +127,25 @@ export default function ClientInfo({ clientId, mode = "compact", className }: Cl
                   </a>
                 </div>
               )}
-              {client.address && (
+              {(client.address || client.city || client.zipCode || client.province || client.state) && (
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>{client.address}</span>
+                  <a 
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                      formatAddress(client.address, client.city, client.zipCode, client.province, client.state)
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    {formatAddress(
+                      client.address,
+                      client.city,
+                      client.zipCode,
+                      client.province,
+                      client.state
+                    )}
+                  </a>
                 </div>
               )}
             </div>

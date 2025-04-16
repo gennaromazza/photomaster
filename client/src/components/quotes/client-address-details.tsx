@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Mail, Phone, MapPin, Home } from "lucide-react";
-import { formatFullName, formatClientName } from "@/lib/utils";
+import { formatFullName, formatClientName, formatAddress } from "@/lib/utils";
 
 type ClientAddressDetailsProps = {
   client?: any;
@@ -72,19 +72,17 @@ export function ClientAddressDetails({
                     <span>{client.phone}</span>
                   </div>
                 )}
-                {showAddresses && client.address && (
+                {showAddresses && (client.address || client.city || client.zipCode || client.province || client.state) && (
                   <div className="flex items-start">
                     <MapPin className="h-4 w-4 mr-2 text-muted-foreground mt-1" />
-                    <span className="whitespace-pre-line">{client.address}</span>
-                  </div>
-                )}
-                {showAddresses && client.city && (
-                  <div className="flex items-center">
-                    <Home className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>
-                      {client.city}
-                      {client.postalCode && `, ${client.postalCode}`}
-                      {client.province && ` (${client.province})`}
+                    <span className="whitespace-pre-line">
+                      {formatAddress(
+                        client.address,
+                        client.city,
+                        client.zipCode || client.postalCode,
+                        client.province,
+                        client.state
+                      )}
                     </span>
                   </div>
                 )}
@@ -120,19 +118,17 @@ export function ClientAddressDetails({
                     <span>{secondClient.phone}</span>
                   </div>
                 )}
-                {showAddresses && secondClient.address && (
+                {showAddresses && (secondClient.address || secondClient.city || secondClient.zipCode || secondClient.province || secondClient.state) && (
                   <div className="flex items-start">
                     <MapPin className="h-4 w-4 mr-2 text-muted-foreground mt-1" />
-                    <span className="whitespace-pre-line">{secondClient.address}</span>
-                  </div>
-                )}
-                {showAddresses && secondClient.city && (
-                  <div className="flex items-center">
-                    <Home className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>
-                      {secondClient.city}
-                      {secondClient.postalCode && `, ${secondClient.postalCode}`}
-                      {secondClient.province && ` (${secondClient.province})`}
+                    <span className="whitespace-pre-line">
+                      {formatAddress(
+                        secondClient.address,
+                        secondClient.city,
+                        secondClient.zipCode || secondClient.postalCode,
+                        secondClient.province,
+                        secondClient.state
+                      )}
                     </span>
                   </div>
                 )}

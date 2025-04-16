@@ -376,13 +376,17 @@ export default function NewQuotePage() {
       const res = await apiRequest("POST", "/api/quotes", data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (newQuote) => {
       toast({
         title: "Preventivo creato",
         description: "Il preventivo è stato creato con successo",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-      setLocation("/quotes");
+      
+      // Reindirizza l'utente alla pagina di dettaglio del preventivo invece che alla lista
+      // Questo è fondamentale per completare il flusso evento -> preventivo
+      console.log("Preventivo creato con successo, ID:", newQuote.id);
+      setLocation(`/quotes/detail/${newQuote.id}`);
     },
     onError: (error) => {
       toast({

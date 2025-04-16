@@ -172,7 +172,6 @@ const QuotesPage = () => {
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Cliente</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Evento</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Data</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">Importo</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Stato</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-500">Azioni</th>
                   </tr>
@@ -199,9 +198,6 @@ const QuotesPage = () => {
                       </td>
                       <td className="py-3 px-4 text-gray-700">
                         {formatDate(quote.createdAt, "dd/MM/yyyy")}
-                      </td>
-                      <td className="py-3 px-4 text-gray-700 text-right">
-                        {quote.total ? formatCurrency(quote.total) : "€ 0,00"}
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant={getStatusBadge(quote.status)}>

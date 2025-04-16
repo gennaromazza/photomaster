@@ -26,17 +26,17 @@ function normalizeUrl(url: string): string {
   return normalized;
 }
 
-// Estende le proprietà del componente Link di wouter
-interface CustomLinkProps {
+type CustomLinkProps = {
   href: string;
   children: React.ReactNode;
   className?: string;
-  // Altri attributi possono essere aggiunti qui se necessario
-}
+  [key: string]: any;  // Per consentire l'utilizzo di prop aggiuntive
+};
 
 export function Link({ href, children, className, ...rest }: CustomLinkProps) {
   // Normalizza l'URL prima di passarlo al componente Link di wouter
   const normalizedHref = normalizeUrl(href);
   
-  return <WouterLink to={normalizedHref} {...rest}>{children}</WouterLink>;
+  // Usiamo l'attributo to perché è quello che wouter si aspetta
+  return <WouterLink to={normalizedHref} className={className} {...rest}>{children}</WouterLink>;
 }

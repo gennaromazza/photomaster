@@ -11,6 +11,16 @@ import { Event, Client, Collaborator, Quote, insertEventSchema } from "@shared/s
 import { CreateEventForm, CreateAppointmentForm } from "@/components/calendar";
 import { Link } from "wouter";
 
+// Tipo personalizzato per rappresentare sia eventi che preventivi nel calendario
+type CalendarItem = Event | {
+  id: string;
+  title: string;
+  eventType: string;
+  date: Date;
+  isQuote: true;
+  status: string;
+};
+
 const weekdays = ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"];
 
 // Function to adjust the day for the Italian locale (Monday is 1)
@@ -73,14 +83,40 @@ const CalendarPage = () => {
   const calendarDays = [...prevMonthDays, ...days, ...nextMonthDays];
   
   // Function to get events for a specific day
+  // Funzione per determinare se un preventivo ha una data evento associata
+  const getQuotesForDay = (day: Date) => {
+    return quotes.filter(quote => {
+      if (!quote.eventDate) return false;
+      const quoteEventDate = new Date(quote.eventDate);
+      return quoteEventDate.getDate() === day.getDate() && 
+             quoteEventDate.getMonth() === day.getMonth() && 
+             quoteEventDate.getFullYear() === day.getFullYear();
+    });
+  };
+
+  // Funzione per ottenere tutti gli eventi per un giorno specifico
   const getEventsForDay = (day: Date) => {
-    return events.filter(event => {
+    // Primo recuperiamo gli eventi standard
+    const dayEvents = events.filter(event => {
       if (!event.date) return false;
       const eventDate = new Date(event.date);
       return eventDate.getDate() === day.getDate() && 
              eventDate.getMonth() === day.getMonth() && 
              eventDate.getFullYear() === day.getFullYear();
     });
+    
+    // Poi recuperiamo i preventivi con data evento impostata
+    const dayQuotes = getQuotesForDay(day);
+    
+    // Li combiniamo in un unico array di elementi visualizzabili nel calendario
+    return [...dayEvents, ...dayQuotes.map(quote => ({
+      id: `quote-${quote.id}`,
+      title: quote.title || "Preventivo senza titolo",
+      eventType: quote.eventType || "quote",
+      date: new Date(quote.eventDate!),
+      isQuote: true,
+      status: quote.status === "signed" ? "signed" : "draft"
+    }))];
   };
 
   const handleDayClick = (day: Date) => {
@@ -175,20 +211,40 @@ const CalendarPage = () => {
                     {format(day, "d")}
                   </div>
                   
-                  {dayEvents.slice(0, 2).map((event, eventIndex) => (
-                    <Link key={eventIndex} href={`/events/${event.id}`}>
-                      <div 
-                        className={cn(
-                          "mt-1 p-1 text-xs rounded truncate",
-                          event.eventType === "wedding" ? "bg-accent-light text-accent-dark" : 
-                          event.eventType === "appointment" ? "bg-blue-100 text-blue-800" : 
-                          "bg-green-100 text-green-800"
-                        )}
-                      >
-                        {event.title}
-                      </div>
-                    </Link>
-                  ))}
+                  {dayEvents.slice(0, 2).map((event, eventIndex) => {
+                    // Determina il link corretto in base al tipo di elemento (preventivo o evento)
+                    const linkPath = event.isQuote 
+                      ? `/quotes/${event.id.toString().replace('quote-', '')}` 
+                      : `/events/${event.id}`;
+                    
+                    // Determina la classe di stile in base al tipo di elemento e allo stato
+                    const eventClass = cn(
+                      "mt-1 p-1 text-xs rounded truncate flex items-center",
+                      event.isQuote
+                        ? (event.status === "signed" 
+                            ? "bg-purple-100 text-purple-800" 
+                            : "bg-amber-100 text-amber-800")
+                        : event.eventType === "wedding" 
+                            ? "bg-accent-light text-accent-dark" 
+                            : event.eventType === "appointment" 
+                                ? "bg-blue-100 text-blue-800" 
+                                : "bg-green-100 text-green-800"
+                    );
+                    
+                    // Aggiungi un'icona per identificare rapidamente il tipo di elemento
+                    const eventIcon = event.isQuote 
+                      ? <i className="ri-file-list-line mr-1 text-xs"></i>
+                      : <i className="ri-calendar-event-line mr-1 text-xs"></i>;
+                    
+                    return (
+                      <Link key={eventIndex} href={linkPath}>
+                        <div className={eventClass}>
+                          {eventIcon}
+                          <span className="truncate">{event.title}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
                   
                   {dayEvents.length > 2 && (
                     <div className="mt-1 text-xs text-gray-500 text-center">

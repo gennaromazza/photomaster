@@ -195,11 +195,39 @@ const ClientsPage = () => {
                           <div className="flex items-center text-gray-700">
                             <Mail className="h-3.5 w-3.5 text-gray-400 mr-1.5" /> 
                             <span>{client.email}</span>
+                            <a 
+                              href={`mailto:${client.email}`} 
+                              title="Invia email"
+                              className="text-primary hover:text-primary/80 transition-colors rounded-full p-1 ml-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Mail className="h-3 w-3" />
+                            </a>
                           </div>
                           {client.phone && (
                             <div className="flex items-center text-gray-700 mt-1">
                               <Phone className="h-3.5 w-3.5 text-gray-400 mr-1.5" /> 
                               <span>{client.phone}</span>
+                              <div className="flex items-center ml-2 space-x-1">
+                                <a 
+                                  href={`tel:${client.phone.replace(/\s+/g, '')}`} 
+                                  title="Chiama"
+                                  className="text-primary hover:text-primary/80 transition-colors rounded-full p-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Phone className="h-3 w-3" />
+                                </a>
+                                <a 
+                                  href={`https://wa.me/${client.phone.replace(/\s+/g, '')}`} 
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Apri WhatsApp"
+                                  className="text-green-600 hover:text-green-700 transition-colors rounded-full p-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <i className="ri-whatsapp-line text-xs"></i>
+                                </a>
+                              </div>
                             </div>
                           )}
                         </div>

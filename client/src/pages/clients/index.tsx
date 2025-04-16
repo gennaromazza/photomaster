@@ -36,7 +36,8 @@ import {
   Plus,
   Mail,
   Phone,
-  UserPlus
+  UserPlus,
+  MapPin
 } from "lucide-react";
 
 const ClientsPage = () => {
@@ -231,8 +232,24 @@ const ClientsPage = () => {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="text-gray-700">
-                          {client.address ? client.address : '-'}
+                        <div className="flex items-center text-gray-700">
+                          {client.address ? (
+                            <>
+                              <a 
+                                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(client.address)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Apri in Google Maps" 
+                                className="text-primary hover:text-primary/80 transition-colors rounded-full p-1 mr-1.5"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MapPin className="h-3.5 w-3.5" />
+                              </a>
+                              <span>{client.address}</span>
+                            </>
+                          ) : (
+                            '-'
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-right">

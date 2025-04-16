@@ -712,6 +712,7 @@ const ClientsPage = () => {
                     </p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Campi obbligatori */}
                       <div className="space-y-2">
                         <Label htmlFor="firstName" className="text-sm font-medium">
                           Nome <span className="text-red-500">*</span>
@@ -756,6 +757,7 @@ const ClientsPage = () => {
                         </Select>
                       </div>
                       
+                      {/* Dati di contatto */}
                       <div className="space-y-2">
                         <Label htmlFor="email" className="text-sm font-medium">
                           Email
@@ -801,6 +803,51 @@ const ClientsPage = () => {
                       </div>
                       
                       <div className="space-y-2">
+                        <Label htmlFor="companyName" className="text-sm font-medium">
+                          Nome Azienda
+                        </Label>
+                        <Select
+                          value={fieldMapping.companyName || 'none'}
+                          onValueChange={(value) => updateFieldMapping('companyName', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="internationalPrefix" className="text-sm font-medium">
+                          Prefisso Internazionale
+                        </Label>
+                        <Select
+                          value={fieldMapping.internationalPrefix || 'none'}
+                          onValueChange={(value) => updateFieldMapping('internationalPrefix', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Dati di localizzazione */}
+                      <div className="space-y-2">
                         <Label htmlFor="address" className="text-sm font-medium">
                           Indirizzo
                         </Label>
@@ -822,6 +869,117 @@ const ClientsPage = () => {
                         </Select>
                       </div>
                       
+                      <div className="space-y-2">
+                        <Label htmlFor="city" className="text-sm font-medium">
+                          Città
+                        </Label>
+                        <Select
+                          value={fieldMapping.city || 'none'}
+                          onValueChange={(value) => updateFieldMapping('city', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="zipCode" className="text-sm font-medium">
+                          C.A.P.
+                        </Label>
+                        <Select
+                          value={fieldMapping.zipCode || 'none'}
+                          onValueChange={(value) => updateFieldMapping('zipCode', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="province" className="text-sm font-medium">
+                          Provincia
+                        </Label>
+                        <Select
+                          value={fieldMapping.province || 'none'}
+                          onValueChange={(value) => updateFieldMapping('province', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="state" className="text-sm font-medium">
+                          Stato
+                        </Label>
+                        <Select
+                          value={fieldMapping.state || 'none'}
+                          onValueChange={(value) => updateFieldMapping('state', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="fiscalCode" className="text-sm font-medium">
+                          Codice Fiscale
+                        </Label>
+                        <Select
+                          value={fieldMapping.fiscalCode || 'none'}
+                          onValueChange={(value) => updateFieldMapping('fiscalCode', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un campo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nessuno</SelectItem>
+                            {uploadedFile.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Note */}
                       <div className="space-y-2">
                         <Label htmlFor="notes" className="text-sm font-medium">
                           Note

@@ -8,6 +8,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { FileText, Share2, Users } from "lucide-react";
+import { formatClientName } from "@/lib/utils";
 
 interface QuoteInfoProps {
   quote: any; // Utilizziamo 'any' per ora, ma idealmente dovremmo definire un'interfaccia più precisa

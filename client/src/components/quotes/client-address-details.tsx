@@ -1,6 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Mail, Phone, MapPin, Home } from "lucide-react";
+import { formatFullName, formatClientName } from "@/lib/utils";
 
 type ClientAddressDetailsProps = {
   client?: any;
@@ -52,7 +53,7 @@ export function ClientAddressDetails({
                 </div>
                 <div>
                   <h3 className="text-lg font-medium">
-                    {client.firstName} {client.lastName}
+                    {formatClientName(client)}
                   </h3>
                   <p className="text-sm text-muted-foreground">Cliente Principale</p>
                 </div>
@@ -100,7 +101,7 @@ export function ClientAddressDetails({
                 </div>
                 <div>
                   <h3 className="text-lg font-medium">
-                    {secondClient.firstName} {secondClient.lastName}
+                    {formatClientName(secondClient)}
                   </h3>
                   <p className="text-sm text-muted-foreground">Secondo Cliente</p>
                 </div>

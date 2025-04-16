@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, FileText, Map, Pencil, Users } from "lucide-react";
+import { formatClientName } from "@/lib/utils";
 
 interface EventInfoProps {
   event: any; // Utilizziamo 'any' per ora, ma idealmente dovremmo definire un'interfaccia più precisa
@@ -138,7 +139,7 @@ export default function EventInfo({ event }: EventInfoProps) {
               <dl className="space-y-2">
                 <div className="flex justify-between">
                   <dt className="font-medium text-gray-500">Nome:</dt>
-                  <dd>{client.firstName} {client.lastName}</dd>
+                  <dd>{formatClientName(client)}</dd>
                 </div>
                 {client.email && (
                   <div className="flex justify-between">

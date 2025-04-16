@@ -583,52 +583,69 @@ export default function NewQuotePage() {
             
             {!isEditMode && events.length > 0 && (
               <div className="mt-4">
-                <Popover>
-                  <PopoverTrigger asChild>
+                <Dialog>
+                  <DialogTrigger asChild>
                     <Button variant="outline" className="flex items-center">
                       <Download className="h-4 w-4 mr-2" />
                       Importa Dati da Evento
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80">
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-sm">Seleziona un evento</h4>
-                      <Select
-                        onValueChange={(value) => {
-                          if (value !== "0") {
-                            const eventId = parseInt(value);
-                            fetchEventDataFromApi(eventId).then((success) => {
-                              if (success) {
-                                toast({
-                                  title: "Dati importati",
-                                  description: "I dati dell'evento sono stati importati nel preventivo",
-                                });
-                              } else {
-                                toast({
-                                  title: "Errore",
-                                  description: "Impossibile importare i dati dell'evento",
-                                  variant: "destructive",
-                                });
-                              }
-                            });
-                          }
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona evento" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Seleziona</SelectItem>
-                          {events.map((event: any) => (
-                            <SelectItem key={event.id} value={event.id.toString()}>
-                              {event.title} - {event.eventType || "Evento"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Importa Dati da Evento</DialogTitle>
+                      <DialogDescription>
+                        Cerca e seleziona un evento per importarne i dati nel preventivo
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <Command className="rounded-lg border shadow-md">
+                        <CommandInput placeholder="Cerca evento per titolo..." />
+                        <CommandList>
+                          <CommandEmpty>Nessun evento trovato</CommandEmpty>
+                          <CommandGroup heading="Eventi">
+                            {events.map((event: any) => (
+                              <CommandItem 
+                                key={event.id}
+                                onSelect={() => {
+                                  fetchEventDataFromApi(event.id).then((success) => {
+                                    if (success) {
+                                      toast({
+                                        title: "Dati importati",
+                                        description: "I dati dell'evento sono stati importati nel preventivo",
+                                      });
+                                      // Chiude automaticamente il dialog dopo l'importazione riuscita
+                                      const closeButton = document.querySelector('[data-dialog-close]') as HTMLElement;
+                                      if (closeButton) closeButton.click();
+                                    } else {
+                                      toast({
+                                        title: "Errore",
+                                        description: "Impossibile importare i dati dell'evento",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  });
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-semibold">{event.title}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {event.eventType || "Evento"} - {event.date ? new Date(event.date).toLocaleDateString('it-IT') : "Data non specificata"}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
                     </div>
-                  </PopoverContent>
-                </Popover>
+                    <DialogFooter>
+                      <Button variant="outline" type="button" data-dialog-close>
+                        Chiudi
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </div>
@@ -1181,10 +1198,63 @@ export default function NewQuotePage() {
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
+                            <div className="flex flex-col sm:flex-row border-b px-3 py-2">
+                              <Select
+                                onValueChange={(value) => {
+                                  const month = parseInt(value);
+                                  const date = field.value || new Date();
+                                  date.setMonth(month);
+                                  field.onChange(new Date(date));
+                                }}
+                                value={field.value ? field.value.getMonth().toString() : new Date().getMonth().toString()}
+                              >
+                                <SelectTrigger className="w-[110px] mr-2">
+                                  <SelectValue placeholder="Mese" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">Gennaio</SelectItem>
+                                  <SelectItem value="1">Febbraio</SelectItem>
+                                  <SelectItem value="2">Marzo</SelectItem>
+                                  <SelectItem value="3">Aprile</SelectItem>
+                                  <SelectItem value="4">Maggio</SelectItem>
+                                  <SelectItem value="5">Giugno</SelectItem>
+                                  <SelectItem value="6">Luglio</SelectItem>
+                                  <SelectItem value="7">Agosto</SelectItem>
+                                  <SelectItem value="8">Settembre</SelectItem>
+                                  <SelectItem value="9">Ottobre</SelectItem>
+                                  <SelectItem value="10">Novembre</SelectItem>
+                                  <SelectItem value="11">Dicembre</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Select
+                                onValueChange={(value) => {
+                                  const year = parseInt(value);
+                                  const date = field.value || new Date();
+                                  date.setFullYear(year);
+                                  field.onChange(new Date(date));
+                                }}
+                                value={field.value ? field.value.getFullYear().toString() : new Date().getFullYear().toString()}
+                              >
+                                <SelectTrigger className="w-[110px]">
+                                  <SelectValue placeholder="Anno" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.from({ length: 10 }, (_, i) => {
+                                    const year = new Date().getFullYear() + i;
+                                    return (
+                                      <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
                             <Calendar
                               mode="single"
                               selected={field.value}
                               onSelect={field.onChange}
+                              defaultMonth={field.value || new Date()}
                               initialFocus
                               locale={it}
                             />

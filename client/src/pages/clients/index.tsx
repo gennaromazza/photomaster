@@ -711,51 +711,56 @@ const ClientsPage = () => {
                       I campi nome e cognome sono obbligatori.
                     </p>
                     
+                    <div className="bg-amber-50 p-4 rounded-lg mb-4 border border-amber-200">
+                      <h4 className="font-semibold text-amber-800 mb-2">Campi obbligatori</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="firstName" className="text-sm font-medium">
+                            Nome <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={fieldMapping.firstName || 'none'}
+                            onValueChange={(value) => updateFieldMapping('firstName', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona un campo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nessuno</SelectItem>
+                              {uploadedFile.headers.map((header) => (
+                                <SelectItem key={header} value={header}>
+                                  {header}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="lastName" className="text-sm font-medium">
+                            Cognome <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={fieldMapping.lastName || 'none'}
+                            onValueChange={(value) => updateFieldMapping('lastName', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona un campo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nessuno</SelectItem>
+                              {uploadedFile.headers.map((header) => (
+                                <SelectItem key={header} value={header}>
+                                  {header}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Campi obbligatori */}
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName" className="text-sm font-medium">
-                          Nome <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={fieldMapping.firstName || 'none'}
-                          onValueChange={(value) => updateFieldMapping('firstName', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona un campo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Nessuno</SelectItem>
-                            {uploadedFile.headers.map((header) => (
-                              <SelectItem key={header} value={header}>
-                                {header}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName" className="text-sm font-medium">
-                          Cognome <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={fieldMapping.lastName || 'none'}
-                          onValueChange={(value) => updateFieldMapping('lastName', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona un campo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Nessuno</SelectItem>
-                            {uploadedFile.headers.map((header) => (
-                              <SelectItem key={header} value={header}>
-                                {header}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
                       
                       {/* Dati di contatto */}
                       <div className="space-y-2">

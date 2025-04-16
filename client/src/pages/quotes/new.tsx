@@ -173,18 +173,68 @@ export default function NewQuotePage() {
     },
   });
 
-  // Estrai eventId dalla query string se esiste
+  // Estrai eventId dalla query string
   const fromEventId = new URLSearchParams(location.split("?")[1] || "").get("fromEventId");
   console.log("URL location:", location);
   console.log("fromEventId:", fromEventId);
   
-  // Gestisce direttamente la chiamata API per ottenere i dati di un evento specifico
-  const fetchEventData = async (eventId: number) => {
+  // Carica i dati dell'evento dal localStorage e dall'API come fallback
+  useEffect(() => {
+    // Prima prova a caricare i dati dal localStorage
+    try {
+      const savedEventData = localStorage.getItem('eventForQuote');
+      if (savedEventData) {
+        const eventData = JSON.parse(savedEventData);
+        console.log("Dati evento recuperati da localStorage:", eventData);
+        
+        // Imposta i valori del form dai dati salvati
+        form.setValue("title", eventData.title || "");
+        form.setValue("clientId", eventData.clientId);
+        form.setValue("eventId", eventData.id);
+        form.setValue("eventType", eventData.eventType || "");
+        form.setValue("location", eventData.location || "");
+        form.setValue("eventDate", eventData.date ? new Date(eventData.date) : undefined);
+        form.setValue("notes", eventData.notes || "");
+        form.setValue("categoryId", eventData.categoryId);
+        form.setValue("leadSourceId", eventData.leadSourceId);
+        
+        // Imposta il timestamp delle ore se disponibile
+        if (eventData.date) {
+          const date = new Date(eventData.date);
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          form.setValue("eventTime", `${hours}:${minutes}`);
+        }
+        
+        // Forza l'aggiornamento dei valori nel form
+        Object.keys(form.getValues()).forEach(key => {
+          form.trigger(key as any);
+        });
+        
+        // Rimuovi i dati dal localStorage dopo l'uso
+        localStorage.removeItem('eventForQuote');
+        return;
+      }
+    } catch (error) {
+      console.error("Errore nel recupero dati da localStorage:", error);
+    }
+    
+    // Fallback: prova a caricare i dati dall'API se disponibile l'ID nell'URL
+    if (fromEventId) {
+      const eventId = parseInt(fromEventId);
+      if (!isNaN(eventId)) {
+        fetchEventDataFromApi(eventId);
+      }
+    }
+  }, [form]);
+  
+  // Funzione per recuperare i dati dell'evento dall'API (come fallback)
+  const fetchEventDataFromApi = async (eventId: number) => {
     try {
       const response = await fetch(`/api/events/${eventId}`);
       if (!response.ok) throw new Error('Errore nel recupero dati evento');
       const event = await response.json();
-      console.log("Dati evento recuperati direttamente:", event);
+      console.log("Dati evento recuperati da API (fallback):", event);
       
       // Imposta i valori del form
       form.setValue("title", event.title || "");
@@ -212,20 +262,10 @@ export default function NewQuotePage() {
       
       return true;
     } catch (error) {
-      console.error("Errore nel caricamento dati evento:", error);
+      console.error("Errore nel caricamento dati evento dall'API:", error);
       return false;
     }
   };
-
-  // Carica i dati dell'evento quando viene passato un fromEventId
-  useEffect(() => {
-    if (fromEventId) {
-      const eventId = parseInt(fromEventId);
-      if (!isNaN(eventId)) {
-        fetchEventData(eventId);
-      }
-    }
-  }, [fromEventId]);
 
   // Filtraggio clienti basato sulla ricerca
   useEffect(() => {

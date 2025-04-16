@@ -66,7 +66,20 @@ export default function EventDetailPage() {
             </Link>
           ) : (
             <Link href={`/quotes/new?fromEventId=${event.id}`} onClick={() => {
-              console.log('Creazione preventivo da evento:', event.id)
+              console.log('Creazione preventivo da evento:', event.id);
+              // Salva i dati dell'evento in localStorage per la precompilazione
+              localStorage.setItem('eventForQuote', JSON.stringify({
+                id: event.id,
+                title: event.title,
+                clientId: event.clientId,
+                description: event.description,
+                eventType: event.eventType,
+                date: event.date,
+                location: event.location,
+                notes: event.notes,
+                categoryId: event.categoryId,
+                leadSourceId: event.leadSourceId
+              }));
             }}>
               <Button>
                 Crea Preventivo

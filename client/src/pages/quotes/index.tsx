@@ -170,7 +170,6 @@ const QuotesPage = () => {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Titolo</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Cliente</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">Evento</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Data</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Stato</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-500">Azioni</th>
@@ -192,17 +191,6 @@ const QuotesPage = () => {
                       </td>
                       <td className="py-3 px-4 text-gray-700">
                         {getClientName(quote.clientId)}
-                      </td>
-                      <td className="py-3 px-4 text-gray-700">
-                        <div>
-                          {quote.eventId ? getEventTitle(quote.eventId) : "-"}
-                        </div>
-                        {quote.eventId && events.find(e => e.id === quote.eventId)?.date && (
-                          <div className="text-xs text-gray-500 flex items-center mt-1">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {formatDate(events.find(e => e.id === quote.eventId)?.date || new Date(), "dd/MM/yyyy")}
-                          </div>
-                        )}
                       </td>
                       <td className="py-3 px-4 text-gray-700">
                         <div>{formatDate(quote.createdAt, "dd/MM/yyyy")}</div>

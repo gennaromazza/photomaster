@@ -178,39 +178,54 @@ export default function NewQuotePage() {
   console.log("URL location:", location);
   console.log("fromEventId:", fromEventId);
   
+  // Gestisce direttamente la chiamata API per ottenere i dati di un evento specifico
+  const fetchEventData = async (eventId: number) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}`);
+      if (!response.ok) throw new Error('Errore nel recupero dati evento');
+      const event = await response.json();
+      console.log("Dati evento recuperati direttamente:", event);
+      
+      // Imposta i valori del form
+      form.setValue("title", event.title || "");
+      form.setValue("clientId", event.clientId);
+      form.setValue("eventId", event.id);
+      form.setValue("eventType", event.eventType || "");
+      form.setValue("location", event.location || "");
+      form.setValue("eventDate", event.date ? new Date(event.date) : undefined);
+      form.setValue("notes", event.notes || "");
+      form.setValue("categoryId", event.categoryId);
+      form.setValue("leadSourceId", event.leadSourceId);
+      
+      // Imposta il timestamp delle ore se disponibile
+      if (event.date) {
+        const date = new Date(event.date);
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        form.setValue("eventTime", `${hours}:${minutes}`);
+      }
+      
+      // Forza l'aggiornamento dei valori nel form
+      Object.keys(form.getValues()).forEach(key => {
+        form.trigger(key as any);
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Errore nel caricamento dati evento:", error);
+      return false;
+    }
+  };
+
   // Carica i dati dell'evento quando viene passato un fromEventId
   useEffect(() => {
-    if (fromEventId && events.length > 0) {
+    if (fromEventId) {
       const eventId = parseInt(fromEventId);
-      const event = events.find((e: any) => e.id === eventId);
-      
-      if (event) {
-        console.log("Ricevuti dati evento per preventivo:", event);
-        form.setValue("title", event.title || "");
-        form.setValue("clientId", event.clientId);
-        form.setValue("eventId", event.id);
-        form.setValue("eventType", event.eventType || "");
-        form.setValue("location", event.location || "");
-        form.setValue("eventDate", event.date ? new Date(event.date) : undefined);
-        form.setValue("notes", event.notes || "");
-        form.setValue("categoryId", event.categoryId);
-        form.setValue("leadSourceId", event.leadSourceId);
-        
-        // Imposta il timestamp delle ore se disponibile
-        if (event.date) {
-          const date = new Date(event.date);
-          const hours = String(date.getHours()).padStart(2, '0');
-          const minutes = String(date.getMinutes()).padStart(2, '0');
-          form.setValue("eventTime", `${hours}:${minutes}`);
-        }
-        
-        // Forza l'aggiornamento dei valori nel form
-        Object.keys(form.getValues()).forEach(key => {
-          form.trigger(key as any);
-        });
+      if (!isNaN(eventId)) {
+        fetchEventData(eventId);
       }
     }
-  }, [fromEventId, events, form]);
+  }, [fromEventId]);
 
   // Filtraggio clienti basato sulla ricerca
   useEffect(() => {

@@ -1,5 +1,6 @@
 import React from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
+import { Link } from "@/components/ui/custom-link";
 import { cn } from "@/lib/utils";
 import {
   Home,

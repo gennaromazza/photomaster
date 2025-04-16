@@ -1,0 +1,30 @@
+7Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+content_script.js:66 Uncaught TypeError: Cannot read properties of undefined (reading 'x')
+    at wasDragged (content_script.js:66:52)
+    at HTMLAnchorElement.onMouseUp (content_script.js:112:13)Understand this error
+4hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//calendar' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//settings' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//quotes' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//auth' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//calendar' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+hook.js:608 Invalid href 'https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev//auth' passed to next/router in page: '/replEnvironmentDesktop'. Repeated forward-slashes (//) or backslashes \ are not valid in the href.
+overrideMethod @ hook.js:608Understand this error
+error:1 
+            
+            
+           Failed to load resource: the server responded with a status of 403 ()

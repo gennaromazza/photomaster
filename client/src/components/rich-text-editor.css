@@ -1,0 +1,57 @@
+/* Stili personalizzati per CKEditor */
+.rich-text-editor {
+  overflow: hidden;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+}
+
+.rich-text-editor .ck.ck-editor__main {
+  padding: 0.75rem;
+}
+
+.rich-text-editor .ck-editor__editable {
+  min-height: 150px;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.rich-text-editor .ck.ck-toolbar {
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: var(--muted) !important;
+  border-radius: 0.375rem 0.375rem 0 0 !important;
+}
+
+.rich-text-editor .ck.ck-button {
+  border-radius: 0.25rem !important;
+}
+
+.rich-text-editor .ck.ck-button:hover {
+  background: var(--accent) !important;
+}
+
+.rich-text-editor .ck.ck-button.ck-on {
+  background: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+.rich-text-editor .ck-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-family: var(--font-playfair);
+}
+
+.rich-text-editor .ck-content ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+}
+
+.rich-text-editor .ck-content ol {
+  list-style-type: decimal;
+  margin-left: 1.5rem;
+}
+
+.rich-text-editor .ck.ck-editor__editable_inline {
+  padding: 1rem !important;
+  background: transparent !important;
+}

@@ -30,7 +30,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Inizia a scri
   return (
     <div className="rich-text-editor border rounded-md">
       <CKEditor
-        editor={ClassicEditor}
+        editor={ClassicEditor as any}
         data={content}
         config={{
           placeholder: placeholder,

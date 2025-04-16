@@ -11,8 +11,8 @@ import { Event, Client, Collaborator, Quote, insertEventSchema } from "@shared/s
 import { CreateEventForm, CreateAppointmentForm } from "@/components/calendar";
 import { Link } from "wouter";
 
-// Tipo personalizzato per rappresentare sia eventi che preventivi nel calendario
-type CalendarItem = Event | {
+// Tipo personalizzato per rappresentare i preventivi nel calendario
+type QuoteCalendarItem = {
   id: string;
   title: string;
   eventType: string;
@@ -20,6 +20,9 @@ type CalendarItem = Event | {
   isQuote: true;
   status: string;
 };
+
+// Tipo di unione per rappresentare sia eventi che preventivi nel calendario
+type CalendarItem = Event | QuoteCalendarItem;
 
 const weekdays = ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"];
 
@@ -95,7 +98,7 @@ const CalendarPage = () => {
   };
 
   // Funzione per ottenere tutti gli eventi per un giorno specifico
-  const getEventsForDay = (day: Date) => {
+  const getEventsForDay = (day: Date): CalendarItem[] => {
     // Primo recuperiamo gli eventi standard
     const dayEvents = events.filter(event => {
       if (!event.date) return false;
@@ -108,15 +111,18 @@ const CalendarPage = () => {
     // Poi recuperiamo i preventivi con data evento impostata
     const dayQuotes = getQuotesForDay(day);
     
-    // Li combiniamo in un unico array di elementi visualizzabili nel calendario
-    return [...dayEvents, ...dayQuotes.map(quote => ({
+    // Creiamo gli elementi di calendario dai preventivi
+    const quoteCalendarItems: CalendarItem[] = dayQuotes.map(quote => ({
       id: `quote-${quote.id}`,
       title: quote.title || "Preventivo senza titolo",
       eventType: quote.eventType || "quote",
       date: new Date(quote.eventDate!),
       isQuote: true,
       status: quote.status === "signed" ? "signed" : "draft"
-    }))];
+    }));
+    
+    // Combiniamo tutto in un unico array
+    return [...dayEvents, ...quoteCalendarItems];
   };
 
   const handleDayClick = (day: Date) => {
@@ -212,15 +218,19 @@ const CalendarPage = () => {
                   </div>
                   
                   {dayEvents.slice(0, 2).map((event, eventIndex) => {
+                    // Verifichiamo se l'elemento è un preventivo usando typeguard
+                    const isQuoteItem = (item: CalendarItem): item is QuoteCalendarItem => 
+                      'isQuote' in item && item.isQuote === true;
+                    
                     // Determina il link corretto in base al tipo di elemento (preventivo o evento)
-                    const linkPath = event.isQuote 
+                    const linkPath = isQuoteItem(event)
                       ? `/quotes/${event.id.toString().replace('quote-', '')}` 
                       : `/events/${event.id}`;
                     
                     // Determina la classe di stile in base al tipo di elemento e allo stato
                     const eventClass = cn(
                       "mt-1 p-1 text-xs rounded truncate flex items-center",
-                      event.isQuote
+                      isQuoteItem(event)
                         ? (event.status === "signed" 
                             ? "bg-purple-100 text-purple-800" 
                             : "bg-amber-100 text-amber-800")
@@ -232,7 +242,7 @@ const CalendarPage = () => {
                     );
                     
                     // Aggiungi un'icona per identificare rapidamente il tipo di elemento
-                    const eventIcon = event.isQuote 
+                    const eventIcon = isQuoteItem(event)
                       ? <i className="ri-file-list-line mr-1 text-xs"></i>
                       : <i className="ri-calendar-event-line mr-1 text-xs"></i>;
                     

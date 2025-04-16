@@ -1,5 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -106,6 +107,7 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Strategia di autenticazione locale
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
@@ -131,6 +133,87 @@ export function setupAuth(app: Express) {
         return done(error);
       }
     }),
+  );
+  
+  // Strategia di autenticazione Google
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        callbackURL: "/api/auth/google/callback",
+        passReqToCallback: true,
+      },
+      async (req: any, accessToken: string, refreshToken: string, profile: any, done: any) => {
+        try {
+          // Memorizza il token per l'accesso all'API Calendar
+          const tokens = {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            // Normalmente le API Google forniscono anche expiry_date e scope
+          };
+          
+          // Verifica se l'utente esiste già
+          let user = await storage.getUserByEmail(profile.emails[0].value);
+          
+          if (user) {
+            // Aggiorna i token di Google per l'utente esistente
+            user = await storage.updateUser(user.id, {
+              googleId: profile.id,
+              googleTokens: JSON.stringify(tokens),
+              profileImage: user.profileImage || profile.photos[0]?.value || "",
+            });
+            
+            return done(null, user);
+          } else {
+            // Genera un username unico basato sull'email
+            const emailUsername = profile.emails[0].value.split('@')[0];
+            let username = emailUsername;
+            let usernameIsUnique = false;
+            let counter = 1;
+            
+            // Assicurati che l'username sia unico
+            while (!usernameIsUnique) {
+              const existingUser = await storage.getUserByUsername(username);
+              if (!existingUser) {
+                usernameIsUnique = true;
+              } else {
+                username = `${emailUsername}${counter}`;
+                counter++;
+              }
+            }
+            
+            // Crea un nuovo utente
+            const isAdmin = profile.emails[0].value === "gennaro.mazzacane@gmail.com";
+            
+            // Crea una password casuale per l'utente (non sarà usata per il login)
+            const randomPassword = randomBytes(16).toString("hex");
+            const hashedPassword = await hashPassword(randomPassword);
+            
+            const newUser = await storage.createUser({
+              username,
+              password: hashedPassword,
+              fullName: profile.displayName,
+              email: profile.emails[0].value,
+              role: isAdmin ? "admin" : "user",
+              status: isAdmin ? "active" : "pending",
+              googleId: profile.id,
+              googleTokens: JSON.stringify(tokens),
+              profileImage: profile.photos[0]?.value || "",
+            });
+            
+            // Se non è l'amministratore, invia una notifica per l'approvazione
+            if (!isAdmin) {
+              await sendRegistrationNotification(newUser);
+            }
+            
+            return done(null, newUser);
+          }
+        } catch (error) {
+          return done(error);
+        }
+      }
+    )
   );
 
   passport.serializeUser((user, done) => done(null, user.id));

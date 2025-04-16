@@ -1117,7 +1117,25 @@ const ClientsPage = () => {
                                 Telefono
                               </th>
                               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Azienda
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Indirizzo
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                CAP
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Città
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Provincia
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Stato
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Codice Fiscale
                               </th>
                             </tr>
                           </thead>
@@ -1129,7 +1147,14 @@ const ClientsPage = () => {
                                 lastName: fieldMapping.lastName ? row[fieldMapping.lastName] : '-',
                                 email: fieldMapping.email ? row[fieldMapping.email] : '-',
                                 phone: fieldMapping.phone ? row[fieldMapping.phone] : '-',
-                                address: fieldMapping.address ? row[fieldMapping.address] : '-'
+                                companyName: fieldMapping.companyName ? row[fieldMapping.companyName] : '-',
+                                address: fieldMapping.address ? row[fieldMapping.address] : '-',
+                                zipCode: fieldMapping.zipCode ? row[fieldMapping.zipCode] : '-',
+                                city: fieldMapping.city ? row[fieldMapping.city] : '-',
+                                province: fieldMapping.province ? row[fieldMapping.province] : '-',
+                                state: fieldMapping.state ? row[fieldMapping.state] : '-',
+                                fiscalCode: fieldMapping.fiscalCode ? row[fieldMapping.fiscalCode] : '-',
+                                internationalPrefix: fieldMapping.internationalPrefix ? row[fieldMapping.internationalPrefix] : '-'
                               };
                               
                               return (
@@ -1147,7 +1172,25 @@ const ClientsPage = () => {
                                     {mappedRow.phone || '-'}
                                   </td>
                                   <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.companyName || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
                                     {mappedRow.address || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.zipCode || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.city || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.province || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.state || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.fiscalCode || '-'}
                                   </td>
                                 </tr>
                               );

@@ -153,8 +153,23 @@ export function setupAuth(app: Express) {
             // Normalmente le API Google forniscono anche expiry_date e scope
           };
           
-          // Verifica se l'utente esiste già
-          let user = await storage.getUserByEmail(profile.emails[0].value);
+          // Verifica se l'utente esiste già tramite Google ID
+          let user = await storage.getUserByGoogleId(profile.id);
+          
+          if (user) {
+            // Aggiorna i token di Google
+            const googleTokens = JSON.stringify({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+              updated_at: new Date().toISOString()
+            });
+            
+            user = await storage.updateUser(user.id, { googleTokens });
+            return done(null, user);
+          }
+          
+          // Se non esiste con Google ID, verifica tramite email
+          user = await storage.getUserByEmail(profile.emails[0].value);
           
           if (user) {
             // Aggiorna i token di Google per l'utente esistente

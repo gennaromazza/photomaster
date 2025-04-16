@@ -25,6 +25,8 @@ type AuthContextType = {
   loginMutation: UseMutationResult<LoginResponse, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<UserWithoutPassword, Error, RegisterData>;
+  loginWithGoogle: () => void;
+  handleGoogleCallback: (token: string) => Promise<void>;
 };
 
 type LoginData = {
@@ -194,6 +196,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Funzione per iniziare il flusso di autenticazione Google
+  const loginWithGoogle = () => {
+    // Reindirizza l'utente all'endpoint di autenticazione Google
+    window.location.href = "/api/auth/google";
+  };
+  
+  // Funzione per gestire il callback dopo l'autenticazione Google
+  const handleGoogleCallback = async (tokenFromGoogle: string) => {
+    try {
+      // Salva il token nel localStorage
+      localStorage.setItem("auth_token", tokenFromGoogle);
+      setToken(tokenFromGoogle);
+      
+      // Verifica il token per ottenere i dati dell'utente
+      await verifyToken(tokenFromGoogle);
+      
+      toast({
+        title: "Login con Google effettuato",
+        description: "Sei stato autenticato tramite Google",
+      });
+    } catch (error) {
+      toast({
+        title: "Login con Google fallito",
+        description: "Si è verificato un errore durante l'autenticazione con Google",
+        variant: "destructive",
+      });
+      
+      // Rimuovi il token
+      localStorage.removeItem("auth_token");
+      setToken(null);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -204,6 +239,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        loginWithGoogle,
+        handleGoogleCallback,
       }}
     >
       {children}

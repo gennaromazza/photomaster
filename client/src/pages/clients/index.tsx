@@ -256,7 +256,10 @@ const ClientsPage = () => {
   
   // Funzione per aggiornare la mappatura dei campi
   const updateFieldMapping = (field: string, value: string) => {
-    setFieldMapping(prev => ({ ...prev, [field]: value }));
+    // Se il valore è 'none', imposta una stringa vuota nella mappatura
+    const actualValue = value === 'none' ? '' : value;
+    setFieldMapping(prev => ({ ...prev, [field]: actualValue }));
+    console.log(`Campo ${field} aggiornato a:`, value, "-> mappato come:", actualValue);
   };
   
   // Funzione per pulire la ricerca
@@ -608,7 +611,7 @@ const ClientsPage = () => {
                         </Label>
                         <Select
                           value={fieldMapping.firstName || 'none'}
-                          onValueChange={(value) => updateFieldMapping('firstName', value === 'none' ? '' : value)}
+                          onValueChange={(value) => updateFieldMapping('firstName', value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
@@ -630,7 +633,7 @@ const ClientsPage = () => {
                         </Label>
                         <Select
                           value={fieldMapping.lastName || 'none'}
-                          onValueChange={(value) => updateFieldMapping('lastName', value === 'none' ? '' : value)}
+                          onValueChange={(value) => updateFieldMapping('lastName', value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
@@ -652,7 +655,7 @@ const ClientsPage = () => {
                         </Label>
                         <Select
                           value={fieldMapping.email || 'none'}
-                          onValueChange={(value) => updateFieldMapping('email', value === 'none' ? '' : value)}
+                          onValueChange={(value) => updateFieldMapping('email', value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
@@ -674,7 +677,7 @@ const ClientsPage = () => {
                         </Label>
                         <Select
                           value={fieldMapping.phone || 'none'}
-                          onValueChange={(value) => updateFieldMapping('phone', value === 'none' ? '' : value)}
+                          onValueChange={(value) => updateFieldMapping('phone', value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
@@ -696,7 +699,7 @@ const ClientsPage = () => {
                         </Label>
                         <Select
                           value={fieldMapping.address || 'none'}
-                          onValueChange={(value) => updateFieldMapping('address', value === 'none' ? '' : value)}
+                          onValueChange={(value) => updateFieldMapping('address', value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />
@@ -718,7 +721,7 @@ const ClientsPage = () => {
                         </Label>
                         <Select
                           value={fieldMapping.notes || 'none'}
-                          onValueChange={(value) => updateFieldMapping('notes', value === 'none' ? '' : value)}
+                          onValueChange={(value) => updateFieldMapping('notes', value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona un campo" />

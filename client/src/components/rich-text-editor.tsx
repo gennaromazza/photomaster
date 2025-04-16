@@ -34,18 +34,30 @@ export function RichTextEditor({ content, onChange, placeholder = 'Inizia a scri
         data={content}
         config={{
           placeholder: placeholder,
-          toolbar: [
-            'heading', '|',
-            'bold', 'italic', 'underline', 'strikethrough', '|',
-            'bulletedList', 'numberedList', '|',
-            'blockQuote', 'link', '|',
-            'undo', 'redo'
-          ],
+          toolbar: {
+            items: [
+              'heading', '|',
+              'bold', 'italic', '|',
+              'bulletedList', 'numberedList', '|',
+              'blockQuote', 'link', '|',
+              'undo', 'redo'
+            ],
+            shouldNotGroupWhenFull: true
+          },
           heading: {
             options: [
               { model: 'paragraph', title: 'Paragrafo', class: 'ck-heading_paragraph' },
               { model: 'heading2', view: 'h2', title: 'Titolo', class: 'ck-heading_heading2' }
             ]
+          },
+          link: {
+            decorators: {
+              openInNewTab: {
+                mode: 'manual',
+                label: 'Apri in una nuova scheda',
+                defaultValue: true
+              }
+            }
           },
           language: 'it'
         }}
@@ -53,7 +65,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Inizia a scri
       />
       
       {/* Contatore caratteri in basso a destra */}
-      <div className="text-xs text-muted-foreground text-right px-3 py-1 border-t bg-muted/20">
+      <div className="char-counter">
         {charCount} caratteri
       </div>
     </div>

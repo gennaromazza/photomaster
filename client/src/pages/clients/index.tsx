@@ -67,9 +67,11 @@ const ClientsPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<number | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [importStep, setImportStep] = useState<"upload" | "mapping">("upload");
+  const [importStep, setImportStep] = useState<"upload" | "mapping" | "preview">("upload");
   const [uploadedFile, setUploadedFile] = useState<{ filePath: string; headers: string[]; originalName: string } | null>(null);
   const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({});
+  const [parsedData, setParsedData] = useState<any[]>([]);
+  const [previewData, setPreviewData] = useState<any[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -177,7 +179,6 @@ const ClientsPage = () => {
   const handleFileUpload = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    const formData = new FormData();
     const fileInput = fileInputRef.current;
     
     if (!fileInput || !fileInput.files || !fileInput.files[0]) {
@@ -189,9 +190,58 @@ const ClientsPage = () => {
       return;
     }
     
-    formData.append('file', fileInput.files[0]);
-    setIsImporting(true);
-    uploadFileMutation.mutate(formData);
+    const file = fileInput.files[0];
+    
+    // Controlla se è un file CSV
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      // Usa PapaParse per leggere il file CSV direttamente
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.data && results.data.length > 0 && results.meta.fields) {
+            // Estrai le intestazioni (fields) e i dati
+            const headers = results.meta.fields;
+            const data = results.data;
+            
+            // Imposta i dati analizzati
+            setParsedData(data);
+            // Preparare un'anteprima dei dati (primi 5 record)
+            setPreviewData(data.slice(0, 5));
+            
+            // Imposta il file come "caricato" con le intestazioni
+            setUploadedFile({
+              filePath: 'direct-parse', // Non abbiamo bisogno di un percorso fisico
+              headers: headers,
+              originalName: file.name
+            });
+            
+            // Passa al passaggio di mappatura
+            setImportStep("mapping");
+          } else {
+            toast({
+              title: "Errore",
+              description: "Il file CSV non contiene dati validi",
+              variant: "destructive",
+            });
+          }
+        },
+        error: (error) => {
+          console.error("Errore parsing CSV:", error);
+          toast({
+            title: "Errore",
+            description: "Si è verificato un errore durante la lettura del file CSV",
+            variant: "destructive",
+          });
+        }
+      });
+    } else {
+      // Per altri tipi di file (Excel), usa il metodo esistente
+      const formData = new FormData();
+      formData.append('file', file);
+      setIsImporting(true);
+      uploadFileMutation.mutate(formData);
+    }
   };
   
   // Funzione per gestire la mappatura dei campi e l'importazione
@@ -209,10 +259,60 @@ const ClientsPage = () => {
     }
     
     setIsImporting(true);
-    importClientsMutation.mutate({
-      filePath: uploadedFile.filePath,
-      fieldMapping: fieldMapping,
-    });
+    
+    // Se stiamo usando il parsing diretto con PapaParse
+    if (uploadedFile.filePath === 'direct-parse' && parsedData.length > 0) {
+      // Converti i dati in base alla mappatura
+      const clients = parsedData.map(row => {
+        const client: any = {};
+        
+        // Mappa ogni campo secondo la configurazione
+        Object.entries(fieldMapping).forEach(([field, headerKey]) => {
+          if (headerKey && row[headerKey] !== undefined) {
+            client[field] = row[headerKey];
+          }
+        });
+        
+        return client;
+      });
+      
+      // Filtra i clienti validi (quelli con nome e cognome)
+      const validClients = clients.filter(c => c.firstName && c.lastName);
+      
+      // Invia direttamente i clienti da importare
+      const response = apiRequest("POST", "/api/clients/direct-import", { clients: validClients });
+      response.then(async (res) => {
+        if (!res.ok) {
+          throw new Error('Errore durante l\'importazione');
+        }
+        
+        const data = await res.json();
+        // Successo
+        toast({
+          title: "Importazione completata",
+          description: `Importati ${data.imported} clienti su ${validClients.length}`,
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+        setIsImportDialogOpen(false);
+        resetImport();
+        setIsImporting(false);
+      }).catch(error => {
+        console.error("Errore importazione clienti:", error);
+        toast({
+          title: "Errore",
+          description: "Si è verificato un errore durante l'importazione dei clienti",
+          variant: "destructive",
+        });
+        setIsImporting(false);
+      });
+    } else {
+      // Usa il metodo standard per file Excel
+      importClientsMutation.mutate({
+        filePath: uploadedFile.filePath,
+        fieldMapping: fieldMapping,
+      });
+    }
   };
   
   // Funzione per esportare i clienti
@@ -525,12 +625,18 @@ const ClientsPage = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {importStep === "upload" ? "Importa Clienti" : "Mappatura dei campi"}
+              {importStep === "upload" 
+                ? "Importa Clienti" 
+                : importStep === "mapping" 
+                  ? "Mappatura dei campi" 
+                  : "Anteprima importazione"}
             </DialogTitle>
             <DialogDescription>
               {importStep === "upload" 
                 ? "Carica un file Excel o CSV con i tuoi clienti." 
-                : "Associa le colonne del file ai campi del sistema."}
+                : importStep === "mapping"
+                  ? "Associa le colonne del file ai campi del sistema."
+                  : "Verifica l'anteprima dei dati prima di importare."}
             </DialogDescription>
           </DialogHeader>
           
@@ -587,7 +693,7 @@ const ClientsPage = () => {
                 </Button>
               </DialogFooter>
             </form>
-          ) : (
+          ) : importStep === "mapping" ? (
             // Step 2: Mappatura dei campi
             <div className="space-y-6">
               {uploadedFile && (
@@ -738,6 +844,39 @@ const ClientsPage = () => {
                         </Select>
                       </div>
                     </div>
+                    
+                    {previewData.length > 0 && (
+                      <div className="mt-6">
+                        <h3 className="text-sm font-medium text-gray-700 mb-2">Anteprima dati</h3>
+                        <div className="bg-gray-50 p-3 rounded-lg overflow-x-auto max-h-40">
+                          <table className="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead>
+                              <tr>
+                                {uploadedFile.headers.map((header) => (
+                                  <th 
+                                    key={header} 
+                                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                  >
+                                    {header}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {previewData.map((row, idx) => (
+                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                  {uploadedFile.headers.map((header) => (
+                                    <td key={`${idx}-${header}`} className="px-3 py-2 whitespace-nowrap text-xs">
+                                      {row[header] || '-'}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <DialogFooter>
@@ -750,10 +889,134 @@ const ClientsPage = () => {
                     </Button>
                     <Button 
                       type="button"
-                      onClick={handleImportClients}
-                      disabled={importClientsMutation.isPending}
+                      onClick={() => {
+                        // Verifica che almeno nome e cognome siano mappati
+                        if (!fieldMapping.firstName || !fieldMapping.lastName) {
+                          toast({
+                            title: "Mappatura incompleta",
+                            description: "È necessario specificare almeno i campi Nome e Cognome",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        
+                        setImportStep("preview");
+                      }}
                     >
-                      {importClientsMutation.isPending ? 'Importazione in corso...' : 'Importa Clienti'}
+                      Continua
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </div>
+          ) : (
+            // Step 3: Anteprima e importazione
+            <div className="space-y-6">
+              {uploadedFile && (
+                <>
+                  <div className="bg-primary/5 p-3 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      <span className="font-medium">File caricato:</span> {uploadedFile.originalName}
+                    </p>
+                    <p className="text-sm text-gray-700 mt-1">
+                      <span className="font-medium">Totale record:</span> {parsedData.length}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-700">Mappatura impostata</h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {Object.entries(fieldMapping).filter(([_, value]) => value).map(([field, value]) => (
+                        <div key={field} className="bg-gray-50 p-2 rounded">
+                          <span className="font-medium">{
+                            field === 'firstName' ? 'Nome' :
+                            field === 'lastName' ? 'Cognome' :
+                            field === 'email' ? 'Email' :
+                            field === 'phone' ? 'Telefono' :
+                            field === 'address' ? 'Indirizzo' :
+                            field === 'notes' ? 'Note' : field
+                          }:</span> {value}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-6">
+                      <h3 className="text-sm font-medium text-gray-700 mb-2">Anteprima importazione</h3>
+                      <div className="bg-gray-50 p-3 rounded-lg overflow-x-auto max-h-60">
+                        <table className="min-w-full divide-y divide-gray-200 text-sm">
+                          <thead>
+                            <tr>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Nome
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Cognome
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Email
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Telefono
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Indirizzo
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {previewData.map((row, idx) => {
+                              // Prepara i dati in base alla mappatura
+                              const mappedRow = {
+                                firstName: fieldMapping.firstName ? row[fieldMapping.firstName] : '-',
+                                lastName: fieldMapping.lastName ? row[fieldMapping.lastName] : '-',
+                                email: fieldMapping.email ? row[fieldMapping.email] : '-',
+                                phone: fieldMapping.phone ? row[fieldMapping.phone] : '-',
+                                address: fieldMapping.address ? row[fieldMapping.address] : '-'
+                              };
+                              
+                              return (
+                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.firstName || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.lastName || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.email || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.phone || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                                    {mappedRow.address || '-'}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Visualizzazione di {previewData.length} record su {parsedData.length} totali
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setImportStep("mapping")}
+                    >
+                      Torna alla mappatura
+                    </Button>
+                    <Button 
+                      type="button"
+                      onClick={handleImportClients}
+                      disabled={isImporting}
+                    >
+                      {isImporting ? 'Importazione in corso...' : 'Importa Clienti'}
                     </Button>
                   </DialogFooter>
                 </>

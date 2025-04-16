@@ -187,9 +187,11 @@ export default function NewQuotePage() {
         const eventData = JSON.parse(savedEventData);
         console.log("Dati evento recuperati da localStorage:", eventData);
         
-        // Imposta i valori del form dai dati salvati
+        // Mappa completa e dettagliata dei campi evento → preventivo
+        // Questa mappatura garantisce che tutti i campi pertinenti vengano trasferiti
         form.setValue("title", eventData.title || "");
         form.setValue("clientId", eventData.clientId);
+        form.setValue("secondClientId", eventData.secondClientId);
         form.setValue("eventId", eventData.id);
         form.setValue("eventType", eventData.eventType || "");
         form.setValue("location", eventData.location || "");
@@ -197,6 +199,13 @@ export default function NewQuotePage() {
         form.setValue("notes", eventData.notes || "");
         form.setValue("categoryId", eventData.categoryId);
         form.setValue("leadSourceId", eventData.leadSourceId);
+        form.setValue("status", eventData.status || "draft");
+        
+        // Titolo del preventivo più descrittivo basato sull'evento
+        const titoloPreventivo = eventData.title 
+          ? `Preventivo ${eventData.eventType ? eventData.eventType + ' - ' : ''}${eventData.title}` 
+          : form.getValues("title");
+        form.setValue("title", titoloPreventivo);
         
         // Imposta il timestamp delle ore se disponibile
         if (eventData.date) {
@@ -204,12 +213,28 @@ export default function NewQuotePage() {
           const hours = String(date.getHours()).padStart(2, '0');
           const minutes = String(date.getMinutes()).padStart(2, '0');
           form.setValue("eventTime", `${hours}:${minutes}`);
+          
+          // Se c'è una data di fine o durata, calcola l'orario di fine
+          if (eventData.endDate) {
+            const endDate = new Date(eventData.endDate);
+            const endHours = String(endDate.getHours()).padStart(2, '0');
+            const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+            form.setValue("eventEndTime", `${endHours}:${endMinutes}`);
+          } else if (eventData.duration) {
+            // Calcola orario di fine in base alla durata (in minuti)
+            const endTime = new Date(date.getTime() + eventData.duration * 60000);
+            const endHours = String(endTime.getHours()).padStart(2, '0');
+            const endMinutes = String(endTime.getMinutes()).padStart(2, '0');
+            form.setValue("eventEndTime", `${endHours}:${endMinutes}`);
+          }
         }
         
         // Forza l'aggiornamento dei valori nel form
         Object.keys(form.getValues()).forEach(key => {
           form.trigger(key as any);
         });
+        
+        console.log("Valori impostati nel form:", form.getValues());
         
         // Rimuovi i dati dal localStorage dopo l'uso
         localStorage.removeItem('eventForQuote');
@@ -236,9 +261,10 @@ export default function NewQuotePage() {
       const event = await response.json();
       console.log("Dati evento recuperati da API (fallback):", event);
       
-      // Imposta i valori del form
+      // Mappa completa e dettagliata dei campi evento → preventivo (come nella versione localStorage)
       form.setValue("title", event.title || "");
       form.setValue("clientId", event.clientId);
+      form.setValue("secondClientId", event.secondClientId);
       form.setValue("eventId", event.id);
       form.setValue("eventType", event.eventType || "");
       form.setValue("location", event.location || "");
@@ -246,6 +272,13 @@ export default function NewQuotePage() {
       form.setValue("notes", event.notes || "");
       form.setValue("categoryId", event.categoryId);
       form.setValue("leadSourceId", event.leadSourceId);
+      form.setValue("status", event.status || "draft");
+      
+      // Titolo del preventivo più descrittivo basato sull'evento
+      const titoloPreventivo = event.title 
+        ? `Preventivo ${event.eventType ? event.eventType + ' - ' : ''}${event.title}` 
+        : form.getValues("title");
+      form.setValue("title", titoloPreventivo);
       
       // Imposta il timestamp delle ore se disponibile
       if (event.date) {
@@ -253,12 +286,28 @@ export default function NewQuotePage() {
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
         form.setValue("eventTime", `${hours}:${minutes}`);
+        
+        // Se c'è una data di fine o durata, calcola l'orario di fine
+        if (event.endDate) {
+          const endDate = new Date(event.endDate);
+          const endHours = String(endDate.getHours()).padStart(2, '0');
+          const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+          form.setValue("eventEndTime", `${endHours}:${endMinutes}`);
+        } else if (event.duration) {
+          // Calcola orario di fine in base alla durata (in minuti)
+          const endTime = new Date(date.getTime() + event.duration * 60000);
+          const endHours = String(endTime.getHours()).padStart(2, '0');
+          const endMinutes = String(endTime.getMinutes()).padStart(2, '0');
+          form.setValue("eventEndTime", `${endHours}:${endMinutes}`);
+        }
       }
       
       // Forza l'aggiornamento dei valori nel form
       Object.keys(form.getValues()).forEach(key => {
         form.trigger(key as any);
       });
+      
+      console.log("Valori impostati nel form da API:", form.getValues());
       
       return true;
     } catch (error) {

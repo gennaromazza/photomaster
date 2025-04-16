@@ -1230,8 +1230,19 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
 
       const quote = await storage.createQuote(parseResult.data);
+      
+      // Se c'è un evento associato al preventivo, aggiorna l'evento con il preventivo appena creato
+      if (quote && parseResult.data.eventId) {
+        console.log(`Aggiornamento evento ID ${parseResult.data.eventId} con preventivo ID ${quote.id}`);
+        // Aggiorna l'evento con il preventivo appena creato
+        await storage.updateEvent(parseResult.data.eventId, {
+          quoteId: quote.id
+        });
+      }
+      
       res.status(201).json(quote);
     } catch (err) {
+      console.error("Errore nella creazione del preventivo:", err);
       res.status(500).json({ message: "Failed to create quote" });
     }
   });

@@ -68,17 +68,23 @@ export default function EventDetailPage() {
             <Link href={`/quotes/new?fromEventId=${event.id}`} onClick={() => {
               console.log('Creazione preventivo da evento:', event.id);
               // Salva i dati dell'evento in localStorage per la precompilazione
+              // Mappa completa dei campi evento -> preventivo per una migliore precompilazione
               localStorage.setItem('eventForQuote', JSON.stringify({
                 id: event.id,
-                title: event.title,
-                clientId: event.clientId,
-                description: event.description,
-                eventType: event.eventType,
-                date: event.date,
-                location: event.location,
-                notes: event.notes,
-                categoryId: event.categoryId,
-                leadSourceId: event.leadSourceId
+                title: event.title || '',
+                clientId: event.clientId || null,
+                secondClientId: event.secondClientId || null,
+                description: event.description || '',
+                eventType: event.eventType || '',
+                categoryId: event.categoryId || null,
+                leadSourceId: event.leadSourceId || null,
+                date: event.date || null,
+                location: event.location || '',
+                notes: event.notes || '',
+                status: event.status || 'draft',
+                // Includi tutti i campi che potrebbero essere utili alla creazione preventivo
+                endDate: event.endDate || null,
+                duration: event.duration || null
               }));
             }}>
               <Button>

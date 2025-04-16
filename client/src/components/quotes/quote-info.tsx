@@ -135,7 +135,7 @@ export default function QuoteInfo({ quote }: QuoteInfoProps) {
               <dl className="space-y-2">
                 <div className="flex justify-between">
                   <dt className="font-medium text-gray-500">Nome:</dt>
-                  <dd>{client.firstName} {client.lastName}</dd>
+                  <dd>{formatClientName(client)}</dd>
                 </div>
                 {client.email && (
                   <div className="flex justify-between">
@@ -181,7 +181,7 @@ export default function QuoteInfo({ quote }: QuoteInfoProps) {
               <dl className="space-y-2">
                 <div className="flex justify-between">
                   <dt className="font-medium text-gray-500">Nome:</dt>
-                  <dd>{secondClient.firstName} {secondClient.lastName}</dd>
+                  <dd>{formatClientName(secondClient)}</dd>
                 </div>
                 {secondClient.email && (
                   <div className="flex justify-between">

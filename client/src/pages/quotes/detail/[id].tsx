@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import "@/components/rich-text-content.css";
 // Rimuovo import Layout per evitare la duplicazione del layout
 import ModuleManager from "@/components/quotes/modules/module-manager";
 import { useToast } from "@/hooks/use-toast";
@@ -702,7 +703,7 @@ export default function QuoteDetailPage() {
                   </CardHeader>
                   <CardContent>
                     {quote.notes ? (
-                      <div className="whitespace-pre-wrap">{quote.notes}</div>
+                      <div className="rich-text-content" dangerouslySetInnerHTML={{ __html: quote.notes }} />
                     ) : (
                       <div className="text-muted-foreground text-sm italic">
                         Nessuna nota aggiunta

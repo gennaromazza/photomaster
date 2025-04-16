@@ -1,0 +1,85 @@
+/* Stili per la visualizzazione del contenuto HTML formatato */
+.rich-text-content {
+  /* Stili di base */
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  color: var(--foreground);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+  
+  /* Stili per i titoli */
+  & h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-family: var(--font-playfair);
+    margin-top: 1.25rem;
+    margin-bottom: 0.75rem;
+    color: var(--primary);
+  }
+  
+  /* Stili per i paragrafi */
+  & p {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Stili per elenchi puntati */
+  & ul {
+    list-style-type: disc;
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Stili per elenchi numerati */
+  & ol {
+    list-style-type: decimal;
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Stili per elementi dell'elenco */
+  & li {
+    margin-bottom: 0.25rem;
+  }
+  
+  /* Stili per link */
+  & a {
+    color: var(--primary);
+    text-decoration: underline;
+    transition: color 0.2s;
+  }
+  
+  & a:hover {
+    color: var(--primary/80);
+  }
+  
+  /* Stili per testo in grassetto */
+  & strong {
+    font-weight: 600;
+  }
+  
+  /* Stili per testo in corsivo */
+  & em {
+    font-style: italic;
+  }
+  
+  /* Stili per citazioni */
+  & blockquote {
+    border-left: 3px solid var(--primary/50);
+    margin-left: 1rem;
+    padding-left: 1rem;
+    font-style: italic;
+    color: var(--muted-foreground);
+  }
+  
+  /* Spaziatura per elementi diversi */
+  & * + h2,
+  & * + ul,
+  & * + ol,
+  & * + blockquote {
+    margin-top: 1rem;
+  }
+}

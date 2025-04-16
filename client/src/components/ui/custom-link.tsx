@@ -1,5 +1,5 @@
 import { Link as WouterLink } from "wouter";
-import React from "react";
+import React, { forwardRef } from "react";
 
 // Normalizza l'URL rimuovendo eventuali doppi slash
 function normalizeUrl(url: string): string {
@@ -34,15 +34,21 @@ type CustomLinkProps = {
   [key: string]: any;  // Per consentire l'utilizzo di prop aggiuntive
 };
 
-// Creiamo un componente funzionale normale
-export function Link({ href, children, className, ...rest }: CustomLinkProps) {
+/**
+ * Componente Link personalizzato che supporta il forwarding dei ref e la normalizzazione degli URL
+ */
+export const Link = forwardRef<HTMLAnchorElement, CustomLinkProps>((props, ref) => {
+  const { href, children, className, ...rest } = props;
   // Normalizza l'URL prima di passarlo al componente Link di wouter
   const normalizedHref = normalizeUrl(href);
   
-  // Usiamo l'attributo to perché è quello che wouter si aspetta
+  // Usiamo l'attributo to perché è quello che wouter si aspetta e passiamo il ref
   return (
-    <WouterLink to={normalizedHref} className={className} {...rest}>
+    <WouterLink ref={ref} to={normalizedHref} className={className} {...rest}>
       {children}
     </WouterLink>
   );
-}
+});
+
+// Aggiungiamo un displayName per migliorare l'esperienza di debugging
+Link.displayName = "Link";

@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { RiEyeLine, RiEdit2Line, RiDeleteBinLine } from "react-icons/ri";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Clock, Calendar } from "lucide-react";
 import { useState as useState2 } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
@@ -194,10 +194,22 @@ const QuotesPage = () => {
                         {getClientName(quote.clientId)}
                       </td>
                       <td className="py-3 px-4 text-gray-700">
-                        {quote.eventId ? getEventTitle(quote.eventId) : "-"}
+                        <div>
+                          {quote.eventId ? getEventTitle(quote.eventId) : "-"}
+                        </div>
+                        {quote.eventId && events.find(e => e.id === quote.eventId)?.date && (
+                          <div className="text-xs text-gray-500 flex items-center mt-1">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {formatDate(events.find(e => e.id === quote.eventId)?.date || new Date(), "dd/MM/yyyy")}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-gray-700">
-                        {formatDate(quote.createdAt, "dd/MM/yyyy")}
+                        <div>{formatDate(quote.createdAt, "dd/MM/yyyy")}</div>
+                        <div className="text-xs text-gray-500 flex items-center mt-1">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Creato: {formatDate(quote.createdAt, "dd/MM/yyyy")}
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant={getStatusBadge(quote.status)}>

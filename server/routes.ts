@@ -2700,6 +2700,18 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/bundle-leads", bundleLeadsRouter);
   app.use("/api/settings", settingsRouter);
   
+  // Configurazione di multer per l'upload dei file
+  const upload = multer({
+    dest: join(tmpdir(), 'uploads'),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB
+    },
+  });
+  
+  // Rotte per l'importazione ed esportazione dei clienti
+  app.post('/api/clients/upload', isAuthenticated, upload.single('file'), handleFileUpload);
+  app.post('/api/clients/import', isAuthenticated, importClients);
+  app.get('/api/clients/export', isAuthenticated, exportClientsCSV);
 
   app.use("/api", apiRouter);
 

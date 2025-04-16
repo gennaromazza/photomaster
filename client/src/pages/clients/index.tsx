@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -37,7 +54,10 @@ import {
   Mail,
   Phone,
   UserPlus,
-  MapPin
+  MapPin,
+  Upload,
+  Download,
+  FileSpreadsheet
 } from "lucide-react";
 
 const ClientsPage = () => {
@@ -45,6 +65,13 @@ const ClientsPage = () => {
   const [, navigate] = useLocation();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<number | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importStep, setImportStep] = useState<"upload" | "mapping">("upload");
+  const [uploadedFile, setUploadedFile] = useState<{ filePath: string; headers: string[]; originalName: string } | null>(null);
+  const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({});
+  const [isImporting, setIsImporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
   const { data: clients = [], isLoading } = useQuery<Client[]>({
@@ -83,6 +110,61 @@ const ClientsPage = () => {
     },
   });
   
+  // Mutation per caricare il file
+  const uploadFileMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const response = await fetch('/api/clients/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Errore durante il caricamento del file');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setUploadedFile(data);
+      setImportStep("mapping");
+    },
+    onError: (error) => {
+      console.error("Errore caricamento file:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante il caricamento del file",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation per importare i clienti
+  const importClientsMutation = useMutation({
+    mutationFn: async (data: { filePath: string; fieldMapping: Record<string, string> }) => {
+      const response = await apiRequest("POST", "/api/clients/import", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Importazione completata",
+        description: `Importati ${data.imported} clienti su ${data.total}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setIsImportDialogOpen(false);
+      setImportStep("upload");
+      setUploadedFile(null);
+      setFieldMapping({});
+    },
+    onError: (error) => {
+      console.error("Errore importazione clienti:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'importazione dei clienti",
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Funzione per gestire l'eliminazione del cliente
   const handleDeleteClient = () => {
     if (clientToDelete) {
@@ -90,9 +172,106 @@ const ClientsPage = () => {
     }
   };
   
+  // Funzione per gestire l'upload del file
+  const handleFileUpload = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    const fileInput = fileInputRef.current;
+    
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+      toast({
+        title: "Errore",
+        description: "Seleziona un file da caricare",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    formData.append('file', fileInput.files[0]);
+    setIsImporting(true);
+    uploadFileMutation.mutate(formData);
+  };
+  
+  // Funzione per gestire la mappatura dei campi e l'importazione
+  const handleImportClients = () => {
+    if (!uploadedFile) return;
+    
+    // Verifica che almeno nome e cognome siano mappati
+    if (!fieldMapping.firstName || !fieldMapping.lastName) {
+      toast({
+        title: "Mappatura incompleta",
+        description: "È necessario specificare almeno i campi Nome e Cognome",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsImporting(true);
+    importClientsMutation.mutate({
+      filePath: uploadedFile.filePath,
+      fieldMapping: fieldMapping,
+    });
+  };
+  
+  // Funzione per esportare i clienti
+  const handleExportClients = async () => {
+    try {
+      setIsExporting(true);
+      
+      const response = await fetch('/api/clients/export', {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Errore durante l\'esportazione dei clienti');
+      }
+      
+      // Crea un link per il download del file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `export_clienti_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Esportazione completata",
+        description: "Il file è stato scaricato con successo",
+      });
+    } catch (error) {
+      console.error("Errore esportazione clienti:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'esportazione dei clienti",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  
+  // Funzione per aggiornare la mappatura dei campi
+  const updateFieldMapping = (field: string, value: string) => {
+    setFieldMapping(prev => ({ ...prev, [field]: value }));
+  };
+  
   // Funzione per pulire la ricerca
   const clearFilters = () => {
     setSearchQuery("");
+  };
+  
+  // Funzione per resettare il processo di importazione
+  const resetImport = () => {
+    setImportStep("upload");
+    setUploadedFile(null);
+    setFieldMapping({});
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
   
   return (

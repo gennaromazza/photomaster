@@ -373,18 +373,61 @@ export default function NewQuotePage() {
   // Mutation per creare un nuovo preventivo
   const createQuoteMutation = useMutation({
     mutationFn: async (data: QuoteFormValues) => {
-      const res = await apiRequest("POST", "/api/quotes", data);
+      // Verifica se dobbiamo eliminare l'evento originale
+      const savedEventData = localStorage.getItem('eventForQuote');
+      let convertAndDelete = false;
+      let eventId = null;
+      
+      if (savedEventData) {
+        try {
+          const parsedData = JSON.parse(savedEventData);
+          convertAndDelete = parsedData.convertAndDelete === true;
+          eventId = parsedData.id;
+        } catch (e) {
+          console.error("Errore nel parsing dei dati dell'evento:", e);
+        }
+      }
+      
+      // Aggiungi l'informazione nel body della richiesta
+      const requestData = {
+        ...data,
+        _convertAndDelete: convertAndDelete,
+        _originalEventId: eventId
+      };
+      
+      const res = await apiRequest("POST", "/api/quotes", requestData);
       return res.json();
     },
     onSuccess: (newQuote) => {
-      toast({
-        title: "Preventivo creato",
-        description: "Il preventivo è stato creato con successo",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      // Controlla se è stata effettuata una conversione per mostrare feedback adeguato
+      const savedEventData = localStorage.getItem('eventForQuote');
+      let wasConverted = false;
       
-      // Reindirizza l'utente alla pagina di dettaglio del preventivo invece che alla lista
-      // Questo è fondamentale per completare il flusso evento -> preventivo
+      if (savedEventData) {
+        try {
+          const parsedData = JSON.parse(savedEventData);
+          wasConverted = parsedData.convertAndDelete === true;
+        } catch (e) {
+          console.error("Errore nel parsing dei dati dell'evento:", e);
+        }
+        
+        // Rimuovi i dati dal localStorage dopo l'uso
+        localStorage.removeItem('eventForQuote');
+      }
+      
+      // Mostra toast con messaggio appropriato
+      toast({
+        title: wasConverted ? "Evento convertito" : "Preventivo creato",
+        description: wasConverted 
+          ? "L'evento è stato convertito con successo in preventivo" 
+          : "Il preventivo è stato creato con successo",
+      });
+      
+      // Aggiorna sia la lista preventivi che la lista eventi
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      
+      // Reindirizza l'utente alla pagina di dettaglio del preventivo
       console.log("Preventivo creato con successo, ID:", newQuote.id);
       setLocation(`/quotes/detail/${newQuote.id}`);
     },

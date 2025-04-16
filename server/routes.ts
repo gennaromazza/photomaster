@@ -1204,7 +1204,10 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
   apiRouter.post("/quotes", async (req, res) => {
     try {
-      const { eventDate, ...rest } = req.body;
+      // Estrai campi speciali per la gestione della conversione evento -> preventivo
+      const { eventDate, _convertAndDelete, _originalEventId, ...rest } = req.body;
+      
+      // Filtra solo i campi validi per lo schema del preventivo
       const parseResult = insertQuoteSchema.safeParse({
         ...rest,
         eventDate: eventDate ? new Date(eventDate) : undefined
@@ -1229,15 +1232,50 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         }
       }
 
+      // Crea il preventivo con i dati validati
       const quote = await storage.createQuote(parseResult.data);
       
-      // Se c'è un evento associato al preventivo, aggiorna l'evento con il preventivo appena creato
+      // Se c'è un evento associato al preventivo, gestisci la relazione
       if (quote && parseResult.data.eventId) {
         console.log(`Aggiornamento evento ID ${parseResult.data.eventId} con preventivo ID ${quote.id}`);
         // Aggiorna l'evento con il preventivo appena creato
         await storage.updateEvent(parseResult.data.eventId, {
           quoteId: quote.id
         });
+      }
+      
+      // Se richiesto, elimina l'evento originale (conversione)
+      if (_convertAndDelete && _originalEventId) {
+        try {
+          console.log(`Richiesta conversione: eliminazione evento ID ${_originalEventId}`);
+          
+          // Verifica se l'evento esiste
+          const event = await storage.getEvent(parseInt(_originalEventId));
+          if (event) {
+            // Prima elimina tutti gli elementi correlati (collaboratori, attività, ecc.)
+            // Questo dipende da come è strutturato lo storage
+            
+            // Elimina le attività associate all'evento
+            const tasks = await storage.getTasksByEvent(parseInt(_originalEventId));
+            for (const task of tasks) {
+              await storage.deleteTask(task.id);
+            }
+            
+            // Elimina i collaboratori associati all'evento
+            const collaborators = await storage.getEventCollaborators(parseInt(_originalEventId));
+            for (const collaborator of collaborators) {
+              await storage.removeCollaboratorFromEvent(collaborator.id, parseInt(_originalEventId));
+            }
+            
+            // Infine elimina l'evento
+            await storage.deleteEvent(parseInt(_originalEventId));
+            
+            console.log(`Evento ID ${_originalEventId} eliminato con successo (convertito in preventivo ID ${quote.id})`);
+          }
+        } catch (error) {
+          console.error(`Errore durante l'eliminazione dell'evento convertito:`, error);
+          // Non blocchiamo la creazione del preventivo se fallisce l'eliminazione dell'evento
+        }
       }
       
       res.status(201).json(quote);

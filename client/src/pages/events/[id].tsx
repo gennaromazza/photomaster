@@ -11,6 +11,9 @@ import CollaboratorsCard from "@/components/events/collaborators-card";
 import EventTasks from "@/components/events/event-tasks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function EventDetailPage() {
   const { id } = useParams();
@@ -65,32 +68,64 @@ export default function EventDetailPage() {
               </Button>
             </Link>
           ) : (
-            <Link href={`/quotes/new?fromEventId=${event.id}`} onClick={() => {
-              console.log('Creazione preventivo da evento:', event.id);
-              // Salva i dati dell'evento in localStorage per la precompilazione
-              // Mappa completa dei campi evento -> preventivo per una migliore precompilazione
-              localStorage.setItem('eventForQuote', JSON.stringify({
-                id: event.id,
-                title: event.title || '',
-                clientId: event.clientId || null,
-                secondClientId: event.secondClientId || null,
-                description: event.description || '',
-                eventType: event.eventType || '',
-                categoryId: event.categoryId || null,
-                leadSourceId: event.leadSourceId || null,
-                date: event.date || null,
-                location: event.location || '',
-                notes: event.notes || '',
-                status: event.status || 'draft',
-                // Includi tutti i campi che potrebbero essere utili alla creazione preventivo
-                endDate: event.endDate || null,
-                duration: event.duration || null
-              }));
-            }}>
-              <Button>
-                Crea Preventivo
-              </Button>
-            </Link>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  Converti in Preventivo
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Conferma conversione</DialogTitle>
+                  <DialogDescription>
+                    Stai per convertire questo evento in un preventivo. L'evento verrà rimosso dalla lista eventi e tutti i suoi dati
+                    saranno trasferiti al nuovo preventivo. Questa azione non può essere annullata.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Attenzione</AlertTitle>
+                    <AlertDescription>
+                      Eventuali collaboratori e attività associate a questo evento andranno persi durante la conversione.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      // Salva i dati dell'evento in localStorage per la precompilazione
+                      console.log('Conversione evento in preventivo:', event.id);
+                      localStorage.setItem('eventForQuote', JSON.stringify({
+                        id: event.id,
+                        title: event.title || '',
+                        clientId: event.clientId || null,
+                        secondClientId: event.secondClientId || null,
+                        description: event.description || '',
+                        eventType: event.eventType || '',
+                        categoryId: event.categoryId || null,
+                        leadSourceId: event.leadSourceId || null,
+                        date: event.date || null,
+                        location: event.location || '',
+                        notes: event.notes || '',
+                        status: event.status || 'draft',
+                        // Indica che l'evento deve essere eliminato durante la conversione
+                        convertAndDelete: true,
+                        // Includi tutti i campi che potrebbero essere utili
+                        endDate: event.endDate || null,
+                        duration: event.duration || null
+                      }));
+                      
+                      // Reindirizza all'URL di creazione preventivo
+                      window.location.href = `/quotes/new?fromEventId=${event.id}`;
+                    }}
+                  >
+                    Conferma Conversione
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
           <Link href={`/events/edit/${event.id}`}>
             <Button variant="outline">

@@ -65,7 +65,9 @@ export default function EventDetailPage() {
               </Button>
             </Link>
           ) : (
-            <Link href={`/quotes/new?fromEventId=${event.id}`}>
+            <Link href={`/quotes/new?fromEventId=${event.id}`} onClick={() => {
+              console.log('Creazione preventivo da evento:', event.id)
+            }}>
               <Button>
                 Crea Preventivo
               </Button>

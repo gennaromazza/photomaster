@@ -174,7 +174,9 @@ export default function NewQuotePage() {
   });
 
   // Estrai eventId dalla query string se esiste
-  const fromEventId = new URLSearchParams(location.split("?")[1]).get("fromEventId");
+  const fromEventId = new URLSearchParams(location.split("?")[1] || "").get("fromEventId");
+  console.log("URL location:", location);
+  console.log("fromEventId:", fromEventId);
   
   // Carica i dati dell'evento quando viene passato un fromEventId
   useEffect(() => {
@@ -183,6 +185,7 @@ export default function NewQuotePage() {
       const event = events.find((e: any) => e.id === eventId);
       
       if (event) {
+        console.log("Ricevuti dati evento per preventivo:", event);
         form.setValue("title", event.title || "");
         form.setValue("clientId", event.clientId);
         form.setValue("eventId", event.id);
@@ -200,6 +203,11 @@ export default function NewQuotePage() {
           const minutes = String(date.getMinutes()).padStart(2, '0');
           form.setValue("eventTime", `${hours}:${minutes}`);
         }
+        
+        // Forza l'aggiornamento dei valori nel form
+        Object.keys(form.getValues()).forEach(key => {
+          form.trigger(key as any);
+        });
       }
     }
   }, [fromEventId, events, form]);

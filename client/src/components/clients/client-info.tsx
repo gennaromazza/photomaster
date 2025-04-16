@@ -3,7 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { formatClientName } from "@/lib/utils";
+import { formatClientName, formatAddress } from "@/lib/utils";
 import { Mail, PhoneCall, User, MapPin, Building } from "lucide-react";
 
 interface ClientInfoProps {
@@ -66,10 +66,18 @@ export default function ClientInfo({ clientId, mode = "compact", className }: Cl
                 <span>{client.phone}</span>
               </div>
             )}
-            {client.address && (
+            {(client.address || client.city || client.zipCode || client.province || client.state) && (
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="truncate">{client.address}</span>
+                <span className="truncate">
+                  {formatAddress(
+                    client.address,
+                    client.city,
+                    client.zipCode,
+                    client.province,
+                    client.state
+                  )}
+                </span>
               </div>
             )}
           </div>

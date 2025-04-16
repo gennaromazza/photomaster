@@ -253,3 +253,49 @@ export function formatClientName(client: { firstName?: string | null, lastName?:
     client.companyName
   );
 }
+
+/**
+ * Formatta un indirizzo completo combinando i vari campi disponibili
+ * @param address - Indirizzo principale (via e numero)
+ * @param city - Città
+ * @param zipCode - Codice postale (CAP)
+ * @param province - Provincia
+ * @param state - Stato/nazione
+ * @returns Indirizzo completo formattato
+ */
+export function formatAddress(
+  address?: string | null, 
+  city?: string | null, 
+  zipCode?: string | null, 
+  province?: string | null,
+  state?: string | null
+): string {
+  // Se c'è già un indirizzo completo, lo usiamo
+  if (address && !city && !zipCode && !province && !state) {
+    return address;
+  }
+  
+  const parts = [];
+  
+  // Aggiungi l'indirizzo principale (via e numero)
+  if (address) {
+    parts.push(address);
+  }
+  
+  // Combina CAP, città e provincia in un'unica riga
+  const locationParts = [];
+  if (zipCode) locationParts.push(zipCode);
+  if (city) locationParts.push(city);
+  if (province) locationParts.push(province);
+  
+  if (locationParts.length > 0) {
+    parts.push(locationParts.join(' '));
+  }
+  
+  // Aggiungi lo stato/nazione se disponibile
+  if (state) {
+    parts.push(state);
+  }
+  
+  return parts.join(', ');
+}

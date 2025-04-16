@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Client, Event, Quote } from "@shared/schema";
-import { getInitials, formatCurrency, formatDate, formatClientName } from "@/lib/utils";
+import { getInitials, formatCurrency, formatDate, formatClientName, formatAddress } from "@/lib/utils";
 
 const ClientDetailPage = () => {
   const { id } = useParams();
@@ -234,10 +234,29 @@ const ClientDetailPage = () => {
                 </div>
               )}
 
-              {client.address && (
+              {(client.address || client.city || client.zipCode || client.province || client.state) && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Indirizzo</h3>
-                  <p className="mt-1">{client.address}</p>
+                  <p className="mt-1">
+                    {formatAddress(
+                      client.address,
+                      client.city,
+                      client.zipCode,
+                      client.province,
+                      client.state
+                    )}
+                  </p>
+                  <a 
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                      formatAddress(client.address, client.city, client.zipCode, client.province, client.state)
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 text-primary hover:underline text-sm inline-flex items-center"
+                  >
+                    <i className="ri-map-pin-line mr-1"></i>
+                    Visualizza su Google Maps
+                  </a>
                 </div>
               )}
 

@@ -129,10 +129,12 @@ export default function NewQuotePage() {
   const [isSecondClientDialogOpen, setIsSecondClientDialogOpen] = useState(false);
   const [mainClientSearch, setMainClientSearch] = useState("");
   const [secondClientSearch, setSecondClientSearch] = useState("");
+  const [eventSearch, setEventSearch] = useState("");
   const [showClientSuccess, setShowClientSuccess] = useState(false);
   const [showSecondClientSuccess, setShowSecondClientSuccess] = useState(false);
   const [filteredMainClients, setFilteredMainClients] = useState<any[]>([]);
   const [filteredSecondClients, setFilteredSecondClients] = useState<any[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
 
   // Variabili per i controlli selezionati
   const [assignPhotographers, setAssignPhotographers] = useState(false);
@@ -259,6 +261,22 @@ export default function NewQuotePage() {
       setFilteredSecondClients(clients);
     }
   }, [secondClientSearch, clients]);
+  
+  // Filtraggio eventi basato sulla ricerca
+  useEffect(() => {
+    if (events.length > 0 && eventSearch) {
+      const query = eventSearch.toLowerCase();
+      const filtered = events.filter(
+        (event: any) =>
+          (event.title && event.title.toLowerCase().includes(query)) ||
+          (event.eventType && event.eventType.toLowerCase().includes(query)) ||
+          (event.location && event.location.toLowerCase().includes(query))
+      );
+      setFilteredEvents(filtered);
+    } else {
+      setFilteredEvents(events);
+    }
+  }, [eventSearch, events]);
 
   // Gestione dello stato per l'opzione "Evento tutto il giorno"
   const [isFullDayEvent, setIsFullDayEvent] = useState(false);
@@ -742,20 +760,36 @@ export default function NewQuotePage() {
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[300px] p-0">
                                   <Command>
-                                    <CommandInput placeholder="Cerca cliente..." />
+                                    <CommandInput 
+                                      placeholder="Cerca cliente..." 
+                                      value={mainClientSearch}
+                                      onValueChange={setMainClientSearch}
+                                    />
                                     <CommandEmpty>Nessun cliente trovato</CommandEmpty>
                                     <CommandGroup>
-                                      {clients.map((client) => (
-                                        <CommandItem
-                                          key={client.id}
-                                          value={`${client.firstName} ${client.lastName}`}
-                                          onSelect={() => {
-                                            form.setValue("clientId", client.id);
-                                          }}
-                                        >
-                                          {client.firstName} {client.lastName}
-                                        </CommandItem>
-                                      ))}
+                                      {mainClientSearch.length < 2 ? (
+                                        <div className="py-6 text-center text-sm text-muted-foreground">
+                                          Inserisci almeno 2 caratteri per cercare...
+                                        </div>
+                                      ) : (
+                                        filteredMainClients.map((client) => (
+                                          <CommandItem
+                                            key={client.id}
+                                            value={`${client.firstName} ${client.lastName}`}
+                                            onSelect={() => {
+                                              form.setValue("clientId", client.id);
+                                              setMainClientSearch("");
+                                            }}
+                                          >
+                                            <div className="flex flex-col">
+                                              <span>{client.firstName} {client.lastName}</span>
+                                              <span className="text-xs text-muted-foreground">
+                                                {client.email} {client.phone ? `• ${client.phone}` : ''}
+                                              </span>
+                                            </div>
+                                          </CommandItem>
+                                        ))
+                                      )}
                                     </CommandGroup>
                                   </Command>
                                 </PopoverContent>
@@ -911,20 +945,36 @@ export default function NewQuotePage() {
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[300px] p-0">
                                   <Command>
-                                    <CommandInput placeholder="Cerca secondo cliente..." />
+                                    <CommandInput 
+                                      placeholder="Cerca secondo cliente..." 
+                                      value={secondClientSearch}
+                                      onValueChange={setSecondClientSearch}
+                                    />
                                     <CommandEmpty>Nessun cliente trovato</CommandEmpty>
                                     <CommandGroup>
-                                      {clients.map((client) => (
-                                        <CommandItem
-                                          key={client.id}
-                                          value={`${client.firstName} ${client.lastName}`}
-                                          onSelect={() => {
-                                            form.setValue("secondClientId", client.id);
-                                          }}
-                                        >
-                                          {client.firstName} {client.lastName}
-                                        </CommandItem>
-                                      ))}
+                                      {secondClientSearch.length < 2 ? (
+                                        <div className="py-6 text-center text-sm text-muted-foreground">
+                                          Inserisci almeno 2 caratteri per cercare...
+                                        </div>
+                                      ) : (
+                                        filteredSecondClients.map((client) => (
+                                          <CommandItem
+                                            key={client.id}
+                                            value={`${client.firstName} ${client.lastName}`}
+                                            onSelect={() => {
+                                              form.setValue("secondClientId", client.id);
+                                              setSecondClientSearch("");
+                                            }}
+                                          >
+                                            <div className="flex flex-col">
+                                              <span>{client.firstName} {client.lastName}</span>
+                                              <span className="text-xs text-muted-foreground">
+                                                {client.email} {client.phone ? `• ${client.phone}` : ''}
+                                              </span>
+                                            </div>
+                                          </CommandItem>
+                                        ))
+                                      )}
                                     </CommandGroup>
                                   </Command>
                                 </PopoverContent>
@@ -1146,25 +1196,68 @@ export default function NewQuotePage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Evento (opzionale)</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(value !== "0" ? parseInt(value) : undefined)}
-                          value={field.value?.toString() || "0"}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleziona un evento" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="0">Nessun evento</SelectItem>
-                            {events.map((event: any) => (
-                              <SelectItem key={event.id} value={event.id.toString()}>
-                                {event.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
+                        <div className="relative">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    events.find((event: any) => event.id === field.value)
+                                      ? events.find((event: any) => event.id === field.value)?.title
+                                      : "Seleziona un evento"
+                                  ) : (
+                                    "Seleziona un evento"
+                                  )}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0">
+                              <Command>
+                                <CommandInput 
+                                  placeholder="Cerca evento..." 
+                                  value={eventSearch}
+                                  onValueChange={setEventSearch}
+                                />
+                                <CommandEmpty>Nessun evento trovato</CommandEmpty>
+                                <CommandGroup>
+                                  {eventSearch.length < 2 ? (
+                                    <div className="py-6 text-center text-sm text-muted-foreground">
+                                      Inserisci almeno 2 caratteri per cercare...
+                                    </div>
+                                  ) : (
+                                    filteredEvents.map((event: any) => (
+                                      <CommandItem
+                                        key={event.id}
+                                        value={event.title}
+                                        onSelect={() => {
+                                          form.setValue("eventId", event.id);
+                                          setEventSearch("");
+                                        }}
+                                      >
+                                        <div className="flex flex-col">
+                                          <span>{event.title}</span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {event.date ? format(new Date(event.date), "PPP", { locale: it }) : 'Data non impostata'} 
+                                            {event.eventType ? ` • ${event.eventType}` : ''}
+                                          </span>
+                                        </div>
+                                      </CommandItem>
+                                    ))
+                                  )}
+                                </CommandGroup>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </div>
                       </FormItem>
                     )}
                   />

@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/use-auth";
 
 export interface HeaderProps {
   onOpenSidebar: () => void;
@@ -21,6 +22,12 @@ export interface HeaderProps {
  * Responsabilità: Mostrare la barra di navigazione superiore con logo, cerca, notifiche, ecc.
  */
 export default function Header({ onOpenSidebar }: HeaderProps) {
+  const { user, logoutMutation } = useAuth();
+  
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
+  
   return (
     <header className="sticky top-0 z-30 h-16 border-b bg-background/95 backdrop-blur">
       <div className="flex h-16 items-center justify-between px-4 sm:px-6">
@@ -96,7 +103,9 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
                 <Link href="/help">Aiuto</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
+                {logoutMutation.isPending ? "Logout in corso..." : "Logout"}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

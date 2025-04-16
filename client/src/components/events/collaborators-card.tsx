@@ -275,7 +275,7 @@ export default function CollaboratorsCard({ eventId }: CollaboratorsCardProps) {
                   {collaborator.profileImage ? (
                     <img
                       src={collaborator.profileImage}
-                      alt={`${collaborator.firstName} ${collaborator.lastName}`}
+                      alt={formatFullName(collaborator.firstName, collaborator.lastName)}
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
@@ -290,7 +290,7 @@ export default function CollaboratorsCard({ eventId }: CollaboratorsCardProps) {
                   )}
                   <div className="ml-3">
                     <p className="font-medium text-gray-900">
-                      {collaborator.firstName} {collaborator.lastName}
+                      {formatFullName(collaborator.firstName, collaborator.lastName)}
                     </p>
                     <div className="flex items-center text-sm text-gray-500">
                       <span className="text-xs">

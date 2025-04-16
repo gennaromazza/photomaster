@@ -15,6 +15,13 @@ export interface FieldMapping {
   email?: string;
   phone?: string;
   address?: string;
+  companyName?: string;
+  zipCode?: string;
+  state?: string;
+  province?: string;
+  fiscalCode?: string;
+  city?: string;
+  internationalPrefix?: string;
   notes?: string;
 }
 
@@ -83,6 +90,49 @@ function convertToClientFormat(data: any[], fieldMapping: FieldMapping): InsertC
       client.address = row[fieldMapping.address].toString();
     } else {
       client.address = null;
+    }
+    
+    // Aggiungi i nuovi campi dal CSV
+    if (fieldMapping.companyName && row[fieldMapping.companyName]) {
+      client.companyName = row[fieldMapping.companyName].toString();
+    } else {
+      client.companyName = null;
+    }
+    
+    if (fieldMapping.zipCode && row[fieldMapping.zipCode]) {
+      client.zipCode = row[fieldMapping.zipCode].toString();
+    } else {
+      client.zipCode = null;
+    }
+    
+    if (fieldMapping.state && row[fieldMapping.state]) {
+      client.state = row[fieldMapping.state].toString();
+    } else {
+      client.state = null;
+    }
+    
+    if (fieldMapping.province && row[fieldMapping.province]) {
+      client.province = row[fieldMapping.province].toString();
+    } else {
+      client.province = null;
+    }
+    
+    if (fieldMapping.fiscalCode && row[fieldMapping.fiscalCode]) {
+      client.fiscalCode = row[fieldMapping.fiscalCode].toString();
+    } else {
+      client.fiscalCode = null;
+    }
+    
+    if (fieldMapping.city && row[fieldMapping.city]) {
+      client.city = row[fieldMapping.city].toString();
+    } else {
+      client.city = null;
+    }
+    
+    if (fieldMapping.internationalPrefix && row[fieldMapping.internationalPrefix]) {
+      client.internationalPrefix = row[fieldMapping.internationalPrefix].toString();
+    } else {
+      client.internationalPrefix = null;
     }
     
     if (fieldMapping.notes && row[fieldMapping.notes]) {
@@ -262,11 +312,18 @@ export async function exportClientsCSV(req: Request, res: Response): Promise<voi
     const csvData = clients.map(client => {
       return {
         ID: client.id,
+        'Nome Azienda': client.companyName || '',
         Nome: client.firstName,
         Cognome: client.lastName,
         Email: client.email,
         Telefono: client.phone || '',
         Indirizzo: client.address || '',
+        'C.A.P.': client.zipCode || '',
+        Stato: client.state || '',
+        Provincia: client.province || '',
+        'Codice Fiscale': client.fiscalCode || '',
+        Città: client.city || '',
+        'Prefisso Internazionale': client.internationalPrefix || '',
         Note: client.notes || '',
         'Data Creazione': new Date(client.createdAt).toLocaleDateString()
       };

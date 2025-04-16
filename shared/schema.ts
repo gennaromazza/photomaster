@@ -41,6 +41,13 @@ export const clients = pgTable("clients", {
   email: text("email").notNull(),
   phone: text("phone"),
   address: text("address"),
+  companyName: text("company_name"),
+  zipCode: text("zip_code"),
+  state: text("state"),
+  province: text("province"),
+  fiscalCode: text("fiscal_code"),
+  city: text("city"),
+  internationalPrefix: text("international_prefix"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   notes: text("notes"),
 });
@@ -51,6 +58,13 @@ export const insertClientSchema = createInsertSchema(clients).pick({
   email: true,
   phone: true,
   address: true,
+  companyName: true,
+  zipCode: true,
+  state: true,
+  province: true,
+  fiscalCode: true,
+  city: true,
+  internationalPrefix: true,
   notes: true,
 });
 

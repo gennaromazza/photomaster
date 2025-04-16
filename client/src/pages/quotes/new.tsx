@@ -53,6 +53,7 @@ import {
   User, 
   Mail, 
   Phone, 
+  Download,
   CalendarIcon, 
   Clock, 
   MapPin,
@@ -472,7 +473,7 @@ export default function NewQuotePage() {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="flex items-center">
-                    <FileImport className="h-4 w-4 mr-2" />
+                    <Download className="h-4 w-4 mr-2" />
                     Importa Dati da Evento
                   </Button>
                 </PopoverTrigger>

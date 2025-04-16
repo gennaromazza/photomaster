@@ -1,6 +1,7 @@
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
+import CharacterCount from '@tiptap/extension-character-count';
 import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered, Heading2, Code } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
@@ -16,6 +17,9 @@ export function RichTextEditor({ content, onChange, placeholder = 'Inizia a scri
     extensions: [
       StarterKit,
       Underline,
+      CharacterCount.configure({
+        limit: 10000
+      }),
     ],
     content,
     editorProps: {

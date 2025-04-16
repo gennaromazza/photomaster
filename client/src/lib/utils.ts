@@ -218,3 +218,38 @@ export function getQueryParams(): Record<string, string> {
   
   return result;
 }
+
+/**
+ * Formatta il nome e cognome di una persona in modo standardizzato
+ * @param firstName - Nome della persona
+ * @param lastName - Cognome della persona
+ * @param companyName - Nome dell'azienda (opzionale)
+ * @returns Nome completo formattato
+ */
+export function formatFullName(firstName?: string | null, lastName?: string | null, companyName?: string | null): string {
+  // Se abbiamo un nome azienda, lo mettiamo come prefisso tra parentesi
+  const company = companyName ? `[${companyName}] ` : '';
+  
+  if (!firstName && !lastName) return company || 'N/D';
+  
+  const first = firstName || '';
+  const last = lastName || '';
+  
+  // Formatta il nome completo con cognome prima, iniziale maiuscola
+  const formattedName = `${first} ${last}`.trim();
+  
+  return company + formattedName;
+}
+
+/**
+ * Formatta il nome e cognome di un cliente, includendo opzionalmente i dati aziendali
+ * @param client - Oggetto cliente con firstName, lastName e opzionalmente companyName
+ * @returns Nome completo formattato
+ */
+export function formatClientName(client: { firstName?: string | null, lastName?: string | null, companyName?: string | null }): string {
+  return formatFullName(
+    client.firstName,
+    client.lastName,
+    client.companyName
+  );
+}

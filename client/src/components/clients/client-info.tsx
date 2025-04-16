@@ -3,7 +3,8 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Mail, PhoneCall, User, MapPin } from "lucide-react";
+import { formatClientName } from "@/lib/utils";
+import { Mail, PhoneCall, User, MapPin, Building } from "lucide-react";
 
 interface ClientInfoProps {
   clientId: number;
@@ -50,7 +51,7 @@ export default function ClientInfo({ clientId, mode = "compact", className }: Cl
         </CardHeader>
         <CardContent>
           <div className="font-medium text-lg mb-2">
-            {client.firstName} {client.lastName}
+            {formatClientName(client)}
           </div>
           <div className="space-y-1 text-sm">
             {client.email && (
@@ -99,7 +100,7 @@ export default function ClientInfo({ clientId, mode = "compact", className }: Cl
         <div className="space-y-4">
           <div>
             <h3 className="text-xl font-semibold mb-1">
-              {client.firstName} {client.lastName}
+              {formatClientName(client)}
             </h3>
             <div className="flex flex-col gap-2">
               {client.email && (

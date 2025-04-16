@@ -37,6 +37,8 @@ const CalendarPage = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"month" | "agenda">("month");
+  const [selectedDayEvents, setSelectedDayEvents] = useState<{ day: Date, events: CalendarItem[] } | null>(null);
   
   const { data: events = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
     queryKey: ["/api/events"],
@@ -159,7 +161,17 @@ const CalendarPage = () => {
           <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-900">Calendario</h1>
           <p className="mt-1 text-gray-500">Visualizza e gestisci i tuoi eventi</p>
         </div>
-        <div className="mt-4 lg:mt-0 flex space-x-3">
+        <div className="mt-4 lg:mt-0 flex items-center space-x-3">
+          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "month" | "agenda")}>
+            <ToggleGroupItem value="month" aria-label="Vista Mese">
+              <i className="ri-calendar-line mr-1"></i>
+              Mese
+            </ToggleGroupItem>
+            <ToggleGroupItem value="agenda" aria-label="Vista Agenda">
+              <i className="ri-list-check-2 mr-1"></i>
+              Agenda
+            </ToggleGroupItem>
+          </ToggleGroup>
           <Link href="/events/new">
             <Button className="inline-flex items-center">
               <i className="ri-add-line mr-2"></i>
@@ -198,99 +210,191 @@ const CalendarPage = () => {
         </CardHeader>
         
         <CardContent className="p-6">
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-2">
-            {weekdays.map((day, index) => (
-              <div key={index} className="text-xs text-gray-500 font-medium py-2">
-                {day}
+          {viewMode === "month" ? (
+            <>
+              {/* Vista Mese - Griglia Calendario */}
+              <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                {weekdays.map((day, index) => (
+                  <div key={index} className="text-xs text-gray-500 font-medium py-2">
+                    {day}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day, index) => {
-              const isCurrentMonth = isSameMonth(day, currentMonth);
-              const isSelected = isToday(day);
-              const dayEvents = getEventsForDay(day);
               
-              return (
-                <div 
-                  key={index}
-                  onClick={() => handleDayClick(day)} 
-                  className={cn(
-                    "min-h-[80px] p-1 border border-gray-100 rounded-md cursor-pointer transition-colors hover:bg-gray-50 relative group",
-                    isSelected && "bg-primary-light/5",
-                    isCurrentMonth ? "bg-white" : "bg-gray-50/50"
-                  )}
-                >
-                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center cursor-pointer transition-opacity">
-                    <i className="ri-add-line text-xs"></i>
-                  </div>
-                  <div className={cn(
-                    "text-xs",
-                    !isCurrentMonth && "text-gray-400",
-                    isSelected && "font-medium text-primary"
-                  )}>
-                    {format(day, "d")}
-                  </div>
+              <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((day, index) => {
+                  const isCurrentMonth = isSameMonth(day, currentMonth);
+                  const isSelected = isToday(day);
+                  const dayEvents = getEventsForDay(day);
                   
-                  {/* Mostriamo fino a 3 eventi per giorno */}
-                  {dayEvents.slice(0, 3).map((event, eventIndex) => {
-                    // Verifichiamo se l'elemento è un preventivo usando typeguard
-                    const isQuoteItem = (item: CalendarItem): item is QuoteCalendarItem => 
-                      'isQuote' in item && item.isQuote === true;
-                    
-                    // Determina il link corretto in base al tipo di elemento (preventivo o evento)
-                    const linkPath = isQuoteItem(event)
-                      ? `/quotes/${event.id.toString().replace('quote-', '')}` 
-                      : `/events/${event.id}`;
-                    
-                    // Determina la classe di stile in base al tipo di elemento e allo stato
-                    const eventClass = cn(
-                      "mt-1 p-1 text-xs rounded truncate flex items-center",
-                      isQuoteItem(event)
-                        ? (event.status === "signed" 
-                            ? "bg-purple-100 text-purple-800" 
-                            : "bg-amber-100 text-amber-800")
-                        : event.eventType === "wedding" 
-                            ? "bg-accent-light text-accent-dark" 
-                            : event.eventType === "appointment" 
-                                ? "bg-blue-100 text-blue-800" 
-                                : "bg-green-100 text-green-800"
-                    );
-                    
-                    // Aggiungi un'icona per identificare rapidamente il tipo di elemento
-                    const eventIcon = isQuoteItem(event)
-                      ? <i className="ri-file-list-line mr-1 text-xs"></i>
-                      : <i className="ri-calendar-event-line mr-1 text-xs"></i>;
-                    
-                    return (
-                      <Link key={eventIndex} href={linkPath}>
-                        <div className={eventClass}>
-                          {eventIcon}
-                          <span className="truncate">{event.title}</span>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                  
-                  {/* Se ci sono più di 3 eventi, mostriamo un indicatore */}
-                  {dayEvents.length > 3 && (
-                    <div
-                      className="mt-1 text-xs text-gray-500 text-center cursor-pointer hover:text-primary-dark transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Evita di aprire il dialog per creare un evento
-                        // Qui possiamo mostrare un dialog con tutti gli eventi del giorno
-                        console.log("Mostra tutti gli eventi per", format(day, "dd/MM/yyyy"));
-                      }}
+                  return (
+                    <div 
+                      key={index}
+                      onClick={() => handleDayClick(day)} 
+                      className={cn(
+                        "min-h-[80px] p-1 border border-gray-100 rounded-md cursor-pointer transition-colors hover:bg-gray-50 relative group",
+                        isSelected && "bg-primary-light/5",
+                        isCurrentMonth ? "bg-white" : "bg-gray-50/50"
+                      )}
                     >
-                      +{dayEvents.length - 3} altri
+                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center cursor-pointer transition-opacity">
+                        <i className="ri-add-line text-xs"></i>
+                      </div>
+                      <div className={cn(
+                        "text-xs",
+                        !isCurrentMonth && "text-gray-400",
+                        isSelected && "font-medium text-primary"
+                      )}>
+                        {format(day, "d")}
+                      </div>
+                      
+                      {/* Mostriamo fino a 3 eventi per giorno */}
+                      {dayEvents.slice(0, 3).map((event, eventIndex) => {
+                        // Verifichiamo se l'elemento è un preventivo usando typeguard
+                        const isQuoteItem = (item: CalendarItem): item is QuoteCalendarItem => 
+                          'isQuote' in item && item.isQuote === true;
+                        
+                        // Determina il link corretto in base al tipo di elemento (preventivo o evento)
+                        const linkPath = isQuoteItem(event)
+                          ? `/quotes/${event.id.toString().replace('quote-', '')}` 
+                          : `/events/${event.id}`;
+                        
+                        // Determina la classe di stile in base al tipo di elemento e allo stato
+                        const eventClass = cn(
+                          "mt-1 p-1 text-xs rounded truncate flex items-center",
+                          isQuoteItem(event)
+                            ? (event.status === "signed" 
+                                ? "bg-purple-100 text-purple-800" 
+                                : "bg-amber-100 text-amber-800")
+                            : event.eventType === "wedding" 
+                                ? "bg-accent-light text-accent-dark" 
+                                : event.eventType === "appointment" 
+                                    ? "bg-blue-100 text-blue-800" 
+                                    : "bg-green-100 text-green-800"
+                        );
+                        
+                        // Aggiungi un'icona per identificare rapidamente il tipo di elemento
+                        const eventIcon = isQuoteItem(event)
+                          ? <i className="ri-file-list-line mr-1 text-xs"></i>
+                          : <i className="ri-calendar-event-line mr-1 text-xs"></i>;
+                        
+                        return (
+                          <Link key={eventIndex} href={linkPath}>
+                            <div className={eventClass}>
+                              {eventIcon}
+                              <span className="truncate">{event.title}</span>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                      
+                      {/* Se ci sono più di 3 eventi, mostriamo un indicatore */}
+                      {dayEvents.length > 3 && (
+                        <div
+                          className="mt-1 text-xs text-gray-500 text-center cursor-pointer hover:text-primary-dark transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Evita di aprire il dialog per creare un evento
+                            setSelectedDayEvents({ day, events: dayEvents });
+                          }}
+                        >
+                          +{dayEvents.length - 3} altri
+                        </div>
+                      )}
                     </div>
-                  )}
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            /* Vista Agenda */
+            <div className="divide-y divide-gray-100">
+              {/* Ottieni solo i giorni del mese corrente per l'agenda */}
+              {days.map((day, index) => {
+                const dayEvents = getEventsForDay(day);
+                
+                // Mostra solo i giorni che hanno eventi
+                if (dayEvents.length === 0) return null;
+                
+                return (
+                  <div key={index} className="py-4">
+                    <div className="flex items-center">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center mr-4",
+                        isToday(day) ? "bg-primary text-white font-medium" : "bg-gray-100 text-gray-700"
+                      )}>
+                        {format(day, "d")}
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{format(day, "EEEE d MMMM", { locale: it })}</h3>
+                        <p className="text-sm text-gray-500">{dayEvents.length} {dayEvents.length === 1 ? 'evento' : 'eventi'}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-2 pl-14 space-y-2">
+                      {dayEvents.map((event, eventIndex) => {
+                        // Verifichiamo se l'elemento è un preventivo usando typeguard
+                        const isQuoteItem = (item: CalendarItem): item is QuoteCalendarItem => 
+                          'isQuote' in item && item.isQuote === true;
+                        
+                        // Determina il link corretto in base al tipo di elemento (preventivo o evento)
+                        const linkPath = isQuoteItem(event)
+                          ? `/quotes/${event.id.toString().replace('quote-', '')}` 
+                          : `/events/${event.id}`;
+                        
+                        // Determina la classe di stile in base al tipo di elemento e allo stato
+                        const eventClass = cn(
+                          "p-2 rounded flex items-center justify-between hover:bg-gray-50 transition-colors border-l-4",
+                          isQuoteItem(event)
+                            ? (event.status === "signed" 
+                                ? "border-purple-500 bg-purple-50" 
+                                : "border-amber-500 bg-amber-50")
+                            : event.eventType === "wedding" 
+                                ? "border-accent bg-accent-light/20" 
+                                : event.eventType === "appointment" 
+                                    ? "border-blue-500 bg-blue-50" 
+                                    : "border-green-500 bg-green-50"
+                        );
+                        
+                        // Aggiungi un'icona per identificare rapidamente il tipo di elemento
+                        const eventIcon = isQuoteItem(event)
+                          ? <i className="ri-file-list-line mr-2"></i>
+                          : <i className="ri-calendar-event-line mr-2"></i>;
+                        
+                        return (
+                          <Link key={eventIndex} href={linkPath}>
+                            <div className={eventClass}>
+                              <div className="flex items-center">
+                                {eventIcon}
+                                <span className="font-medium">{event.title}</span>
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {isQuoteItem(event) 
+                                  ? event.status === "signed" ? "Preventivo firmato" : "Preventivo"
+                                  : event.eventType === "wedding" ? "Matrimonio" : 
+                                    event.eventType === "appointment" ? "Appuntamento" : 
+                                    "Evento"
+                                }
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {/* Messaggio se non ci sono eventi */}
+              {days.every(day => getEventsForDay(day).length === 0) && (
+                <div className="py-8 text-center">
+                  <div className="text-gray-400 mb-2">
+                    <i className="ri-calendar-line text-4xl"></i>
+                  </div>
+                  <p className="text-gray-500">Nessun evento in questo mese</p>
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -332,6 +436,77 @@ const CalendarPage = () => {
                 />
               </TabsContent>
             </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog per mostrare tutti gli eventi di un giorno */}
+      <Dialog open={!!selectedDayEvents} onOpenChange={(open) => !open && setSelectedDayEvents(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              {selectedDayEvents && (
+                <span>Eventi del {format(selectedDayEvents.day, "d MMMM yyyy", { locale: it })}</span>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedDayEvents && (
+                <span>{selectedDayEvents.events.length} {selectedDayEvents.events.length === 1 ? 'evento' : 'eventi'} in questa data</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedDayEvents && (
+            <div className="space-y-3 max-h-96 overflow-auto py-2">
+              {selectedDayEvents.events.map((event, index) => {
+                // Verifichiamo se l'elemento è un preventivo usando typeguard
+                const isQuoteItem = (item: CalendarItem): item is QuoteCalendarItem => 
+                  'isQuote' in item && item.isQuote === true;
+                
+                // Determina il link corretto in base al tipo di elemento (preventivo o evento)
+                const linkPath = isQuoteItem(event)
+                  ? `/quotes/${event.id.toString().replace('quote-', '')}` 
+                  : `/events/${event.id}`;
+                
+                // Determina la classe di stile in base al tipo di elemento e allo stato
+                const eventClass = cn(
+                  "p-3 rounded flex items-center justify-between hover:bg-gray-50 transition-colors border-l-4",
+                  isQuoteItem(event)
+                    ? (event.status === "signed" 
+                        ? "border-purple-500 bg-purple-50" 
+                        : "border-amber-500 bg-amber-50")
+                    : event.eventType === "wedding" 
+                        ? "border-accent bg-accent-light/20" 
+                        : event.eventType === "appointment" 
+                            ? "border-blue-500 bg-blue-50" 
+                            : "border-green-500 bg-green-50"
+                );
+                
+                // Aggiungi un'icona per identificare rapidamente il tipo di elemento
+                const eventIcon = isQuoteItem(event)
+                  ? <i className="ri-file-list-line mr-2"></i>
+                  : <i className="ri-calendar-event-line mr-2"></i>;
+                
+                return (
+                  <Link key={index} href={linkPath} onClick={() => setSelectedDayEvents(null)}>
+                    <div className={eventClass}>
+                      <div className="flex items-center">
+                        {eventIcon}
+                        <span className="font-medium">{event.title}</span>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {isQuoteItem(event) 
+                          ? event.status === "signed" ? "Preventivo firmato" : "Preventivo"
+                          : event.eventType === "wedding" ? "Matrimonio" : 
+                            event.eventType === "appointment" ? "Appuntamento" : 
+                            "Evento"
+                        }
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           )}
         </DialogContent>
       </Dialog>

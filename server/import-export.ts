@@ -32,9 +32,11 @@ async function importFromCSV(filePath: string, fieldMapping: FieldMapping): Prom
       .pipe(csvParser())
       .on('data', (data: any) => results.push(data))
       .on('end', () => {
+        console.log('CSV headers found:', Object.keys(results[0] || {}));
         resolve(results);
       })
       .on('error', (error: Error) => {
+        console.error('Error parsing CSV:', error);
         reject(error);
       });
   });
@@ -102,13 +104,18 @@ export async function analyzeFile(filePath: string): Promise<string[]> {
     const data = await importFromCSV(filePath, {});
     if (data.length > 0) {
       headers = Object.keys(data[0]);
+      console.log('CSV headers extracted:', headers);
     }
   } else if (extension === 'xlsx' || extension === 'xls') {
     const data = await importFromExcel(filePath);
     if (data.length > 0) {
       headers = Object.keys(data[0]);
+      console.log('Excel headers extracted:', headers);
     }
   }
+  
+  // Pulisci le intestazioni rimuovendo virgolette se presenti
+  headers = headers.map(header => header.replace(/^["']|["']$/g, '').trim());
   
   return headers;
 }

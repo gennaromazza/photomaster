@@ -512,6 +512,11 @@ export function setupAuth(app: Express) {
     }
   );
   
+  // Endpoint per ottenere un token CSRF
+  app.get("/api/csrf-token", (req, res) => {
+    res.json({ csrfToken: generateCsrfToken() });
+  });
+  
   // Get utente corrente - supporta sia sessioni che JWT
   app.get("/api/user", (req, res, next) => {
     try {
@@ -525,17 +530,23 @@ export function setupAuth(app: Express) {
       // Controlla se c'è un token JWT nell'header Authorization
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        // Per il momento, per debug, invia un utente fittizio
-        const mockUser = {
-          id: 1,
-          username: "ImageStudio",
-          fullName: "Gennaro Mazzacane",
-          email: "gennaro.mazzacane@gmail.com",
-          role: "admin",
-          status: "active",
-          profileImage: "",
-        };
-        return res.json(mockUser);
+        // Per uso in sviluppo, lasciamo questo codice commentato,
+        // ma dovrebbe essere rimosso in produzione
+        if (process.env.NODE_ENV === 'development') {
+          const mockUser = {
+            id: 1,
+            username: "ImageStudio",
+            fullName: "Gennaro Mazzacane",
+            email: "gennaro.mazzacane@gmail.com",
+            role: "admin",
+            status: "active",
+            profileImage: "",
+          };
+          return res.json(mockUser);
+        }
+        
+        // Attivazione dell'autenticazione reale
+        return res.status(401).json({ message: "Non autenticato" });
       }
       
       // Estrai il token
@@ -560,17 +571,23 @@ export function setupAuth(app: Express) {
           res.json(userWithoutPassword);
         })
         .catch((err) => {
-          // Per il momento, per debug, invia un utente fittizio
-          const mockUser = {
-            id: 1,
-            username: "ImageStudio",
-            fullName: "Gennaro Mazzacane",
-            email: "gennaro.mazzacane@gmail.com",
-            role: "admin",
-            status: "active",
-            profileImage: "",
-          };
-          return res.json(mockUser);
+          // Per uso in sviluppo, lasciamo questo codice commentato,
+          // ma dovrebbe essere rimosso in produzione
+          if (process.env.NODE_ENV === 'development') {
+            const mockUser = {
+              id: 1,
+              username: "ImageStudio",
+              fullName: "Gennaro Mazzacane",
+              email: "gennaro.mazzacane@gmail.com",
+              role: "admin",
+              status: "active",
+              profileImage: "",
+            };
+            return res.json(mockUser);
+          }
+          
+          // Attivazione dell'autenticazione reale
+          return res.status(401).json({ message: "Token non valido o scaduto" });
         });
     } catch (error) {
       next(error);
@@ -733,21 +750,24 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
   // Controlla se c'è un token JWT nell'header Authorization
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // Per il momento, per debug, consentiamo sempre l'accesso
-    const mockUser = {
-      id: 1,
-      username: "ImageStudio",
-      fullName: "Gennaro Mazzacane",
-      email: "gennaro.mazzacane@gmail.com",
-      role: "admin",
-      status: "active",
-      profileImage: "",
-    };
-    (req as any).user = mockUser;
-    return next();
+    // Per uso in sviluppo, lasciamo questo codice commentato,
+    // ma dovrebbe essere rimosso in produzione
+    if (process.env.NODE_ENV === 'development') {
+      const mockUser = {
+        id: 1,
+        username: "ImageStudio",
+        fullName: "Gennaro Mazzacane",
+        email: "gennaro.mazzacane@gmail.com",
+        role: "admin",
+        status: "active",
+        profileImage: "",
+      };
+      (req as any).user = mockUser;
+      return next();
+    }
     
-    // Quando sarà il momento di attivare l'autenticazione, decommentare questa riga:
-    // return res.status(401).json({ message: "Non autenticato" });
+    // Attivazione dell'autenticazione reale
+    return res.status(401).json({ message: "Non autenticato" });
   }
   
   // Estrai il token
@@ -772,21 +792,24 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
       next();
     })
     .catch((err) => {
-      // Per il momento, per debug, consentiamo sempre l'accesso
-      const mockUser = {
-        id: 1,
-        username: "ImageStudio",
-        fullName: "Gennaro Mazzacane",
-        email: "gennaro.mazzacane@gmail.com",
-        role: "admin",
-        status: "active",
-        profileImage: "",
-      };
-      (req as any).user = mockUser;
-      next();
+      // Per uso in sviluppo, lasciamo questo codice commentato,
+      // ma dovrebbe essere rimosso in produzione
+      if (process.env.NODE_ENV === 'development') {
+        const mockUser = {
+          id: 1,
+          username: "ImageStudio",
+          fullName: "Gennaro Mazzacane",
+          email: "gennaro.mazzacane@gmail.com",
+          role: "admin",
+          status: "active",
+          profileImage: "",
+        };
+        (req as any).user = mockUser;
+        return next();
+      }
       
-      // Quando sarà il momento di attivare l'autenticazione, decommentare questa riga:
-      // res.status(401).json({ message: "Token non valido o scaduto" });
+      // Attivazione dell'autenticazione reale
+      res.status(401).json({ message: "Token non valido o scaduto" });
     });
 }
 
@@ -800,5 +823,27 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
       res.status(403).json({ message: "Non autorizzato" });
     }
   });
+}
+
+// Middleware per protezione CSRF
+export function csrfProtection(req: Request, res: Response, next: NextFunction) {
+  // Salta la verifica per GET, HEAD, OPTIONS
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    return next();
+  }
+  
+  // Verifica il token CSRF negli header
+  const csrfToken = req.headers["x-csrf-token"] as string;
+  
+  if (!csrfToken) {
+    return res.status(403).json({ message: "Token CSRF mancante" });
+  }
+  
+  // Verifica la validità del token
+  if (!verifyCsrfToken(csrfToken)) {
+    return res.status(403).json({ message: "Token CSRF non valido" });
+  }
+  
+  next();
 }
 

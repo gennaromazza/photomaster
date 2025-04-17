@@ -1,8 +1,29 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import helmet from "helmet";
 
 const app = express();
+
+// Configurazione di Helmet per migliorare la sicurezza delle intestazioni HTTP
+// Personalizzazione per consentire l'uso di CKEditor e altre risorse
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.ckeditor.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.ckeditor.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://cdn.ckeditor.com", "https://*.googleusercontent.com"],
+        connectSrc: ["'self'", "https://www.googleapis.com"],
+        frameSrc: ["'self'", "https://accounts.google.com"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Necessario per CKEditor
+  })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

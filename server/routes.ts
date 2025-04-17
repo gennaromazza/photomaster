@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, hashPassword } from "./auth";
+import { setupAuth, isAuthenticated, isAdmin, csrfProtection, hashPassword } from "./auth";
 import { 
   sendPasswordResetEmail, 
   sendQuoteSignedNotification, 
@@ -42,6 +42,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup API routes
   const apiRouter = express.Router();
+  
+  // Aggiungi il middleware di protezione CSRF a tutte le rotte POST, PUT, DELETE
+  // Solo per le rotte di modifica dati in modo da prevenire attacchi CSRF
+  apiRouter.use(csrfProtection);
 
   // Client routes
   apiRouter.get("/clients", async (req, res) => {

@@ -59,7 +59,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-  // Verifica token all'avvio
+  // Funzione per decodificare il token JWT senza verificarlo
+  const decodeToken = (token: string): { exp?: number } | null => {
+    try {
+      // Dividi il token in parti (header, payload, signature)
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      
+      // Decodifica il payload (seconda parte)
+      const payload = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+      return JSON.parse(payload);
+    } catch (error) {
+      console.error('Errore nella decodifica del token:', error);
+      return null;
+    }
+  };
+  
+  // Funzione per verificare se il token sta per scadere (entro 30 minuti)
+  const isTokenExpiringSoon = (token: string): boolean => {
+    try {
+      const decoded = decodeToken(token);
+      if (!decoded || !decoded.exp) return true;
+      
+      // Calcola quando manca alla scadenza (in secondi)
+      const now = Math.floor(Date.now() / 1000);
+      const timeRemaining = decoded.exp - now;
+      
+      // Considera il token in scadenza se mancano meno di 30 minuti
+      return timeRemaining < 30 * 60;
+    } catch (error) {
+      console.error('Errore nella verifica della scadenza del token:', error);
+      return true;
+    }
+  };
+
+  // Verifica token all'avvio e imposta refresh automatico
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedToken = localStorage.getItem("auth_token");
@@ -67,6 +101,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(storedToken);
         // Verifica il token
         verifyToken(storedToken);
+        
+        // Imposta un intervallo per verificare e refreshare il token
+        const tokenRefreshInterval = setInterval(() => {
+          const currentToken = localStorage.getItem("auth_token");
+          if (currentToken && isTokenExpiringSoon(currentToken)) {
+            verifyToken(currentToken);
+          }
+        }, 5 * 60 * 1000); // Controlla ogni 5 minuti
+        
+        return () => clearInterval(tokenRefreshInterval);
       }
     }
   }, []);

@@ -7,6 +7,38 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Variabile per memorizzare il token CSRF
+let csrfToken: string | null = null;
+
+// Funzione per ottenere il token CSRF
+export async function getCsrfToken(): Promise<string> {
+  // Se abbiamo già un token, lo restituiamo
+  if (csrfToken) {
+    return csrfToken;
+  }
+  
+  // Altrimenti, lo richiediamo all'API
+  try {
+    const response = await fetch('/api/csrf-token');
+    
+    if (!response.ok) {
+      throw new Error('Impossibile ottenere il token CSRF');
+    }
+    
+    const data = await response.json();
+    csrfToken = data.csrfToken;
+    
+    if (!csrfToken) {
+      throw new Error('Token CSRF non valido');
+    }
+    
+    return csrfToken;
+  } catch (error) {
+    console.error('Errore durante il recupero del token CSRF:', error);
+    throw error;
+  }
+}
+
 export async function apiRequest(
   method: string,
   url: string,
@@ -28,6 +60,18 @@ export async function apiRequest(
     headers["Authorization"] = `Bearer ${token}`;
   }
   
+  // Ottieni e aggiungi il token CSRF per le richieste che modificano dati 
+  // (ma non per GET e HEAD che non richiedono protezione CSRF)
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
+    try {
+      const csrfToken = await getCsrfToken();
+      headers['X-CSRF-Token'] = csrfToken;
+    } catch (error) {
+      console.error('Errore nel recupero del token CSRF:', error);
+      // Non blocchiamo la richiesta, il server respingerà se necessario
+    }
+  }
+  
   const res = await fetch(url, {
     method,
     headers,
@@ -44,7 +88,7 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
+  async ({ queryKey, signal }) => {
     // Controlla se c'è un token JWT nel localStorage
     const token = localStorage.getItem("auth_token");
     
@@ -67,6 +111,7 @@ export const getQueryFn: <T>(options: {
     const res = await fetch(url, {
       headers,
       credentials: "include", // Manteniamo per compatibilità con sessioni
+      signal, // Passa il segnale di abort
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

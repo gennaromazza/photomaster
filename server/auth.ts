@@ -56,7 +56,7 @@ export function verifyCsrfToken(token: string) {
 // Aggiungo le funzioni per JWT
 const JWT_SECRET = process.env.JWT_SECRET || "image-studio-jwt-secret";
 // Ridotto da 7 giorni a 2 giorni per maggiore sicurezza
-const JWT_EXPIRATION = '2d';
+const JWT_EXPIRATION = '2h'; // Ridotto a 2 ore per maggiore sicurezza
 
 // Genera un token JWT per l'utente
 export function generateToken(user: SelectUser): string {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { v4 as uuidv4 } from "uuid";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, ArrowLeft, Plus, Search, X, PlusCircle, Trash, BookOpen, ChevronsUpDown, AlertCircle, Eye } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { roundToTwoDecimals } from "@/lib/moduleCalculations";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // Interfacce per i servizi e prodotti
 interface Service {
@@ -369,14 +371,77 @@ export default function VariableModuleEditor({
     setIsAddingSelection(false);
   };
   
-  // Rimuove una selezione
+  // Toast notification hook
+  const { toast } = useToast();
+  
+  // Mutation per aggiornare il modulo dopo la rimozione di una selezione
+  const updateModuleMutation = useMutation({
+    mutationFn: async (updatedModule: QuoteModule) => {
+      // Se il modulo non ha un ID, non possiamo aggiornarlo nel database
+      if (!updatedModule.id) {
+        return updatedModule;
+      }
+      
+      const url = `/api/modules/${updatedModule.id}`;
+      console.log(`Aggiornamento modulo variabile all'URL ${url}:`, updatedModule);
+      
+      const res = await apiRequest("PUT", url, updatedModule);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      console.log("Modulo aggiornato con successo dopo la rimozione della categoria:", data);
+      
+      // Aggiorna la cache per una risposta immediata
+      if (data.id) {
+        queryClient.invalidateQueries([`/api/quotes/${quoteId}/modules`]);
+        queryClient.invalidateQueries([`/api/modules/${data.id}`]);
+      }
+      
+      toast({
+        title: "Categoria rimossa",
+        description: "La categoria di selezione è stata rimossa dal modulo",
+      });
+    },
+    onError: (error) => {
+      console.error("Errore nell'aggiornamento del modulo:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante la rimozione della categoria",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Rimuove una selezione con aggiornamento immediato sul server
   const handleRemoveSelection = (selectionId: string) => {
     if (window.confirm("Sei sicuro di voler rimuovere questa categoria di selezione?")) {
+      // Prima aggiorniamo lo stato locale per un feedback immediato
       setModuleSelections(prev => prev.filter(s => s.id !== selectionId));
       
       if (activeSelectionId === selectionId) {
         setActiveSelectionId(null);
         selectionForm.reset();
+      }
+      
+      // Se il modulo ha un ID, dobbiamo aggiornare anche il server
+      if (module?.id) {
+        // Prepariamo i dati del modulo con la selezione rimossa
+        const updatedSelections = moduleSelections.filter(s => s.id !== selectionId);
+        
+        const moduleData: QuoteModule = {
+          ...module,
+          name: form.getValues("name"),
+          description: form.getValues("description"),
+          discount: form.getValues("discount"),
+          discountType: form.getValues("discountType"),
+          selections: updatedSelections,
+          // Mantieni gli altri campi invariati
+          type: "variable",
+          quoteId
+        };
+        
+        // Inviamo l'aggiornamento al server
+        updateModuleMutation.mutate(moduleData);
       }
     }
   };

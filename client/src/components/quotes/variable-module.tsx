@@ -42,14 +42,43 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
   const { toast } = useToast();
   const isEdit = !!module?.id;
 
-  const [formData, setFormData] = useState<QuoteModuleData>({
-    quoteId,
-    name: "",
-    type: "variable",
-    status: "active",
-    items: [],
-    expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default a 7 giorni da oggi
-    ...module
+  // Inizializzazione più robusta del formData con controlli espliciti
+  const [formData, setFormData] = useState<QuoteModuleData>(() => {
+    console.log("Inizializzazione modulo variabile:", module);
+    
+    // Valori di default
+    const defaults = {
+      quoteId,
+      name: "",
+      type: "variable" as const,
+      status: "active" as const,
+      items: [] as QuoteModuleItemData[],
+      expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    };
+    
+    // Se non c'è un modulo esistente, restituisci i valori predefiniti
+    if (!module) {
+      return defaults;
+    }
+    
+    // Combina i valori predefiniti con quelli del modulo esistente
+    return {
+      ...defaults,
+      id: module.id,
+      name: module.name || defaults.name,
+      description: module.description || undefined,
+      status: module.status || defaults.status,
+      items: Array.isArray(module.items) && module.items.length > 0 ? [...module.items] : defaults.items,
+      shareToken: module.shareToken,
+      expiryDate: module.expiryDate ? new Date(module.expiryDate) : defaults.expiryDate,
+      discount: module.discount,
+      discountType: module.discountType,
+      position: module.position,
+      subtotal: module.subtotal,
+      total: module.total,
+      updatedAt: module.updatedAt,
+      createdAt: module.createdAt,
+    };
   });
 
   const [availableServices, setAvailableServices] = useState<any[]>([]);

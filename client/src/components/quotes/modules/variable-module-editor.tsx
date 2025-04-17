@@ -166,43 +166,78 @@ export default function VariableModuleEditor({
     staleTime: 30000
   });
   
-  // Inizializza le selezioni quando il modulo viene caricato
+  // Inizializza il modulo quando viene caricato
   useEffect(() => {
-    console.log("Caricamento modulo:", module);
+    console.log("Caricamento modulo VariableModuleEditor:", module);
     
-    if (module?.selections && module.selections.length > 0) {
-      // Assicuriamoci che tutti i dati siano correttamente formattati
-      const formattedSelections = module.selections.map(selection => {
-        // Assicuriamoci che la selezione abbia un ID
-        const selectionId = selection.id || uuidv4();
-        
-        // Formatta le opzioni della selezione
-        const formattedOptions = Array.isArray(selection.options) 
-          ? selection.options.map(option => ({
-              ...option,
-              id: option.id || uuidv4(),
-              selectionId: selectionId
-            }))
-          : [];
-          
-        return {
-          ...selection,
-          id: selectionId,
-          options: formattedOptions
-        };
+    // Aggiorniamo il form principale indipendentemente dall'esistenza delle selezioni
+    if (module) {
+      console.log("Inizializzazione form con dati esistenti:", {
+        name: module.name,
+        description: module.description,
+        discount: module.discount,
+        discountType: module.discountType
       });
       
-      console.log("Selezioni formattate:", formattedSelections);
-      setModuleSelections(formattedSelections);
-      
-      // Se c'è almeno una selezione, aggiorniamo anche il form principale
+      // Prima fase: inizializzazione del form principale
       form.reset({
         name: module.name || "",
         description: module.description || "",
         discount: module.discount || 0,
         discountType: module.discountType || "percentage",
       });
+      
+      // Seconda fase: gestione delle selezioni
+      if (module.selections && Array.isArray(module.selections) && module.selections.length > 0) {
+        console.log("Selezioni originali:", module.selections);
+        
+        // Assicuriamoci che tutti i dati siano correttamente formattati
+        const formattedSelections = module.selections.map(selection => {
+          if (!selection) return null;
+          
+          // Assicuriamoci che la selezione abbia un ID
+          const selectionId = selection.id || uuidv4();
+          
+          // Formatta le opzioni della selezione se esistono
+          const formattedOptions = Array.isArray(selection.options) 
+            ? selection.options.map(option => {
+                if (!option) return null;
+                return {
+                  ...option,
+                  id: option.id || uuidv4(),
+                  selectionId: selectionId
+                };
+              }).filter(Boolean) // Rimuove gli elementi null
+            : [];
+            
+          return {
+            ...selection,
+            id: selectionId,
+            options: formattedOptions,
+            name: selection.name || "",
+            minOptions: selection.minOptions ?? 0,
+            maxOptions: selection.maxOptions,
+            isRequired: selection.isRequired ?? false,
+            description: selection.description || "",
+            position: selection.position ?? 0
+          };
+        }).filter(Boolean); // Rimuove gli elementi null
+        
+        console.log("Selezioni formattate:", formattedSelections);
+        setModuleSelections(formattedSelections);
+      } else {
+        console.log("Nessuna selezione presente nel modulo");
+        setModuleSelections([]);
+      }
     } else {
+      // Reset completo se non c'è un modulo
+      console.log("Reset completo: nessun modulo fornito");
+      form.reset({
+        name: "",
+        description: "",
+        discount: 0,
+        discountType: "percentage"
+      });
       setModuleSelections([]);
     }
   }, [module, form.reset]);

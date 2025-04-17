@@ -90,11 +90,11 @@ export function PublicFixedModule({ module }: PublicFixedModuleProps) {
                 <div className="flex flex-col md:flex-row">
                   {/* Immagine del prodotto/servizio se disponibile */}
                   {imagePath ? (
-                    <div className="w-full md:w-32 h-24 md:h-auto relative bg-muted">
+                    <div className="w-full md:w-40 h-32 md:h-auto relative bg-muted/20 flex items-center justify-center">
                       <img 
                         src={imagePath} 
                         alt={name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain p-2"
                         onError={(e) => {
                           console.log(`[LOG] Errore caricamento immagine modulo fisso: ${imagePath}`);
                           const target = e.target as HTMLImageElement;
@@ -119,7 +119,7 @@ export function PublicFixedModule({ module }: PublicFixedModuleProps) {
                       />
                     </div>
                   ) : (
-                    <div className="hidden md:flex w-24 h-full items-center justify-center bg-muted text-muted-foreground">
+                    <div className="hidden md:flex w-32 h-full items-center justify-center bg-muted/20 text-muted-foreground">
                       <Image className="h-6 w-6" />
                     </div>
                   )}

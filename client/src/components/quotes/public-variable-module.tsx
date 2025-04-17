@@ -325,7 +325,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
 
                     {/* Immagine del prodotto/servizio se disponibile */}
                     {imagePath && (
-                      <div className="mt-2 w-full h-28 rounded-md overflow-hidden bg-muted/40">
+                      <div className="mt-2 w-full h-36 rounded-md overflow-hidden bg-muted/40 relative">
                         {imageState.hasError ? (
                           <div className="w-full h-full flex items-center justify-center bg-muted">
                             <div className="text-muted-foreground flex flex-col items-center">
@@ -334,13 +334,15 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                             </div>
                           </div>
                         ) : (
-                          <img 
-                            src={imagePath}
-                            alt={name || "Immagine prodotto"}
-                            className="w-full h-full object-cover"
-                            onError={() => handleImageError(item.id)}
-                            onLoad={() => handleImageLoad(item.id)}
-                          />
+                          <div className="w-full h-full flex items-center justify-center">
+                            <img 
+                              src={imagePath}
+                              alt={name || "Immagine prodotto"}
+                              className="w-full h-full object-contain p-1"
+                              onError={() => handleImageError(item.id)}
+                              onLoad={() => handleImageLoad(item.id)}
+                            />
+                          </div>
                         )}
                       </div>
                     )}

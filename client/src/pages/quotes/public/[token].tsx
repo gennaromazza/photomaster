@@ -23,6 +23,7 @@ import { StudioInfo } from "@/components/quotes/studio-info";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { PublicFixedModule } from "@/components/quotes/public-fixed-module";
 import { PublicVariableModule } from "@/components/quotes/public-variable-module";
+import { Watermark } from "@/components/ui/watermark";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,9 +31,21 @@ import { Button } from "@/components/ui/button";
 
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
+  // Aggiunta della filigrana con il nome dello studio in tutta la pagina
   return (
-    <div className="min-h-screen flex flex-col bg-background/50">
-      <header className="bg-primary py-5 shadow-md">
+    <div className="min-h-screen flex flex-col bg-background/50 overflow-hidden relative">
+      {/* Filigrana ImageStudio */}
+      <Watermark 
+        text="ImageStudio" 
+        opacity={0.07} 
+        fontSize="1.8rem" 
+        rotate={-30} 
+        repeat={12} 
+        position="center" 
+        color="var(--primary)"  
+      />
+      
+      <header className="bg-primary py-5 shadow-md relative z-10">
         <div className="container px-4 sm:px-6 md:px-8">
           <div className="flex items-center justify-center">
             <div className="bg-white/10 p-1 px-3 rounded-full">
@@ -45,8 +58,8 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </div>
       </header>
-      <main className="flex-1 container px-4 sm:px-6 md:px-8 py-6 md:py-10">{children}</main>
-      <footer className="bg-muted py-5 border-t shadow-inner">
+      <main className="flex-1 container px-4 sm:px-6 md:px-8 py-6 md:py-10 relative z-10">{children}</main>
+      <footer className="bg-muted py-5 border-t shadow-inner relative z-10">
         <div className="container px-4 text-center">
           <div className="flex flex-col items-center justify-center space-y-2">
             <p className="text-sm md:text-base text-muted-foreground">

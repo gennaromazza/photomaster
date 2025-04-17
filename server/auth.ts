@@ -3,7 +3,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { randomBytes } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "../shared/schema";
@@ -13,6 +13,9 @@ const { Pool } = pkg;
 import { z } from "zod";
 import { sendRegistrationNotification, sendApprovalNotification, sendDisabledNotification, sendPasswordResetEmail } from "./email";
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+import Tokens from 'csrf';
+import helmet from 'helmet';
 
 declare global {
   namespace Express {
@@ -20,21 +23,40 @@ declare global {
   }
 }
 
-const scryptAsync = promisify(scrypt);
+// Inizializza il generatore di token CSRF
+const csrfTokens = new Tokens();
+const secret = randomBytes(32).toString('hex'); // Genera un segreto CSRF sicuro
 
+// Migliora la funzione di hash delle password con bcrypt (più sicuro di scrypt)
 export async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
+  // Usa bcrypt con salt-rounds di 12 (consigliato per sicurezza)
+  const saltRounds = 12;
+  return bcrypt.hash(password, saltRounds);
+}
+
+// Confronta le password con bcrypt
+export async function comparePasswords(supplied: string, stored: string) {
+  return bcrypt.compare(supplied, stored);
 }
 
 export function generateResetToken(): string {
   return randomBytes(20).toString('hex');
 }
 
+// Genera un token CSRF
+export function generateCsrfToken() {
+  return csrfTokens.create(secret);
+}
+
+// Verifica un token CSRF
+export function verifyCsrfToken(token: string) {
+  return csrfTokens.verify(secret, token);
+}
+
 // Aggiungo le funzioni per JWT
 const JWT_SECRET = process.env.JWT_SECRET || "image-studio-jwt-secret";
-const JWT_EXPIRATION = '7d'; // Token valido per 7 giorni
+// Ridotto da 7 giorni a 2 giorni per maggiore sicurezza
+const JWT_EXPIRATION = '2d';
 
 // Genera un token JWT per l'utente
 export function generateToken(user: SelectUser): string {
@@ -53,14 +75,6 @@ export function verifyToken(token: string): Promise<any> {
       }
     });
   });
-}
-
-
-async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
 // Schema per la validazione della registrazione

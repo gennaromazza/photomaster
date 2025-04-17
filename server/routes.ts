@@ -2205,7 +2205,87 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         })
       );
 
-      res.json({ ...module, items });
+      // Se è un modulo variabile, costruisci anche la struttura delle categorie di selezione
+      if (module.type === 'variable') {
+        // Aggruppiamo gli item per categoria (se disponibile)
+        const selections = [];
+        
+        // Mappa per tracciare gli item già assegnati a una selezione
+        const assignedItems = new Set();
+        
+        // Raggruppa gli item in base al campo notes che contiene le informazioni sulla categoria
+        // nel formato "NomeCategoria: NomeItem"
+        const categoryMap = new Map();
+        
+        items.forEach(item => {
+          if (!item || !item.notes) return;
+          
+          // Estrai la categoria dalla nota (formato: "NomeCategoria: NomeItem")
+          const noteParts = item.notes.split(':');
+          if (noteParts.length < 2) return;
+          
+          const categoryName = noteParts[0].trim();
+          
+          // Aggiungi l'item alla categoria corrispondente
+          if (!categoryMap.has(categoryName)) {
+            categoryMap.set(categoryName, {
+              id: `cat-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              name: categoryName,
+              options: []
+            });
+          }
+          
+          const category = categoryMap.get(categoryName);
+          
+          // Aggiungi l'opzione alla categoria
+          category.options.push({
+            id: `opt-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            selectionId: category.id,
+            itemId: item.serviceId || item.productId || item.bundleId,
+            itemType: item.serviceId ? 'service' : (item.productId ? 'product' : 'bundle'),
+            name: item.serviceName || item.productName || item.bundleName,
+            description: item.serviceDescription || item.productDescription || item.bundleDescription,
+            price: item.unitPrice,
+            isDefault: item.isSelected,
+            isRequired: item.isRequired
+          });
+          
+          // Segna questo item come già assegnato
+          assignedItems.add(item.id);
+        });
+        
+        // Converti la mappa in array di selezioni
+        categoryMap.forEach((category) => {
+          selections.push(category);
+        });
+        
+        // Gli item non assegnati a categorie possono essere aggiunti a una categoria "Altro"
+        const unassignedItems = items.filter(item => !assignedItems.has(item.id));
+        if (unassignedItems.length > 0) {
+          const defaultCategory = {
+            id: `cat-default-${Date.now()}`,
+            name: "Altro",
+            options: unassignedItems.map(item => ({
+              id: `opt-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              selectionId: `cat-default-${Date.now()}`,
+              itemId: item.serviceId || item.productId || item.bundleId,
+              itemType: item.serviceId ? 'service' : (item.productId ? 'product' : 'bundle'),
+              name: item.serviceName || item.productName || item.bundleName,
+              description: item.serviceDescription || item.productDescription || item.bundleDescription,
+              price: item.unitPrice,
+              isDefault: item.isSelected,
+              isRequired: item.isRequired
+            }))
+          };
+          selections.push(defaultCategory);
+        }
+        
+        // Restituisci il modulo con gli items e le selections
+        res.json({ ...module, items, selections });
+      } else {
+        // Per i moduli fissi restituisci solo gli items
+        res.json({ ...module, items });
+      }
     } catch (err) {
       console.error("Error fetching module:", err);
       res.status(500).json({ message: "Errore nel recupero del modulo" });

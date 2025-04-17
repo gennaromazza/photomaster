@@ -1567,7 +1567,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
       
       // Recupera tutti i moduli variabili del preventivo
-      const modules = await storage.getQuoteModulesByQuote(quote.id);
+      const modules = await storage.getModulesByQuote(quote.id);
       const variableModules = modules.filter(m => m.type === 'variable');
       
       // Verifica i vincoli di selezione per tutti i moduli variabili

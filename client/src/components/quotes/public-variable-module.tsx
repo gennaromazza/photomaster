@@ -405,6 +405,28 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
             <p className="text-sm">{module.description}</p>
           </div>
         )}
+        
+        {/* Vincoli di selezione */}
+        {(module.minSelectCount || module.maxSelectCount) && (
+          <div className="mt-3 p-2 bg-amber-50 rounded-md border border-amber-200">
+            <p className="text-sm font-medium text-amber-800 flex items-center">
+              <AlertCircle className="h-4 w-4 mr-1.5 text-amber-600" />
+              {module.minSelectCount && module.maxSelectCount && module.minSelectCount === module.maxSelectCount ? (
+                <span>Seleziona <span className="font-bold underline">esattamente {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+              ) : (
+                <span>
+                  {module.minSelectCount ? (
+                    <span>Seleziona <span className="font-bold">almeno {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                  ) : null}
+                  {module.minSelectCount && module.maxSelectCount ? ' e ' : ''}
+                  {module.maxSelectCount ? (
+                    <span>massimo <span className="font-bold">{module.maxSelectCount}</span> {module.maxSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                  ) : null}
+                </span>
+              )}
+            </p>
+          </div>
+        )}
 
         {/* Data di scadenza */}
         {module.expiryDate && (

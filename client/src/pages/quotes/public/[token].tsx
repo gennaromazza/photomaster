@@ -406,12 +406,45 @@ export default function PublicQuotePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5">
-              <div className="mb-2 text-sm text-muted-foreground">
-                Qui puoi visualizzare i {modules.length > 1 ? "moduli" : "modulo"} inclusi nel preventivo.
+              <div className="mb-4 text-sm">
+                <h3 className="font-semibold text-base mb-2">Guida al preventivo</h3>
+                <p className="text-muted-foreground mb-2">
+                  Qui puoi visualizzare i {modules.length > 1 ? "moduli" : "modulo"} inclusi nel preventivo.
+                </p>
+                
+                {modules.some(m => m.type === 'fixed') && (
+                  <div className="flex items-start gap-2 mb-2 p-2 bg-primary/5 rounded-md">
+                    <div className="mt-1 text-primary">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <span className="font-medium">Moduli fissi:</span> Rappresentano i servizi inclusi di base nel pacchetto scelto. Questi elementi sono sempre inclusi nel preventivo.
+                    </div>
+                  </div>
+                )}
+                
                 {modules.some(m => m.type === 'variable') && (
-                  <p className="mt-1">
-                    I moduli <span className="font-medium">variabili</span> ti permettono di selezionare le opzioni che preferisci.
-                  </p>
+                  <div className="flex items-start gap-2 p-2 bg-primary/5 rounded-md">
+                    <div className="mt-1 text-primary">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <span className="font-medium">Moduli variabili:</span> Ti permettono di personalizzare il pacchetto selezionando le opzioni che preferisci. 
+                      <ul className="list-disc list-inside mt-1 ml-2 text-xs">
+                        <li>Le opzioni contrassegnate come <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Obbligatorio</span> non possono essere deselezionate.</li>
+                        <li>Ogni modulo variabile può richiedere un numero minimo e massimo di selezioni.</li>
+                        <li>Leggi attentamente le istruzioni all'interno di ogni modulo per comprendere i requisiti di selezione.</li>
+                      </ul>
+                    </div>
+                  </div>
                 )}
               </div>
 

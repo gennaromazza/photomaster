@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, Info, ImageOff } from "lucide-react";
+import { Calendar, Info, ImageOff, AlertCircle, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { 
@@ -64,6 +64,15 @@ interface SelectedItem {
 interface ImageLoadStateItem {
   hasError: boolean;
   isLoading: boolean;
+}
+
+// Interfaccia per raggruppare gli elementi per categoria
+interface CategoryGroup {
+  category: string;
+  items: {
+    item: ModuleItem;
+    index: number;
+  }[];
 }
 
 export function PublicVariableModule({ module, onSelectionChange, disabled = false }: PublicVariableModuleProps) {
@@ -257,10 +266,15 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
             {formatCurrency(total)}
           </Badge>
         </div>
+
+        {/* Descrizione del modulo */}
         {module.description && (
-          <p className="text-sm text-muted-foreground mt-1">{module.description}</p>
+          <div className="mt-2 p-2 bg-muted/20 rounded-md border border-muted/30">
+            <p className="text-sm">{module.description}</p>
+          </div>
         )}
 
+        {/* Data di scadenza */}
         {module.expiryDate && (
           <div className="flex items-center text-xs text-muted-foreground mt-2">
             <Calendar className="h-3 w-3 mr-1" />
@@ -269,15 +283,63 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
             </span>
           </div>
         )}
-
-        {((module.minSelectCount || module.maxSelectCount) || hasRequiredItems) && !disabled && (
-          <div className="flex items-center mt-2 text-xs p-2 bg-muted/40 rounded-md">
-            <Info className="h-3 w-3 mr-1 text-muted-foreground" />
-            <span>
-              {module.minSelectCount && `Seleziona almeno ${module.minSelectCount} opzioni. `}
-              {module.maxSelectCount && `Puoi selezionare massimo ${module.maxSelectCount} opzioni. `}
-              {hasRequiredItems && <span className="font-medium text-amber-700">Alcune opzioni sono obbligatorie e non possono essere deselezionate.</span>}
-            </span>
+        
+        {/* Sezione guida alla selezione */}
+        {!disabled && (
+          <div className="mt-3 border rounded-md overflow-hidden">
+            <div className="bg-primary/10 px-3 py-2 text-xs font-medium flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              Guida alla selezione
+            </div>
+            <div className="p-2 text-xs bg-muted/10">
+              <ul className="space-y-1.5 list-none">
+                {module.minSelectCount && module.maxSelectCount && module.minSelectCount === module.maxSelectCount ? (
+                  <li className="flex items-center">
+                    <CheckCircle className="h-3 w-3 mr-1.5 text-primary" />
+                    <span>Seleziona <span className="font-semibold">esattamente {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                  </li>
+                ) : (
+                  <>
+                    {module.minSelectCount ? (
+                      <li className="flex items-center">
+                        <CheckCircle className="h-3 w-3 mr-1.5 text-primary" />
+                        <span>Seleziona <span className="font-semibold">almeno {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                      </li>
+                    ) : null}
+                    {module.maxSelectCount ? (
+                      <li className="flex items-center">
+                        <CheckCircle className="h-3 w-3 mr-1.5 text-primary" />
+                        <span>Puoi selezionare <span className="font-semibold">massimo {module.maxSelectCount}</span> {module.maxSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                      </li>
+                    ) : null}
+                  </>
+                )}
+                {hasRequiredItems && (
+                  <li className="flex items-center">
+                    <AlertCircle className="h-3 w-3 mr-1.5 text-amber-600" />
+                    <span className="text-amber-700 font-medium">Le opzioni contrassegnate come "Obbligatorio" sono già preselezionate e non possono essere deselezionate</span>
+                  </li>
+                )}
+                <li className="flex items-center">
+                  <Info className="h-3 w-3 mr-1.5 text-muted-foreground" />
+                  <span>Selezionati: <span className="font-medium">{selectedItems.length}</span> prodotti/servizi</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        )}
+        
+        {/* Badge di stato per preventivo firmato */}
+        {disabled && (
+          <div className="mt-2 p-2 bg-green-50 border border-green-100 rounded-md">
+            <p className="text-xs text-green-700 flex items-center">
+              <CheckCircle className="h-3 w-3 mr-1.5" />
+              <span>Le opzioni di questo modulo sono state confermate e non possono essere modificate.</span>
+            </p>
           </div>
         )}
       </CardHeader>

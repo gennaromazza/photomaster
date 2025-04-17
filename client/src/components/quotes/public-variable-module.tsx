@@ -393,53 +393,97 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
         )}
         
         {/* Sezione guida alla selezione */}
-        {!disabled && (
-          <div className="mt-3 border rounded-md overflow-hidden">
-            <div className="bg-primary/10 px-3 py-2 text-xs font-medium flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-              Guida alla selezione
+        {!disabled ? (
+          <div className={`mt-3 border ${validationError ? 'border-amber-300' : 'border-muted'} rounded-md overflow-hidden`}>
+            <div className={`${validationError ? 'bg-amber-50' : 'bg-primary/10'} px-3 py-2 text-xs font-medium flex items-center`}>
+              {validationError ? (
+                <AlertTriangle className="h-4 w-4 mr-1.5 text-amber-600" />
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              )}
+              {validationError ? 'Attenzione: Selezione incompleta' : 'Guida alla selezione'}
             </div>
-            <div className="p-2 text-xs bg-muted/10">
-              <ul className="space-y-1.5 list-none">
-                {module.minSelectCount && module.maxSelectCount && module.minSelectCount === module.maxSelectCount ? (
-                  <li className="flex items-center">
-                    <CheckCircle className="h-3 w-3 mr-1.5 text-primary" />
-                    <span>Seleziona <span className="font-semibold">esattamente {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
-                  </li>
-                ) : (
-                  <>
-                    {module.minSelectCount ? (
-                      <li className="flex items-center">
-                        <CheckCircle className="h-3 w-3 mr-1.5 text-primary" />
-                        <span>Seleziona <span className="font-semibold">almeno {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+            <div className={`p-3 text-xs ${validationError ? 'bg-amber-50/50' : 'bg-muted/10'}`}>
+              {/* Errore di validazione */}
+              {validationError && (
+                <div className="p-2 rounded-md bg-amber-100/50 border border-amber-200 mb-3">
+                  <p className="text-amber-800 font-medium flex items-start">
+                    <AlertTriangle className="h-4 w-4 mr-1.5 mt-0.5 flex-shrink-0 text-amber-600" />
+                    <span>{validationError}</span>
+                  </p>
+                </div>
+              )}
+              
+              <ul className="space-y-2 list-none">
+                {/* Requisiti di selezione */}
+                <li className="p-2 rounded-md bg-primary/5 border border-primary/10">
+                  <p className="font-medium mb-1 text-sm flex items-center">
+                    <CheckCircle className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                    Requisiti di selezione:
+                  </p>
+                  <ul className="pl-5 space-y-1 list-disc text-muted-foreground">
+                    {module.minSelectCount && module.maxSelectCount && module.minSelectCount === module.maxSelectCount ? (
+                      <li>
+                        <span>Seleziona <span className="font-semibold text-foreground">esattamente {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
                       </li>
-                    ) : null}
-                    {module.maxSelectCount ? (
-                      <li className="flex items-center">
-                        <CheckCircle className="h-3 w-3 mr-1.5 text-primary" />
-                        <span>Puoi selezionare <span className="font-semibold">massimo {module.maxSelectCount}</span> {module.maxSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
-                      </li>
-                    ) : null}
-                  </>
-                )}
+                    ) : (
+                      <>
+                        {module.minSelectCount ? (
+                          <li>
+                            <span>Seleziona <span className="font-semibold text-foreground">almeno {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                          </li>
+                        ) : null}
+                        {module.maxSelectCount ? (
+                          <li>
+                            <span>Puoi selezionare <span className="font-semibold text-foreground">massimo {module.maxSelectCount}</span> {module.maxSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                          </li>
+                        ) : null}
+                      </>
+                    )}
+                  </ul>
+                </li>
+                
+                {/* Informazioni sulle categorie e le opzioni obbligatorie */}
                 {hasRequiredItems && (
-                  <li className="flex items-center">
-                    <AlertCircle className="h-3 w-3 mr-1.5 text-amber-600" />
-                    <span className="text-amber-700 font-medium">Le opzioni contrassegnate come "Obbligatorio" sono già preselezionate e non possono essere deselezionate</span>
+                  <li className="p-2 rounded-md bg-amber-50 border border-amber-100">
+                    <p className="font-medium mb-1 text-sm flex items-center text-amber-800">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-amber-600" />
+                      Opzioni obbligatorie:
+                    </p>
+                    <p className="text-amber-700">
+                      Le opzioni contrassegnate come <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Obbligatorio</span> sono già preselezionate e non possono essere deselezionate.
+                    </p>
                   </li>
                 )}
-                <li className="flex items-center">
-                  <Info className="h-3 w-3 mr-1.5 text-muted-foreground" />
-                  <span>Selezionati: <span className="font-medium">{selectedItems.length}</span> prodotti/servizi</span>
+                
+                {/* Stato attuale della selezione */}
+                <li className="p-2 rounded-md bg-muted/20 border border-muted/30">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center">
+                      <Info className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                      <span>Stato selezione:</span>
+                    </span>
+                    <span className="font-medium">
+                      {selectedItems.length} {selectedItems.length === 1 ? 'opzione selezionata' : 'opzioni selezionate'}
+                    </span>
+                  </div>
                 </li>
               </ul>
+              
+              {validationError && (
+                <div className="mt-3 text-center">
+                  <p className="text-amber-600 text-xs italic">
+                    È necessario completare la selezione secondo i requisiti sopra indicati per poter procedere.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
-        )}
+        ) : null}
         
         {/* Badge di stato per preventivo firmato */}
         {disabled && (

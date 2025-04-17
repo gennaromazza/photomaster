@@ -1525,8 +1525,11 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(404).json({ message: "Preventivo non trovato" });
       }
 
-      // Genera un token di condivisione
-      const token = await storage.generateShareToken(id);
+      // Ottieni il numero di giorni di validità dal body o usa il default (30 giorni)
+      const expiryDays = req.body.expiryDays || 30;
+
+      // Genera un token di condivisione con scadenza
+      const token = await storage.generateShareToken(id, expiryDays);
       if (!token) {
         return res.status(500).json({ message: "Impossibile generare il link di condivisione" });
       }
@@ -1534,11 +1537,48 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.json({ 
         success: true, 
         token,
-        shareUrl: `/quotes/public/${token}`
+        shareUrl: `/quotes/public/${token}`,
+        expiryDays
       });
     } catch (err) {
       console.error("Errore nella condivisione del preventivo:", err);
       res.status(500).json({ message: "Errore nella condivisione del preventivo" });
+    }
+  });
+  
+  // API per aggiornare la scadenza di un token di condivisione
+  apiRouter.patch("/quotes/:id/share-expiry", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      // Verifica se il preventivo esiste
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato" });
+      }
+      
+      // Verifica se il preventivo è condiviso
+      if (!quote.isShared || !quote.shareToken) {
+        return res.status(400).json({ message: "Il preventivo non è attualmente condiviso" });
+      }
+
+      // Ottieni il numero di giorni di validità dal body o usa il default (30 giorni)
+      const expiryDays = req.body.expiryDays || 30;
+      
+      // Aggiorna la data di scadenza
+      const success = await storage.updateShareTokenExpiry(id, expiryDays);
+      if (!success) {
+        return res.status(500).json({ message: "Impossibile aggiornare la scadenza del link" });
+      }
+
+      res.json({ 
+        success: true,
+        message: `Scadenza del link aggiornata a ${expiryDays} giorni`,
+        expiryDays
+      });
+    } catch (err) {
+      console.error("Errore nell'aggiornamento della scadenza del link:", err);
+      res.status(500).json({ message: "Errore nell'aggiornamento della scadenza del link" });
     }
   });
 

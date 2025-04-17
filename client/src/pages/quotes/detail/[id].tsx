@@ -165,9 +165,11 @@ export default function QuoteDetailPage() {
         // Costruisci l'URL completo per la condivisione
         const shareUrl = `${window.location.origin}/quotes/public/${data.token}`;
         setShareLink(shareUrl);
+        // Ricarica i dati del preventivo per avere le informazioni aggiornate
+        queryClient.invalidateQueries({ queryKey: ["/api/quotes", id] });
         toast({
           title: "Link generato",
-          description: "Il link di condivisione è stato generato con successo",
+          description: `Il link di condivisione è stato generato con validità di ${data.expiryDays} giorni`,
         });
       } else {
         toast({
@@ -182,6 +184,40 @@ export default function QuoteDetailPage() {
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante la generazione del link di condivisione",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation per aggiornare la scadenza del link di condivisione
+  const updateShareExpiryMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("PATCH", `/api/quotes/${id}/share-expiry`, {
+        expiryDays
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        // Ricarica i dati del preventivo per avere le informazioni aggiornate
+        queryClient.invalidateQueries({ queryKey: ["/api/quotes", id] });
+        toast({
+          title: "Scadenza aggiornata",
+          description: `La validità del link è stata aggiornata a ${data.expiryDays} giorni`,
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: "Impossibile aggiornare la scadenza del link",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error) => {
+      console.error("Errore aggiornamento scadenza:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'aggiornamento della scadenza",
         variant: "destructive",
       });
     },

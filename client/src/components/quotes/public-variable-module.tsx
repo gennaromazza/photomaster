@@ -33,6 +33,12 @@ interface ModuleItem {
   serviceDescription?: string;
   productDescription?: string;
   bundleDescription?: string;
+  serviceCategory?: string;
+  productCategory?: string;
+  bundleCategory?: string;
+  serviceCategoryDescription?: string;
+  productCategoryDescription?: string;
+  bundleCategoryDescription?: string;
   minSelectCount?: number;
 }
 
@@ -208,6 +214,21 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
   const isItemSelected = (itemId: number): boolean => {
     return selectedItems.some(selected => selected.id === itemId);
   };
+  
+  // Ottiene la descrizione della categoria di un elemento
+  const getCategoryDescription = (item: ModuleItem): string | undefined => {
+    return item.serviceCategoryDescription || 
+           item.productCategoryDescription || 
+           item.bundleCategoryDescription;
+  };
+  
+  // Ottiene la categoria di un elemento
+  const getCategory = (item: ModuleItem): string => {
+    return item.serviceCategory || 
+           item.productCategory || 
+           item.bundleCategory || 
+           "";
+  };
 
   // Verifica se è possibile selezionare altri item (in base al maxSelectCount)
   const canSelectMore = (): boolean => {
@@ -244,6 +265,46 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
     }));
   };
 
+  // Raggruppa gli elementi per categoria se disponibile
+  const groupByCategory = (): CategoryGroup[] => {
+    const groups: CategoryGroup[] = [];
+    const uncategorized: { item: ModuleItem, index: number }[] = [];
+    
+    module.items.forEach((item: ModuleItem, index: number) => {
+      if (!item || !item.id) return;
+      
+      // Estrai la categoria (se presente)
+      const category = getCategory(item);
+      
+      // Se non ha categoria, aggiungilo agli elementi senza categoria
+      if (!category) {
+        uncategorized.push({ item, index });
+        return;
+      }
+      
+      // Trova o crea il gruppo per questa categoria
+      let group = groups.find(g => g.category === category);
+      if (!group) {
+        group = { category, items: [] };
+        groups.push(group);
+      }
+      
+      // Aggiungi l'elemento al gruppo
+      group.items.push({ item, index });
+    });
+    
+    // Se ci sono elementi senza categoria, aggiungili come ultimo gruppo
+    if (uncategorized.length > 0) {
+      groups.push({ category: "", items: uncategorized });
+    }
+    
+    return groups;
+  };
+  
+  // Ottieni gli elementi raggruppati per categoria
+  const categoryGroups = groupByCategory();
+  const hasCategories = categoryGroups.length > 1 || (categoryGroups.length === 1 && categoryGroups[0].category !== "");
+  
   // Verifica se il modulo è scaduto
   const isExpired = module.expiryDate 
     ? new Date(module.expiryDate) < new Date() 
@@ -345,100 +406,217 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
       </CardHeader>
 
       <CardContent className="p-4">
-        <div className="space-y-3">
-          {module.items.map((item: any, index: number) => {
-            if (!item || !item.id) return null;
-
-            const isRequired = isItemRequired(item);
-            const isSelected = isItemSelected(item.id);
-            const itemSelectable = isItemSelectable(item, index);
-            const { name, description } = getItemNameAndDescription(item);
-            const imagePath = getItemImagePath(item);
-            const imageState = imageLoadState[item.id] || { hasError: false, isLoading: true };
-
-            return (
-              <div 
-                key={item.id} 
-                className={`border rounded-md p-3 transition-colors ${
-                  isSelected 
-                    ? 'bg-primary/10 border-primary/30' 
-                    : !itemSelectable
-                      ? 'bg-muted/20 opacity-60'
-                      : 'bg-muted/20 hover:bg-muted/30'
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  <Checkbox 
-                    id={`item-${module.id}-${item.id}`}
-                    checked={isSelected}
-                    disabled={disabled || (!itemSelectable && !isSelected)}
-                    onCheckedChange={(checked) => handleItemSelect(item.id, index, Boolean(checked))}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="flex flex-wrap justify-between items-center gap-2">
-                      <Label 
-                        htmlFor={`item-${module.id}-${item.id}`}
-                        className={`font-medium cursor-pointer ${isRequired ? 'after:content-["*"] after:text-red-500 after:ml-0.5' : ''}`}
-                      >
-                        {name}
-                        {isRequired && (
-                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                            Obbligatorio
-                          </span>
-                        )}
-                      </Label>
-                      <Badge variant="outline" className={isSelected ? 'bg-primary/20' : ''}>
-                        {formatCurrency(item.total)}
-                      </Badge>
-                    </div>
-
-                    {/* Descrizione del prodotto/servizio */}
-                    {description && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {description}
+        <div className="space-y-6">
+          {hasCategories ? (
+            /* Visualizzazione per categorie */
+            categoryGroups.map((group, groupIndex) => (
+              <div key={`category-${groupIndex}`} className="space-y-3">
+                {/* Titolo e descrizione della categoria */}
+                {group.category && (
+                  <div className="mb-3">
+                    <h3 className="text-sm font-semibold border-b pb-1 mb-1">{group.category}</h3>
+                    {getCategoryDescription(group.items[0].item) && (
+                      <p className="text-xs text-muted-foreground">
+                        {getCategoryDescription(group.items[0].item)}
                       </p>
                     )}
+                  </div>
+                )}
+                
+                {/* Elementi della categoria */}
+                {group.items.map(({ item, index }) => {
+                  if (!item || !item.id) return null;
 
-                    {/* Immagine del prodotto/servizio se disponibile */}
-                    {imagePath && (
-                      <div className="mt-2 w-full h-36 rounded-md overflow-hidden bg-muted/40 relative">
-                        {imageState.hasError ? (
-                          <div className="w-full h-full flex items-center justify-center bg-muted">
-                            <div className="text-muted-foreground flex flex-col items-center">
-                              <ImageOff className="h-8 w-8 mb-2 opacity-70" />
-                              <span className="text-xs">Immagine non disponibile</span>
-                            </div>
+                  const isRequired = isItemRequired(item);
+                  const isSelected = isItemSelected(item.id);
+                  const itemSelectable = isItemSelectable(item, index);
+                  const { name, description } = getItemNameAndDescription(item);
+                  const imagePath = getItemImagePath(item);
+                  const imageState = imageLoadState[item.id] || { hasError: false, isLoading: true };
+
+                  return (
+                    <div 
+                      key={item.id} 
+                      className={`border rounded-md p-3 transition-colors ${
+                        isSelected 
+                          ? 'bg-primary/10 border-primary/30' 
+                          : !itemSelectable
+                            ? 'bg-muted/20 opacity-60'
+                            : 'bg-muted/20 hover:bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <Checkbox 
+                          id={`item-${module.id}-${item.id}`}
+                          checked={isSelected}
+                          disabled={disabled || (!itemSelectable && !isSelected)}
+                          onCheckedChange={(checked) => handleItemSelect(item.id, index, Boolean(checked))}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex flex-wrap justify-between items-center gap-2">
+                            <Label 
+                              htmlFor={`item-${module.id}-${item.id}`}
+                              className={`font-medium cursor-pointer ${isRequired ? 'after:content-["*"] after:text-red-500 after:ml-0.5' : ''}`}
+                            >
+                              {name}
+                              {isRequired && (
+                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                  Obbligatorio
+                                </span>
+                              )}
+                            </Label>
+                            <Badge variant="outline" className={isSelected ? 'bg-primary/20' : ''}>
+                              {formatCurrency(item.total)}
+                            </Badge>
                           </div>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <img 
-                              src={imagePath}
-                              alt={name || "Immagine prodotto"}
-                              className="w-full h-full object-contain p-1"
-                              onError={() => handleImageError(item.id)}
-                              onLoad={() => handleImageLoad(item.id)}
-                            />
+
+                          {/* Descrizione del prodotto/servizio */}
+                          {description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              {description}
+                            </p>
+                          )}
+
+                          {/* Immagine del prodotto/servizio se disponibile */}
+                          {imagePath && (
+                            <div className="mt-2 w-full h-36 rounded-md overflow-hidden bg-muted/40 relative">
+                              {imageState.hasError ? (
+                                <div className="w-full h-full flex items-center justify-center bg-muted">
+                                  <div className="text-muted-foreground flex flex-col items-center">
+                                    <ImageOff className="h-8 w-8 mb-2 opacity-70" />
+                                    <span className="text-xs">Immagine non disponibile</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <img 
+                                    src={imagePath}
+                                    alt={name || "Immagine prodotto"}
+                                    className="w-full h-full object-contain p-1"
+                                    onError={() => handleImageError(item.id)}
+                                    onLoad={() => handleImageLoad(item.id)}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="text-sm text-muted-foreground mt-2">
+                            Quantità: {item.quantity} x {formatCurrency(item.unitPrice)}
+                            {item.hasDiscount && item.discountedPrice !== undefined && (
+                              <span className="text-green-600 ml-2">
+                                (-{item.discountType === 'percentage' 
+                                  ? `${item.discountValue}%` 
+                                  : formatCurrency(item.discountValue || 0)})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))
+          ) : (
+            /* Visualizzazione senza categorie (originale) */
+            <div className="space-y-3">
+              {module.items.map((item: any, index: number) => {
+                if (!item || !item.id) return null;
+
+                const isRequired = isItemRequired(item);
+                const isSelected = isItemSelected(item.id);
+                const itemSelectable = isItemSelectable(item, index);
+                const { name, description } = getItemNameAndDescription(item);
+                const imagePath = getItemImagePath(item);
+                const imageState = imageLoadState[item.id] || { hasError: false, isLoading: true };
+
+                return (
+                  <div 
+                    key={item.id} 
+                    className={`border rounded-md p-3 transition-colors ${
+                      isSelected 
+                        ? 'bg-primary/10 border-primary/30' 
+                        : !itemSelectable
+                          ? 'bg-muted/20 opacity-60'
+                          : 'bg-muted/20 hover:bg-muted/30'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <Checkbox 
+                        id={`item-${module.id}-${item.id}`}
+                        checked={isSelected}
+                        disabled={disabled || (!itemSelectable && !isSelected)}
+                        onCheckedChange={(checked) => handleItemSelect(item.id, index, Boolean(checked))}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                          <Label 
+                            htmlFor={`item-${module.id}-${item.id}`}
+                            className={`font-medium cursor-pointer ${isRequired ? 'after:content-["*"] after:text-red-500 after:ml-0.5' : ''}`}
+                          >
+                            {name}
+                            {isRequired && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                Obbligatorio
+                              </span>
+                            )}
+                          </Label>
+                          <Badge variant="outline" className={isSelected ? 'bg-primary/20' : ''}>
+                            {formatCurrency(item.total)}
+                          </Badge>
+                        </div>
+
+                        {/* Descrizione del prodotto/servizio */}
+                        {description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {description}
+                          </p>
+                        )}
+
+                        {/* Immagine del prodotto/servizio se disponibile */}
+                        {imagePath && (
+                          <div className="mt-2 w-full h-36 rounded-md overflow-hidden bg-muted/40 relative">
+                            {imageState.hasError ? (
+                              <div className="w-full h-full flex items-center justify-center bg-muted">
+                                <div className="text-muted-foreground flex flex-col items-center">
+                                  <ImageOff className="h-8 w-8 mb-2 opacity-70" />
+                                  <span className="text-xs">Immagine non disponibile</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <img 
+                                  src={imagePath}
+                                  alt={name || "Immagine prodotto"}
+                                  className="w-full h-full object-contain p-1"
+                                  onError={() => handleImageError(item.id)}
+                                  onLoad={() => handleImageLoad(item.id)}
+                                />
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
-                    )}
 
-                    <div className="text-sm text-muted-foreground mt-2">
-                      Quantità: {item.quantity} x {formatCurrency(item.unitPrice)}
-                      {item.hasDiscount && item.discountedPrice !== undefined && (
-                        <span className="text-green-600 ml-2">
-                          (-{item.discountType === 'percentage' 
-                            ? `${item.discountValue}%` 
-                            : formatCurrency(item.discountValue || 0)})
-                        </span>
-                      )}
+                        <div className="text-sm text-muted-foreground mt-2">
+                          Quantità: {item.quantity} x {formatCurrency(item.unitPrice)}
+                          {item.hasDiscount && item.discountedPrice !== undefined && (
+                            <span className="text-green-600 ml-2">
+                              (-{item.discountType === 'percentage' 
+                                ? `${item.discountValue}%` 
+                                : formatCurrency(item.discountValue || 0)})
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
       </CardContent>
 

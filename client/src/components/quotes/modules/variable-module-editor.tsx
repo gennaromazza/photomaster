@@ -238,8 +238,52 @@ export default function VariableModuleEditor({
     if (moduleToUse.selections && Array.isArray(moduleToUse.selections) && moduleToUse.selections.length > 0) {
       console.log("Selezioni originali:", moduleToUse.selections);
       
+      // Per evitare duplicazioni, prima trasformiamo le selezioni in una mappa basata sui loro ID o nomi
+      const selectionMap = new Map();
+      
+      // Raggruppa le opzioni per categoria per evitare duplicati
+      moduleToUse.selections.forEach(selection => {
+        if (!selection) return;
+        
+        const key = selection.id || selection.name;
+        if (!key) return;
+        
+        // Se la selezione esiste già nella mappa, unisci le opzioni senza duplicati
+        if (selectionMap.has(key)) {
+          const existingSelection = selectionMap.get(key);
+          
+          // Unisci le opzioni rimuovendo i duplicati (in base all'itemId)
+          if (Array.isArray(selection.options) && Array.isArray(existingSelection.options)) {
+            const optionsMap = new Map();
+            
+            // Prima aggiungi le opzioni esistenti
+            existingSelection.options.forEach(opt => {
+              if (opt && opt.itemId) {
+                optionsMap.set(opt.itemId, opt);
+              }
+            });
+            
+            // Poi aggiungi o sovrascrivi con le nuove opzioni
+            selection.options.forEach(opt => {
+              if (opt && opt.itemId) {
+                optionsMap.set(opt.itemId, opt);
+              }
+            });
+            
+            // Aggiorna le opzioni con la lista deduplicate
+            existingSelection.options = Array.from(optionsMap.values());
+          }
+        } else {
+          // Altrimenti, aggiungi la selezione alla mappa
+          selectionMap.set(key, { ...selection });
+        }
+      });
+      
+      // Converti la mappa in un array di selezioni
+      const uniqueSelections = Array.from(selectionMap.values());
+      
       // Assicuriamoci che tutti i dati siano correttamente formattati
-      const formattedSelections = moduleToUse.selections.map(selection => {
+      const formattedSelections = uniqueSelections.map(selection => {
         if (!selection) return null;
         
         // Assicuriamoci che la selezione abbia un ID
@@ -268,9 +312,9 @@ export default function VariableModuleEditor({
           description: selection.description || "",
           position: selection.position ?? 0
         };
-      }).filter(Boolean) // Rimuove gli elementi null
+      }).filter(Boolean); // Rimuove gli elementi null
       
-      console.log("Selezioni formattate:", formattedSelections);
+      console.log("Selezioni formattate dopo deduplicazione:", formattedSelections);
       setModuleSelections(formattedSelections);
     } else {
       console.log("Nessuna selezione presente nel modulo");

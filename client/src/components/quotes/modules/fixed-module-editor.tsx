@@ -192,7 +192,36 @@ export default function FixedModuleEditor({
     // Inizializza gli elementi selezionati
     if (moduleToUse.items && moduleToUse.items.length > 0) {
       console.log("Inizializzazione elementi modulo fisso:", moduleToUse.items);
-      setSelectedItems(moduleToUse.items);
+      
+      // Per evitare duplicazioni, creiamo un oggetto Map usando un identificatore unico per ogni item
+      const itemMap = new Map();
+      
+      // Popoliamo la mappa con gli elementi esistenti
+      moduleToUse.items.forEach(item => {
+        // Creiamo una chiave unica basata sul tipo di item (service, product, bundle)
+        let key;
+        if (item.serviceId) key = `service-${item.serviceId}`;
+        else if (item.productId) key = `product-${item.productId}`;
+        else if (item.bundleId) key = `bundle-${item.bundleId}`;
+        else key = `item-${item.id || Math.random()}`;
+        
+        // Se l'elemento esiste già nella mappa, manteniamo quello con l'ID più alto (presumibilmente il più recente)
+        if (itemMap.has(key)) {
+          const existingItem = itemMap.get(key);
+          // Sostituisci solo se il nuovo item ha un ID più grande o se l'esistente non ha ID
+          if (!existingItem.id || (item.id && item.id > existingItem.id)) {
+            itemMap.set(key, item);
+          }
+        } else {
+          itemMap.set(key, item);
+        }
+      });
+      
+      // Convertiamo la mappa in un array
+      const uniqueItems = Array.from(itemMap.values());
+      console.log("Elementi deduplicati:", uniqueItems);
+      
+      setSelectedItems(uniqueItems);
     } else {
       console.log("Nessun elemento nel modulo fisso");
       setSelectedItems([]);

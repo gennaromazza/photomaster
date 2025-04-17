@@ -130,6 +130,12 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
         title: "Modulo eliminato",
         description: "Il modulo è stato eliminato con successo",
       });
+      
+      // Invalida tutte le query relative ai moduli per forzare un aggiornamento dei dati
+      queryClient.invalidateQueries([`/api/quotes/${quoteId}/modules`]);
+      queryClient.invalidateQueries(['/api/quotes']);
+      
+      // Ricarica i dati per essere sicuri di avere l'ultimo stato
       refetch();
 
       // Aggiorna il preventivo principale
@@ -207,22 +213,15 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
     if (window.confirm("Sei sicuro di voler eliminare questo modulo?")) {
       try {
         // Aggiorna immediatamente l'UI prima della chiamata al server
-        // Rimuovi il modulo dalla lista locale
+        // Rimuovi il modulo dalla lista locale per un feedback immediato
         const updatedModules = modules.filter(module => module.id !== moduleId);
         queryClient.setQueryData([`/api/quotes/${quoteId}/modules`], updatedModules);
         
         // Chiama il server per eliminare effettivamente il modulo
         await deleteModuleMutation.mutateAsync(moduleId);
         
-        // Invalida la cache per forzare il refresh dei dati
-        queryClient.invalidateQueries(['quotes']);
-        queryClient.invalidateQueries(['quote', quoteId]);
-        queryClient.invalidateQueries([`/api/quotes/${quoteId}/modules`]);
-        
-        toast({
-          title: "Modulo eliminato",
-          description: "Il modulo è stato eliminato con successo",
-        });
+        // L'invalidazione della cache è già gestita nel deleteModuleMutation.onSuccess
+        // Non è necessario ripeterla qui, evitando operazioni duplicate
         
         // Aggiorna il preventivo principale se necessario
         if (refreshQuote) {
@@ -230,6 +229,7 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
         }
       } catch (error) {
         // In caso di errore, ripristina i dati originali
+        console.error("Errore durante l'eliminazione del modulo:", error);
         refetch();
         
         toast({

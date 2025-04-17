@@ -166,70 +166,47 @@ export default function VariableModuleEditor({
     staleTime: 30000
   });
   
-  // Inizializza il modulo quando viene caricato
+  // Gestione stato di caricamento e dati del modulo
+  const [isLoadingModuleData, setIsLoadingModuleData] = useState<boolean>(false);
+  const [fullModuleData, setFullModuleData] = useState<QuoteModule | null>(null);
+  
+  // Carica i dati completi del modulo
   useEffect(() => {
-    console.log("Caricamento modulo VariableModuleEditor:", module);
-    
-    // Aggiorniamo il form principale indipendentemente dall'esistenza delle selezioni
-    if (module) {
-      console.log("Inizializzazione form con dati esistenti:", {
-        name: module.name,
-        description: module.description,
-        discount: module.discount,
-        discountType: module.discountType
-      });
-      
-      // Prima fase: inizializzazione del form principale
-      form.reset({
-        name: module.name || "",
-        description: module.description || "",
-        discount: module.discount || 0,
-        discountType: module.discountType || "percentage",
-      });
-      
-      // Seconda fase: gestione delle selezioni
-      if (module.selections && Array.isArray(module.selections) && module.selections.length > 0) {
-        console.log("Selezioni originali:", module.selections);
-        
-        // Assicuriamoci che tutti i dati siano correttamente formattati
-        const formattedSelections = module.selections.map(selection => {
-          if (!selection) return null;
-          
-          // Assicuriamoci che la selezione abbia un ID
-          const selectionId = selection.id || uuidv4();
-          
-          // Formatta le opzioni della selezione se esistono
-          const formattedOptions = Array.isArray(selection.options) 
-            ? selection.options.map(option => {
-                if (!option) return null;
-                return {
-                  ...option,
-                  id: option.id || uuidv4(),
-                  selectionId: selectionId
-                };
-              }).filter(Boolean) // Rimuove gli elementi null
-            : [];
-            
-          return {
-            ...selection,
-            id: selectionId,
-            options: formattedOptions,
-            name: selection.name || "",
-            minOptions: selection.minOptions ?? 0,
-            maxOptions: selection.maxOptions,
-            isRequired: selection.isRequired ?? false,
-            description: selection.description || "",
-            position: selection.position ?? 0
-          };
-        }).filter(Boolean); // Rimuove gli elementi null
-        
-        console.log("Selezioni formattate:", formattedSelections);
-        setModuleSelections(formattedSelections);
-      } else {
-        console.log("Nessuna selezione presente nel modulo");
-        setModuleSelections([]);
+    const loadFullModuleData = async () => {
+      // Se non è in modalità modifica o se i dati sono già stati caricati, non fare nulla
+      if (!module?.id || fullModuleData) {
+        return;
       }
-    } else {
+      
+      console.log("Caricamento dati completi del modulo:", module.id);
+      setIsLoadingModuleData(true);
+      
+      try {
+        const response = await fetch(`/api/modules/${module.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Dati completi caricati:", data);
+          setFullModuleData(data);
+        } else {
+          console.error("Errore nel caricamento dei dati completi:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Errore nella richiesta dei dati completi:", error);
+      } finally {
+        setIsLoadingModuleData(false);
+      }
+    };
+    
+    loadFullModuleData();
+  }, [module?.id]);
+  
+  // Inizializza il modulo quando i dati completi vengono caricati
+  useEffect(() => {
+    // Determina quale oggetto modulo usare per l'inizializzazione
+    const moduleToUse = fullModuleData || module;
+    console.log("Inizializzazione modulo con:", moduleToUse);
+    
+    if (!moduleToUse) {
       // Reset completo se non c'è un modulo
       console.log("Reset completo: nessun modulo fornito");
       form.reset({
@@ -239,8 +216,67 @@ export default function VariableModuleEditor({
         discountType: "percentage"
       });
       setModuleSelections([]);
+      return;
     }
-  }, [module, form.reset]);
+    
+    // Prima fase: inizializzazione del form principale
+    console.log("Inizializzazione form con dati esistenti:", {
+      name: moduleToUse.name,
+      description: moduleToUse.description,
+      discount: moduleToUse.discount,
+      discountType: moduleToUse.discountType
+    });
+    
+    form.reset({
+      name: moduleToUse.name || "",
+      description: moduleToUse.description || "",
+      discount: moduleToUse.discount || 0,
+      discountType: moduleToUse.discountType || "percentage",
+    });
+    
+    // Seconda fase: gestione delle selezioni
+    if (moduleToUse.selections && Array.isArray(moduleToUse.selections) && moduleToUse.selections.length > 0) {
+      console.log("Selezioni originali:", moduleToUse.selections);
+      
+      // Assicuriamoci che tutti i dati siano correttamente formattati
+      const formattedSelections = moduleToUse.selections.map(selection => {
+        if (!selection) return null;
+        
+        // Assicuriamoci che la selezione abbia un ID
+        const selectionId = selection.id || uuidv4();
+        
+        // Formatta le opzioni della selezione se esistono
+        const formattedOptions = Array.isArray(selection.options) 
+          ? selection.options.map(option => {
+              if (!option) return null;
+              return {
+                ...option,
+                id: option.id || uuidv4(),
+                selectionId: selectionId
+              };
+            }).filter(Boolean) // Rimuove gli elementi null
+          : [];
+          
+        return {
+          ...selection,
+          id: selectionId,
+          options: formattedOptions,
+          name: selection.name || "",
+          minOptions: selection.minOptions ?? 0,
+          maxOptions: selection.maxOptions,
+          isRequired: selection.isRequired ?? false,
+          description: selection.description || "",
+          position: selection.position ?? 0
+        };
+      }).filter(Boolean) // Rimuove gli elementi null
+      
+      console.log("Selezioni formattate:", formattedSelections);
+      setModuleSelections(formattedSelections);
+    } else {
+      console.log("Nessuna selezione presente nel modulo");
+      setModuleSelections([]);
+    }
+  }, [fullModuleData, module, form.reset]);
   
   // Filtra servizi e prodotti in base alla ricerca
   const filteredServices = services.filter(service => 

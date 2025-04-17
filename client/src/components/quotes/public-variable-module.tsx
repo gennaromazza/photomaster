@@ -118,6 +118,30 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
   const isItemRequired = (item: ModuleItem): boolean => {
     return Boolean(item && item.minSelectCount && item.minSelectCount > 0);
   };
+  
+  // Formatta un messaggio informativo sui vincoli di selezione
+  const getSelectionConstraintsMessage = (): string | null => {
+    const hasMinConstraint = module.minSelectCount && module.minSelectCount > 0;
+    const hasMaxConstraint = module.maxSelectCount && module.maxSelectCount > 0;
+    
+    if (!hasMinConstraint && !hasMaxConstraint) {
+      return null;
+    }
+    
+    if (hasMinConstraint && hasMaxConstraint) {
+      if (module.minSelectCount === module.maxSelectCount) {
+        return `Devi selezionare esattamente ${module.minSelectCount} ${module.minSelectCount === 1 ? 'opzione' : 'opzioni'}.`;
+      } else {
+        return `Devi selezionare da ${module.minSelectCount} a ${module.maxSelectCount} opzioni.`;
+      }
+    } else if (hasMinConstraint) {
+      return `Devi selezionare almeno ${module.minSelectCount} ${module.minSelectCount === 1 ? 'opzione' : 'opzioni'}.`;
+    } else if (hasMaxConstraint) {
+      return `Puoi selezionare al massimo ${module.maxSelectCount} ${module.maxSelectCount === 1 ? 'opzione' : 'opzioni'}.`;
+    }
+    
+    return null;
+  };
 
   // Inizializza gli item selezionati in base al minSelectCount
   useEffect(() => {

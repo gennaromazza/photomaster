@@ -918,18 +918,23 @@ export class DatabaseStorage implements IStorage {
   
 
   
-  async generateShareToken(id: number): Promise<string | undefined> {
+  async generateShareToken(id: number, expiryDays: number = 30): Promise<string | undefined> {
     try {
       // Genera un token casuale
       const token = crypto.randomBytes(16).toString('hex');
       
-      // Aggiorna il preventivo con il token
+      // Calcola la data di scadenza (default: 30 giorni da oggi)
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + expiryDays);
+      
+      // Aggiorna il preventivo con il token e la scadenza
       const updateData = {
         isShared: true,
-        shareToken: token
+        shareToken: token,
+        shareTokenExpiry: expiryDate
       };
       
-      // Aggiorna il preventivo con il token e la scadenza se disponibile
+      // Aggiorna il preventivo con il token e la scadenza
       const [updatedQuote] = await db
         .update(quotes)
         .set(updateData)
@@ -948,27 +953,11 @@ export class DatabaseStorage implements IStorage {
   async disableSharing(id: number): Promise<boolean> {
     try {
       // Prepariamo un oggetto di aggiornamento con solo i campi che sappiamo esistere
-      const updateData: any = {
+      const updateData = {
         isShared: false,
-        shareToken: null
+        shareToken: null,
+        shareTokenExpiry: null // Includiamo anche questo campo
       };
-      
-      // Otteniamo lo schema attuale del database
-      try {
-        // Verifichiamo se possiamo aggiungere anche shareExpiry
-        const result = await db.query.quotes.findFirst({
-          where: (quotesTable, { eq }) => eq(quotesTable.id, id)
-        });
-        
-        // Se abbiamo il campo shareExpiry nella tabella, lo aggiungiamo ai dati da aggiornare
-        if (result && 'shareExpiry' in result) {
-          // Questo evita l'errore di colonna mancante
-          updateData.shareExpiry = null;
-        }
-      } catch (e) {
-        // Ignoriamo eventuali errori e procediamo con l'aggiornamento senza shareExpiry
-        console.log("shareExpiry potrebbe non esistere nella tabella, proseguiamo senza");
-      }
       
       const [updatedQuote] = await db
         .update(quotes)
@@ -983,16 +972,37 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  async updateShareTokenExpiry(id: number, expiryDays: number): Promise<boolean> {
+    try {
+      // Calcola la data di scadenza
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + expiryDays);
+      
+      // Aggiorna solo la data di scadenza
+      const [updatedQuote] = await db
+        .update(quotes)
+        .set({ shareTokenExpiry: expiryDate })
+        .where(eq(quotes.id, id))
+        .returning();
+      
+      return !!updatedQuote;
+    } catch (error) {
+      console.error("Errore nell'aggiornamento della scadenza del token:", error);
+      return false;
+    }
+  }
+  
   async getQuoteByShareToken(token: string): Promise<Quote | undefined> {
     try {
       console.log("Cerco preventivo con token:", token);
       
       // Utilizziamo il client postgres diretto per la query SQL grezza
+      // Includiamo il campo share_token_expiry nella SELECT
       const rawQuotes = await pgClient`
         SELECT id, title, client_id, second_client_id, event_id, category_id, lead_source_id, 
         event_date, is_full_day, event_time, event_end_time, location, ceremony_location, ceremony_time,
         event_type, workflow, created_at, updated_at, expiry_date, status, notes, signature, 
-        is_shared, share_token
+        is_shared, share_token, share_token_expiry
         FROM quotes WHERE share_token = ${token} AND is_shared = true
       `;
       
@@ -1002,6 +1012,17 @@ export class DatabaseStorage implements IStorage {
       }
       
       const rawQuote = rawQuotes[0];
+      
+      // Verifica se il token è scaduto
+      if (rawQuote.share_token_expiry) {
+        const expiryDate = new Date(rawQuote.share_token_expiry);
+        const now = new Date();
+        
+        if (now > expiryDate) {
+          console.log("Token scaduto, data attuale:", now, "data scadenza:", expiryDate);
+          return undefined;
+        }
+      }
       
       // Convertiamo da snake_case a camelCase per TypeScript
       const result: Quote = {
@@ -1029,11 +1050,12 @@ export class DatabaseStorage implements IStorage {
         signature: rawQuote.signature,
         isShared: rawQuote.is_shared,
         shareToken: rawQuote.share_token,
-        // Campi virtuali
+        // Aggiorna il campo virtuale shareExpiry con il valore effettivo dal database
+        shareExpiry: rawQuote.share_token_expiry,
+        // Altri campi virtuali
         subtotal: 0,
         total: 0,
         discount: 0,
-        shareExpiry: null,
       } as Quote;
       
       try {

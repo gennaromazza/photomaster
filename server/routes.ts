@@ -2503,7 +2503,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                   position: option.position || 0,
                   hasDiscount: false,
                   total: option.price || 0,
-                  notes: `${selection.name}: ${option.name}`
+                  notes: `${selection.name}: ${option.name}`,
+                  // Aggiungiamo i vincoli di selezione dalla selezione all'item
+                  minSelectCount: option.isRequired ? 1 : 0
                 };
                 
                 console.log("Creando item (update):", JSON.stringify(moduleItem, null, 2));

@@ -2434,6 +2434,11 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         ...moduleDataToUpdate,
         // Se expiryDate è fornito, lo convertiamo in Date oppure lo impostiamo a null
         ...(expiryDate ? { expiryDate: new Date(expiryDate) } : { expiryDate: null }),
+        // Assicuriamoci che i vincoli di selezione siano inclusi
+        minSelectCount: moduleDataToUpdate.minSelectCount !== undefined ? 
+          parseInt(moduleDataToUpdate.minSelectCount as any) || 0 : undefined,
+        maxSelectCount: moduleDataToUpdate.maxSelectCount !== undefined ? 
+          parseInt(moduleDataToUpdate.maxSelectCount as any) || null : undefined,
         // Aggiorniamo la data di modifica
         updatedAt: new Date()
       };

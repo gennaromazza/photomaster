@@ -520,7 +520,8 @@ export const quoteModules = pgTable("quote_modules", {
   // Campi per la gestione del prezzo totale
   subtotal: integer("subtotal").default(0), // Subtotale (somma degli elementi)
   total: integer("total").default(0), // Totale finale
-  maxSelections: integer("max_selections"), // Numero massimo di selezioni per moduli variabili
+  minSelectCount: integer("min_select_count"), // Numero minimo di selezioni per moduli variabili
+  maxSelectCount: integer("max_select_count"), // Numero massimo di selezioni per moduli variabili
 });
 
 export const insertQuoteModuleSchema = createInsertSchema(quoteModules).pick({
@@ -535,7 +536,8 @@ export const insertQuoteModuleSchema = createInsertSchema(quoteModules).pick({
   internalNotes: true,
   subtotal: true,
   total: true,
-  maxSelections: true,
+  minSelectCount: true,
+  maxSelectCount: true,
 });
 
 export type InsertQuoteModule = z.infer<typeof insertQuoteModuleSchema>;

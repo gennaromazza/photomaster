@@ -212,25 +212,31 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   const handleDeleteModule = async (moduleId: number) => {
     if (window.confirm("Sei sicuro di voler eliminare questo modulo?")) {
       try {
-        // Aggiorna immediatamente l'UI prima della chiamata al server
-        // Rimuovi il modulo dalla lista locale per un feedback immediato
-        const updatedModules = modules.filter(module => module.id !== moduleId);
-        queryClient.setQueryData([`/api/quotes/${quoteId}/modules`], updatedModules);
-        
-        // Chiama il server per eliminare effettivamente il modulo
+        // Prima elimina il modulo sul server
         await deleteModuleMutation.mutateAsync(moduleId);
         
-        // L'invalidazione della cache è già gestita nel deleteModuleMutation.onSuccess
-        // Non è necessario ripeterla qui, evitando operazioni duplicate
+        // Dopo la conferma dal server, invalida tutte le query correlate
+        await Promise.all([
+          queryClient.invalidateQueries([`/api/quotes/${quoteId}/modules`]),
+          queryClient.invalidateQueries([`/api/quotes/${quoteId}`]),
+          queryClient.invalidateQueries([`/api/modules/${moduleId}`])
+        ]);
         
-        // Aggiorna il preventivo principale se necessario
+        // Forza il refresh dei dati
+        await refetch();
+        
+        // Aggiorna il preventivo principale
         if (refreshQuote) {
-          refreshQuote();
+          await refreshQuote();
         }
+        
+        // Feedback all'utente
+        toast({
+          title: "Modulo eliminato",
+          description: "Il modulo è stato eliminato con successo"
+        });
       } catch (error) {
-        // In caso di errore, ripristina i dati originali
         console.error("Errore durante l'eliminazione del modulo:", error);
-        refetch();
         
         toast({
           title: "Errore",

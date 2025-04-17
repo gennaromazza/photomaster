@@ -168,20 +168,44 @@ export default function VariableModuleEditor({
   
   // Inizializza le selezioni quando il modulo viene caricato
   useEffect(() => {
+    console.log("Caricamento modulo:", module);
+    
     if (module?.selections && module.selections.length > 0) {
-      setModuleSelections(module.selections.map(selection => ({
-        ...selection,
-        id: selection.id || uuidv4(),
-        options: selection.options.map(option => ({
-          ...option,
-          id: option.id || uuidv4(),
-          selectionId: selection.id || uuidv4()
-        }))
-      })));
+      // Assicuriamoci che tutti i dati siano correttamente formattati
+      const formattedSelections = module.selections.map(selection => {
+        // Assicuriamoci che la selezione abbia un ID
+        const selectionId = selection.id || uuidv4();
+        
+        // Formatta le opzioni della selezione
+        const formattedOptions = Array.isArray(selection.options) 
+          ? selection.options.map(option => ({
+              ...option,
+              id: option.id || uuidv4(),
+              selectionId: selectionId
+            }))
+          : [];
+          
+        return {
+          ...selection,
+          id: selectionId,
+          options: formattedOptions
+        };
+      });
+      
+      console.log("Selezioni formattate:", formattedSelections);
+      setModuleSelections(formattedSelections);
+      
+      // Se c'è almeno una selezione, aggiorniamo anche il form principale
+      form.reset({
+        name: module.name || "",
+        description: module.description || "",
+        discount: module.discount || 0,
+        discountType: module.discountType || "percentage",
+      });
     } else {
       setModuleSelections([]);
     }
-  }, [module]);
+  }, [module, form.reset]);
   
   // Filtra servizi e prodotti in base alla ricerca
   const filteredServices = services.filter(service => 

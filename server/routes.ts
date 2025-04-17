@@ -1579,11 +1579,12 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         const requiredItems = moduleItems.filter(item => item.isRequired);
         for (const requiredItem of requiredItems) {
           if (!selectedItems.includes(requiredItem.id)) {
+            // Ottieni solo le informazioni del servizio, poiché gli elementi dei moduli sono solo servizi
             const service = requiredItem.serviceId ? await storage.getService(requiredItem.serviceId) : null;
-            const product = requiredItem.productId ? await storage.getProduct(requiredItem.productId) : null;
-            const bundle = requiredItem.bundleId ? await storage.getBundle(requiredItem.bundleId) : null;
             
-            const itemName = service?.name || product?.name || bundle?.name || 'Opzione';
+            // Usa il nome del servizio o un nome generico
+            const itemName = service?.name || 'Opzione';
+            
             return res.status(400).json({ 
               message: `È necessario selezionare l'opzione obbligatoria: ${itemName} nel modulo "${module.name}"`
             });
@@ -1634,6 +1635,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Gestione sicura della data dell'evento
       const eventDate = quote.eventDate ? new Date(quote.eventDate) : new Date();
       
+      // Crea un nuovo evento basato sul preventivo firmato
       const event = await storage.createEvent({
         title: quote.title,
         description: quote.notes || '',
@@ -1643,7 +1645,8 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         clientId: quote.clientId,
         secondClientId: quote.secondClientId || undefined,
         quoteId: quote.id,
-        fromSignedQuote: true, // Indica che l'evento è stato creato da un preventivo firmato
+        // fromSignedQuote non è nel modello, usiamo il campo notes per annotare l'origine
+        notes: "Creato automaticamente dalla firma del preventivo",
         status: "confirmed",
         eventType: quote.eventType || "wedding",
         categoryId: quote.categoryId

@@ -269,12 +269,14 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
   };
   
   // Verifica se la selezione corrente rispetta i vincoli min/max
-  const isSelectionValid = (): { isValid: boolean; message?: string } => {
+  const isSelectionValid = (): { isValid: boolean; message?: string; remaining?: number } => {
     // Controllo sul minimo
     if (module.minSelectCount && selectedItems.length < module.minSelectCount) {
+      const remaining = module.minSelectCount - selectedItems.length;
       return { 
         isValid: false, 
-        message: `Devi selezionare almeno ${module.minSelectCount} ${module.minSelectCount === 1 ? 'elemento' : 'elementi'}.` 
+        message: `Devi selezionare almeno ${module.minSelectCount} ${module.minSelectCount === 1 ? 'elemento' : 'elementi'}.`,
+        remaining 
       };
     }
     

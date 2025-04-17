@@ -121,6 +121,37 @@ export default function PublicQuotePage() {
     });
   };
 
+  // Funzione di validazione per i moduli variabili
+  const isSelectionValidForAllModules = (): { isValid: boolean; message?: string } => {
+    if (!modules) return { isValid: true };
+    
+    // Esamina tutti i moduli variabili
+    for (const module of modules) {
+      if (module.type !== "variable") continue;
+      
+      // Ottieni gli item selezionati per questo modulo
+      const selectedItems = selectedModuleItems[module.id] || [];
+      
+      // Verifica i requisiti minimi
+      if (module.minSelectCount && selectedItems.length < module.minSelectCount) {
+        return { 
+          isValid: false, 
+          message: `Nel modulo "${module.name}" devi selezionare almeno ${module.minSelectCount} ${module.minSelectCount === 1 ? 'elemento' : 'elementi'}.` 
+        };
+      }
+      
+      // Verifica i requisiti massimi
+      if (module.maxSelectCount && selectedItems.length > module.maxSelectCount) {
+        return { 
+          isValid: false, 
+          message: `Nel modulo "${module.name}" puoi selezionare al massimo ${module.maxSelectCount} ${module.maxSelectCount === 1 ? 'elemento' : 'elementi'}.` 
+        };
+      }
+    }
+    
+    return { isValid: true };
+  };
+
   // Gestione firma e conferma preventivo
   const handleSignQuote = async () => {
     //Check if quote is already signed
@@ -137,6 +168,17 @@ export default function PublicQuotePage() {
       toast({
         title: "Errore",
         description: "Inserisci il tuo nome e cognome per firmare",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Verifica tutti i moduli variabili per assicurarsi che rispettino i requisiti minimi/massimi
+    const validationResult = isSelectionValidForAllModules();
+    if (!validationResult.isValid) {
+      toast({
+        title: "Selezione non valida",
+        description: validationResult.message || "Verifica le selezioni nei moduli variabili",
         variant: "destructive",
       });
       return;

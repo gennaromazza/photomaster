@@ -405,6 +405,7 @@ export const quotes = pgTable("quotes", {
   signature: text("signature"), // Firma del cliente per l'approvazione
   isShared: boolean("is_shared").default(false), // Indica se il preventivo è condiviso pubblicamente
   shareToken: text("share_token"), // Token univoco per l'URL di condivisione
+  shareTokenExpiry: timestamp("share_token_expiry"), // Data di scadenza del token di condivisione
   // Questi campi non esistono nella tabella reale
   // subtotal: integer("subtotal").default(0), // Subtotale (somma dei servizi/prodotti prima degli sconti)
   // total: integer("total").default(0), // Totale (subtotale - sconti)

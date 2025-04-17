@@ -1643,13 +1643,29 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
 
       // Aggiorna lo stato del preventivo
-      // Nota: moduleSelections non è definito nello schema, quindi non lo includiamo
       await storage.updateQuote(quote.id, {
         status,
-        signature
+        signature,
+        signedAt: signedAt || new Date().toISOString()
       });
 
-      // Se necessario, salva moduleSelections in un altro modo o aggiorna lo schema
+      // Salva le selezioni degli elementi dei moduli variabili
+      if (selectedModuleItems) {
+        console.log("[INFO] Salvataggio selezioni moduli per preventivo ID:", quote.id);
+        for (const moduleId in selectedModuleItems) {
+          const moduleItems = await storage.getQuoteModuleItemsByModule(parseInt(moduleId));
+          
+          // Aggiorna lo stato di selezione per ogni elemento del modulo
+          for (const item of moduleItems) {
+            const isSelected = selectedModuleItems[moduleId].includes(item.id);
+            console.log(`[INFO] Modulo ${moduleId}, Item ${item.id}, Selezionato: ${isSelected}`);
+            await storage.updateQuoteModuleItem(item.id, { isSelected });
+          }
+          
+          // Segna il modulo come attivo (non più in attesa di selezione)
+          await storage.updateQuoteModule(parseInt(moduleId), { status: 'active' });
+        }
+      }
 
       // Crea un nuovo evento
       // Gestione sicura della data dell'evento

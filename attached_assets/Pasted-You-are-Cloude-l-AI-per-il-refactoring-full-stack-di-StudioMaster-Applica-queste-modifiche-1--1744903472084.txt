@@ -1,0 +1,39 @@
+You are Cloude, l’AI per il refactoring full‑stack di StudioMaster. Applica queste modifiche:
+
+1. **ID tipizzazione**  
+   - In client/src/types/module‑types.ts cambia `id?: string` e `selectionId?: string` in `id?: number` e `selectionId?: number` per allinearti al DB.
+
+2. **React‑Query Modules**  
+   - In client/src/pages/quotes/public/[token].tsx, per la query dei moduli:  
+     - Modifica `useQuery({ queryKey: ["/api/quotes/share", token, "modules"], … })` in `useQuery({ queryKey: ["/api/quotes", quote?.id, "modules"], enabled: !!quote?.id, … })`.  
+
+3. **Invalidate cache dopo mutate**  
+   - In tutte le mutation di create/update/delete moduli e moduleItems (client), dopo il successo chiama `queryClient.invalidateQueries(["/api/quotes", quoteId, "modules"])`.
+
+4. **Shape ModuleItem**  
+   - In server/routes.ts, rotta `GET /quotes/:quoteId/modules` e `/modules/share/:token/select`:  
+     - Assicurati che ogni `item` abbia `{ id, itemId, itemType, name, description, price, isSelected, isDefault }` mappando i campi `serviceId`, `productId`, `bundleId`, `isRequired` → `isDefault` per gli fixed.
+
+5. **Chiamata endpoint di selezione**  
+   - Nel client (share/[token].tsx), dopo ogni selezione di moduleItems, invoca `POST /modules/share/${token}/select` con body `{ selectedItems: string[] }`.
+
+6. **Persistenza selezioni**  
+   - In server/routes.ts, `POST /quotes/share/:token/sign`:  
+     - Oltre a validare, itera su `selectedModuleItems` e chiama `storage.updateQuoteModuleItem(itemId, { isSelected: true/false })` prima di `storage.updateQuote(...)`.
+
+7. **Error handling UI**  
+   - Aggiungi in tutte le mutate React‑Query opzioni `onError: (err) => toast.error(err.message)` e `onSuccess: () => toast.success("Modifica avvenuta")`.
+
+8. **Status filter**  
+   - Nel client, dove filtri moduli `modules.filter(m => m.type === …)`, includi anche `m.status === "active"` o `"pending_selection"` a seconda del contesto.
+
+9. **Aggiorna shareToken**  
+   - In admin, quando cambi un modulo variabile, dopo `storage.updateQuoteModule` ritorna il nuovo `shareToken` e aggiorna automaticamente il link `/quotes/share/:token` in UI.
+
+10. **Test end‑to‑end**  
+   - Scrivi un test Cypress/Playwright che:  
+     a) Crea un modulo variabile, ne ottiene il shareToken.  
+     b) Visita `/quotes/share/:token`, verifica i moduli.  
+     c) Seleziona opzioni, firma, controlla che in DB `quoteModuleItems.isSelected` sia `true`.
+
+Applica tutti i fix, ricompila e verifica che eliminare o modificare moduli/categorie si rifletta immediatamente nel link condiviso e che le selezioni vengano salvate correttamente.

@@ -2131,7 +2131,14 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
             })
           );
 
-          return { ...module, items: enrichedItems };
+          // Assicuriamoci che i vincoli di selezione siano esplicitamente inclusi
+          return { 
+            ...module, 
+            items: enrichedItems,
+            // Includiamo esplicitamente i vincoli di selezione con valori di default se non presenti
+            minSelectCount: module.minSelectCount !== undefined ? module.minSelectCount : 0,
+            maxSelectCount: module.maxSelectCount !== undefined ? module.maxSelectCount : null
+          };
         })
       );
 
@@ -2648,7 +2655,13 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       const client = await storage.getClient(quote.clientId);
 
       res.json({
-        module: { ...module, items: enrichedItems },
+        module: { 
+          ...module, 
+          items: enrichedItems,
+          // Aggiungiamo esplicitamente i vincoli di selezione
+          minSelectCount: module.minSelectCount !== undefined ? module.minSelectCount : 0,
+          maxSelectCount: module.maxSelectCount !== undefined ? module.maxSelectCount : null 
+        },
         quote: {
           id: quote.id,
           title: quote.title
@@ -2750,6 +2763,22 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         })
       );
 
+      // Conta quanti elementi sono stati selezionati
+      const totalSelected = selectedItems.length;
+      
+      // Verifica vincoli di minimo e massimo numero di selezioni
+      if (module.minSelectCount !== undefined && module.minSelectCount > 0 && totalSelected < module.minSelectCount) {
+        return res.status(400).json({
+          message: `È necessario selezionare almeno ${module.minSelectCount} opzioni`
+        });
+      }
+      
+      if (module.maxSelectCount !== undefined && module.maxSelectCount !== null && totalSelected > module.maxSelectCount) {
+        return res.status(400).json({
+          message: `È possibile selezionare al massimo ${module.maxSelectCount} opzioni`
+        });
+      }
+      
       // Aggiorna lo stato di ciascun elemento
       for (const item of moduleItems) {
         const isSelected = selectedItems.includes(item.id);

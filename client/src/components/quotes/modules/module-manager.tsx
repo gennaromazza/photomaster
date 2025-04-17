@@ -162,10 +162,39 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
     }
   };
 
-  // Gestisce la modifica di un modulo esistente
+  // Gestisce la modifica di un modulo esistente con preparazione dei dati corretta
   const handleEditModule = (module: QuoteModule) => {
-    setEditingModule(module);
+    // Log dei dati modulo per debug
+    console.log("Modifica modulo - Dati originali:", module);
+    
+    // Controllo della presenza di selections nei moduli variabili
+    if (module.type === "variable" && !module.selections) {
+      // Caricamento specifico per il modulo variabile
+      const fetchModuleDetails = async () => {
+        try {
+          const res = await fetch(`/api/modules/${module.id}`);
+          if (res.ok) {
+            const fullModuleData = await res.json();
+            console.log("Dati completi modulo variabile:", fullModuleData);
+            setEditingModule(fullModuleData);
+          } else {
+            console.error("Errore nel caricamento dei dettagli del modulo:", res.statusText);
+            setEditingModule(module); // Fallback ai dati originali
+          }
+        } catch (error) {
+          console.error("Errore nel caricamento dei dettagli del modulo:", error);
+          setEditingModule(module); // Fallback ai dati originali
+        }
+      };
+      
+      // Fetch dei dettagli solo per i moduli variabili senza selections
+      fetchModuleDetails();
+    } else {
+      // Per moduli fissi o variabili con selections già presenti
+      setEditingModule(module);
+    }
 
+    // Imposta lo stato del manager in base al tipo di modulo
     if (module.type === "fixed") {
       setModuleManagerState(ModuleManagerState.EDIT_FIXED);
     } else {

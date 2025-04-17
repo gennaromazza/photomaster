@@ -26,7 +26,7 @@ export async function getCsrfToken(): Promise<string> {
     }
     
     const data = await response.json();
-    csrfToken = data.csrfToken;
+    csrfToken = data.token; // L'API restituisce il token con chiave 'token'
     
     if (!csrfToken) {
       throw new Error('Token CSRF non valido');

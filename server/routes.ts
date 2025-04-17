@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, isAdmin, csrfProtection, hashPassword } from "./auth";
+import { setupAuth, isAuthenticated, isAdmin, csrfProtection, hashPassword, generateCsrfToken } from "./auth";
 import { 
   sendPasswordResetEmail, 
   sendQuoteSignedNotification, 
@@ -43,6 +43,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup API routes
   const apiRouter = express.Router();
   
+  // Endpoint per generare un token CSRF - non richiede autenticazione
+  apiRouter.get('/csrf-token', (req, res) => {
+    try {
+      const token = generateCsrfToken();
+      
+      // Salviamo il token nella sessione per verifica
+      // Nota: questo step non è strettamente necessario poiché 
+      // la verifica CSRF avviene usando il segreto lato server
+      // come un salt - ma può essere utile per debugging
+      res.json({ token });
+    } catch (error) {
+      console.error('Errore nella generazione del token CSRF:', error);
+      res.status(500).json({ message: 'Errore nella generazione del token di sicurezza' });
+    }
+  });
+
   // Aggiungi il middleware di protezione CSRF a tutte le rotte POST, PUT, DELETE
   // Solo per le rotte di modifica dati in modo da prevenire attacchi CSRF
   apiRouter.use(csrfProtection);

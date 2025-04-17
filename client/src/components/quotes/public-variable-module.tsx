@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
-import { Calendar, Info, ImageOff, AlertCircle, CheckCircle } from "lucide-react";
+import { Calendar, Info, ImageOff, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { 
@@ -104,6 +104,7 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
   // Stato per la selezione degli elementi (usando ID invece di indici)
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Teniamo traccia dello stato di caricamento delle immagini
   const [imageLoadState, setImageLoadState] = useState<{[key: number]: ImageLoadStateItem}>({});
@@ -153,7 +154,7 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
     setImageLoadState(initialImageLoadState);
   }, [module.items]);
 
-  // Calcola il totale in base agli elementi selezionati
+  // Calcola il totale in base agli elementi selezionati e valida la selezione
   useEffect(() => {
     // Calcola il totale degli elementi selezionati
     let sum = 0;
@@ -164,6 +165,10 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
       }
     });
     setTotal(sum);
+
+    // Verifica se la selezione è valida
+    const validation = isSelectionValid();
+    setValidationError(validation.isValid ? null : (validation.message || null));
 
     // Notifica il componente padre della selezione
     if (onSelectionChange) {
@@ -235,6 +240,28 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
     if (!module.maxSelectCount) return true;
     return selectedItems.length < module.maxSelectCount;
   };
+  
+  // Verifica se la selezione corrente rispetta i vincoli min/max
+  const isSelectionValid = (): { isValid: boolean; message?: string } => {
+    // Controllo sul minimo
+    if (module.minSelectCount && selectedItems.length < module.minSelectCount) {
+      return { 
+        isValid: false, 
+        message: `Devi selezionare almeno ${module.minSelectCount} ${module.minSelectCount === 1 ? 'elemento' : 'elementi'}.` 
+      };
+    }
+    
+    // Controllo sul massimo
+    if (module.maxSelectCount && selectedItems.length > module.maxSelectCount) {
+      return { 
+        isValid: false, 
+        message: `Puoi selezionare al massimo ${module.maxSelectCount} ${module.maxSelectCount === 1 ? 'elemento' : 'elementi'}.` 
+      };
+    }
+    
+    // Tutto ok
+    return { isValid: true };
+  };
 
   // Controlla se un item è selezionabile
   const isItemSelectable = (item: any, index: number): boolean => {
@@ -270,6 +297,9 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
     const groups: CategoryGroup[] = [];
     const uncategorized: { item: ModuleItem, index: number }[] = [];
     
+    // Prima raggruppiamo gli elementi in un oggetto per deduplica
+    const uniqueCategories = new Map<string, { items: { item: ModuleItem, index: number }[] }>();
+    
     module.items.forEach((item: ModuleItem, index: number) => {
       if (!item || !item.id) return;
       
@@ -282,21 +312,38 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
         return;
       }
       
-      // Trova o crea il gruppo per questa categoria
-      let group = groups.find(g => g.category === category);
-      if (!group) {
-        group = { category, items: [] };
-        groups.push(group);
+      // Ottieni o crea il gruppo per questa categoria
+      if (!uniqueCategories.has(category)) {
+        uniqueCategories.set(category, { items: [] });
       }
       
       // Aggiungi l'elemento al gruppo
-      group.items.push({ item, index });
+      const group = uniqueCategories.get(category);
+      if (group) {
+        group.items.push({ item, index });
+      }
+    });
+    
+    // Converti la mappa in un array
+    uniqueCategories.forEach((value, key) => {
+      groups.push({
+        category: key,
+        items: value.items
+      });
     });
     
     // Se ci sono elementi senza categoria, aggiungili come ultimo gruppo
     if (uncategorized.length > 0) {
       groups.push({ category: "", items: uncategorized });
     }
+    
+    // Ordina i gruppi alfabeticamente per categoria
+    groups.sort((a, b) => {
+      // Gli elementi senza categoria sempre in fondo
+      if (a.category === "") return 1;
+      if (b.category === "") return -1;
+      return a.category.localeCompare(b.category);
+    });
     
     return groups;
   };
@@ -620,13 +667,28 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
         </div>
       </CardContent>
 
-      <CardFooter className="flex justify-between border-t pt-3 bg-muted/10">
-        <div>
-          <p className="text-sm text-muted-foreground">Elementi selezionati: {selectedItems.length}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-muted-foreground">Totale:</p>
-          <p className="font-medium text-lg">{formatCurrency(total)}</p>
+      <CardFooter className="flex flex-col border-t pt-3 bg-muted/10">
+        {/* Messaggio di errore validazione */}
+        {!disabled && validationError && (
+          <div className="w-full mb-3 p-2 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-xs text-red-700 flex items-center">
+              <AlertTriangle className="h-3 w-3 mr-1.5" />
+              <span>{validationError}</span>
+            </p>
+          </div>
+        )}
+        <div className="flex justify-between w-full">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Elementi selezionati: {selectedItems.length}
+              {module.minSelectCount && ` (minimo: ${module.minSelectCount})`}
+              {module.maxSelectCount && ` (massimo: ${module.maxSelectCount})`}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Totale:</p>
+            <p className="font-medium text-lg">{formatCurrency(total)}</p>
+          </div>
         </div>
       </CardFooter>
     </Card>

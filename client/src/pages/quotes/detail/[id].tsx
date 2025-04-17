@@ -78,10 +78,36 @@ import {
   FileText,
   FileSignature,
   Clock,
+  ClockIcon,
+  RefreshCw,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistance, formatDistanceToNow, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
+
+// Helper per formattare le date
+function formatDate(date: Date): string {
+  return format(date, "d MMMM yyyy", { locale: it });
+}
+
+// Helper per calcolare la distanza tra due date
+function formatExpiryDate(date: Date | string | null | undefined): string {
+  if (!date) return "Data non disponibile";
+  
+  const expiryDate = typeof date === 'string' ? new Date(date) : date;
+  const now = new Date();
+  
+  // Se la data è scaduta
+  if (expiryDate < now) {
+    return "Scaduto";
+  }
+  
+  // Formatta la distanza in linguaggio naturale
+  return `Scade ${formatDistanceToNow(expiryDate, { 
+    addSuffix: true,
+    locale: it 
+  })}`;
+}
 
 /**
  * Pagina di dettaglio di un preventivo
@@ -250,6 +276,31 @@ export default function QuoteDetailPage() {
     }
   };
 
+  // Aggiorna il link di condivisione quando il preventivo viene caricato
+  useEffect(() => {
+    if (quote && quote.isShared && quote.shareToken) {
+      const shareUrl = `${window.location.origin}/quotes/public/${quote.shareToken}`;
+      setShareLink(shareUrl);
+      
+      // Se il preventivo ha una scadenza predefinita, aggiorniamo lo stato locale
+      if (quote.shareTokenExpiry) {
+        // Calcola i giorni dalla data corrente alla data di scadenza
+        const expiryDate = new Date(quote.shareTokenExpiry);
+        const currentDate = new Date();
+        const diffTime = expiryDate.getTime() - currentDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Trova il valore più vicino tra le opzioni disponibili
+        const availableOptions = [7, 15, 30, 60, 90];
+        const closestOption = availableOptions.reduce((prev, curr) => {
+          return (Math.abs(curr - diffDays) < Math.abs(prev - diffDays) ? curr : prev);
+        });
+        
+        setExpiryDays(closestOption);
+      }
+    }
+  }, [quote]);
+  
   // Callback per aggiornare il preventivo dopo modifiche ai moduli
   const refreshQuote = useCallback(() => {
     refetch();
@@ -338,42 +389,98 @@ export default function QuoteDetailPage() {
                 <DialogHeader>
                   <DialogTitle>Condividi preventivo</DialogTitle>
                   <DialogDescription>
-                    Crea un link per condividere questo preventivo con il cliente.
+                    Crea o gestisci il link per condividere questo preventivo con il cliente.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                  <div className="mb-4">
-                    <label className="text-sm font-medium mb-1 block">
-                      Validità link (giorni)
-                    </label>
-                    <div className="flex items-center">
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        value={expiryDays}
-                        onChange={(e) => setExpiryDays(parseInt(e.target.value))}
-                      >
-                        <option value={7}>7 giorni</option>
-                        <option value={15}>15 giorni</option>
-                        <option value={30}>30 giorni</option>
-                        <option value={60}>60 giorni</option>
-                        <option value={90}>90 giorni</option>
-                      </select>
-                      <Button
-                        className="ml-2"
-                        onClick={() => generateShareLinkMutation.mutate()}
-                        disabled={generateShareLinkMutation.isPending}
-                      >
-                        {generateShareLinkMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generazione...
-                          </>
-                        ) : (
-                          "Genera link"
-                        )}
-                      </Button>
+                  {quote.isShared && quote.shareToken ? (
+                    <div className="mb-6">
+                      <div className="bg-muted p-3 rounded-md">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ClockIcon className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">
+                            {quote.shareTokenExpiry ? formatExpiryDate(quote.shareTokenExpiry) : "Scadenza non impostata"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          {quote.shareTokenExpiry ? (
+                            `Il link scade il ${formatDate(new Date(quote.shareTokenExpiry))}`
+                          ) : (
+                            "Il link non ha una data di scadenza."
+                          )}
+                        </p>
+                        <div className="flex flex-col space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium">
+                              Aggiorna scadenza (giorni)
+                            </label>
+                            <select
+                              className="flex h-8 w-28 rounded-md border border-input bg-background px-2 py-1 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                              value={expiryDays}
+                              onChange={(e) => setExpiryDays(parseInt(e.target.value))}
+                            >
+                              <option value={7}>7 giorni</option>
+                              <option value={15}>15 giorni</option>
+                              <option value={30}>30 giorni</option>
+                              <option value={60}>60 giorni</option>
+                              <option value={90}>90 giorni</option>
+                            </select>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => updateShareExpiryMutation.mutate()}
+                            disabled={updateShareExpiryMutation.isPending}
+                            className="w-full"
+                          >
+                            {updateShareExpiryMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                Aggiornamento...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="mr-2 h-3 w-3" />
+                                Aggiorna scadenza
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="mb-4">
+                      <label className="text-sm font-medium mb-1 block">
+                        Validità link (giorni)
+                      </label>
+                      <div className="flex items-center">
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={expiryDays}
+                          onChange={(e) => setExpiryDays(parseInt(e.target.value))}
+                        >
+                          <option value={7}>7 giorni</option>
+                          <option value={15}>15 giorni</option>
+                          <option value={30}>30 giorni</option>
+                          <option value={60}>60 giorni</option>
+                          <option value={90}>90 giorni</option>
+                        </select>
+                        <Button
+                          className="ml-2"
+                          onClick={() => generateShareLinkMutation.mutate()}
+                          disabled={generateShareLinkMutation.isPending}
+                        >
+                          {generateShareLinkMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Generazione...
+                            </>
+                          ) : (
+                            "Genera link"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {shareLink && (
                     <div className="mt-4">
@@ -942,8 +1049,4 @@ export default function QuoteDetailPage() {
       </div>
 
   );
-}
-
-function formatDate(date: Date, formatStr = "d MMM yyyy") {
-  return format(date, formatStr, { locale: it });
 }

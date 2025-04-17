@@ -71,11 +71,13 @@ export default function PublicQuotePage() {
   const [signature, setSignature] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Carica i dati del preventivo tramite token di condivisione
+  // Carica i dati del preventivo tramite token di condivisione con aggiornamento automatico
   const { data: quote, isLoading, error } = useQuery({
     queryKey: ["/api/quotes/share", token],
     queryFn: async () => {
-      const res = await fetch(`/api/quotes/share/${token}`);
+      // Aggiungiamo un parametro di timestamp per evitare caching
+      const timestamp = new Date().getTime();
+      const res = await fetch(`/api/quotes/share/${token}?_t=${timestamp}`);
       if (!res.ok) {
         if (res.status === 404) {
           setIsExpired(true);
@@ -85,16 +87,22 @@ export default function PublicQuotePage() {
       }
       return res.json();
     },
+    // Aggiornamento automatico ogni 30 secondi
+    refetchInterval: 30000,
+    // Se la pagina non è attiva, interrompiamo l'aggiornamento automatico
+    refetchIntervalInBackground: false,
   });
 
-  // Carica i moduli del preventivo
+  // Carica i moduli del preventivo con aggiornamento automatico ogni 15 secondi
   const { data: modules = [], isLoading: isLoadingModules } = useQuery({
     queryKey: ["/api/quotes/share", token, "modules"],
     queryFn: async () => {
       if (!quote?.id) return [];
 
       try {
-        const res = await fetch(`/api/quotes/${quote.id}/modules`);
+        // Aggiungiamo un parametro di timestamp per evitare caching
+        const timestamp = new Date().getTime();
+        const res = await fetch(`/api/quotes/${quote.id}/modules?_t=${timestamp}`);
         if (!res.ok) return [];
         return res.json();
       } catch (err) {
@@ -103,6 +111,10 @@ export default function PublicQuotePage() {
       }
     },
     enabled: !!quote?.id,
+    // Aggiornamento automatico ogni 15 secondi per visualizzare in tempo reale eventuali modifiche ai moduli
+    refetchInterval: 15000,
+    // Se la pagina non è attiva, interrompiamo l'aggiornamento automatico
+    refetchIntervalInBackground: false,
   });
 
   // Funzione per gestire la selezione degli elementi nei moduli variabili

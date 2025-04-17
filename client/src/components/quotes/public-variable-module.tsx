@@ -33,6 +33,7 @@ interface ModuleItem {
   productCategoryDescription?: string;
   bundleCategoryDescription?: string;
   minSelectCount?: number;
+  notes?: string; // Campo notes per contenere informazioni di categoria
 }
 
 interface Module {
@@ -245,6 +246,16 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
   
   // Ottiene la categoria di un elemento
   const getCategory = (item: ModuleItem): string => {
+    // Prima controlla se c'è una categoria nei campi notes (dove spesso è archiviata la categoria)
+    // Il formato atteso nelle note è "CATEGORIA: valore"
+    if (item.notes) {
+      const notesMatch = item.notes.match(/^([^:]+):/);
+      if (notesMatch && notesMatch[1]) {
+        return notesMatch[1].trim();
+      }
+    }
+    
+    // Altrimenti usa i campi standard di categoria
     return item.serviceCategory || 
            item.productCategory || 
            item.bundleCategory || 

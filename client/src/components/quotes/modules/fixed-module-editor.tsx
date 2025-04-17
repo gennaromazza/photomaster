@@ -135,14 +135,69 @@ export default function FixedModuleEditor({
     staleTime: 30000
   });
   
+  // Gestione stato di caricamento e dati del modulo
+  const [isLoadingModuleData, setIsLoadingModuleData] = useState<boolean>(false);
+  const [fullModuleData, setFullModuleData] = useState<QuoteModule | null>(null);
+  
+  // Carica i dati completi del modulo
+  useEffect(() => {
+    const loadFullModuleData = async () => {
+      // Se non è in modalità modifica o se i dati sono già stati caricati, non fare nulla
+      if (!module?.id || fullModuleData) {
+        return;
+      }
+      
+      console.log("Caricamento dati completi del modulo fisso:", module.id);
+      setIsLoadingModuleData(true);
+      
+      try {
+        const response = await fetch(`/api/modules/${module.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Dati completi modulo fisso caricati:", data);
+          setFullModuleData(data);
+        } else {
+          console.error("Errore nel caricamento dei dati completi:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Errore nella richiesta dei dati completi:", error);
+      } finally {
+        setIsLoadingModuleData(false);
+      }
+    };
+    
+    loadFullModuleData();
+  }, [module?.id, fullModuleData]);
+
   // Inizializza gli elementi selezionati quando il modulo viene caricato
   useEffect(() => {
-    if (module?.items && module.items.length > 0) {
-      setSelectedItems(module.items);
+    // Determina quale oggetto modulo usare per l'inizializzazione
+    const moduleToUse = fullModuleData || module;
+    console.log("Inizializzazione modulo fisso con:", moduleToUse);
+    
+    if (!moduleToUse) {
+      console.log("Nessun modulo da inizializzare");
+      setSelectedItems([]);
+      return;
+    }
+    
+    // Aggiorna il form con i dati del modulo
+    form.reset({
+      name: moduleToUse.name || "",
+      description: moduleToUse.description || "",
+      discount: moduleToUse.discount || 0,
+      discountType: moduleToUse.discountType || "percentage",
+    });
+    
+    // Inizializza gli elementi selezionati
+    if (moduleToUse.items && moduleToUse.items.length > 0) {
+      console.log("Inizializzazione elementi modulo fisso:", moduleToUse.items);
+      setSelectedItems(moduleToUse.items);
     } else {
+      console.log("Nessun elemento nel modulo fisso");
       setSelectedItems([]);
     }
-  }, [module]);
+  }, [fullModuleData, module, form]);
   
   // Filtra servizi e prodotti in base alla ricerca
   const filteredServices = services.filter(service => 

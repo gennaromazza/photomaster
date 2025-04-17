@@ -1566,6 +1566,49 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(400).json({ message: "Il preventivo è già stato firmato" });
       }
       
+      // Recupera tutti i moduli variabili del preventivo
+      const modules = await storage.getQuoteModulesByQuote(quote.id);
+      const variableModules = modules.filter(m => m.type === 'variable');
+      
+      // Verifica i vincoli di selezione per tutti i moduli variabili
+      for (const module of variableModules) {
+        const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
+        const selectedItems = selectedModuleItems?.[module.id] || [];
+        
+        // Verifica se ci sono elementi obbligatori non selezionati
+        const requiredItems = moduleItems.filter(item => item.isRequired);
+        for (const requiredItem of requiredItems) {
+          if (!selectedItems.includes(requiredItem.id)) {
+            const service = requiredItem.serviceId ? await storage.getService(requiredItem.serviceId) : null;
+            const product = requiredItem.productId ? await storage.getProduct(requiredItem.productId) : null;
+            const bundle = requiredItem.bundleId ? await storage.getBundle(requiredItem.bundleId) : null;
+            
+            const itemName = service?.name || product?.name || bundle?.name || 'Opzione';
+            return res.status(400).json({ 
+              message: `È necessario selezionare l'opzione obbligatoria: ${itemName} nel modulo "${module.name}"`
+            });
+          }
+        }
+        
+        // Verifica numero minimo di selezioni
+        if (module.minSelectCount !== undefined && module.minSelectCount !== null && module.minSelectCount > 0) {
+          if (selectedItems.length < module.minSelectCount) {
+            return res.status(400).json({ 
+              message: `È necessario selezionare almeno ${module.minSelectCount} opzioni nel modulo "${module.name}"`
+            });
+          }
+        }
+        
+        // Verifica numero massimo di selezioni
+        if (module.maxSelectCount !== undefined && module.maxSelectCount !== null) {
+          if (selectedItems.length > module.maxSelectCount) {
+            return res.status(400).json({ 
+              message: `È possibile selezionare al massimo ${module.maxSelectCount} opzioni nel modulo "${module.name}"`
+            });
+          }
+        }
+      }
+      
       // Recupera i dati del cliente principale
       const client = await storage.getClient(quote.clientId);
       if (!client) {

@@ -1725,15 +1725,74 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         })
       );
 
+      // Carica dinamicamente tutti i moduli associati al preventivo
+      console.log(`Caricamento dinamico dei moduli per il preventivo ${quote.id} (token: ${token})`);
+      const modules = await storage.getModulesByQuote(quote.id);
+      
+      // Per ogni modulo, carica e arricchisci gli elementi associati
+      const enrichedModules = await Promise.all(
+        modules.map(async (module) => {
+          // Carica gli elementi del modulo
+          const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
+          
+          // Arricchisci gli elementi con i dettagli di servizi, prodotti e pacchetti
+          const enrichedItems = await Promise.all(
+            moduleItems.map(async (item) => {
+              let enrichedItem = { ...item };
+              
+              // Se l'item ha un serviceId, aggiungi i dettagli del servizio
+              if (item.serviceId) {
+                const service = await storage.getService(item.serviceId);
+                if (service) {
+                  enrichedItem = {
+                    ...enrichedItem,
+                    serviceName: service.name,
+                    serviceDescription: service.description,
+                    serviceImagePath: service.imagePath
+                  };
+                }
+              }
+              
+              // Se l'item ha un bundleId, aggiungi i dettagli del bundle
+              if (item.bundleId) {
+                const bundle = await storage.getServiceBundle(item.bundleId);
+                if (bundle) {
+                  enrichedItem = {
+                    ...enrichedItem,
+                    bundleName: bundle.name,
+                    bundleDescription: bundle.description,
+                    bundleImagePath: bundle.imagePath
+                  };
+                }
+              }
+              
+              return enrichedItem;
+            })
+          );
+          
+          // Restituisci il modulo arricchito con i suoi elementi
+          return {
+            ...module,
+            items: enrichedItems,
+            // Assicuriamoci che i vincoli di selezione siano esplicitamente definiti
+            minSelectCount: module.minSelectCount !== undefined ? module.minSelectCount : 0,
+            maxSelectCount: module.maxSelectCount !== undefined ? module.maxSelectCount : null
+          };
+        })
+      );
+      
       // Prepara l'oggetto completo del preventivo con tutte le informazioni
       const completeQuote = {
         ...quote,
         quoteItems: enrichedQuoteItems,
         client: client || undefined,
         secondClient: secondClient || undefined,
-        category: category || undefined
+        category: category || undefined,
+        // Aggiungi i moduli arricchiti
+        modules: enrichedModules
       };
-
+      
+      console.log(`Preventivo completato con ${enrichedModules.length} moduli caricati dinamicamente`);
       res.json(completeQuote);
     } catch (err) {
       console.error("Errore nel recupero del preventivo condiviso:", err);

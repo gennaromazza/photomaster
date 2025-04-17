@@ -261,12 +261,13 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
           </div>
         )}
 
-        {(module.minSelectCount || module.maxSelectCount) && (
+        {((module.minSelectCount || module.maxSelectCount) || hasRequiredItems) && (
           <div className="flex items-center mt-2 text-xs p-2 bg-muted/40 rounded-md">
             <Info className="h-3 w-3 mr-1 text-muted-foreground" />
             <span>
               {module.minSelectCount && `Seleziona almeno ${module.minSelectCount} opzioni. `}
-              {module.maxSelectCount && `Puoi selezionare massimo ${module.maxSelectCount} opzioni.`}
+              {module.maxSelectCount && `Puoi selezionare massimo ${module.maxSelectCount} opzioni. `}
+              {hasRequiredItems && <span className="font-medium text-amber-700">Alcune opzioni sono obbligatorie e non possono essere deselezionate.</span>}
             </span>
           </div>
         )}
@@ -310,6 +311,11 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                         className={`font-medium cursor-pointer ${isRequired ? 'after:content-["*"] after:text-red-500 after:ml-0.5' : ''}`}
                       >
                         {name}
+                        {isRequired && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                            Obbligatorio
+                          </span>
+                        )}
                       </Label>
                       <Badge variant="outline" className={isSelected ? 'bg-primary/20' : ''}>
                         {formatCurrency(item.total)}
@@ -353,7 +359,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                         <span className="text-green-600 ml-2">
                           (-{item.discountType === 'percentage' 
                             ? `${item.discountValue}%` 
-                            : formatCurrency(item.discountValue)})
+                            : formatCurrency(item.discountValue || 0)})
                         </span>
                       )}
                     </div>

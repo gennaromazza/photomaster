@@ -143,7 +143,7 @@ export function PublicFixedModule({ module }: PublicFixedModuleProps) {
                         <span className="text-green-600 ml-2">
                           (-{item.discountType === 'percentage' 
                             ? `${item.discountValue}%` 
-                            : formatCurrency(item.discountValue)})
+                            : formatCurrency(item.discountValue || 0)})
                         </span>
                       )}
                     </div>

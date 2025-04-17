@@ -426,7 +426,8 @@ export default function PublicQuotePage() {
                   <PublicVariableModule 
                     key={module.id} 
                     module={module}
-                    onSelectionChange={handleModuleItemSelection}
+                    onSelectionChange={quote && (quote.status === "approved" || quote.status === "confermato") ? undefined : handleModuleItemSelection}
+                    disabled={quote && (quote.status === "approved" || quote.status === "confermato")}
                   />
                 ))}
               </div>

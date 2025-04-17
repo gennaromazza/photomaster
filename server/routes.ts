@@ -2520,62 +2520,71 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
       
       // Se è un modulo variabile, processa la struttura selections
-      if (updateData.type === 'variable' && selections && Array.isArray(selections)) {
-        console.log("Aggiornamento modulo variabile: processamento delle selections", JSON.stringify(selections, null, 2));
+      if (updateData.type === 'variable') {
+        console.log("Aggiornamento modulo variabile: processamento delle selections");
         
-        try {
-          // Per ogni selezione, processa le opzioni come elementi del modulo
-          for (const selection of selections) {
-            console.log("Processando selezione (update):", JSON.stringify(selection, null, 2));
-            
-            if (selection.options && Array.isArray(selection.options)) {
-              // Crea item per ogni opzione nella selezione
-              for (const option of selection.options) {
-                console.log("Processando opzione (update):", JSON.stringify(option, null, 2));
-                
-                // Conversione di itemId a numero se è una stringa
-                const itemId = typeof option.itemId === 'string' ? parseInt(option.itemId) : option.itemId;
-                
-                // Aggiungiamo controllo per il tipo di elemento
-                let serviceId = null;
-                let bundleId = null;
-                
-                if (option.itemType === 'service') {
-                  serviceId = itemId;
-                } else if (option.itemType === 'bundle') {
-                  bundleId = itemId;
-                } else if (option.itemType === 'product') {
-                  serviceId = itemId; // i prodotti sono servizi con type='product'
+        // Verifica se abbiamo ricevuto un array di selections (potrebbe essere vuoto se tutte le categorie sono state rimosse)
+        if (!selections || !Array.isArray(selections)) {
+          console.log("Nessuna selezione ricevuta nell'aggiornamento - tutte le categorie sono state rimosse");
+          // Se non ci sono selections, significa che tutte le categorie sono state rimosse
+          // Non è necessario fare altro perché abbiamo già eliminato tutti gli elementi del modulo
+        } else {
+          console.log("Processando selections:", JSON.stringify(selections, null, 2));
+          
+          try {
+            // Per ogni selezione, processa le opzioni come elementi del modulo
+            for (const selection of selections) {
+              console.log("Processando selezione (update):", JSON.stringify(selection, null, 2));
+              
+              if (selection.options && Array.isArray(selection.options)) {
+                // Crea item per ogni opzione nella selezione
+                for (const option of selection.options) {
+                  console.log("Processando opzione (update):", JSON.stringify(option, null, 2));
+                  
+                  // Conversione di itemId a numero se è una stringa
+                  const itemId = typeof option.itemId === 'string' ? parseInt(option.itemId) : option.itemId;
+                  
+                  // Aggiungiamo controllo per il tipo di elemento
+                  let serviceId = null;
+                  let bundleId = null;
+                  
+                  if (option.itemType === 'service') {
+                    serviceId = itemId;
+                  } else if (option.itemType === 'bundle') {
+                    bundleId = itemId;
+                  } else if (option.itemType === 'product') {
+                    serviceId = itemId; // i prodotti sono servizi con type='product'
+                  }
+                  
+                  console.log(`Creazione item (update): moduleId=${moduleId}, serviceId=${serviceId}, bundleId=${bundleId}`);
+                  
+                  const moduleItem = {
+                    moduleId: moduleId,
+                    serviceId: serviceId,
+                    bundleId: bundleId,
+                    quantity: 1,
+                    unitPrice: option.price || 0,
+                    isRequired: option.isRequired || false,
+                    isSelected: option.isDefault || false,
+                    position: option.position || 0,
+                    hasDiscount: false,
+                    total: option.price || 0,
+                    notes: `${selection.name}: ${option.name}`,
+                    // Aggiungiamo i vincoli di selezione dalla selezione all'item
+                    minSelectCount: option.isRequired ? 1 : 0
+                  };
+                  
+                  console.log("Creando item (update):", JSON.stringify(moduleItem, null, 2));
+                  
+                  const createdItem = await storage.createQuoteModuleItem(moduleItem);
+                  console.log("Item creato (update):", JSON.stringify(createdItem, null, 2));
                 }
-                
-                console.log(`Creazione item (update): moduleId=${moduleId}, serviceId=${serviceId}, bundleId=${bundleId}`);
-                
-                const moduleItem = {
-                  moduleId: moduleId,
-                  serviceId: serviceId,
-                  bundleId: bundleId,
-                  quantity: 1,
-                  unitPrice: option.price || 0,
-                  isRequired: option.isRequired || false,
-                  isSelected: option.isDefault || false,
-                  position: option.position || 0,
-                  hasDiscount: false,
-                  total: option.price || 0,
-                  notes: `${selection.name}: ${option.name}`,
-                  // Aggiungiamo i vincoli di selezione dalla selezione all'item
-                  minSelectCount: option.isRequired ? 1 : 0
-                };
-                
-                console.log("Creando item (update):", JSON.stringify(moduleItem, null, 2));
-                
-                const createdItem = await storage.createQuoteModuleItem(moduleItem);
-                console.log("Item creato (update):", JSON.stringify(createdItem, null, 2));
               }
             }
+          } catch (error) {
+            console.error("Errore nella creazione degli item per il modulo variabile (update):", error);
+            throw new Error("Errore nell'aggiornamento degli item per il modulo variabile");
           }
-        } catch (error) {
-          console.error("Errore nella creazione degli item per il modulo variabile (update):", error);
-          throw new Error("Errore nell'aggiornamento degli item per il modulo variabile");
         }
       }
 

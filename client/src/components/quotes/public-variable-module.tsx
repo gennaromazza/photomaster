@@ -452,49 +452,33 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
                   <ul className="pl-5 space-y-1 list-disc text-muted-foreground">
                     {module.minSelectCount && module.maxSelectCount && module.minSelectCount === module.maxSelectCount ? (
                       <li>
-                        <span>Seleziona <span className="font-semibold text-foreground">esattamente {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                        Devi selezionare <span className="font-medium">esattamente {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}.
                       </li>
                     ) : (
                       <>
-                        {module.minSelectCount ? (
+                        {module.minSelectCount && module.minSelectCount > 0 && (
                           <li>
-                            <span>Seleziona <span className="font-semibold text-foreground">almeno {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                            Devi selezionare <span className="font-medium">almeno {module.minSelectCount}</span> {module.minSelectCount === 1 ? 'opzione' : 'opzioni'}.
                           </li>
-                        ) : null}
-                        {module.maxSelectCount ? (
+                        )}
+                        {module.maxSelectCount && module.maxSelectCount > 0 && (
                           <li>
-                            <span>Puoi selezionare <span className="font-semibold text-foreground">massimo {module.maxSelectCount}</span> {module.maxSelectCount === 1 ? 'opzione' : 'opzioni'}</span>
+                            Puoi selezionare <span className="font-medium">massimo {module.maxSelectCount}</span> {module.maxSelectCount === 1 ? 'opzione' : 'opzioni'}.
                           </li>
-                        ) : null}
+                        )}
                       </>
                     )}
+                    {!module.minSelectCount && !module.maxSelectCount && (
+                      <li>
+                        Puoi selezionare quante opzioni desideri.
+                      </li>
+                    )}
+                    {hasRequiredItems && (
+                      <li>
+                        Le opzioni marcate come <span className="font-medium">obbligatorie</span> non possono essere deselezionate.
+                      </li>
+                    )}
                   </ul>
-                </li>
-                
-                {/* Informazioni sulle categorie e le opzioni obbligatorie */}
-                {hasRequiredItems && (
-                  <li className="p-2 rounded-md bg-amber-50 border border-amber-100">
-                    <p className="font-medium mb-1 text-sm flex items-center text-amber-800">
-                      <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-amber-600" />
-                      Opzioni obbligatorie:
-                    </p>
-                    <p className="text-amber-700">
-                      Le opzioni contrassegnate come <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Obbligatorio</span> sono già preselezionate e non possono essere deselezionate.
-                    </p>
-                  </li>
-                )}
-                
-                {/* Stato attuale della selezione */}
-                <li className="p-2 rounded-md bg-muted/20 border border-muted/30">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center">
-                      <Info className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                      <span>Stato selezione:</span>
-                    </span>
-                    <span className="font-medium">
-                      {selectedItems.length} {selectedItems.length === 1 ? 'opzione selezionata' : 'opzioni selezionate'}
-                    </span>
-                  </div>
                 </li>
               </ul>
               
@@ -539,6 +523,7 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
                 )}
                 
                 {/* Elementi della categoria */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {group.items.map(({ item, index }) => {
                   if (!item || !item.id) return null;
 
@@ -632,11 +617,12 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
                     </div>
                   );
                 })}
+                </div>
               </div>
             ))
           ) : (
-            /* Visualizzazione senza categorie (originale) */
-            <div className="space-y-3">
+            /* Visualizzazione senza categorie */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {module.items.map((item: any, index: number) => {
                 if (!item || !item.id) return null;
 

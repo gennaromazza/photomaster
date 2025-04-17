@@ -712,7 +712,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch services" });
     }
   });
-  
+
   // Products route - Recupera solo servizi di tipo "product"
   apiRouter.get("/products", async (req, res) => {
     try {
@@ -1133,19 +1133,19 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Failed to fetch quotes" });
     }
   });
-  
+
   // API per recuperare un preventivo in base all'ID dell'evento associato
   // Nota: questa rotta deve venire PRIMA della rotta parametrica /:id
   apiRouter.get("/quotes/by-event/:eventId", async (req, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
-      
+
       // Trova l'evento per verificare se esiste
       const event = await storage.getEvent(eventId);
       if (!event) {
         return res.status(404).json({ message: "Evento non trovato" });
       }
-      
+
       // Se l'evento ha un quoteId, recupera il preventivo
       if (event.quoteId) {
         const quote = await storage.getQuote(event.quoteId);
@@ -1154,15 +1154,15 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         }
         return res.json(quote);
       }
-      
+
       // Verifica se c'è un preventivo che ha questo eventId
       const quotes = await storage.getAllQuotes();
       const associatedQuote = quotes.find(q => q.eventId === eventId);
-      
+
       if (associatedQuote) {
         return res.json(associatedQuote);
       }
-      
+
       // Nessun preventivo associato
       return res.status(404).json({ message: "Nessun preventivo associato a questo evento" });
     } catch (err) {
@@ -1170,7 +1170,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       res.status(500).json({ message: "Errore nel recuperare il preventivo" });
     }
   });
-  
+
   apiRouter.get("/quotes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -1210,7 +1210,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     try {
       // Estrai campi speciali per la gestione della conversione evento -> preventivo
       const { eventDate, _convertAndDelete, _originalEventId, ...rest } = req.body;
-      
+
       // Filtra solo i campi validi per lo schema del preventivo
       const parseResult = insertQuoteSchema.safeParse({
         ...rest,
@@ -1238,7 +1238,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Crea il preventivo con i dati validati
       const quote = await storage.createQuote(parseResult.data);
-      
+
       // Se c'è un evento associato al preventivo, gestisci la relazione
       if (quote && parseResult.data.eventId) {
         console.log(`Aggiornamento evento ID ${parseResult.data.eventId} con preventivo ID ${quote.id}`);
@@ -1247,33 +1247,33 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           quoteId: quote.id
         });
       }
-      
+
       // Se richiesto, elimina l'evento originale (conversione)
       if (_convertAndDelete && _originalEventId) {
         try {
           console.log(`Richiesta conversione: eliminazione evento ID ${_originalEventId}`);
-          
+
           // Verifica se l'evento esiste
           const event = await storage.getEvent(parseInt(_originalEventId));
           if (event) {
             // Prima elimina tutti gli elementi correlati (collaboratori, attività, ecc.)
             // Questo dipende da come è strutturato lo storage
-            
+
             // Elimina le attività associate all'evento
             const tasks = await storage.getTasksByEvent(parseInt(_originalEventId));
             for (const task of tasks) {
               await storage.deleteTask(task.id);
             }
-            
+
             // Elimina i collaboratori associati all'evento
             const collaborators = await storage.getEventCollaborators(parseInt(_originalEventId));
             for (const collaborator of collaborators) {
               await storage.removeCollaboratorFromEvent(collaborator.id, parseInt(_originalEventId));
             }
-            
+
             // Infine elimina l'evento
             await storage.deleteEvent(parseInt(_originalEventId));
-            
+
             console.log(`Evento ID ${_originalEventId} eliminato con successo (convertito in preventivo ID ${quote.id})`);
           }
         } catch (error) {
@@ -1281,7 +1281,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           // Non blocchiamo la creazione del preventivo se fallisce l'eliminazione dell'evento
         }
       }
-      
+
       res.status(201).json(quote);
     } catch (err) {
       console.error("Errore nella creazione del preventivo:", err);
@@ -1465,7 +1465,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         // al preventivo corrente utilizzando il campo quoteId
         const eventsQuery = await storage.getAllEvents();
         const eventsLinkedToQuote = eventsQuery.filter(event => event.quoteId === id);
-        
+
         if (eventsLinkedToQuote.length > 0) {
           // Elimina gli eventi collegati a questo preventivo
           for (const event of eventsLinkedToQuote) {
@@ -1565,32 +1565,32 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       if (quote.status === "approved") {
         return res.status(400).json({ message: "Il preventivo è già stato firmato" });
       }
-      
+
       // Recupera tutti i moduli variabili del preventivo
       const modules = await storage.getModulesByQuote(quote.id);
       const variableModules = modules.filter(m => m.type === 'variable');
-      
+
       // Verifica i vincoli di selezione per tutti i moduli variabili
       for (const module of variableModules) {
         const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
         const selectedItems = selectedModuleItems?.[module.id] || [];
-        
+
         // Verifica se ci sono elementi obbligatori non selezionati
         const requiredItems = moduleItems.filter(item => item.isRequired);
         for (const requiredItem of requiredItems) {
           if (!selectedItems.includes(requiredItem.id)) {
             // Ottieni solo le informazioni del servizio, poiché gli elementi dei moduli sono solo servizi
             const service = requiredItem.serviceId ? await storage.getService(requiredItem.serviceId) : null;
-            
+
             // Usa il nome del servizio o un nome generico
             const itemName = service?.name || 'Opzione';
-            
+
             return res.status(400).json({ 
               message: `È necessario selezionare l'opzione obbligatoria: ${itemName} nel modulo "${module.name}"`
             });
           }
         }
-        
+
         // Verifica numero minimo di selezioni
         if (module.minSelectCount !== undefined && module.minSelectCount !== null && module.minSelectCount > 0) {
           if (selectedItems.length < module.minSelectCount) {
@@ -1599,7 +1599,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
             });
           }
         }
-        
+
         // Verifica numero massimo di selezioni
         if (module.maxSelectCount !== undefined && module.maxSelectCount !== null) {
           if (selectedItems.length > module.maxSelectCount) {
@@ -1609,13 +1609,13 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           }
         }
       }
-      
+
       // Recupera i dati del cliente principale
       const client = await storage.getClient(quote.clientId);
       if (!client) {
         console.error("Cliente non trovato per il preventivo:", quote.id);
       }
-      
+
       // Recupera i dati del cliente secondario, se presente
       let secondClient = null;
       if (quote.secondClientId) {
@@ -1628,13 +1628,13 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         status,
         signature
       });
-      
+
       // Se necessario, salva moduleSelections in un altro modo o aggiorna lo schema
 
       // Crea un nuovo evento
       // Gestione sicura della data dell'evento
       const eventDate = quote.eventDate ? new Date(quote.eventDate) : new Date();
-      
+
       // Crea un nuovo evento basato sul preventivo firmato
       const event = await storage.createEvent({
         title: quote.title,
@@ -1651,21 +1651,21 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         eventType: quote.eventType || "wedding",
         categoryId: quote.categoryId
       });
-      
+
       // Invia email di notifica all'amministratore
       // Usa le importazioni già disponibili all'inizio del file
       const clientName = client ? `${client.firstName} ${client.lastName}`.trim() : "Cliente";
-      
+
       try {
         // Invia notifica all'amministratore
         await sendQuoteSignedNotification(quote, clientName, signature);
-        
+
         // Invia conferma al cliente principale se è disponibile l'email
         if (client && client.email) {
           await sendQuoteSignedConfirmation(client.email, client.firstName, quote);
           console.log(`Email di conferma inviata al cliente principale: ${client.email}`);
         }
-        
+
         // Invia conferma anche al cliente secondario, se presente
         if (secondClient && secondClient.email) {
           await sendQuoteSignedConfirmation(secondClient.email, secondClient.firstName, quote);
@@ -1728,18 +1728,18 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       // Carica dinamicamente tutti i moduli associati al preventivo
       console.log(`Caricamento dinamico dei moduli per il preventivo ${quote.id} (token: ${token})`);
       const modules = await storage.getModulesByQuote(quote.id);
-      
+
       // Per ogni modulo, carica e arricchisci gli elementi associati
       const enrichedModules = await Promise.all(
         modules.map(async (module) => {
           // Carica gli elementi del modulo
           const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
-          
+
           // Arricchisci gli elementi con i dettagli di servizi, prodotti e pacchetti
           const enrichedItems = await Promise.all(
             moduleItems.map(async (item) => {
               let enrichedItem = { ...item };
-              
+
               // Se l'item ha un serviceId, aggiungi i dettagli del servizio
               if (item.serviceId) {
                 const service = await storage.getService(item.serviceId);
@@ -1752,7 +1752,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                   };
                 }
               }
-              
+
               // Se l'item ha un bundleId, aggiungi i dettagli del bundle
               if (item.bundleId) {
                 const bundle = await storage.getServiceBundle(item.bundleId);
@@ -1765,11 +1765,11 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                   };
                 }
               }
-              
+
               return enrichedItem;
             })
           );
-          
+
           // Restituisci il modulo arricchito con i suoi elementi
           return {
             ...module,
@@ -1780,7 +1780,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           };
         })
       );
-      
+
       // Prepara l'oggetto completo del preventivo con tutte le informazioni
       const completeQuote = {
         ...quote,
@@ -1791,7 +1791,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         // Aggiungi i moduli arricchiti
         modules: enrichedModules
       };
-      
+
       console.log(`Preventivo completato con ${enrichedModules.length} moduli caricati dinamicamente`);
       res.json(completeQuote);
     } catch (err) {
@@ -2268,7 +2268,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Recupera anche gli elementi del modulo
       const baseItems = await storage.getQuoteModuleItemsByModule(moduleId);
-      
+
       // Arricchisci gli elementi con i dettagli di servizi, prodotti e pacchetti
       const items = await Promise.all(
         baseItems.map(async (item) => {
@@ -2299,7 +2299,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
               };
             }
           }
-          
+
           // Se l'item ha un productId, aggiungi i dettagli del prodotto
           if (item.productId) {
             const product = await storage.getService(item.productId);
@@ -2321,23 +2321,23 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       if (module.type === 'variable') {
         // Aggruppiamo gli item per categoria (se disponibile)
         const selections = [];
-        
+
         // Mappa per tracciare gli item già assegnati a una selezione
         const assignedItems = new Set();
-        
+
         // Raggruppa gli item in base al campo notes che contiene le informazioni sulla categoria
         // nel formato "NomeCategoria: NomeItem"
         const categoryMap = new Map();
-        
+
         items.forEach(item => {
           if (!item || !item.notes) return;
-          
+
           // Estrai la categoria dalla nota (formato: "NomeCategoria: NomeItem")
           const noteParts = item.notes.split(':');
           if (noteParts.length < 2) return;
-          
+
           const categoryName = noteParts[0].trim();
-          
+
           // Aggiungi l'item alla categoria corrispondente
           if (!categoryMap.has(categoryName)) {
             categoryMap.set(categoryName, {
@@ -2346,9 +2346,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
               options: []
             });
           }
-          
+
           const category = categoryMap.get(categoryName);
-          
+
           // Aggiungi l'opzione alla categoria
           category.options.push({
             id: `opt-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -2361,16 +2361,16 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
             isDefault: item.isSelected,
             isRequired: item.isRequired
           });
-          
+
           // Segna questo item come già assegnato
           assignedItems.add(item.id);
         });
-        
+
         // Converti la mappa in array di selezioni
         categoryMap.forEach((category) => {
           selections.push(category);
         });
-        
+
         // Gli item non assegnati a categorie possono essere aggiunti a una categoria "Altro"
         const unassignedItems = items.filter(item => !assignedItems.has(item.id));
         if (unassignedItems.length > 0) {
@@ -2391,7 +2391,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           };
           selections.push(defaultCategory);
         }
-        
+
         // Restituisci il modulo con gli items e le selections
         res.json({ ...module, items, selections });
       } else {
@@ -2427,7 +2427,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Estrai i campi selections dalle proprietà del modulo se ci sono
       const { selections, updatedAt, ...moduleBaseData } = req.body;
-      
+
       // Crea il modulo con gestione corretta della data di scadenza
       const moduleData = {
         ...moduleBaseData,
@@ -2452,29 +2452,29 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           })
         ));
       }
-      
+
       // Se è un modulo variabile con selezioni, processiamo le selections e creiamo items appropriati
       if (moduleData.type === 'variable' && selections && Array.isArray(selections)) {
         console.log("Processando selections per modulo variabile", JSON.stringify(selections, null, 2));
-        
+
         try {
           // Per ogni selezione, processiamo le opzioni come elementi del modulo
           for (const selection of selections) {
             console.log("Processando selezione:", JSON.stringify(selection, null, 2));
-            
+
             if (selection.options && Array.isArray(selection.options)) {
               // Crea item per ogni opzione nella selezione
               for (const option of selection.options) {
                 console.log("Processando opzione:", JSON.stringify(option, null, 2));
-                
+
                 // Conversione di itemId a numero se è una stringa
                 const itemId = typeof option.itemId === 'string' ? parseInt(option.itemId) : option.itemId;
-                
+
                 // Aggiungiamo controllo per il tipo di elemento
                 let serviceId = null;
                 let bundleId = null;
                 let productId = null;
-                
+
                 if (option.itemType === 'service') {
                   serviceId = itemId;
                 } else if (option.itemType === 'bundle') {
@@ -2482,9 +2482,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                 } else if (option.itemType === 'product') {
                   serviceId = itemId; // i prodotti sono servizi con type='product'
                 }
-                
+
                 console.log(`Creazione item: moduleId=${newModule.id}, serviceId=${serviceId}, bundleId=${bundleId}, productId=${productId}`);
-                
+
                 const moduleItem = {
                   moduleId: newModule.id,
                   serviceId: serviceId,
@@ -2498,9 +2498,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                   total: option.price || 0,
                   notes: `${selection.name}: ${option.name}`
                 };
-                
+
                 console.log("Creando item:", JSON.stringify(moduleItem, null, 2));
-                
+
                 const createdItem = await storage.createQuoteModuleItem(moduleItem);
                 console.log("Item creato:", JSON.stringify(createdItem, null, 2));
               }
@@ -2566,7 +2566,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       for (const item of existingItems) {
         await storage.deleteQuoteModuleItem(item.id);
       }
-      
+
       // Gestisci gli elementi del modulo fisso
       if (itemsFromBody && Array.isArray(itemsFromBody)) {
         // Crea i nuovi elementi
@@ -2577,11 +2577,11 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           });
         }
       }
-      
+
       // Se è un modulo variabile, processa la struttura selections
       if (updateData.type === 'variable') {
         console.log("Aggiornamento modulo variabile: processamento delle selections");
-        
+
         // Verifica se abbiamo ricevuto un array di selections (potrebbe essere vuoto se tutte le categorie sono state rimosse)
         if (!selections || !Array.isArray(selections)) {
           console.log("Nessuna selezione ricevuta nell'aggiornamento - tutte le categorie sono state rimosse");
@@ -2589,24 +2589,24 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           // Non è necessario fare altro perché abbiamo già eliminato tutti gli elementi del modulo
         } else {
           console.log("Processando selections:", JSON.stringify(selections, null, 2));
-          
+
           try {
             // Per ogni selezione, processa le opzioni come elementi del modulo
             for (const selection of selections) {
               console.log("Processando selezione (update):", JSON.stringify(selection, null, 2));
-              
+
               if (selection.options && Array.isArray(selection.options)) {
                 // Crea item per ogni opzione nella selezione
                 for (const option of selection.options) {
                   console.log("Processando opzione (update):", JSON.stringify(option, null, 2));
-                  
+
                   // Conversione di itemId a numero se è una stringa
                   const itemId = typeof option.itemId === 'string' ? parseInt(option.itemId) : option.itemId;
-                  
+
                   // Aggiungiamo controllo per il tipo di elemento
                   let serviceId = null;
                   let bundleId = null;
-                  
+
                   if (option.itemType === 'service') {
                     serviceId = itemId;
                   } else if (option.itemType === 'bundle') {
@@ -2614,9 +2614,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                   } else if (option.itemType === 'product') {
                     serviceId = itemId; // i prodotti sono servizi con type='product'
                   }
-                  
+
                   console.log(`Creazione item (update): moduleId=${moduleId}, serviceId=${serviceId}, bundleId=${bundleId}`);
-                  
+
                   const moduleItem = {
                     moduleId: moduleId,
                     serviceId: serviceId,
@@ -2632,9 +2632,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
                     // Aggiungiamo i vincoli di selezione dalla selezione all'item
                     minSelectCount: option.isRequired ? 1 : 0
                   };
-                  
+
                   console.log("Creando item (update):", JSON.stringify(moduleItem, null, 2));
-                  
+
                   const createdItem = await storage.createQuoteModuleItem(moduleItem);
                   console.log("Item creato (update):", JSON.stringify(createdItem, null, 2));
                 }
@@ -2747,7 +2747,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
               };
             }
           }
-          
+
           // Se l'item ha un productId, aggiungi i dettagli del prodotto
           if (item.productId) {
             const product = await storage.getService(item.productId);
@@ -2859,7 +2859,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
               };
             }
           }
-          
+
           // Se l'item ha un productId, aggiungi i dettagli del prodotto
           if (item.productId) {
             const product = await storage.getService(item.productId);
@@ -2879,20 +2879,20 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Conta quanti elementi sono stati selezionati
       const totalSelected = selectedItems.length;
-      
+
       // Verifica vincoli di minimo e massimo numero di selezioni
       if (module.minSelectCount !== undefined && module.minSelectCount > 0 && totalSelected < module.minSelectCount) {
         return res.status(400).json({
           message: `È necessario selezionare almeno ${module.minSelectCount} opzioni`
         });
       }
-      
+
       if (module.maxSelectCount !== undefined && module.maxSelectCount !== null && totalSelected > module.maxSelectCount) {
         return res.status(400).json({
           message: `È possibile selezionare al massimo ${module.maxSelectCount} opzioni`
         });
       }
-      
+
       // Aggiorna lo stato di ciascun elemento
       for (const item of moduleItems) {
         const isSelected = selectedItems.includes(item.id);
@@ -2929,7 +2929,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Registrazione dei router modulari
   app.use("/api/bundle-leads", bundleLeadsRouter);
   app.use("/api/settings", settingsRouter);
-  
+
   // Configurazione di multer per l'upload dei file
   const upload = multer({
     dest: join(tmpdir(), 'uploads'),
@@ -2937,7 +2937,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       fileSize: 10 * 1024 * 1024, // 10MB
     },
   });
-  
+
   // Rotte per l'importazione ed esportazione dei clienti
   app.post('/api/clients/upload', isAuthenticated, upload.single('file'), handleFileUpload);
   app.post('/api/clients/import', isAuthenticated, importClients);

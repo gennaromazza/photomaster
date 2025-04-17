@@ -31,17 +31,29 @@ import { Button } from "@/components/ui/button";
 
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
-  // Aggiunta della filigrana con il nome dello studio in tutta la pagina
+  // Query per ottenere le impostazioni dell'applicazione
+  const { data: settings } = useQuery({
+    queryKey: ["/api/settings"],
+  });
+  
+  // Estrai le impostazioni della filigrana, o usa valori predefiniti
+  const watermarkSettings = (settings?.additionalSettings as any)?.watermark || {};
+  const watermarkText = watermarkSettings.text || settings?.companyName || "ImageStudio";
+  const watermarkOpacity = watermarkSettings.opacity || 0.07;
+  const watermarkRotate = watermarkSettings.rotate || -30;
+  const watermarkPosition = watermarkSettings.position || "center";
+  
+  // Rendering della pagina con filigrana personalizzata
   return (
     <div className="min-h-screen flex flex-col bg-background/50 overflow-hidden relative">
-      {/* Filigrana ImageStudio */}
+      {/* Filigrana personalizzata */}
       <Watermark 
-        text="ImageStudio" 
-        opacity={0.07} 
+        text={watermarkText}
+        opacity={watermarkOpacity}
         fontSize="1.8rem" 
-        rotate={-30} 
+        rotate={watermarkRotate}
         repeat={12} 
-        position="center" 
+        position={watermarkPosition as "center" | "top" | "bottom"}
         color="var(--primary)"  
       />
       
@@ -63,7 +75,7 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => {
         <div className="container px-4 text-center">
           <div className="flex flex-col items-center justify-center space-y-2">
             <p className="text-sm md:text-base text-muted-foreground">
-              Preventivo generato da <span className="font-medium">ImageStudio</span>
+              Preventivo generato da <span className="font-medium">{settings?.companyName || "ImageStudio"}</span>
             </p>
             <p className="text-xs text-muted-foreground/70">
               © {new Date().getFullYear()} - Tutti i diritti riservati

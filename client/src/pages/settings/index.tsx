@@ -523,6 +523,226 @@ Studio {studio_nome}`}
                 </Button>
               </CardFooter>
             </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Filigrana Preventivi</CardTitle>
+                <CardDescription>
+                  Personalizza la filigrana dei preventivi condivisi
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="watermark-text">Testo Filigrana</Label>
+                    <Input 
+                      id="watermark-text" 
+                      placeholder="ImageStudio" 
+                      defaultValue={
+                        (settings?.additionalSettings as any)?.watermark?.text || 
+                        settings?.companyName || 
+                        "ImageStudio"
+                      }
+                      onChange={(e) => {
+                        const currentSettings = settings?.additionalSettings || {};
+                        const watermarkSettings = (currentSettings as any)?.watermark || {};
+                        
+                        updateSettingsMutation.mutate({
+                          additionalSettings: {
+                            ...currentSettings,
+                            watermark: {
+                              ...watermarkSettings,
+                              text: e.target.value
+                            }
+                          }
+                        });
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Testo che apparirà come filigrana nei preventivi condivisi
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="watermark-opacity">Opacità</Label>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          id="watermark-opacity" 
+                          type="range" 
+                          min="1" 
+                          max="20" 
+                          defaultValue={
+                            ((settings?.additionalSettings as any)?.watermark?.opacity || 0.07) * 100
+                          }
+                          onChange={(e) => {
+                            const currentSettings = settings?.additionalSettings || {};
+                            const watermarkSettings = (currentSettings as any)?.watermark || {};
+                            const opacityValue = Number(e.target.value) / 100;
+                            
+                            updateSettingsMutation.mutate({
+                              additionalSettings: {
+                                ...currentSettings,
+                                watermark: {
+                                  ...watermarkSettings,
+                                  opacity: opacityValue
+                                }
+                              }
+                            });
+                          }}
+                        />
+                        <span className="text-sm">
+                          {Math.round(((settings?.additionalSettings as any)?.watermark?.opacity || 0.07) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="watermark-rotation">Rotazione</Label>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          id="watermark-rotation" 
+                          type="range" 
+                          min="-45" 
+                          max="45" 
+                          defaultValue={
+                            (settings?.additionalSettings as any)?.watermark?.rotate || -30
+                          }
+                          onChange={(e) => {
+                            const currentSettings = settings?.additionalSettings || {};
+                            const watermarkSettings = (currentSettings as any)?.watermark || {};
+                            
+                            updateSettingsMutation.mutate({
+                              additionalSettings: {
+                                ...currentSettings,
+                                watermark: {
+                                  ...watermarkSettings,
+                                  rotate: Number(e.target.value)
+                                }
+                              }
+                            });
+                          }}
+                        />
+                        <span className="text-sm">
+                          {(settings?.additionalSettings as any)?.watermark?.rotate || -30}°
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label>Posizione Filigrana</Label>
+                    <div className="grid grid-cols-3 gap-3 mt-2">
+                      <div 
+                        className={`border rounded-md p-2 text-center cursor-pointer hover:border-primary transition-colors ${
+                          ((settings?.additionalSettings as any)?.watermark?.position || "center") === "top" 
+                            ? "border-primary bg-primary/5" 
+                            : ""
+                        }`}
+                        onClick={() => {
+                          const currentSettings = settings?.additionalSettings || {};
+                          const watermarkSettings = (currentSettings as any)?.watermark || {};
+                          
+                          updateSettingsMutation.mutate({
+                            additionalSettings: {
+                              ...currentSettings,
+                              watermark: {
+                                ...watermarkSettings,
+                                position: "top"
+                              }
+                            }
+                          });
+                        }}
+                      >
+                        Alto
+                      </div>
+                      <div 
+                        className={`border rounded-md p-2 text-center cursor-pointer hover:border-primary transition-colors ${
+                          ((settings?.additionalSettings as any)?.watermark?.position || "center") === "center" 
+                            ? "border-primary bg-primary/5" 
+                            : ""
+                        }`}
+                        onClick={() => {
+                          const currentSettings = settings?.additionalSettings || {};
+                          const watermarkSettings = (currentSettings as any)?.watermark || {};
+                          
+                          updateSettingsMutation.mutate({
+                            additionalSettings: {
+                              ...currentSettings,
+                              watermark: {
+                                ...watermarkSettings,
+                                position: "center"
+                              }
+                            }
+                          });
+                        }}
+                      >
+                        Centro
+                      </div>
+                      <div 
+                        className={`border rounded-md p-2 text-center cursor-pointer hover:border-primary transition-colors ${
+                          ((settings?.additionalSettings as any)?.watermark?.position || "center") === "bottom" 
+                            ? "border-primary bg-primary/5" 
+                            : ""
+                        }`}
+                        onClick={() => {
+                          const currentSettings = settings?.additionalSettings || {};
+                          const watermarkSettings = (currentSettings as any)?.watermark || {};
+                          
+                          updateSettingsMutation.mutate({
+                            additionalSettings: {
+                              ...currentSettings,
+                              watermark: {
+                                ...watermarkSettings,
+                                position: "bottom"
+                              }
+                            }
+                          });
+                        }}
+                      >
+                        Basso
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <div className="border rounded-md p-4 relative overflow-hidden bg-muted/20 h-40">
+                      <div className="text-center text-sm text-muted-foreground mb-2">Anteprima</div>
+                      <div className="relative h-full bg-white rounded-sm p-2">
+                        <div className="absolute inset-0 flex items-center justify-center font-bold text-lg text-primary/10">
+                          Contenuto Preventivo
+                        </div>
+                        {/* Miniatura della filigrana */}
+                        <div className={`absolute inset-0 flex ${
+                          ((settings?.additionalSettings as any)?.watermark?.position || "center") === "top" 
+                            ? "items-start pt-4" 
+                            : ((settings?.additionalSettings as any)?.watermark?.position || "center") === "bottom"
+                              ? "items-end pb-4" 
+                              : "items-center"
+                        } justify-center overflow-hidden pointer-events-none`}>
+                          <div 
+                            className="whitespace-nowrap mx-4 font-bold"
+                            style={{
+                              opacity: (settings?.additionalSettings as any)?.watermark?.opacity || 0.07,
+                              color: "var(--primary)",
+                              transform: `rotate(${(settings?.additionalSettings as any)?.watermark?.rotate || -30}deg)`,
+                              fontSize: "1.2rem"
+                            }}
+                          >
+                            {(settings?.additionalSettings as any)?.watermark?.text || settings?.companyName || "ImageStudio"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <div className="text-xs text-muted-foreground w-full text-center">
+                  Le modifiche vengono salvate automaticamente
+                </div>
+              </CardFooter>
+            </Card>
           </div>
         </TabsContent>
         

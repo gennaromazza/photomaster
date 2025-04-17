@@ -50,6 +50,7 @@ interface Module {
 interface PublicVariableModuleProps {
   module: Module;
   onSelectionChange?: (moduleId: number, selectedItems: number[]) => void;
+  disabled?: boolean;
 }
 
 // Interfaccia per gli elementi selezionati
@@ -65,7 +66,7 @@ interface ImageLoadStateItem {
   isLoading: boolean;
 }
 
-export function PublicVariableModule({ module, onSelectionChange }: PublicVariableModuleProps) {
+export function PublicVariableModule({ module, onSelectionChange, disabled = false }: PublicVariableModuleProps) {
   // Controllo preventivo
   if (!module || !module.items) {
     console.error("Module o module.items non definito:", module);
@@ -159,6 +160,11 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
 
   // Gestisce il cambio di selezione di un item
   const handleItemSelect = (itemId: number, index: number, checked: boolean) => {
+    // Se il modulo è disabilitato (ad es. dopo la firma) non permettere modifiche
+    if (disabled) {
+      return;
+    }
+
     if (!itemId) {
       console.error(`[ERRORE] Tentativo di selezionare un item senza ID valido nel modulo ${module.id}`);
       return;
@@ -243,6 +249,9 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
             {isExpired && (
               <Badge variant="destructive" className="ml-2">Scaduto</Badge>
             )}
+            {disabled && (
+              <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200">Confermato</Badge>
+            )}
           </CardTitle>
           <Badge variant="outline" className="font-normal bg-primary/10">
             {formatCurrency(total)}
@@ -261,7 +270,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
           </div>
         )}
 
-        {((module.minSelectCount || module.maxSelectCount) || hasRequiredItems) && (
+        {((module.minSelectCount || module.maxSelectCount) || hasRequiredItems) && !disabled && (
           <div className="flex items-center mt-2 text-xs p-2 bg-muted/40 rounded-md">
             <Info className="h-3 w-3 mr-1 text-muted-foreground" />
             <span>
@@ -300,7 +309,7 @@ export function PublicVariableModule({ module, onSelectionChange }: PublicVariab
                   <Checkbox 
                     id={`item-${module.id}-${item.id}`}
                     checked={isSelected}
-                    disabled={!itemSelectable && !isSelected}
+                    disabled={disabled || (!itemSelectable && !isSelected)}
                     onCheckedChange={(checked) => handleItemSelect(item.id, index, Boolean(checked))}
                     className="mt-1"
                   />

@@ -17,6 +17,8 @@ import {
   Briefcase,
   BookMarked,
   Euro,
+  ImageIcon,
+  Camera,
 } from "lucide-react";
 
 interface SidebarLinkProps {
@@ -139,6 +141,13 @@ export default function Sidebar() {
           icon={<Euro className="h-4 w-4" />}
           text="Finanza"
           isActive={isActive("/dashboard/finances")}
+        />
+
+        <SidebarLink
+          href="/galleries"
+          icon={<Camera className="h-4 w-4" />}
+          text="Gallerie Foto"
+          isActive={isActive("/galleries")}
         />
       </div>
       

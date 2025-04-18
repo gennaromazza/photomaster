@@ -24,6 +24,8 @@ import {
   MessageSquare,
   BookMarked,
   X,
+  Euro,
+  Camera,
 } from "lucide-react";
 
 export interface MobileSidebarProps {
@@ -122,6 +124,22 @@ export default function MobileSidebar({
               icon={<BarChart2 className="h-4 w-4" />}
               label="Reportistica"
               isActive={isActive("/reports")}
+              onClick={onClose}
+            />
+
+            <NavItem
+              href="/dashboard/finances"
+              icon={<Euro className="h-4 w-4" />}
+              label="Finanza"
+              isActive={isActive("/dashboard/finances")}
+              onClick={onClose}
+            />
+
+            <NavItem
+              href="/galleries"
+              icon={<Camera className="h-4 w-4" />}
+              label="Gallerie Foto"
+              isActive={isActive("/galleries")}
               onClick={onClose}
             />
           </nav>

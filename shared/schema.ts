@@ -695,8 +695,7 @@ export const transactions = pgTable("transactions", {
   amount: numeric("amount").notNull(),
   date: date("date").notNull(),
   description: text("description"),
-  source: text("source"), // quote, generic
-  sourceId: integer("quote_id"), // FK verso quotes quando source = quote
+  quoteId: integer("quote_id"), // FK verso quotes 
   status: text("status").notNull().default("completed"),
   paymentMethod: text("payment_method"),
   reference: text("reference"),
@@ -714,8 +713,7 @@ export const insertTransactionSchema = createInsertSchema(transactions).pick({
   amount: true,
   date: true,
   description: true,
-  source: true,
-  sourceId: true,
+  quoteId: true,
   status: true,
   paymentMethod: true,
   reference: true,
@@ -732,7 +730,7 @@ export type Transaction = typeof transactions.$inferSelect;
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
   quote: one(quotes, {
-    fields: [transactions.sourceId],
+    fields: [transactions.quoteId],
     references: [quotes.id],
     relationName: "quoteTransactions"
   }),

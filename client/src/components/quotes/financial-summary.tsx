@@ -53,11 +53,20 @@ import {
 interface FinancialSummaryProps {
   quoteId: number;
   quoteTotal?: number;
+  totalAmount?: number; // Supporta anche totalAmount per retrocompatibilità
   readOnly?: boolean;
   clientName?: string;
 }
 
-export function FinancialSummary({ quoteId, quoteTotal = 0, readOnly = false, clientName = '' }: FinancialSummaryProps) {
+export function FinancialSummary({ 
+  quoteId, 
+  quoteTotal = 0, 
+  totalAmount, 
+  readOnly = false, 
+  clientName = '' 
+}: FinancialSummaryProps) {
+  // Usa totalAmount se fornito, altrimenti usa quoteTotal
+  const totalPreventivo = totalAmount !== undefined ? totalAmount : quoteTotal;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
@@ -326,7 +335,7 @@ export function FinancialSummary({ quoteId, quoteTotal = 0, readOnly = false, cl
     .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0);
   
   // Calcola il saldo da pagare
-  const remainingBalance = quoteTotal - totalPaid;
+  const remainingBalance = totalPreventivo - totalPaid;
   
   // Calcola il totale dei pagamenti programmati
   const totalScheduled = scheduledPayments

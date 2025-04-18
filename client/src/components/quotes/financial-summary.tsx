@@ -101,20 +101,32 @@ export function FinancialSummary({
     notes: ''
   });
   
-  // Ottieni le transazioni per questo preventivo
+  // Ottieni le transazioni per questo preventivo con ottimizzazioni per refetch e performance
   const { 
     data: transactions = [],
     isLoading: transactionsLoading,
+    refetch: refetchTransactions
   } = useQuery({
-    queryKey: ['/api/finance/transactions/quote', quoteId]
+    queryKey: ['/api/finance/transactions/quote', quoteId],
+    // Configurazioni per garantire che i dati siano sempre aggiornati
+    refetchOnWindowFocus: true, // Aggiorna quando la finestra torna in focus
+    staleTime: 30 * 1000, // Considera i dati "freschi" per 30 secondi
+    gcTime: 5 * 60 * 1000, // Mantieni in cache per 5 minuti
+    retry: 1 // Riprova una volta in caso di errore
   });
   
-  // Ottieni i pagamenti programmati per questo preventivo
+  // Ottieni i pagamenti programmati per questo preventivo con ottimizzazioni
   const { 
     data: scheduledPayments = [],
     isLoading: scheduledLoading,
+    refetch: refetchScheduled
   } = useQuery({
-    queryKey: ['/api/finance/scheduled/quote', quoteId]
+    queryKey: ['/api/finance/scheduled/quote', quoteId],
+    // Configurazioni per garantire che i dati siano sempre aggiornati
+    refetchOnWindowFocus: true, // Aggiorna quando la finestra torna in focus
+    staleTime: 30 * 1000, // Considera i dati "freschi" per 30 secondi
+    gcTime: 5 * 60 * 1000, // Mantieni in cache per 5 minuti
+    retry: 1 // Riprova una volta in caso di errore
   });
   
   // Mutation per creare una nuova transazione
@@ -136,6 +148,9 @@ export function FinancialSummary({
       
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
+      
+      // Refetch esplicito per garantire la sincronizzazione immediata dei dati
+      refetchTransactions();
       
       toast({
         title: 'Pagamento registrato',
@@ -171,6 +186,9 @@ export function FinancialSummary({
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
       
+      // Refetch esplicito per garantire la sincronizzazione immediata dei dati
+      refetchScheduled();
+      
       toast({
         title: 'Rata programmata',
         description: 'La rata di pagamento è stata programmata con successo.',
@@ -195,6 +213,9 @@ export function FinancialSummary({
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      
+      // Refetch esplicito per garantire la sincronizzazione immediata dei dati
+      refetchScheduled();
       
       toast({
         title: 'Rata eliminata',
@@ -221,6 +242,10 @@ export function FinancialSummary({
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
       queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      
+      // Refetch esplicito per garantire la sincronizzazione immediata dei dati
+      refetchTransactions();
+      refetchScheduled();
       
       toast({
         title: 'Pagamento registrato',

@@ -41,6 +41,29 @@ export async function sendEmail(templateName: string, params: EmailParams): Prom
     const fromEmail = appSettings?.companyEmail || 'info@imagestudio.com';
     const fromName = appSettings?.companyName || 'Image Studio';
 
+    // Crea il contenuto dell'email nel formato richiesto da SendGrid
+    const content: {type: string, value: string}[] = [];
+    if (params.text) {
+      content.push({
+        type: 'text/plain',
+        value: params.text
+      });
+    }
+    if (params.html) {
+      content.push({
+        type: 'text/html',
+        value: params.html
+      });
+    }
+
+    // Assicuriamoci che ci sia almeno un contenuto
+    if (content.length === 0 && (params.text || params.html)) {
+      content.push({
+        type: 'text/plain',
+        value: params.text || params.html || 'Nessun contenuto fornito'
+      });
+    }
+
     const msg = {
       to: params.to,
       from: {
@@ -48,12 +71,11 @@ export async function sendEmail(templateName: string, params: EmailParams): Prom
         name: fromName
       },
       subject: params.subject,
-      text: params.text,
-      html: params.html,
+      content: content,
       attachments: params.attachments
     };
 
-    await sgMail.send(msg);
+    await sgMail.send(msg as any);
     return true;
   } catch (error) {
     console.error('Errore nell\'invio dell\'email:', error);

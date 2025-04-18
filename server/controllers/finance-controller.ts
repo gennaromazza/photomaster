@@ -10,7 +10,7 @@ import {
   ScheduledPayment
 } from "@shared/schema";
 import { eq, and, sql, desc, gte, lte, isNull, not } from "drizzle-orm";
-import { sendEmail } from "../services/email-service";
+import { sendEmail } from "../email";
 
 // Ottieni tutte le transazioni finanziarie
 export async function getAllTransactions(req: Request, res: Response) {

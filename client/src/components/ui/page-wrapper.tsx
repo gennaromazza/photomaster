@@ -15,18 +15,18 @@ export const PageWrapper: React.FC<PageWrapperProps> = ({
   actions
 }) => {
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Heading title={title} subtitle={subtitle} />
+        
         {actions && (
-          <div className="flex items-center space-x-2">
+          <div>
             {actions}
           </div>
         )}
       </div>
-      <div className="space-y-4">
-        {children}
-      </div>
+      
+      {children}
     </div>
   );
 };

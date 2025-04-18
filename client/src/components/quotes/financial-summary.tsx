@@ -309,8 +309,7 @@ export function FinancialSummary({
       amount: parseFloat(payment.amount),
       date: format(new Date(), 'yyyy-MM-dd'), // Inviamo la data come stringa formattata
       description: payment.description || `Pagamento per preventivo #${quoteId}`,
-      source: 'quote',
-      sourceId: quoteId,
+      quoteId: quoteId, // Utilizziamo il nome del campo corretto
       status: 'completed',
       paymentMethod: payment.paymentMethod || null,
       notes: payment.notes || null,

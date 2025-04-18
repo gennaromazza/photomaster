@@ -8,7 +8,7 @@ import { Request } from 'express';
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/google/callback`
+  `https://workspace.imagestudiofoto.repl.co/api/google/callback`
 );
 
 // Crea il client di Google Calendar

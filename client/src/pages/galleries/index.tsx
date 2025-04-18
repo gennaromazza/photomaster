@@ -1,190 +1,353 @@
-import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { useState } from "react";
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
-  Image,
   Plus,
   Search,
+  LayoutGrid,
+  List,
   SlidersHorizontal,
+  Image as ImageIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { queryClient } from "@/lib/queryClient";
-import EmptyState from "@/components/empty-state";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GalleryGrid } from "@/components/galleries/gallery-grid";
-import { GalleryListTable } from "@/components/galleries/gallery-list-table";
-import { GallerySkeleton } from "@/components/galleries/gallery-skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import EmptyState from "@/components/empty-state";
 import { GalleryItem } from "@/types/gallery";
 
+// Componente GalleryGrid
+function GalleryGrid({ galleries = [] }: { galleries: GalleryItem[] }) {
+  const [location, setLocation] = useLocation();
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {galleries.map((gallery) => (
+        <div
+          key={gallery.id}
+          className="group cursor-pointer"
+          onClick={() => setLocation(`/galleries/${gallery.id}`)}
+        >
+          <div className="overflow-hidden rounded-lg aspect-[4/3] bg-muted mb-3 relative">
+            {gallery.coverImage ? (
+              <img
+                src={gallery.coverImage}
+                alt={gallery.name}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-muted">
+                <ImageIcon className="h-12 w-12 text-muted-foreground opacity-50" />
+              </div>
+            )}
+            {!gallery.isPublic && (
+              <div className="absolute top-2 right-2 bg-background/80 text-foreground px-2 py-1 rounded-md text-xs font-medium">
+                Privata
+              </div>
+            )}
+          </div>
+          <h3 className="font-medium text-lg truncate group-hover:text-primary transition-colors">
+            {gallery.name}
+          </h3>
+          <p className="text-sm text-muted-foreground truncate">
+            {new Date(gallery.createdAt).toLocaleDateString("it-IT", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Componente GalleryList
+function GalleryList({ galleries = [] }: { galleries: GalleryItem[] }) {
+  const [location, setLocation] = useLocation();
+
+  return (
+    <div className="space-y-3">
+      {galleries.map((gallery) => (
+        <div
+          key={gallery.id}
+          className="flex items-center space-x-4 rounded-lg border p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+          onClick={() => setLocation(`/galleries/${gallery.id}`)}
+        >
+          <div className="overflow-hidden rounded-md w-16 h-16 bg-muted flex-shrink-0">
+            {gallery.coverImage ? (
+              <img
+                src={gallery.coverImage}
+                alt={gallery.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <ImageIcon className="h-6 w-6 text-muted-foreground opacity-50" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium truncate">{gallery.name}</h3>
+            <p className="text-sm text-muted-foreground">
+              {new Date(gallery.createdAt).toLocaleDateString("it-IT", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            {!gallery.isPublic && (
+              <div className="bg-muted text-muted-foreground px-2 py-1 rounded-md text-xs">
+                Privata
+              </div>
+            )}
+            {gallery.viewCount > 0 && (
+              <div className="text-sm text-muted-foreground">
+                {gallery.viewCount} visualizzazioni
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function GalleriesPage() {
+  const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [location, setLocation] = useLocation();
-  
-  const { data: galleries, isLoading, error } = useQuery<GalleryItem[]>({
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name" | "views">("newest");
+  const [filterStatus, setFilterStatus] = useState<"all" | "public" | "private">("all");
+
+  // Query per ottenere l'elenco di tutte le gallerie
+  const { data: galleries, isLoading } = useQuery({
     queryKey: ["/api/gallery/galleries"],
-    staleTime: 1000 * 60 * 5, // 5 minuti
   });
 
-  // Filtrare le gallerie in base alla ricerca
-  const filteredGalleries = galleries?.filter(gallery =>
-    gallery.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    gallery.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    gallery.event?.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filtro e ordinamento delle gallerie
+  const filteredGalleries = galleries
+    ? galleries
+        .filter((gallery: GalleryItem) => {
+          // Filtra per stato pubblico/privato
+          if (filterStatus === "public" && !gallery.isPublic) return false;
+          if (filterStatus === "private" && gallery.isPublic) return false;
 
-  // Filtra le gallerie per tab
-  const publicGalleries = galleries?.filter(gallery => gallery.isPublic);
-  const privateGalleries = galleries?.filter(gallery => !gallery.isPublic);
-  const passwordProtectedGalleries = galleries?.filter(gallery => gallery.password);
-
-  // Renderizza i contenuti in base allo stato di caricamento
-  const renderGalleryContent = (galleriesToRender?: GalleryItem[]) => {
-    if (isLoading) {
-      return <GallerySkeleton view={viewMode} />;
-    }
-    
-    if (error) {
-      return (
-        <EmptyState
-          icon={<Image className="h-10 w-10" />}
-          title="Errore nel caricamento delle gallerie"
-          description="Si è verificato un errore durante il caricamento delle gallerie. Riprova più tardi."
-          action={
-            <Button 
-              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/gallery/galleries"] })}
-            >
-              Riprova
-            </Button>
+          // Filtra per query di ricerca
+          if (searchQuery) {
+            return gallery.name.toLowerCase().includes(searchQuery.toLowerCase());
           }
-        />
-      );
-    }
-    
-    if (!galleriesToRender || galleriesToRender.length === 0) {
-      return (
+          return true;
+        })
+        .sort((a: GalleryItem, b: GalleryItem) => {
+          // Ordinamento
+          switch (sortBy) {
+            case "newest":
+              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            case "oldest":
+              return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+            case "name":
+              return a.name.localeCompare(b.name);
+            case "views":
+              return b.viewCount - a.viewCount;
+            default:
+              return 0;
+          }
+        })
+    : [];
+
+  // Rendering condizionale durante il caricamento
+  if (isLoading) {
+    return (
+      <div className="container py-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Gallerie</h1>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <Skeleton className="h-10 flex-1" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-10" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="space-y-3">
+              <Skeleton className="aspect-[4/3] rounded-lg" />
+              <Skeleton className="h-6 w-2/3" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container py-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Gallerie</h1>
+        <Button onClick={() => setLocation("/galleries/new")}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nuova Galleria
+        </Button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca gallerie..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Ordina per" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Più recenti</SelectItem>
+              <SelectItem value="oldest">Meno recenti</SelectItem>
+              <SelectItem value="name">Nome</SelectItem>
+              <SelectItem value="views">Visualizzazioni</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <DropdownMenu>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <SlidersHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Filtri</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Filtra per stato</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem
+                checked={filterStatus === "all"}
+                onCheckedChange={() => setFilterStatus("all")}
+              >
+                Tutte
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filterStatus === "public"}
+                onCheckedChange={() => setFilterStatus("public")}
+              >
+                Pubbliche
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filterStatus === "private"}
+                onCheckedChange={() => setFilterStatus("private")}
+              >
+                Private
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <TooltipProvider>
+            <Tabs
+              value={viewMode}
+              onValueChange={(value: "grid" | "list") => setViewMode(value)}
+              className="inline-flex"
+            >
+              <TabsList className="p-0.5 h-10">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger
+                      value="grid"
+                      className="px-3 data-[state=active]:bg-background"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Visualizzazione griglia</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger
+                      value="list"
+                      className="px-3 data-[state=active]:bg-background"
+                    >
+                      <List className="h-4 w-4" />
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Visualizzazione lista</TooltipContent>
+                </Tooltip>
+              </TabsList>
+            </Tabs>
+          </TooltipProvider>
+        </div>
+      </div>
+
+      {filteredGalleries.length === 0 ? (
         <EmptyState
-          icon={<Image className="h-10 w-10" />}
-          title={searchQuery ? "Nessuna galleria trovata" : "Nessuna galleria disponibile"}
+          icon={<ImageIcon className="h-10 w-10" />}
+          title={
+            searchQuery
+              ? "Nessun risultato trovato"
+              : "Nessuna galleria disponibile"
+          }
           description={
             searchQuery
-              ? "Nessuna galleria corrisponde ai criteri di ricerca. Prova a modificare i filtri."
-              : "Inizia a creare la tua prima galleria fotografica."
+              ? `Nessuna galleria corrisponde alla ricerca "${searchQuery}"`
+              : "Inizia creando una nuova galleria per i tuoi clienti"
           }
           action={
             <Button onClick={() => setLocation("/galleries/new")}>
               <Plus className="h-4 w-4 mr-2" />
-              Nuova Galleria
+              Crea nuova galleria
             </Button>
           }
         />
-      );
-    }
-    
-    return viewMode === "grid" 
-      ? <GalleryGrid galleries={galleriesToRender} /> 
-      : <GalleryListTable galleries={galleriesToRender} />;
-  };
-
-  return (
-    <div className="container py-6 max-w-7xl mx-auto">
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight">Gallerie Fotografiche</h1>
-          
-          <Button onClick={() => setLocation("/galleries/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuova Galleria
-          </Button>
-        </div>
-        
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Cerca gallerie..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              <Button
-                variant={viewMode === "grid" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("grid")}
-                className="h-9 w-9"
-              >
-                <div className="grid grid-cols-2 gap-0.5">
-                  <div className="h-2 w-2 rounded-sm bg-current"></div>
-                  <div className="h-2 w-2 rounded-sm bg-current"></div>
-                  <div className="h-2 w-2 rounded-sm bg-current"></div>
-                  <div className="h-2 w-2 rounded-sm bg-current"></div>
-                </div>
-              </Button>
-              
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("list")}
-                className="h-9 w-9"
-              >
-                <div className="flex flex-col gap-0.5 items-start">
-                  <div className="h-1 w-5 rounded-sm bg-current"></div>
-                  <div className="h-1 w-5 rounded-sm bg-current"></div>
-                  <div className="h-1 w-5 rounded-sm bg-current"></div>
-                </div>
-              </Button>
-              
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <SlidersHorizontal className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          
-          <Tabs defaultValue="all">
-            <TabsList>
-              <TabsTrigger value="all">Tutte</TabsTrigger>
-              <TabsTrigger value="public">Pubbliche</TabsTrigger>
-              <TabsTrigger value="private">Private</TabsTrigger>
-              <TabsTrigger value="password">Protette</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="all" className="mt-4">
-              {renderGalleryContent(filteredGalleries)}
-            </TabsContent>
-            
-            <TabsContent value="public" className="mt-4">
-              {renderGalleryContent(publicGalleries?.filter(gallery => 
-                gallery.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                gallery.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                gallery.event?.title.toLowerCase().includes(searchQuery.toLowerCase())
-              ))}
-            </TabsContent>
-            
-            <TabsContent value="private" className="mt-4">
-              {renderGalleryContent(privateGalleries?.filter(gallery => 
-                gallery.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                gallery.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                gallery.event?.title.toLowerCase().includes(searchQuery.toLowerCase())
-              ))}
-            </TabsContent>
-            
-            <TabsContent value="password" className="mt-4">
-              {renderGalleryContent(passwordProtectedGalleries?.filter(gallery => 
-                gallery.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                gallery.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                gallery.event?.title.toLowerCase().includes(searchQuery.toLowerCase())
-              ))}
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+      ) : (
+        <>
+          {viewMode === "grid" ? (
+            <GalleryGrid galleries={filteredGalleries} />
+          ) : (
+            <GalleryList galleries={filteredGalleries} />
+          )}
+        </>
+      )}
     </div>
   );
 }

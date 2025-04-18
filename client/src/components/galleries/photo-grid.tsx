@@ -1,131 +1,276 @@
 import { useState } from "react";
-import { Heart, MessageCircle, Download, Share, Check, Star } from "lucide-react";
+import { 
+  Heart, 
+  MessageCircle, 
+  MoreHorizontal, 
+  Download, 
+  Edit, 
+  Trash2,
+  Check,
+  Star 
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Photo } from "@/types/gallery";
+
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { GalleryPhoto } from "@/types/gallery";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PhotoGridProps {
-  photos: GalleryPhoto[];
-  selectable?: boolean;
+  photos: Photo[];
   onPhotoSelect?: (photoId: number, selected: boolean) => void;
   selectedPhotos?: number[];
+  selectable?: boolean;
   editable?: boolean;
   onPhotoEdit?: (photoId: number) => void;
-  className?: string;
+  galleryId?: number;
+  chapterId?: number | null;
 }
 
 export function PhotoGrid({
   photos,
-  selectable = false,
   onPhotoSelect,
   selectedPhotos = [],
+  selectable = false,
   editable = false,
   onPhotoEdit,
-  className = "",
+  galleryId,
+  chapterId,
 }: PhotoGridProps) {
-  const [hoveredPhoto, setHoveredPhoto] = useState<number | null>(null);
+  const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
-  const handlePhotoClick = (photoId: number) => {
-    if (selectable && onPhotoSelect) {
-      const isSelected = selectedPhotos.includes(photoId);
-      onPhotoSelect(photoId, !isSelected);
-    } else if (editable && onPhotoEdit) {
-      onPhotoEdit(photoId);
+  const handleCheckboxChange = (photoId: number, checked: boolean) => {
+    if (onPhotoSelect) {
+      onPhotoSelect(photoId, checked);
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!photoToDelete || !galleryId) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      await apiRequest("DELETE", `/api/gallery/galleries/${galleryId}/photos/${photoToDelete.id}`);
+      
+      // Invalida la cache per ricaricare le foto
+      queryClient.invalidateQueries({ 
+        queryKey: [
+          `/api/gallery/galleries/${galleryId}/photos`, 
+          { chapter: chapterId }
+        ] 
+      });
+      
+      toast({
+        title: "Foto eliminata",
+        description: "La foto è stata eliminata con successo",
+      });
+      
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error("Errore durante l'eliminazione della foto:", error);
+      
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'eliminazione della foto",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setPhotoToDelete(null);
+    }
+  };
+
+  const toggleFeatured = async (photo: Photo) => {
+    if (!galleryId) return;
+    
+    try {
+      await apiRequest("PUT", `/api/gallery/galleries/${galleryId}/photos/${photo.id}`, {
+        isFeatured: !photo.isFeatured
+      });
+      
+      // Invalida la cache per ricaricare le foto
+      queryClient.invalidateQueries({ 
+        queryKey: [
+          `/api/gallery/galleries/${galleryId}/photos`, 
+          { chapter: chapterId }
+        ] 
+      });
+      
+      toast({
+        title: photo.isFeatured ? "Foto rimossa dai preferiti" : "Foto aggiunta ai preferiti",
+        description: photo.isFeatured 
+          ? "La foto non sarà più mostrata nella selezione preferiti" 
+          : "La foto verrà ora mostrata nella selezione preferiti",
+      });
+    } catch (error) {
+      console.error("Errore durante l'aggiornamento della foto:", error);
+      
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'aggiornamento della foto",
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <div className={cn("grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4", className)}>
-      {photos.map((photo) => {
-        const isSelected = selectedPhotos.includes(photo.id);
-        const isHovered = hoveredPhoto === photo.id;
-
-        return (
-          <div
-            key={photo.id}
-            className={cn(
-              "group relative overflow-hidden rounded-lg aspect-square cursor-pointer transition-all duration-200",
-              isSelected ? "ring-2 ring-primary ring-offset-2" : "",
-              photo.orientation === "portrait" ? "row-span-2" : "",
-              photo.isFeatured ? "col-span-2" : ""
-            )}
-            onMouseEnter={() => setHoveredPhoto(photo.id)}
-            onMouseLeave={() => setHoveredPhoto(null)}
-            onClick={() => handlePhotoClick(photo.id)}
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {photos.map((photo) => (
+          <Card 
+            key={photo.id} 
+            className="overflow-hidden group relative"
           >
-            <img
-              src={photo.mediumPath || photo.thumbnailPath}
-              alt={photo.title || "Foto"}
-              className={cn(
-                "w-full h-full object-cover transition-transform duration-300",
-                isHovered ? "scale-105" : ""
+            <div className="aspect-square overflow-hidden relative">
+              <img
+                src={photo.url}
+                alt={photo.title || "Foto"}
+                className="object-cover h-full w-full transition-all duration-300 group-hover:scale-105"
+              />
+              
+              {photo.isFeatured && (
+                <Badge className="absolute top-2 left-2 bg-amber-500 hover:bg-amber-600">
+                  <Star className="h-3 w-3 mr-1 fill-white" />
+                  In Evidenza
+                </Badge>
               )}
-            />
-
-            {/* Overlay scuro al passaggio del mouse */}
-            <div
-              className={cn(
-                "absolute inset-0 bg-black/50 opacity-0 transition-opacity duration-200",
-                isHovered ? "opacity-100" : "",
-                isSelected ? "opacity-50" : ""
-              )}
-            />
-
-            {/* Badge per foto in evidenza */}
-            {photo.isFeatured && (
-              <Badge className="absolute top-2 left-2 bg-amber-500 hover:bg-amber-600">
-                <Star className="h-3 w-3 mr-1" /> In evidenza
-              </Badge>
-            )}
-
-            {/* Controlli foto */}
-            <div
-              className={cn(
-                "absolute inset-0 flex flex-col justify-between p-3 text-white opacity-0 transition-opacity duration-200",
-                isHovered ? "opacity-100" : ""
-              )}
-            >
-              <div className="flex justify-between items-start">
-                <div className="text-sm font-medium line-clamp-2">{photo.title || "Senza titolo"}</div>
-
-                {selectable && (
-                  <div
-                    className={cn(
-                      "flex items-center justify-center rounded-full h-6 w-6",
-                      isSelected ? "bg-primary" : "bg-black/50"
+              
+              {/* Layer scuro con opzioni durante l'hover */}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3">
+                <div className="flex justify-between items-start">
+                  {selectable && (
+                    <Checkbox
+                      checked={selectedPhotos.includes(photo.id)}
+                      onCheckedChange={(checked) => 
+                        handleCheckboxChange(photo.id, checked === true)
+                      }
+                      className="h-5 w-5 border-white data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                    />
+                  )}
+                  
+                  {editable && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-white hover:bg-white/20"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {onPhotoEdit && (
+                          <DropdownMenuItem onClick={() => onPhotoEdit(photo.id)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Modifica info
+                          </DropdownMenuItem>
+                        )}
+                        
+                        <DropdownMenuItem onClick={() => toggleFeatured(photo)}>
+                          <Star className={`mr-2 h-4 w-4 ${photo.isFeatured ? 'fill-amber-500' : ''}`} />
+                          {photo.isFeatured ? "Rimuovi da In Evidenza" : "Aggiungi a In Evidenza"}
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem onClick={() => window.open(photo.url, "_blank")}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Visualizza originale
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator />
+                        
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            setPhotoToDelete(photo);
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Elimina
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+                
+                <div className="text-white">
+                  {photo.title && <p className="font-medium line-clamp-2">{photo.title}</p>}
+                  
+                  <div className="flex mt-2 gap-3 text-sm">
+                    {photo.likeCount > 0 && (
+                      <div className="flex items-center">
+                        <Heart className="h-4 w-4 mr-1" />
+                        {photo.likeCount}
+                      </div>
                     )}
-                  >
-                    {isSelected && <Check className="h-4 w-4 text-white" />}
+                    
+                    {photo.commentCount > 0 && (
+                      <div className="flex items-center">
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        {photo.commentCount}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 mt-auto">
-                <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/30 hover:bg-black/50">
-                  <Heart className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/30 hover:bg-black/50">
-                  <MessageCircle className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/30 hover:bg-black/50">
-                  <Share className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/30 hover:bg-black/50 ml-auto">
-                  <Download className="h-4 w-4" />
-                </Button>
+                </div>
               </div>
             </div>
-
-            {/* Indicatore di selezione sempre visibile */}
-            {selectable && isSelected && (
-              <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1 z-10">
-                <Check className="h-4 w-4" />
-              </div>
+          </Card>
+        ))}
+      </div>
+      
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Conferma eliminazione</DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare questa foto? Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="my-4 flex justify-center">
+            {photoToDelete && (
+              <img 
+                src={photoToDelete.url} 
+                alt="Foto da eliminare" 
+                className="max-h-48 object-contain rounded-md"
+              />
             )}
           </div>
-        );
-      })}
-    </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeletePhoto}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Eliminazione..." : "Elimina"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

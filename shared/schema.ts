@@ -939,3 +939,8 @@ export const bundleLeadsRelations = relations(bundleLeads, ({ one }) => ({
   }),
 }));
 
+// GESTIONE GALLERIE FOTOGRAFICHE
+// Queste definizioni sono state spostate in un file separato per maggiore chiarezza
+// Importiamo ed esportiamo tutto dal file schema_gallery.ts
+export * from "../schema_gallery";
+

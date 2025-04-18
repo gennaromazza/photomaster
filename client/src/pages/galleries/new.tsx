@@ -92,7 +92,19 @@ export default function NewGalleryPage() {
         formData.append("coverImage", coverImageFile);
       }
       
-      const response = await apiRequest("POST", "/api/gallery/galleries", formData);
+      // Utilizziamo fetch direttamente poiché apiRequest non gestisce bene FormData
+      const csrfResponse = await fetch('/api/csrf-token');
+      const csrfData = await csrfResponse.json();
+      const csrfToken = csrfData.csrfToken;
+      
+      const response = await fetch("/api/gallery/galleries", {
+        method: "POST",
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
+        body: formData,
+        credentials: 'include'
+      });
       
       if (!response.ok) {
         const errorData = await response.json();

@@ -72,9 +72,7 @@ export const financeController = {
           amount: data.amount.toString(),
           date: new Date(data.date),
           description: data.description || null,
-          // Nota: nel database il campo si chiama 'quote_id' ma nell'ORM è mappato come 'sourceId'
           sourceId: data.sourceId || null,
-          source: data.source || "quote", // Aggiungiamo comunque questo valore (anche se non usato dal database)
           status: data.status || "completed",
           paymentMethod: data.paymentMethod || null,
           reference: data.reference || null,

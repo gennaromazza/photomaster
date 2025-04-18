@@ -229,22 +229,63 @@ export default function QuoteDetailPage() {
   // Mutation per ottenere il link permanente di un preventivo firmato
   const getShareTokenMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("GET", `/api/quotes/${id}/share-token`);
-      return res.json();
-    },
-    onSuccess: (data) => {
-      if (data.token) {
-        const shareUrl = `${window.location.origin}/quotes/public/${data.token}`;
-        setShareLink(shareUrl);
-        setIsShareDialogOpen(true);
-      } else {
-        // Se non c'è un token esistente, generiamo uno nuovo
-        generateShareLinkMutation.mutate();
+      try {
+        // Prima proviamo a ottenere un token esistente
+        const response = await apiRequest("GET", `/api/quotes/${id}/share-token`);
+        return await response.json();
+      } catch (error: any) {
+        if (error.status === 404) {
+          // Se il token non esiste, ne creiamo uno permanente
+          const response = await apiRequest("POST", `/api/quotes/${id}/share/permanent`, {});
+          return await response.json();
+        }
+        throw error; // Propaga altri errori
       }
     },
-    onError: () => {
-      // Se non riusciamo a recuperare un token esistente, proviamo a generarne uno nuovo
-      generateShareLinkMutation.mutate();
+    onSuccess: (data) => {
+      // Imposta il link di condivisione e lo copia negli appunti
+      const shareUrl = `${window.location.origin}/quotes/public/${data.token}`;
+      setShareLink(shareUrl);
+      
+      // Aggiorna il query cache se necessario
+      if (data.permanent) {
+        queryClient.setQueryData(["/api/quotes", id], (oldData: any) => {
+          return {
+            ...oldData,
+            isShared: true,
+            shareToken: data.token,
+            shareTokenExpiry: null // Nessuna scadenza per i link permanenti
+          };
+        });
+      }
+      
+      // Copia automaticamente il link
+      navigator.clipboard.writeText(shareUrl)
+        .then(() => {
+          toast({
+            title: "Link documento firmato",
+            description: "Link copiato negli appunti",
+          });
+        })
+        .catch(err => {
+          console.error("Errore copia link:", err);
+          // Non mostriamo errore ma solo notifica che il link è pronto
+          toast({
+            title: "Link documento firmato",
+            description: "Link pronto - usa il menu condivisione per copiarlo",
+          });
+        });
+        
+      // Apri il dialog di condivisione per mostrare il link
+      setIsShareDialogOpen(true);
+    },
+    onError: (error) => {
+      console.error("Errore recupero/creazione link permanente:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile recuperare o creare il link permanente",
+        variant: "destructive",
+      });
     },
   });
   

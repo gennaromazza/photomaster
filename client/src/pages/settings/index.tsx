@@ -14,6 +14,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Settings } from "@shared/schema";
 import { z } from "zod";
+import { GoogleCalendarIntegration } from "@/components/settings/google-calendar-integration";
 
 const generalSettingsSchema = z.object({
   companyName: z.string().min(1, "Il nome dell'azienda è obbligatorio"),
@@ -473,6 +474,8 @@ Studio {studio_nome}`}
         
         <TabsContent value="config">
           <div className="grid md:grid-cols-2 gap-8">
+            {/* Integrazioni */}
+            <GoogleCalendarIntegration />
             <Card>
               <CardHeader>
                 <CardTitle>Categorie Servizi</CardTitle>

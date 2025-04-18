@@ -943,3 +943,30 @@ export const bundleLeadsRelations = relations(bundleLeads, ({ one }) => ({
   }),
 }));
 
+
+
+export const insertScheduledPaymentSchema = createInsertSchema(scheduledPayments).pick({
+  quoteId: true,
+  amount: true,
+  dueDate: true,
+  description: true,
+  status: true,
+  paymentMethod: true,
+  notes: true,
+  transactionId: true,
+  reminderSent: true,
+});
+
+export type InsertScheduledPayment = z.infer<typeof insertScheduledPaymentSchema>;
+export type ScheduledPayment = typeof scheduledPayments.$inferSelect;
+
+export const scheduledPaymentsRelations = relations(scheduledPayments, ({ one }) => ({
+  quote: one(quotes, {
+    fields: [scheduledPayments.quoteId],
+    references: [quotes.id],
+  }),
+  transaction: one(transactions, {
+    fields: [scheduledPayments.transactionId],
+    references: [transactions.id],
+  }),
+}));

@@ -1,713 +1,658 @@
-import { Request, Response } from "express";
 import { db } from "../db";
-import { 
-  transactions, 
-  scheduledPayments, 
-  quotes, 
-  InsertTransaction, 
-  Transaction,
-  InsertScheduledPayment,
-  ScheduledPayment
-} from "@shared/schema";
-import { eq, and, sql, desc, gte, lte, isNull, not } from "drizzle-orm";
-import { sendEmail } from "../email";
+import { eq, and, or, sql, sum, count, isNull, desc, asc, SQL, between } from "drizzle-orm";
+import { transactions, quotes, scheduledPayments, clients } from "@shared/schema";
+import { format, parseISO, isAfter, isBefore, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import { it } from "date-fns/locale";
+import { sendPaymentNotification } from "../services/email-service";
 
-// Ottieni tutte le transazioni finanziarie
-export async function getAllTransactions(req: Request, res: Response) {
-  try {
-    // Possiamo filtrare per tipo, data, ecc.
-    const { type, fromDate, toDate, quoteId } = req.query;
-    
-    let query = db.select().from(transactions);
-    
-    // Applica filtri se specificati
-    if (type) {
-      query = query.where(eq(transactions.type, type as string));
-    }
-    
-    if (fromDate && toDate) {
-      query = query.where(
-        and(
-          gte(transactions.date, fromDate as string),
-          lte(transactions.date, toDate as string)
-        )
-      );
-    } else if (fromDate) {
-      query = query.where(gte(transactions.date, fromDate as string));
-    } else if (toDate) {
-      query = query.where(lte(transactions.date, toDate as string));
-    }
-    
-    if (quoteId) {
-      const quoteIdNum = parseInt(quoteId as string);
-      if (!isNaN(quoteIdNum)) {
-        query = query.where(eq(transactions.quoteId, quoteIdNum));
-      }
-    }
-    
-    // Ordina per data (più recenti prima)
-    const results = await query.orderBy(desc(transactions.date));
-    
-    res.json(results);
-  } catch (error) {
-    console.error('Errore nel recupero delle transazioni:', error);
-    res.status(500).json({ message: 'Errore nel recupero delle transazioni' });
-  }
-}
-
-// Ottieni una transazione specifica
-export async function getTransaction(req: Request, res: Response) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    if (isNaN(id)) {
-      return res.status(400).json({ message: 'ID transazione non valido' });
-    }
-    
-    const [transaction] = await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.id, id));
-    
-    if (!transaction) {
-      return res.status(404).json({ message: 'Transazione non trovata' });
-    }
-    
-    res.json(transaction);
-  } catch (error) {
-    console.error('Errore nel recupero della transazione:', error);
-    res.status(500).json({ message: 'Errore nel recupero della transazione' });
-  }
-}
-
-// Crea una nuova transazione
-export async function createTransaction(req: Request, res: Response) {
-  try {
-    const transactionData: InsertTransaction = req.body;
-    
-    if (!req.user) {
-      return res.status(401).json({ message: 'Utente non autenticato' });
-    }
-    
-    // Assegna l'utente corrente come creatore della transazione
-    transactionData.createdBy = req.user.id;
-    
-    // Validazione dei dati
-    if (!transactionData.amount || !transactionData.date || !transactionData.type) {
-      return res.status(400).json({ message: 'Dati transazione incompleti' });
-    }
-    
-    // Controlla se è un pagamento associato a un preventivo
-    if (transactionData.quoteId && transactionData.type === 'payment') {
-      // Verifica che il preventivo esista
-      const [quote] = await db
-        .select()
-        .from(quotes)
-        .where(eq(quotes.id, transactionData.quoteId));
+/**
+ * Controller per la gestione delle finanze:
+ * - transazioni (incassi e spese)
+ * - pagamenti programmati
+ * - dashboard finanziaria
+ */
+export const financeController = {
+  // TRANSAZIONI
+  
+  /**
+   * Ottiene tutte le transazioni
+   */
+  async getTransactions() {
+    try {
+      const result = await db.select().from(transactions)
+        .orderBy(desc(transactions.date));
       
-      if (!quote) {
-        return res.status(404).json({ message: 'Preventivo non trovato' });
+      return result;
+    } catch (error) {
+      console.error("Errore nel recupero delle transazioni:", error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Ottiene una transazione per ID
+   */
+  async getTransactionById(id: number) {
+    try {
+      const [transaction] = await db.select()
+        .from(transactions)
+        .where(eq(transactions.id, id));
+      
+      if (!transaction) {
+        throw new Error("Transazione non trovata");
       }
       
-      // Se il pagamento è associato a un pagamento programmato, aggiorniamo lo stato del pagamento programmato
-      if (req.body.scheduledPaymentId) {
-        const scheduledPaymentId = parseInt(req.body.scheduledPaymentId);
+      return transaction;
+    } catch (error) {
+      console.error(`Errore nel recupero della transazione ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Crea una nuova transazione
+   */
+  async createTransaction(data: any) {
+    try {
+      // Verifico se è collegata a un pagamento programmato
+      if (data.scheduledPaymentId) {
+        // Aggiorno lo stato del pagamento programmato
+        await db.update(scheduledPayments)
+          .set({ 
+            status: "paid",
+            transactionId: null // Sarà aggiornato dopo che avremo l'ID della transazione
+          })
+          .where(eq(scheduledPayments.id, data.scheduledPaymentId));
+      }
+      
+      // Creo la transazione
+      const [transaction] = await db.insert(transactions)
+        .values({
+          type: data.type,
+          amount: data.amount.toString(),
+          date: new Date(data.date),
+          description: data.description || null,
+          source: data.source || null,
+          sourceId: data.sourceId || null,
+          status: data.status || "completed",
+          paymentMethod: data.paymentMethod || null,
+          reference: data.reference || null,
+          notes: data.notes || null,
+          createdBy: data.createdBy || null,
+          category: data.category || null,
+          attachmentPath: data.attachmentPath || null,
+          notificationSent: false,
+          scheduledPaymentId: data.scheduledPaymentId || null
+        })
+        .returning();
+      
+      // Se collegata a un pagamento programmato, aggiorno il riferimento
+      if (data.scheduledPaymentId) {
+        await db.update(scheduledPayments)
+          .set({ transactionId: transaction.id })
+          .where(eq(scheduledPayments.id, data.scheduledPaymentId));
+      }
+      
+      // Se è una transazione di tipo "income" e source = "quote", invio una notifica
+      if (data.type === "income" && data.source === "quote" && data.sourceId) {
+        // Recupero i dati del preventivo e cliente
+        const [quote] = await db.select()
+          .from(quotes)
+          .where(eq(quotes.id, data.sourceId));
         
-        if (!isNaN(scheduledPaymentId)) {
-          // Crea prima la transazione
-          const [transaction] = await db
-            .insert(transactions)
-            .values(transactionData)
-            .returning();
+        if (quote) {
+          // Recupero il cliente
+          const [client] = await db.select()
+            .from(clients)
+            .where(eq(clients.id, quote.clientId));
           
-          // Poi aggiorna il pagamento programmato
-          await db
-            .update(scheduledPayments)
-            .set({
-              status: 'paid',
-              transactionId: transaction.id
-            })
-            .where(eq(scheduledPayments.id, scheduledPaymentId));
-          
-          // Recupera il pagamento programmato aggiornato
-          const [updatedScheduledPayment] = await db
-            .select()
-            .from(scheduledPayments)
-            .where(eq(scheduledPayments.id, scheduledPaymentId));
-          
-          // Invia email di notifica se non è già stata inviata
-          if (!transaction.notificationSent) {
-            await sendPaymentNotification(transaction, quote, updatedScheduledPayment);
-            
-            // Segna la transazione come notificata
-            await db
-              .update(transactions)
-              .set({ notificationSent: true })
-              .where(eq(transactions.id, transaction.id));
+          if (client && client.email) {
+            // Invio notifica
+            try {
+              await sendPaymentNotification({
+                clientEmail: client.email,
+                clientName: `${client.firstName} ${client.lastName}`,
+                amount: data.amount,
+                description: data.description || "Pagamento",
+                quoteTitle: quote.title,
+                date: format(new Date(data.date), "dd/MM/yyyy")
+              });
+              
+              // Aggiorno il flag di notifica
+              await db.update(transactions)
+                .set({ notificationSent: true })
+                .where(eq(transactions.id, transaction.id));
+            } catch (emailError) {
+              console.error("Errore nell'invio della notifica di pagamento:", emailError);
+            }
           }
-          
-          return res.status(201).json({
-            transaction,
-            scheduledPayment: updatedScheduledPayment
-          });
         }
       }
       
-      // Caso normale: inserisce solo la transazione
-      const [transaction] = await db
-        .insert(transactions)
-        .values(transactionData)
-        .returning();
-      
-      // Invia email di notifica se non è già stata inviata
-      if (!transaction.notificationSent && transaction.type === 'payment') {
-        await sendPaymentNotification(transaction, quote);
-        
-        // Segna la transazione come notificata
-        await db
-          .update(transactions)
-          .set({ notificationSent: true })
-          .where(eq(transactions.id, transaction.id));
-      }
-      
-      return res.status(201).json(transaction);
-    } else {
-      // Transazione generica (non collegata a un pagamento programmato)
-      const [transaction] = await db
-        .insert(transactions)
-        .values(transactionData)
-        .returning();
-      
-      res.status(201).json(transaction);
+      return transaction;
+    } catch (error) {
+      console.error("Errore nella creazione della transazione:", error);
+      throw error;
     }
-  } catch (error) {
-    console.error('Errore nella creazione della transazione:', error);
-    res.status(500).json({ message: 'Errore nella creazione della transazione' });
-  }
-}
-
-// Aggiorna una transazione esistente
-export async function updateTransaction(req: Request, res: Response) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    if (isNaN(id)) {
-      return res.status(400).json({ message: 'ID transazione non valido' });
-    }
-    
-    const transactionData = req.body;
-    
-    // Rimuovi campi che non dovrebbero essere aggiornati
-    delete transactionData.id;
-    delete transactionData.createdAt;
-    delete transactionData.createdBy;
-    
-    // Aggiorna la transazione
-    await db
-      .update(transactions)
-      .set(transactionData)
-      .where(eq(transactions.id, id));
-    
-    // Recupera la transazione aggiornata
-    const [updatedTransaction] = await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.id, id));
-    
-    if (!updatedTransaction) {
-      return res.status(404).json({ message: 'Transazione non trovata' });
-    }
-    
-    res.json(updatedTransaction);
-  } catch (error) {
-    console.error('Errore nell\'aggiornamento della transazione:', error);
-    res.status(500).json({ message: 'Errore nell\'aggiornamento della transazione' });
-  }
-}
-
-// Elimina una transazione
-export async function deleteTransaction(req: Request, res: Response) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    if (isNaN(id)) {
-      return res.status(400).json({ message: 'ID transazione non valido' });
-    }
-    
-    // Verifica se la transazione è collegata a un pagamento programmato
-    const scheduledPaymentsWithTransaction = await db
-      .select()
-      .from(scheduledPayments)
-      .where(eq(scheduledPayments.transactionId, id));
-    
-    // Se ci sono pagamenti programmati collegati, aggiorna il loro stato
-    if (scheduledPaymentsWithTransaction.length > 0) {
-      await db
-        .update(scheduledPayments)
+  },
+  
+  /**
+   * Aggiorna una transazione esistente
+   */
+  async updateTransaction(id: number, data: any) {
+    try {
+      const [updatedTransaction] = await db.update(transactions)
         .set({
-          status: 'pending',
-          transactionId: null
+          type: data.type,
+          amount: data.amount.toString(),
+          date: new Date(data.date),
+          description: data.description || null,
+          source: data.source || null,
+          sourceId: data.sourceId || null,
+          status: data.status || "completed",
+          paymentMethod: data.paymentMethod || null,
+          reference: data.reference || null,
+          notes: data.notes || null,
+          category: data.category || null,
+          attachmentPath: data.attachmentPath || null
         })
-        .where(eq(scheduledPayments.transactionId, id));
-    }
-    
-    // Elimina la transazione
-    const deletedCount = await db
-      .delete(transactions)
-      .where(eq(transactions.id, id));
-    
-    if (deletedCount === 0) {
-      return res.status(404).json({ message: 'Transazione non trovata' });
-    }
-    
-    res.json({ message: 'Transazione eliminata con successo' });
-  } catch (error) {
-    console.error('Errore nell\'eliminazione della transazione:', error);
-    res.status(500).json({ message: 'Errore nell\'eliminazione della transazione' });
-  }
-}
-
-// Ottieni i pagamenti programmati
-export async function getScheduledPayments(req: Request, res: Response) {
-  try {
-    const { quoteId, status } = req.query;
-    
-    let query = db.select().from(scheduledPayments);
-    
-    if (quoteId) {
-      const quoteIdNum = parseInt(quoteId as string);
-      if (!isNaN(quoteIdNum)) {
-        query = query.where(eq(scheduledPayments.quoteId, quoteIdNum));
-      }
-    }
-    
-    if (status) {
-      query = query.where(eq(scheduledPayments.status, status as string));
-    }
-    
-    // Ordina per data di scadenza (più imminenti prima)
-    const results = await query.orderBy(scheduledPayments.dueDate);
-    
-    res.json(results);
-  } catch (error) {
-    console.error('Errore nel recupero dei pagamenti programmati:', error);
-    res.status(500).json({ message: 'Errore nel recupero dei pagamenti programmati' });
-  }
-}
-
-// Crea un nuovo pagamento programmato
-export async function createScheduledPayment(req: Request, res: Response) {
-  try {
-    const scheduledPaymentData: InsertScheduledPayment = req.body;
-    
-    // Validazione dei dati
-    if (!scheduledPaymentData.amount || !scheduledPaymentData.dueDate || !scheduledPaymentData.quoteId) {
-      return res.status(400).json({ message: 'Dati pagamento programmato incompleti' });
-    }
-    
-    // Verifica che il preventivo esista
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.id, scheduledPaymentData.quoteId));
-    
-    if (!quote) {
-      return res.status(404).json({ message: 'Preventivo non trovato' });
-    }
-    
-    // Crea il pagamento programmato
-    const [scheduledPayment] = await db
-      .insert(scheduledPayments)
-      .values(scheduledPaymentData)
-      .returning();
-    
-    res.status(201).json(scheduledPayment);
-  } catch (error) {
-    console.error('Errore nella creazione del pagamento programmato:', error);
-    res.status(500).json({ message: 'Errore nella creazione del pagamento programmato' });
-  }
-}
-
-// Aggiorna un pagamento programmato
-export async function updateScheduledPayment(req: Request, res: Response) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    if (isNaN(id)) {
-      return res.status(400).json({ message: 'ID pagamento programmato non valido' });
-    }
-    
-    const scheduledPaymentData = req.body;
-    
-    // Rimuovi campi che non dovrebbero essere aggiornati
-    delete scheduledPaymentData.id;
-    
-    // Aggiorna il pagamento programmato
-    await db
-      .update(scheduledPayments)
-      .set(scheduledPaymentData)
-      .where(eq(scheduledPayments.id, id));
-    
-    // Recupera il pagamento programmato aggiornato
-    const [updatedScheduledPayment] = await db
-      .select()
-      .from(scheduledPayments)
-      .where(eq(scheduledPayments.id, id));
-    
-    if (!updatedScheduledPayment) {
-      return res.status(404).json({ message: 'Pagamento programmato non trovato' });
-    }
-    
-    res.json(updatedScheduledPayment);
-  } catch (error) {
-    console.error('Errore nell\'aggiornamento del pagamento programmato:', error);
-    res.status(500).json({ message: 'Errore nell\'aggiornamento del pagamento programmato' });
-  }
-}
-
-// Elimina un pagamento programmato
-export async function deleteScheduledPayment(req: Request, res: Response) {
-  try {
-    const id = parseInt(req.params.id);
-    
-    if (isNaN(id)) {
-      return res.status(400).json({ message: 'ID pagamento programmato non valido' });
-    }
-    
-    // Elimina il pagamento programmato
-    const deletedCount = await db
-      .delete(scheduledPayments)
-      .where(eq(scheduledPayments.id, id));
-    
-    if (deletedCount === 0) {
-      return res.status(404).json({ message: 'Pagamento programmato non trovato' });
-    }
-    
-    res.json({ message: 'Pagamento programmato eliminato con successo' });
-  } catch (error) {
-    console.error('Errore nell\'eliminazione del pagamento programmato:', error);
-    res.status(500).json({ message: 'Errore nell\'eliminazione del pagamento programmato' });
-  }
-}
-
-// Ottieni un riepilogo finanziario
-export async function getFinancialSummary(req: Request, res: Response) {
-  try {
-    const { fromDate, toDate } = req.query;
-    
-    // Calcola l'intervallo di date predefinito (ultimi 30 giorni) se non specificato
-    const today = new Date();
-    const defaultFromDate = new Date();
-    defaultFromDate.setDate(today.getDate() - 30);
-    
-    const startDate = fromDate ? new Date(fromDate as string) : defaultFromDate;
-    const endDate = toDate ? new Date(toDate as string) : today;
-    
-    // Formatta le date per la query SQL
-    const formattedStartDate = startDate.toISOString().split('T')[0];
-    const formattedEndDate = endDate.toISOString().split('T')[0];
-    
-    // Calcola le entrate totali
-    const totalIncome = await db
-      .select({ total: sql`COALESCE(SUM(amount), 0)` })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.type, 'payment'),
-          gte(transactions.date, formattedStartDate),
-          lte(transactions.date, formattedEndDate)
-        )
-      );
-    
-    // Calcola le spese totali
-    const totalExpenses = await db
-      .select({ total: sql`COALESCE(SUM(amount), 0)` })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.type, 'expense'),
-          gte(transactions.date, formattedStartDate),
-          lte(transactions.date, formattedEndDate)
-        )
-      );
-    
-    // Calcola i pagamenti in sospeso
-    const pendingPayments = await db
-      .select({ total: sql`COALESCE(SUM(amount), 0)` })
-      .from(scheduledPayments)
-      .where(
-        and(
-          eq(scheduledPayments.status, 'pending'),
-          gte(scheduledPayments.dueDate, formattedStartDate),
-          lte(scheduledPayments.dueDate, formattedEndDate)
-        )
-      );
-    
-    // Calcola i pagamenti in ritardo
-    const overduePayments = await db
-      .select({ total: sql`COALESCE(SUM(amount), 0)` })
-      .from(scheduledPayments)
-      .where(
-        and(
-          eq(scheduledPayments.status, 'pending'),
-          lte(scheduledPayments.dueDate, formattedStartDate),
-          isNull(scheduledPayments.transactionId)
-        )
-      );
-    
-    // Ottieni le statistiche mensili per gli ultimi 12 mesi
-    const monthlyStats = await getMonthlyStats();
-    
-    res.json({
-      totalIncome: totalIncome[0].total,
-      totalExpenses: totalExpenses[0].total,
-      netIncome: parseFloat(totalIncome[0].total) - parseFloat(totalExpenses[0].total),
-      pendingPayments: pendingPayments[0].total,
-      overduePayments: overduePayments[0].total,
-      monthlyStats,
-      fromDate: formattedStartDate,
-      toDate: formattedEndDate
-    });
-  } catch (error) {
-    console.error('Errore nel recupero del riepilogo finanziario:', error);
-    res.status(500).json({ message: 'Errore nel recupero del riepilogo finanziario' });
-  }
-}
-
-// Ottieni i pagamenti per un preventivo specifico
-export async function getQuoteFinancials(req: Request, res: Response) {
-  try {
-    const quoteId = parseInt(req.params.quoteId);
-    
-    if (isNaN(quoteId)) {
-      return res.status(400).json({ message: 'ID preventivo non valido' });
-    }
-    
-    // Verifica che il preventivo esista
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.id, quoteId));
-    
-    if (!quote) {
-      return res.status(404).json({ message: 'Preventivo non trovato' });
-    }
-    
-    // Ottieni tutti i pagamenti effettuati per questo preventivo
-    const payments = await db
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.quoteId, quoteId),
-          eq(transactions.type, 'payment')
-        )
-      )
-      .orderBy(desc(transactions.date));
-    
-    // Ottieni tutti i pagamenti programmati per questo preventivo
-    const scheduledPaymentsData = await db
-      .select()
-      .from(scheduledPayments)
-      .where(eq(scheduledPayments.quoteId, quoteId))
-      .orderBy(scheduledPayments.dueDate);
-    
-    // Calcola il totale pagato
-    const totalPaid = payments.reduce((sum, payment) => sum + parseFloat(payment.amount.toString()), 0);
-    
-    // Calcola il totale rimanente (basato sui pagamenti programmati non ancora pagati)
-    const totalRemaining = scheduledPaymentsData
-      .filter(payment => payment.status === 'pending')
-      .reduce((sum, payment) => sum + parseFloat(payment.amount.toString()), 0);
-    
-    res.json({
-      payments,
-      scheduledPayments: scheduledPaymentsData,
-      totalPaid,
-      totalRemaining,
-    });
-  } catch (error) {
-    console.error('Errore nel recupero dei dati finanziari del preventivo:', error);
-    res.status(500).json({ message: 'Errore nel recupero dei dati finanziari del preventivo' });
-  }
-}
-
-// Verifica se un preventivo è stato firmato e rimuove la scadenza del token di condivisione
-export async function handleQuoteSigningFinancialUpdates(req: Request, res: Response) {
-  try {
-    const quoteId = parseInt(req.params.quoteId);
-    
-    if (isNaN(quoteId)) {
-      return res.status(400).json({ message: 'ID preventivo non valido' });
-    }
-    
-    // Verifica che il preventivo esista
-    const [quote] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.id, quoteId));
-    
-    if (!quote) {
-      return res.status(404).json({ message: 'Preventivo non trovato' });
-    }
-    
-    // Se il preventivo è firmato (ha lo status "signed"), rimuovi la scadenza del token di condivisione
-    if (quote.status === 'signed') {
-      await db
-        .update(quotes)
-        .set({ shareTokenExpiry: null })
-        .where(eq(quotes.id, quoteId));
+        .where(eq(transactions.id, id))
+        .returning();
       
-      res.json({ message: 'Scadenza token di condivisione rimossa con successo' });
-    } else {
-      res.status(400).json({ message: 'Il preventivo non è stato firmato' });
+      if (!updatedTransaction) {
+        throw new Error("Transazione non trovata");
+      }
+      
+      return updatedTransaction;
+    } catch (error) {
+      console.error(`Errore nell'aggiornamento della transazione ${id}:`, error);
+      throw error;
     }
-  } catch (error) {
-    console.error('Errore nell\'aggiornamento dello stato finanziario del preventivo:', error);
-    res.status(500).json({ message: 'Errore nell\'aggiornamento dello stato finanziario del preventivo' });
-  }
-}
-
-// Funzione di utilità per inviare notifiche email per i pagamenti
-async function sendPaymentNotification(
-  transaction: Transaction, 
-  quote: any, 
-  scheduledPayment?: ScheduledPayment
-) {
-  try {
-    // Ottieni i dati del cliente
-    const [clientData] = await db
-      .select()
-      .from(quotes)
-      .where(eq(quotes.id, quote.id))
-      .innerJoin('clients', eq(quotes.clientId, sql`clients.id`));
-    
-    if (!clientData) {
-      console.error('Dati cliente non trovati per la notifica di pagamento');
-      return;
+  },
+  
+  /**
+   * Elimina una transazione
+   */
+  async deleteTransaction(id: number) {
+    try {
+      // Verifico se è collegata a un pagamento programmato
+      const [transaction] = await db.select()
+        .from(transactions)
+        .where(eq(transactions.id, id));
+      
+      if (!transaction) {
+        throw new Error("Transazione non trovata");
+      }
+      
+      // Se collegata a un pagamento programmato, aggiorno lo stato
+      if (transaction.scheduledPaymentId) {
+        await db.update(scheduledPayments)
+          .set({ 
+            status: "pending",
+            transactionId: null
+          })
+          .where(eq(scheduledPayments.id, transaction.scheduledPaymentId));
+      }
+      
+      // Elimino la transazione
+      const [deletedTransaction] = await db.delete(transactions)
+        .where(eq(transactions.id, id))
+        .returning();
+      
+      return deletedTransaction;
+    } catch (error) {
+      console.error(`Errore nell'eliminazione della transazione ${id}:`, error);
+      throw error;
     }
-    
-    // Ottieni le impostazioni (per email mittente, ecc.)
-    const [settings] = await db
-      .select()
-      .from(sql`settings`);
-    
-    if (!settings) {
-      console.error('Impostazioni non trovate per la notifica di pagamento');
-      return;
+  },
+  
+  /**
+   * Ottiene le transazioni relative a un preventivo
+   */
+  async getTransactionsByQuoteId(quoteId: number) {
+    try {
+      const result = await db.select()
+        .from(transactions)
+        .where(and(
+          eq(transactions.source, "quote"),
+          eq(transactions.sourceId, quoteId)
+        ))
+        .orderBy(desc(transactions.date));
+      
+      return result;
+    } catch (error) {
+      console.error(`Errore nel recupero delle transazioni per il preventivo ${quoteId}:`, error);
+      throw error;
     }
-    
-    const clientEmail = clientData.clients.email;
-    const adminEmail = settings.companyEmail;
-    
-    // Formatta l'importo
-    const formattedAmount = new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(parseFloat(transaction.amount.toString()));
-    
-    const paymentDescription = transaction.description || 'Pagamento';
-    const quoteTitle = quote.title;
-    
-    // Invia email all'amministratore
-    await sendEmail('Nuovo pagamento ricevuto', {
-      to: adminEmail,
-      subject: `Nuovo pagamento ricevuto per ${quoteTitle}`,
-      html: `
-        <p>È stato registrato un nuovo pagamento per il preventivo "${quoteTitle}".</p>
-        <p><strong>Importo:</strong> ${formattedAmount}</p>
-        <p><strong>Data:</strong> ${new Date(transaction.date).toLocaleDateString('it-IT')}</p>
-        <p><strong>Descrizione:</strong> ${paymentDescription}</p>
-        <p><strong>Cliente:</strong> ${clientData.clients.firstName} ${clientData.clients.lastName}</p>
-        ${scheduledPayment ? `<p><strong>Pagamento programmato:</strong> ${scheduledPayment.description || 'N/A'}</p>` : ''}
-      `
-    });
-    
-    // Invia email al cliente
-    await sendEmail('Conferma pagamento', {
-      to: clientEmail,
-      subject: 'Conferma di pagamento ricevuto',
-      html: `
-        <p>Gentile ${clientData.clients.firstName} ${clientData.clients.lastName},</p>
-        <p>Abbiamo ricevuto con successo il seguente pagamento:</p>
-        <p><strong>Preventivo:</strong> ${quoteTitle}</p>
-        <p><strong>Importo:</strong> ${formattedAmount}</p>
-        <p><strong>Data:</strong> ${new Date(transaction.date).toLocaleDateString('it-IT')}</p>
-        <p><strong>Descrizione:</strong> ${paymentDescription}</p>
-        <p>Grazie per la tua fiducia.</p>
-        <p>Cordiali saluti,<br>${settings.companyName}</p>
-      `
-    });
-    
-    return true;
-  } catch (error) {
-    console.error('Errore nell\'invio della notifica di pagamento:', error);
-    return false;
-  }
-}
-
-// Funzione di utilità per ottenere statistiche mensili
-async function getMonthlyStats() {
-  try {
-    // Definiamo la query per ottenere statistiche mensili per entrate e uscite negli ultimi 12 mesi
-    const today = new Date();
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(today.getFullYear() - 1);
-    
-    const formattedStartDate = oneYearAgo.toISOString().split('T')[0];
-    
-    // Query per entrate mensili
-    const monthlyIncome = await db
-      .select({
-        month: sql`TO_CHAR(date, 'YYYY-MM')`,
-        total: sql`COALESCE(SUM(amount), 0)`
+  },
+  
+  // PAGAMENTI PROGRAMMATI
+  
+  /**
+   * Ottiene tutti i pagamenti programmati
+   */
+  async getScheduledPayments() {
+    try {
+      const currentDate = new Date();
+      
+      // Recupero i pagamenti programmati
+      const payments = await db.select({
+        payment: scheduledPayments,
+        quote: {
+          id: quotes.id,
+          title: quotes.title,
+          clientId: quotes.clientId
+        }
       })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.type, 'payment'),
-          gte(transactions.date, formattedStartDate)
-        )
-      )
-      .groupBy(sql`TO_CHAR(date, 'YYYY-MM')`)
-      .orderBy(sql`TO_CHAR(date, 'YYYY-MM')`);
-    
-    // Query per uscite mensili
-    const monthlyExpenses = await db
-      .select({
-        month: sql`TO_CHAR(date, 'YYYY-MM')`,
-        total: sql`COALESCE(SUM(amount), 0)`
-      })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.type, 'expense'),
-          gte(transactions.date, formattedStartDate)
-        )
-      )
-      .groupBy(sql`TO_CHAR(date, 'YYYY-MM')`)
-      .orderBy(sql`TO_CHAR(date, 'YYYY-MM')`);
-    
-    // Combina i risultati
-    const months = Array.from(new Set([
-      ...monthlyIncome.map(item => item.month),
-      ...monthlyExpenses.map(item => item.month)
-    ])).sort();
-    
-    return months.map(month => {
-      const incomeItem = monthlyIncome.find(item => item.month === month);
-      const expenseItem = monthlyExpenses.find(item => item.month === month);
+      .from(scheduledPayments)
+      .leftJoin(quotes, eq(scheduledPayments.quoteId, quotes.id))
+      .orderBy(asc(scheduledPayments.dueDate));
+      
+      // Arricchisco con i dati del cliente
+      const result = await Promise.all(payments.map(async (item) => {
+        let client = null;
+        
+        if (item.quote?.clientId) {
+          [client] = await db.select()
+            .from(clients)
+            .where(eq(clients.id, item.quote.clientId));
+        }
+        
+        // Aggiungo lo stato overdue se necessario
+        let status = item.payment.status;
+        if (status === "pending" && isBefore(new Date(item.payment.dueDate), currentDate)) {
+          status = "overdue";
+        }
+        
+        return {
+          ...item.payment,
+          status,
+          quote: {
+            ...item.quote,
+            client: client ? {
+              id: client.id,
+              firstName: client.firstName,
+              lastName: client.lastName
+            } : undefined
+          }
+        };
+      }));
+      
+      return result;
+    } catch (error) {
+      console.error("Errore nel recupero dei pagamenti programmati:", error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Ottiene i pagamenti programmati per un preventivo
+   */
+  async getScheduledPaymentsByQuoteId(quoteId: number) {
+    try {
+      const currentDate = new Date();
+      
+      const payments = await db.select()
+        .from(scheduledPayments)
+        .where(eq(scheduledPayments.quoteId, quoteId))
+        .orderBy(asc(scheduledPayments.dueDate));
+      
+      // Aggiungo lo stato overdue se necessario
+      return payments.map(payment => {
+        let status = payment.status;
+        if (status === "pending" && isBefore(new Date(payment.dueDate), currentDate)) {
+          status = "overdue";
+        }
+        
+        return {
+          ...payment,
+          status
+        };
+      });
+    } catch (error) {
+      console.error(`Errore nel recupero dei pagamenti programmati per il preventivo ${quoteId}:`, error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Crea un nuovo pagamento programmato
+   */
+  async createScheduledPayment(data: any) {
+    try {
+      const [payment] = await db.insert(scheduledPayments)
+        .values({
+          quoteId: data.quoteId,
+          amount: data.amount.toString(),
+          dueDate: new Date(data.dueDate),
+          description: data.description || null,
+          status: data.status || "pending",
+          paymentMethod: data.paymentMethod || null,
+          notes: data.notes || null,
+          reminderSent: false
+        })
+        .returning();
+      
+      return payment;
+    } catch (error) {
+      console.error("Errore nella creazione del pagamento programmato:", error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Aggiorna un pagamento programmato
+   */
+  async updateScheduledPayment(id: number, data: any) {
+    try {
+      const [updatedPayment] = await db.update(scheduledPayments)
+        .set({
+          amount: data.amount.toString(),
+          dueDate: new Date(data.dueDate),
+          description: data.description || null,
+          status: data.status || "pending",
+          paymentMethod: data.paymentMethod || null,
+          notes: data.notes || null
+        })
+        .where(eq(scheduledPayments.id, id))
+        .returning();
+      
+      if (!updatedPayment) {
+        throw new Error("Pagamento programmato non trovato");
+      }
+      
+      return updatedPayment;
+    } catch (error) {
+      console.error(`Errore nell'aggiornamento del pagamento programmato ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Elimina un pagamento programmato
+   */
+  async deleteScheduledPayment(id: number) {
+    try {
+      const [payment] = await db.select()
+        .from(scheduledPayments)
+        .where(eq(scheduledPayments.id, id));
+      
+      if (!payment) {
+        throw new Error("Pagamento programmato non trovato");
+      }
+      
+      // Se è già collegato a una transazione, non posso eliminarlo
+      if (payment.transactionId) {
+        throw new Error("Impossibile eliminare un pagamento già effettuato");
+      }
+      
+      const [deletedPayment] = await db.delete(scheduledPayments)
+        .where(eq(scheduledPayments.id, id))
+        .returning();
+      
+      return deletedPayment;
+    } catch (error) {
+      console.error(`Errore nell'eliminazione del pagamento programmato ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Invia un promemoria per un pagamento programmato
+   */
+  async sendPaymentReminder(id: number) {
+    try {
+      const [payment] = await db.select()
+        .from(scheduledPayments)
+        .where(eq(scheduledPayments.id, id));
+      
+      if (!payment) {
+        throw new Error("Pagamento programmato non trovato");
+      }
+      
+      if (payment.status === "paid") {
+        throw new Error("Impossibile inviare un promemoria per un pagamento già effettuato");
+      }
+      
+      if (payment.reminderSent) {
+        throw new Error("Promemoria già inviato per questo pagamento");
+      }
+      
+      // Recupero i dati del preventivo e cliente
+      const [quote] = await db.select()
+        .from(quotes)
+        .where(eq(quotes.id, payment.quoteId));
+      
+      if (!quote) {
+        throw new Error("Preventivo non trovato");
+      }
+      
+      const [client] = await db.select()
+        .from(clients)
+        .where(eq(clients.id, quote.clientId));
+      
+      if (!client || !client.email) {
+        throw new Error("Cliente non trovato o email non disponibile");
+      }
+      
+      // Invio promemoria
+      // TODO: Implementare il servizio di invio email per i promemoria
+      console.log(`Invio promemoria per il pagamento ${id} a ${client.email}`);
+      
+      // Aggiorno il flag di promemoria
+      const [updatedPayment] = await db.update(scheduledPayments)
+        .set({ reminderSent: true })
+        .where(eq(scheduledPayments.id, id))
+        .returning();
+      
+      return updatedPayment;
+    } catch (error) {
+      console.error(`Errore nell'invio del promemoria per il pagamento ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // STATISTICHE FINANZIARIE
+  
+  /**
+   * Ottiene le statistiche finanziarie per la dashboard
+   */
+  async getFinancialStats(params: { period?: string, year?: number, month?: number } = {}) {
+    try {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      
+      // Periodo predefinito: mese corrente
+      let startDate = startOfMonth(currentDate);
+      let endDate = endOfMonth(currentDate);
+      
+      // Se specificato, utilizzo il periodo richiesto
+      if (params.period) {
+        switch (params.period) {
+          case "year":
+            startDate = new Date(params.year || currentYear, 0, 1);
+            endDate = new Date(params.year || currentYear, 11, 31);
+            break;
+          case "month":
+            const year = params.year || currentYear;
+            const month = params.month !== undefined ? params.month : currentMonth;
+            startDate = startOfMonth(new Date(year, month, 1));
+            endDate = endOfMonth(new Date(year, month, 1));
+            break;
+          case "last_month":
+            startDate = startOfMonth(subMonths(currentDate, 1));
+            endDate = endOfMonth(subMonths(currentDate, 1));
+            break;
+          case "last_3_months":
+            startDate = startOfMonth(subMonths(currentDate, 3));
+            endDate = endOfMonth(currentDate);
+            break;
+          case "last_6_months":
+            startDate = startOfMonth(subMonths(currentDate, 6));
+            endDate = endOfMonth(currentDate);
+            break;
+          case "last_12_months":
+            startDate = startOfMonth(subMonths(currentDate, 12));
+            endDate = endOfMonth(currentDate);
+            break;
+        }
+      }
+      
+      // Query per incassi totali nel periodo
+      const [incomeResult] = await db
+        .select({ total: sql`SUM(CAST(${transactions.amount} AS DECIMAL))` })
+        .from(transactions)
+        .where(and(
+          eq(transactions.type, "income"),
+          between(transactions.date, startDate, endDate)
+        ));
+      
+      // Query per spese totali nel periodo
+      const [expensesResult] = await db
+        .select({ total: sql`SUM(CAST(${transactions.amount} AS DECIMAL))` })
+        .from(transactions)
+        .where(and(
+          eq(transactions.type, "expense"),
+          between(transactions.date, startDate, endDate)
+        ));
+      
+      // Query per pagamenti programmati scaduti
+      const [overdueResult] = await db
+        .select({ count: count() })
+        .from(scheduledPayments)
+        .where(and(
+          eq(scheduledPayments.status, "pending"),
+          sql`${scheduledPayments.dueDate} < CURRENT_DATE`
+        ));
+      
+      // Query per pagamenti programmati in arrivo
+      const [upcomingResult] = await db
+        .select({ count: count() })
+        .from(scheduledPayments)
+        .where(and(
+          eq(scheduledPayments.status, "pending"),
+          sql`${scheduledPayments.dueDate} >= CURRENT_DATE`,
+          sql`${scheduledPayments.dueDate} <= CURRENT_DATE + INTERVAL '30 day'`
+        ));
+      
+      // Query per dati mensili dell'anno corrente (per grafici)
+      const monthlyData = await Promise.all([...Array(12).keys()].map(async (month) => {
+        const monthStartDate = new Date(currentYear, month, 1);
+        const monthEndDate = endOfMonth(monthStartDate);
+        
+        // Incassi del mese
+        const [incomeItem] = await db
+          .select({ total: sql`SUM(CAST(${transactions.amount} AS DECIMAL))` })
+          .from(transactions)
+          .where(and(
+            eq(transactions.type, "income"),
+            between(transactions.date, monthStartDate, monthEndDate)
+          ));
+        
+        // Spese del mese
+        const [expenseItem] = await db
+          .select({ total: sql`SUM(CAST(${transactions.amount} AS DECIMAL))` })
+          .from(transactions)
+          .where(and(
+            eq(transactions.type, "expense"),
+            between(transactions.date, monthStartDate, monthEndDate)
+          ));
+        
+        return {
+          month: format(monthStartDate, "MMMM", { locale: it }),
+          income: parseFloat(incomeItem.total || "0"),
+          expenses: parseFloat(expenseItem.total || "0"),
+          profit: parseFloat(incomeItem.total || "0") - parseFloat(expenseItem.total || "0")
+        };
+      }));
+      
+      // Query per categorie di spesa nel periodo
+      const expenseCategories = await db
+        .select({
+          category: transactions.category,
+          total: sql`SUM(CAST(${transactions.amount} AS DECIMAL))`
+        })
+        .from(transactions)
+        .where(and(
+          eq(transactions.type, "expense"),
+          between(transactions.date, startDate, endDate)
+        ))
+        .groupBy(transactions.category)
+        .orderBy(sql`SUM(CAST(${transactions.amount} AS DECIMAL))` as any, "desc"); // Usare any per evitare errori TS
       
       return {
-        month,
-        income: incomeItem ? parseFloat(incomeItem.total.toString()) : 0,
-        expenses: expenseItem ? parseFloat(expenseItem.total.toString()) : 0,
-        net: (incomeItem ? parseFloat(incomeItem.total.toString()) : 0) - 
-             (expenseItem ? parseFloat(expenseItem.total.toString()) : 0)
+        period: {
+          start: format(startDate, "yyyy-MM-dd"),
+          end: format(endDate, "yyyy-MM-dd"),
+          label: params.period || "month"
+        },
+        summary: {
+          income: parseFloat(incomeResult.total || "0"),
+          expenses: parseFloat(expensesResult.total || "0"),
+          profit: parseFloat(incomeResult.total || "0") - parseFloat(expensesResult.total || "0"),
+          overduePayments: overdueResult.count,
+          upcomingPayments: upcomingResult.count
+        },
+        monthlyData,
+        expenseCategories: expenseCategories.map(item => ({
+          category: item.category || "Non specificata",
+          total: parseFloat(item.total || "0")
+        }))
       };
-    });
-  } catch (error) {
-    console.error('Errore nel recupero delle statistiche mensili:', error);
-    return [];
+    } catch (error) {
+      console.error("Errore nel recupero delle statistiche finanziarie:", error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Ottiene i dati finanziari per un preventivo
+   */
+  async getQuoteFinancialData(quoteId: number) {
+    try {
+      // Recupero le transazioni
+      const payments = await this.getTransactionsByQuoteId(quoteId);
+      
+      // Recupero i pagamenti programmati
+      const scheduledPaymentsList = await this.getScheduledPaymentsByQuoteId(quoteId);
+      
+      // Calcolo totali
+      const totalPaid = payments
+        .filter(p => p.type === "income")
+        .reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
+      
+      const totalScheduled = scheduledPaymentsList
+        .reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
+      
+      // Recupero il preventivo per ottenere il totale
+      const [quote] = await db.select()
+        .from(quotes)
+        .where(eq(quotes.id, quoteId));
+      
+      if (!quote) {
+        throw new Error("Preventivo non trovato");
+      }
+      
+      // I campi subtotal, total, discount sono virtuali e calcolati dal frontend
+      // Utilizzo il campo total se definito, altrimenti calcolo in base ai pagamenti
+      const quoteTotal = quote.subtotal !== undefined && quote.total !== undefined 
+        ? (quote.total as number) 
+        : (totalPaid + totalScheduled); // Stima basata su pagamenti
+      
+      return {
+        payments,
+        scheduledPayments: scheduledPaymentsList,
+        summary: {
+          quoteTotal,
+          totalPaid,
+          totalScheduled,
+          remainingAmount: quoteTotal - totalPaid
+        }
+      };
+    } catch (error) {
+      console.error(`Errore nel recupero dei dati finanziari per il preventivo ${quoteId}:`, error);
+      throw error;
+    }
   }
-}
+};

@@ -453,7 +453,7 @@ export default function QuoteDetailPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
             {/* Se il preventivo è firmato, mostriamo un pulsante specifico per il link permanente */}
             {(quote.status === "approved" || quote.status === "confermato") ? (
               <Button 
@@ -461,19 +461,19 @@ export default function QuoteDetailPage() {
                 onClick={() => getShareTokenMutation.mutate()}
                 disabled={getShareTokenMutation.isPending}
                 size="sm"
-                className="w-full sm:w-auto"
+                className="flex-shrink-0"
               >
                 {getShareTokenMutation.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4 animate-spin" />
                     <span className="hidden sm:inline">Recupero link...</span>
                     <span className="inline sm:hidden">Recupero...</span>
                   </>
                 ) : (
                   <>
-                    <FileSignature className="mr-2 h-4 w-4" />
+                    <FileSignature className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
                     <span className="hidden sm:inline">Link documento firmato</span>
-                    <span className="inline sm:hidden">Documento</span>
+                    <span className="inline sm:hidden">Documento firmato</span>
                   </>
                 )}
               </Button>
@@ -482,11 +482,10 @@ export default function QuoteDetailPage() {
                 variant="secondary"
                 onClick={() => setIsShareDialogOpen(true)}
                 size="sm"
-                className="w-full sm:w-auto"
+                className="flex-shrink-0"
               >
-                <Share className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Condividi</span>
-                <span className="inline sm:hidden">Condividi</span>
+                <Share className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
+                <span>Condividi</span>
               </Button>
             )}
             
@@ -652,8 +651,8 @@ export default function QuoteDetailPage() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
+                  <MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -1145,16 +1144,16 @@ export default function QuoteDetailPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                       (quote.status === "approved" || quote.status === "confermato" ||                       quote.status === "rejected" || quote.status === "rifiutato") 
                         ? "bg-primary text-white" 
                         : "bg-muted text-muted-foreground"
                     }`}>
                       {(quote.status === "approved" || quote.status === "confermato" ||
                         quote.status === "rejected" || quote.status === "rifiutato") 
-                        ? <Check className="h-4 w-4" /> 
-                        : "4"}
+                        ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> 
+                        : <span className="text-xs sm:text-sm">4</span>}
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">Risposta Cliente</p>

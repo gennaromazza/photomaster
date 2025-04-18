@@ -87,9 +87,24 @@ const EventsPage = () => {
   });
   
   // Funzione per gestire l'eliminazione dell'evento
-  const handleDeleteEvent = () => {
-    if (eventToDelete) {
-      deleteEventMutation.mutate(eventToDelete);
+  const handleDeleteEvent = async () => {
+    if (!eventToDelete) return;
+    try {
+      await apiRequest("DELETE", `/api/events/${eventToDelete}`);
+      await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      setEventToDelete(null);
+      setIsDeleteDialogOpen(false);
+      toast({
+        title: "Successo",
+        description: "Evento eliminato con successo"
+      });
+    } catch (error) {
+      console.error("Errore eliminazione evento:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'eliminazione dell'evento",
+        variant: "destructive"
+      });
     }
   };
 

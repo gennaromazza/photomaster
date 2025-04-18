@@ -79,11 +79,20 @@ const QuotesPage = () => {
   const handleDeleteQuote = async () => {
     if (!quoteToDelete) return;
     try {
-      const response = await fetch(`/api/quotes/${quoteToDelete}`, { method: 'DELETE' });
+      // Fetch CSRF token
+      const csrfResponse = await fetch('/api/csrf-token');
+      const { csrfToken } = await csrfResponse.json();
+
+      const response = await fetch(`/api/quotes/${quoteToDelete}`, { 
+        method: 'DELETE',
+        headers: {
+          'X-CSRF-Token': csrfToken
+        }
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      await refetch(); // Refresh the quotes list
+      await refetch(); 
       setQuoteToDelete(null);
       setIsModalOpen(false);
     } catch (error) {

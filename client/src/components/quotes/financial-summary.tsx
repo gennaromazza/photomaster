@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { ArrowUpRight, ArrowDownRight, Euro, Plus, Calendar, AlertCircle, Check, Clock, Trash2, Edit } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 import {
   Table,
   TableBody,

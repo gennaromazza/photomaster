@@ -661,7 +661,11 @@ export function FinancialSummary({
             {!readOnly && (
               <Dialog open={isAddScheduledOpen} onOpenChange={setIsAddScheduledOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button 
+                    size="sm"
+                    disabled={!isQuoteSigned()}
+                    title={!isQuoteSigned() ? "Puoi programmare rate solo dopo che il preventivo è stato firmato" : ""}
+                  >
                     <Calendar className="h-4 w-4 mr-2" />
                     Aggiungi Rata
                   </Button>
@@ -824,9 +828,9 @@ export function FinancialSummary({
                                   size="icon"
                                   variant="outline"
                                   className="h-7 w-7 bg-green-50 hover:bg-green-100 border-green-200"
-                                  title="Segna come pagato"
+                                  title={!isQuoteSigned() ? "Puoi registrare pagamenti solo dopo che il preventivo è stato firmato" : "Segna come pagato"}
                                   onClick={() => handleMarkAsPaid(payment)}
-                                  disabled={markAsPaidMutation.isPending}
+                                  disabled={markAsPaidMutation.isPending || !isQuoteSigned()}
                                 >
                                   <Check className="h-3.5 w-3.5 text-green-600" />
                                 </Button>

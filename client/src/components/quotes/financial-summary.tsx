@@ -396,6 +396,21 @@ export function FinancialSummary({
     }
   };
   
+  // Componente per mostrare l'avviso quando il preventivo non è firmato
+  const QuoteNotSignedAlert = () => {
+    if (readOnly || isQuoteSigned()) return null;
+    
+    return (
+      <Alert variant="warning" className="bg-amber-50 text-amber-800 border-amber-200 mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Preventivo non firmato</AlertTitle>
+        <AlertDescription>
+          Questo preventivo non è ancora stato firmato dal cliente. I pagamenti e le rate programmate potranno essere gestiti solo dopo la firma.
+        </AlertDescription>
+      </Alert>
+    );
+  };
+  
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-3">

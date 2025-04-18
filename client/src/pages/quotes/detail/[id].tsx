@@ -414,6 +414,11 @@ export default function QuoteDetailPage() {
   const formattedEventDate = eventDate
     ? format(eventDate, "d MMMM yyyy", { locale: it })
     : "Data non specificata";
+    
+  // Prepara il nome completo del cliente per il componente finanziario
+  const clientFullName = client 
+    ? `${client.firstName || ''} ${client.lastName || ''}`.trim() 
+    : '';
 
   return (
 
@@ -1068,14 +1073,8 @@ export default function QuoteDetailPage() {
             {/* Riepilogo finanziario */}
             <FinancialSummary 
               quoteId={parseInt(id as string)} 
-              totalAmount={quote.total || 0} 
-              onAddPaymentClick={() => {
-                // In futuro implementeremo un dialog per l'aggiunta di pagamenti
-                toast({
-                  title: "Funzionalità in arrivo",
-                  description: "L'aggiunta di pagamenti sarà disponibile a breve.",
-                });
-              }} 
+              totalAmount={quote.total || 0}
+              clientName={clientFullName}
             />
 
             {/* Timeline/stato */}

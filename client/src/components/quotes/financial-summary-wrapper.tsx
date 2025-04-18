@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { FinancialSummary } from './financial-summary';
+import { FinancialSummary } from './financial-summary-fixed';
 
 interface FinancialSummaryWrapperProps {
   quoteId: number;

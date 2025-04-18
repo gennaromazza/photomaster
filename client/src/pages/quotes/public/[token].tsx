@@ -266,10 +266,15 @@ export default function PublicQuotePage() {
 
     setIsSubmitting(true);
     try {
+      // Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token');
+      const { csrfToken } = await csrfResponse.json();
+
       const response = await fetch(`/api/quotes/share/${token}/sign`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken, // Added CSRF token to headers
         },
         body: JSON.stringify({
           signature: signature.trim(),

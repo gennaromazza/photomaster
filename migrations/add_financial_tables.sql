@@ -1,7 +1,8 @@
+
 -- Creazione della tabella transazioni
 CREATE TABLE IF NOT EXISTS transactions (
   id SERIAL PRIMARY KEY,
-  type TEXT NOT NULL,
+  type TEXT NOT NULL, -- income, expense
   amount NUMERIC NOT NULL,
   date DATE NOT NULL,
   description TEXT,
@@ -14,7 +15,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   category TEXT,
   attachment_path TEXT,
-  notification_sent BOOLEAN DEFAULT FALSE
+  notification_sent BOOLEAN DEFAULT FALSE,
+  scheduled_payment_id INTEGER REFERENCES scheduled_payments(id) ON DELETE SET NULL
 );
 
 -- Creazione della tabella pagamenti programmati

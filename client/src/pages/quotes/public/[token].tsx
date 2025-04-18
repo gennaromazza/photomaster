@@ -3,20 +3,26 @@ import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { 
-  User, 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  FileText, 
+import {
+  User,
+  Calendar,
+  MapPin,
+  Clock,
+  FileText,
   Euro,
   Loader2,
   Church,
   FileSignature,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ClientAddressDetails } from "@/components/quotes/client-address-details";
 import { StudioInfo } from "@/components/quotes/studio-info";
@@ -29,35 +35,36 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
   // Query per ottenere le impostazioni dell'applicazione
   const { data: settings } = useQuery({
     queryKey: ["/api/settings"],
   });
-  
+
   // Estrai le impostazioni della filigrana, o usa valori predefiniti
-  const watermarkSettings = (settings?.additionalSettings as any)?.watermark || {};
-  const watermarkText = watermarkSettings.text || settings?.companyName || "ImageStudio";
+  const watermarkSettings =
+    (settings?.additionalSettings as any)?.watermark || {};
+  const watermarkText =
+    watermarkSettings.text || settings?.companyName || "ImageStudio";
   const watermarkOpacity = watermarkSettings.opacity || 0.07;
   const watermarkRotate = watermarkSettings.rotate || -30;
   const watermarkPosition = watermarkSettings.position || "center";
-  
+
   // Rendering della pagina con filigrana personalizzata
   return (
     <div className="min-h-screen flex flex-col bg-background/50 overflow-hidden relative">
       {/* Filigrana personalizzata */}
-      <Watermark 
+      <Watermark
         text={watermarkText}
         opacity={watermarkOpacity}
-        fontSize="1.8rem" 
+        fontSize="1.8rem"
         rotate={watermarkRotate}
-        repeat={12} 
+        repeat={12}
         position={watermarkPosition as "center" | "top" | "bottom"}
-        color="var(--primary)"  
+        color="var(--primary)"
       />
-      
+
       <header className="bg-primary py-5 shadow-md relative z-10">
         <div className="container px-4 sm:px-6 md:px-8">
           <div className="flex items-center justify-center">
@@ -65,18 +72,25 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => {
               <h1 className="text-2xl md:text-3xl font-playfair text-primary-foreground tracking-wide">
                 <span className="font-bold">Image</span>
                 <span className="font-light">Studio</span>
-                <span className="text-lg md:text-xl ml-2 opacity-80 font-light">Preventivo</span>
+                <span className="text-lg md:text-xl ml-2 opacity-80 font-light">
+                  Preventivo
+                </span>
               </h1>
             </div>
           </div>
         </div>
       </header>
-      <main className="flex-1 container px-4 sm:px-6 md:px-8 py-6 md:py-10 relative z-10">{children}</main>
+      <main className="flex-1 container px-4 sm:px-6 md:px-8 py-6 md:py-10 relative z-10">
+        {children}
+      </main>
       <footer className="bg-muted py-5 border-t shadow-inner relative z-10">
         <div className="container px-4 text-center">
           <div className="flex flex-col items-center justify-center space-y-2">
             <p className="text-sm md:text-base text-muted-foreground">
-              Preventivo generato da <span className="font-medium">{settings?.companyName || "ImageStudio"}</span>
+              Preventivo generato da{" "}
+              <span className="font-medium">
+                {settings?.companyName || "ImageStudio"}
+              </span>
             </p>
             <p className="text-xs text-muted-foreground/70">
               © {new Date().getFullYear()} - Tutti i diritti riservati
@@ -93,12 +107,18 @@ export default function PublicQuotePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isExpired, setIsExpired] = useState(false);
-  const [selectedModuleItems, setSelectedModuleItems] = useState<Record<number, number[]>>({});
+  const [selectedModuleItems, setSelectedModuleItems] = useState<
+    Record<number, number[]>
+  >({});
   const [signature, setSignature] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Carica i dati del preventivo tramite token di condivisione con aggiornamento automatico
-  const { data: quote, isLoading, error } = useQuery({
+  const {
+    data: quote,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["/api/quotes/share", token],
     queryFn: async () => {
       // Aggiungiamo un parametro di timestamp per evitare caching
@@ -128,7 +148,9 @@ export default function PublicQuotePage() {
       try {
         // Aggiungiamo un parametro di timestamp per evitare caching
         const timestamp = new Date().getTime();
-        const res = await fetch(`/api/quotes/${quote.id}/modules?_t=${timestamp}`);
+        const res = await fetch(
+          `/api/quotes/${quote.id}/modules?_t=${timestamp}`,
+        );
         if (!res.ok) return [];
         return res.json();
       } catch (err) {
@@ -144,13 +166,19 @@ export default function PublicQuotePage() {
   });
 
   // Funzione per gestire la selezione degli elementi nei moduli variabili
-  const handleModuleItemSelection = (moduleId: number, selectedItems: number[]) => {
-    console.log(`[LOG] Selezione modulo ${moduleId}, elementi selezionati:`, selectedItems);
+  const handleModuleItemSelection = (
+    moduleId: number,
+    selectedItems: number[],
+  ) => {
+    console.log(
+      `[LOG] Selezione modulo ${moduleId}, elementi selezionati:`,
+      selectedItems,
+    );
 
-    setSelectedModuleItems(prev => {
+    setSelectedModuleItems((prev) => {
       const newSelections = {
         ...prev,
-        [moduleId]: selectedItems
+        [moduleId]: selectedItems,
       };
 
       // Log per debugging
@@ -160,40 +188,52 @@ export default function PublicQuotePage() {
   };
 
   // Funzione di validazione per i moduli variabili
-  const isSelectionValidForAllModules = (): { isValid: boolean; message?: string } => {
+  const isSelectionValidForAllModules = (): {
+    isValid: boolean;
+    message?: string;
+  } => {
     if (!modules) return { isValid: true };
-    
+
     // Esamina tutti i moduli variabili
     for (const module of modules) {
       if (module.type !== "variable") continue;
-      
+
       // Ottieni gli item selezionati per questo modulo
       const selectedItems = selectedModuleItems[module.id] || [];
-      
+
       // Verifica i requisiti minimi
-      if (module.minSelectCount && selectedItems.length < module.minSelectCount) {
-        return { 
-          isValid: false, 
-          message: `Nel modulo "${module.name}" devi selezionare almeno ${module.minSelectCount} ${module.minSelectCount === 1 ? 'elemento' : 'elementi'}.` 
+      if (
+        module.minSelectCount &&
+        selectedItems.length < module.minSelectCount
+      ) {
+        return {
+          isValid: false,
+          message: `Nel modulo "${module.name}" devi selezionare almeno ${module.minSelectCount} ${module.minSelectCount === 1 ? "elemento" : "elementi"}.`,
         };
       }
-      
+
       // Verifica i requisiti massimi
-      if (module.maxSelectCount && selectedItems.length > module.maxSelectCount) {
-        return { 
-          isValid: false, 
-          message: `Nel modulo "${module.name}" puoi selezionare al massimo ${module.maxSelectCount} ${module.maxSelectCount === 1 ? 'elemento' : 'elementi'}.` 
+      if (
+        module.maxSelectCount &&
+        selectedItems.length > module.maxSelectCount
+      ) {
+        return {
+          isValid: false,
+          message: `Nel modulo "${module.name}" puoi selezionare al massimo ${module.maxSelectCount} ${module.maxSelectCount === 1 ? "elemento" : "elementi"}.`,
         };
       }
     }
-    
+
     return { isValid: true };
   };
 
   // Gestione firma e conferma preventivo
   const handleSignQuote = async () => {
     //Check if quote is already signed
-    if (quote && (quote.status === "approved" || quote.status === "confermato")) {
+    if (
+      quote &&
+      (quote.status === "approved" || quote.status === "confermato")
+    ) {
       toast({
         title: "Errore",
         description: "Il preventivo è già stato firmato",
@@ -210,13 +250,15 @@ export default function PublicQuotePage() {
       });
       return;
     }
-    
+
     // Verifica tutti i moduli variabili per assicurarsi che rispettino i requisiti minimi/massimi
     const validationResult = isSelectionValidForAllModules();
     if (!validationResult.isValid) {
       toast({
         title: "Selezione non valida",
-        description: validationResult.message || "Verifica le selezioni nei moduli variabili",
+        description:
+          validationResult.message ||
+          "Verifica le selezioni nei moduli variabili",
         variant: "destructive",
       });
       return;
@@ -233,24 +275,26 @@ export default function PublicQuotePage() {
           signature: signature.trim(),
           status: "approved",
           signedAt: new Date().toISOString(),
-          selectedModuleItems: selectedModuleItems
+          selectedModuleItems: selectedModuleItems,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Errore durante la firma del preventivo");
+        throw new Error(
+          error.message || "Errore durante la firma del preventivo",
+        );
       }
 
       //Added code to create the event after successful quote signing.  Assumes /api/events endpoint exists.
-      await fetch('/api/events', {
-        method: 'POST',
+      await fetch("/api/events", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           title: quote.title,
-          description: quote.notes || '',
+          description: quote.notes || "",
           date: quote.eventDate,
           location: quote.location,
           clientId: quote.client.id, // Assuming client object has an id property. Adjust as needed
@@ -261,20 +305,22 @@ export default function PublicQuotePage() {
           categoryId: quote.category?.id, // Assuming category object has an id property. Adjust as needed.
           leadSourceId: quote.leadSourceId,
           ceremonyLocation: quote.ceremonyLocation,
-          ceremonyTime: quote.ceremonyTime
-        })
+          ceremonyTime: quote.ceremonyTime,
+        }),
       });
-
 
       // Salviamo i dati nel localStorage per la pagina di conferma
       if (quote.client) {
-        localStorage.setItem('signedQuoteClient', `${quote.client.firstName} ${quote.client.lastName}`.trim());
+        localStorage.setItem(
+          "signedQuoteClient",
+          `${quote.client.firstName} ${quote.client.lastName}`.trim(),
+        );
         if (quote.client.email) {
-          localStorage.setItem('signedQuoteEmail', quote.client.email);
+          localStorage.setItem("signedQuoteEmail", quote.client.email);
         }
       }
       if (quote.title) {
-        localStorage.setItem('signedQuoteTitle', quote.title);
+        localStorage.setItem("signedQuoteTitle", quote.title);
       }
 
       toast({
@@ -288,7 +334,8 @@ export default function PublicQuotePage() {
       console.error("Errore firma preventivo:", error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante la firma del preventivo",
+        description:
+          "Si è verificato un errore durante la firma del preventivo",
         variant: "destructive",
       });
     } finally {
@@ -325,9 +372,12 @@ export default function PublicQuotePage() {
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
           <div className="text-center max-w-md">
             <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-2xl font-bold mb-2">Preventivo non disponibile</h2>
+            <h2 className="text-2xl font-bold mb-2">
+              Preventivo non disponibile
+            </h2>
             <p className="text-muted-foreground mb-6">
-              Il preventivo richiesto non esiste o il link di condivisione è scaduto.
+              Il preventivo richiesto non esiste o il link di condivisione è
+              scaduto.
             </p>
           </div>
         </div>
@@ -340,26 +390,39 @@ export default function PublicQuotePage() {
       <div className="max-w-4xl mx-auto">
         {/* Intestazione preventivo */}
         <div className="text-center mb-10 bg-primary/5 py-8 px-4 rounded-lg shadow-sm border border-primary/10">
-          <h1 className="text-3xl md:text-4xl font-playfair font-bold mb-3">{quote.title}</h1>
-          <Badge 
-            variant={quote.status === "confermato" || quote.status === "approved" ? "success" : 
-                     quote.status === "in attesa" || quote.status === "pending" ? "warning" : 
-                     "default"}
+          <h1 className="text-3xl md:text-4xl font-playfair font-bold mb-3">
+            {quote.title}
+          </h1>
+          <Badge
+            variant={
+              quote.status === "confermato" || quote.status === "approved"
+                ? "success"
+                : quote.status === "in attesa" || quote.status === "pending"
+                  ? "warning"
+                  : "default"
+            }
             className="mb-2 px-3 py-1 text-sm"
           >
-            {quote.status === "draft" ? "Bozza" : 
-             quote.status === "pending" || quote.status === "in attesa" ? "In attesa" : 
-             quote.status === "approved" || quote.status === "confermato" ? "Confermato" : 
-             quote.status === "rejected" || quote.status === "rifiutato" ? "Rifiutato" : 
-             quote.status || "Preventivo"}
+            {quote.status === "draft"
+              ? "Bozza"
+              : quote.status === "pending" || quote.status === "in attesa"
+                ? "In attesa"
+                : quote.status === "approved" || quote.status === "confermato"
+                  ? "Confermato"
+                  : quote.status === "rejected" || quote.status === "rifiutato"
+                    ? "Rifiutato"
+                    : quote.status || "Preventivo"}
           </Badge>
           <p className="text-muted-foreground mt-2">
-            Creato il {quote.createdAt ? format(new Date(quote.createdAt), "dd/MM/yyyy", { locale: it }) : ""}
+            Creato il{" "}
+            {quote.createdAt
+              ? format(new Date(quote.createdAt), "dd/MM/yyyy", { locale: it })
+              : ""}
           </p>
         </div>
 
         {/* Dettagli cliente */}
-        <ClientAddressDetails 
+        <ClientAddressDetails
           client={quote.client}
           secondClient={quote.secondClient}
           className="mb-6"
@@ -374,45 +437,64 @@ export default function PublicQuotePage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">Tipo Evento</h4>
-                <p className="font-medium">{quote.category?.name || "Non specificato"}</p>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                  Tipo Evento
+                </h4>
+                <p className="font-medium">
+                  {quote.category?.name || "Non specificato"}
+                </p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">Data</h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                  Data
+                </h4>
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
                   <p className="font-medium">
-                    {quote.eventDate ? format(new Date(quote.eventDate), "dd/MM/yyyy", { locale: it }) : "Non specificata"}
+                    {quote.eventDate
+                      ? format(new Date(quote.eventDate), "dd/MM/yyyy", {
+                          locale: it,
+                        })
+                      : "Non specificata"}
                   </p>
                 </div>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">Orario</h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                  Orario
+                </h4>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
                   <p className="font-medium">
-                    {quote.isFullDay ? "Giornata intera" : 
-                     (quote.eventTime ? quote.eventTime : "Non specificato") +
-                     (quote.eventEndTime ? ` - ${quote.eventEndTime}` : "")}
+                    {quote.isFullDay
+                      ? "Giornata intera"
+                      : (quote.eventTime
+                          ? quote.eventTime
+                          : "Non specificato") +
+                        (quote.eventEndTime ? ` - ${quote.eventEndTime}` : "")}
                   </p>
                 </div>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">Location</h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                  Location
+                </h4>
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                  <p className="font-medium">{quote.location || "Non specificata"}</p>
+                  <p className="font-medium">
+                    {quote.location || "Non specificata"}
+                  </p>
                 </div>
               </div>
 
               {/* Utilizziamo il componente CeremonyDetails per una visualizzazione più elegante */}
               {(quote.ceremonyLocation || quote.ceremonyTime) && (
                 <div className="col-span-1 md:col-span-2">
-                  <CeremonyDetails 
+                  <CeremonyDetails
                     readOnly={true}
                     ceremony={{
                       location: quote.ceremonyLocation,
-                      time: quote.ceremonyTime
+                      time: quote.ceremonyTime,
                     }}
                     className="bg-muted/30 p-3 rounded-md border border-muted mt-2"
                   />
@@ -420,60 +502,6 @@ export default function PublicQuotePage() {
               )}
             </div>
           </CardContent>
-        </Card>
-
-        {/* Servizi/Moduli */}
-        <Card className="mb-6 overflow-hidden">
-          <CardHeader className="bg-primary/5 border-b">
-            <CardTitle className="flex items-center">
-              <FileText className="h-5 w-5 mr-2 text-primary" />
-              Servizi inclusi
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 md:p-6">
-            {quote.quoteItems && quote.quoteItems.length > 0 ? (
-              <div className="space-y-4">
-                {quote.quoteItems.map((item: any) => (
-                  <div key={item.id} className="border rounded-md p-4 hover:border-primary/30 transition-colors duration-200 bg-background shadow-sm">
-                    <div className="flex flex-wrap justify-between items-start gap-2">
-                      <h4 className="font-medium text-base md:text-lg">{item.service?.name || "Servizio"}</h4>
-                      <Badge variant="outline" className="bg-primary/5 text-primary">€ {(item.total || 0).toLocaleString()}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {item.quantity || 1} x €{(item.unitPrice || 0).toLocaleString()}
-                      {item.hasDiscount && (
-                        <span className="text-green-600 font-medium"> (-{item.discountType === 'percentage' ? `${item.discountValue}%` : `€${item.discountValue}`})</span>
-                      )}
-                    </p>
-                    {item.description && (
-                      <p className="text-sm mt-3 bg-muted p-3 rounded-md border border-border/50">{item.description}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-10 border rounded-md bg-muted/20">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="text-muted-foreground">Nessun servizio incluso nel preventivo</p>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col md:flex-row md:justify-between border-t py-5 gap-4 bg-muted/10">
-            <div className="text-center md:text-left">
-              <p className="text-sm text-muted-foreground">Totale Servizi</p>
-              <p className="font-medium text-xl">€ {(quote.subtotal || 0).toLocaleString()}</p>
-            </div>
-            {quote.discount > 0 && (
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Sconto</p>
-                <p className="font-medium text-xl text-green-600">- € {(quote.discount || 0).toLocaleString()}</p>
-              </div>
-            )}
-            <div className="text-center md:text-right bg-primary/5 px-6 py-3 rounded-md border border-primary/10">
-              <p className="text-sm font-medium text-primary">Totale Preventivo</p>
-              <p className="font-bold text-2xl">€ {(quote.total || 0).toLocaleString()}</p>
-            </div>
-          </CardFooter>
         </Card>
 
         {/* Sezione Pagamenti - visibile solo se il preventivo è stato firmato */}
@@ -486,13 +514,15 @@ export default function PublicQuotePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <FinancialSummary 
-                quoteId={quote.id} 
-                quoteTotal={quote.total || 0} 
+              <FinancialSummary
+                quoteId={quote.id}
+                quoteTotal={quote.total || 0}
                 readOnly={true}
-                clientName={quote.client?.firstName && quote.client?.lastName 
-                  ? `${quote.client.firstName} ${quote.client.lastName}` 
-                  : undefined}
+                clientName={
+                  quote.client?.firstName && quote.client?.lastName
+                    ? `${quote.client.firstName} ${quote.client.lastName}`
+                    : undefined
+                }
               />
             </CardContent>
           </Card>
@@ -509,41 +539,82 @@ export default function PublicQuotePage() {
             </CardHeader>
             <CardContent className="p-5">
               <div className="mb-4 text-sm">
-                <h3 className="font-semibold text-base mb-2">Guida al preventivo</h3>
+                <h3 className="font-semibold text-base mb-2">
+                  Guida al preventivo
+                </h3>
                 <p className="text-muted-foreground mb-2">
-                  Qui puoi visualizzare i {modules.length > 1 ? "moduli" : "modulo"} inclusi nel preventivo.
+                  Qui puoi visualizzare i{" "}
+                  {modules.length > 1 ? "moduli" : "modulo"} inclusi nel
+                  preventivo.
                 </p>
-                
-                {modules.some(m => m.type === 'fixed') && (
+
+                {modules.some((m) => m.type === "fixed") && (
                   <div className="flex items-start gap-2 mb-2 p-2 bg-primary/5 rounded-md">
                     <div className="mt-1 text-primary">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M12 16v-4"></path>
                         <path d="M12 8h.01"></path>
                       </svg>
                     </div>
                     <div>
-                      <span className="font-medium">Moduli fissi:</span> Rappresentano i servizi inclusi di base nel pacchetto scelto. Questi elementi sono sempre inclusi nel preventivo.
+                      <span className="font-medium">Moduli fissi:</span>{" "}
+                      Rappresentano i servizi inclusi di base nel pacchetto
+                      scelto. Questi elementi sono sempre inclusi nel
+                      preventivo.
                     </div>
                   </div>
                 )}
-                
-                {modules.some(m => m.type === 'variable') && (
+
+                {modules.some((m) => m.type === "variable") && (
                   <div className="flex items-start gap-2 p-2 bg-primary/5 rounded-md">
                     <div className="mt-1 text-primary">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M12 16v-4"></path>
                         <path d="M12 8h.01"></path>
                       </svg>
                     </div>
                     <div>
-                      <span className="font-medium">Moduli variabili:</span> Ti permettono di personalizzare il pacchetto selezionando le opzioni che preferisci. 
+                      <span className="font-medium">Moduli variabili:</span> Ti
+                      permettono di personalizzare il pacchetto selezionando le
+                      opzioni che preferisci.
                       <ul className="list-disc list-inside mt-1 ml-2 text-xs">
-                        <li>Le opzioni contrassegnate come <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Obbligatorio</span> non possono essere deselezionate.</li>
-                        <li>Ogni modulo variabile può richiedere un numero minimo e massimo di selezioni.</li>
-                        <li>Leggi attentamente le istruzioni all'interno di ogni modulo per comprendere i requisiti di selezione.</li>
+                        <li>
+                          Le opzioni contrassegnate come{" "}
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                            Obbligatorio
+                          </span>{" "}
+                          non possono essere deselezionate.
+                        </li>
+                        <li>
+                          Ogni modulo variabile può richiedere un numero minimo
+                          e massimo di selezioni.
+                        </li>
+                        <li>
+                          Leggi attentamente le istruzioni all'interno di ogni
+                          modulo per comprendere i requisiti di selezione.
+                        </li>
                       </ul>
                     </div>
                   </div>
@@ -552,19 +623,33 @@ export default function PublicQuotePage() {
 
               <div className="space-y-6 mt-4">
                 {/* Moduli fissi */}
-                {modules.filter(m => m.type === 'fixed').map(module => (
-                  <PublicFixedModule key={module.id} module={module} />
-                ))}
+                {modules
+                  .filter((m) => m.type === "fixed")
+                  .map((module) => (
+                    <PublicFixedModule key={module.id} module={module} />
+                  ))}
 
                 {/* Moduli variabili */}
-                {modules.filter(m => m.type === 'variable').map(module => (
-                  <PublicVariableModule 
-                    key={module.id} 
-                    module={module}
-                    onSelectionChange={quote && (quote.status === "approved" || quote.status === "confermato") ? undefined : handleModuleItemSelection}
-                    disabled={quote && (quote.status === "approved" || quote.status === "confermato")}
-                  />
-                ))}
+                {modules
+                  .filter((m) => m.type === "variable")
+                  .map((module) => (
+                    <PublicVariableModule
+                      key={module.id}
+                      module={module}
+                      onSelectionChange={
+                        quote &&
+                        (quote.status === "approved" ||
+                          quote.status === "confermato")
+                          ? undefined
+                          : handleModuleItemSelection
+                      }
+                      disabled={
+                        quote &&
+                        (quote.status === "approved" ||
+                          quote.status === "confermato")
+                      }
+                    />
+                  ))}
               </div>
             </CardContent>
           </Card>
@@ -586,11 +671,21 @@ export default function PublicQuotePage() {
                     <p className="text-sm text-muted-foreground mb-4">
                       Preventivo firmato da:
                     </p>
-                    <p className="font-playfair text-2xl text-primary mb-2" style={{ fontFamily: 'Dancing Script, cursive' }}>
+                    <p
+                      className="font-playfair text-2xl text-primary mb-2"
+                      style={{ fontFamily: "Dancing Script, cursive" }}
+                    >
                       {quote.signature}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Firmato il {quote.signedAt ? format(new Date(quote.signedAt), "dd/MM/yyyy 'alle' HH:mm", { locale: it }) : ""}
+                      Firmato il{" "}
+                      {quote.signedAt
+                        ? format(
+                            new Date(quote.signedAt),
+                            "dd/MM/yyyy 'alle' HH:mm",
+                            { locale: it },
+                          )
+                        : ""}
                     </p>
                   </div>
                   <div className="mt-4 space-y-2">
@@ -607,7 +702,8 @@ export default function PublicQuotePage() {
             ) : (
               <div className="text-center space-y-4">
                 <p className="text-muted-foreground">
-                  Firmando questo documento, confermi di accettare il preventivo e tutti i servizi/prodotti inclusi.
+                  Firmando questo documento, confermi di accettare il preventivo
+                  e tutti i servizi/prodotti inclusi.
                 </p>
 
                 <div className="max-w-sm mx-auto space-y-4">
@@ -621,8 +717,8 @@ export default function PublicQuotePage() {
                     />
                   </div>
 
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full"
                     size="lg"
                     onClick={handleSignQuote}
                     disabled={!signature.trim() || isSubmitting}
@@ -649,11 +745,14 @@ export default function PublicQuotePage() {
         {quote.notes && (
           <Card className="mt-10 mb-6 overflow-hidden shadow-md">
             <CardHeader className="bg-primary text-primary-foreground border-b">
-              <CardTitle className="text-center font-playfair">Per qualsiasi informazione</CardTitle>
+              <CardTitle className="text-center font-playfair">
+                Per qualsiasi informazione
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <p className="text-center mb-6 text-muted-foreground">
-                Contattaci direttamente per confermare il tuo preventivo o per richieste personalizzate.
+                Contattaci direttamente per confermare il tuo preventivo o per
+                richieste personalizzate.
               </p>
               <div className="bg-muted/20 p-5 rounded-lg border">
                 <StudioInfo className="mx-auto max-w-md" />

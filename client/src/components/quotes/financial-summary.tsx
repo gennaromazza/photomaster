@@ -253,8 +253,7 @@ export function FinancialSummary({
       amount: parseFloat(transactionData.amount),
       date: transactionData.date, // Inviamo la data come stringa, sarà formattata lato server
       description: transactionData.description || `Pagamento per preventivo #${quoteId}`,
-      source: 'quote',
-      sourceId: quoteId,
+      quoteId: quoteId, // Utilizziamo il nome del campo corretto
       status: 'completed',
       paymentMethod: transactionData.method || null,
       reference: transactionData.reference || null,
@@ -368,7 +367,7 @@ export function FinancialSummary({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(quoteTotal)}
+              {formatCurrency(totalPreventivo)}
             </div>
           </CardContent>
         </Card>
@@ -852,7 +851,7 @@ export function FinancialSummary({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(quoteTotal)}
+              {formatCurrency(totalPreventivo)}
             </div>
           </CardContent>
         </Card>

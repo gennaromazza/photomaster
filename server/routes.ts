@@ -1526,6 +1526,35 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   });
 
   // API per la condivisione del preventivo
+  // Ottieni un token di condivisione esistente per un preventivo
+  apiRouter.get("/quotes/:id/share-token", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      // Verifica se il preventivo esiste
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato" });
+      }
+
+      // Se il preventivo ha già un token valido, lo restituiamo
+      if (quote.isShared && quote.shareToken) {
+        return res.json({
+          token: quote.shareToken,
+          hasExpiry: !!quote.shareTokenExpiry,
+          shareTokenExpiry: quote.shareTokenExpiry
+        });
+      }
+
+      // Se non ha un token, o se non è condiviso, restituisci un errore
+      return res.status(404).json({ message: "Nessun token di condivisione trovato per questo preventivo" });
+    } catch (err) {
+      console.error("Errore nel recupero del token:", err);
+      res.status(500).json({ message: "Errore nel recupero del token di condivisione" });
+    }
+  });
+
+  // Genera token di condivisione con scadenza
   apiRouter.post("/quotes/:id/share", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -1554,6 +1583,59 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     } catch (err) {
       console.error("Errore nella condivisione del preventivo:", err);
       res.status(500).json({ message: "Errore nella condivisione del preventivo" });
+    }
+  });
+  
+  // Genera token permanente senza scadenza per preventivi firmati
+  apiRouter.post("/quotes/:id/share/permanent", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      // Verifica se il preventivo esiste
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato" });
+      }
+      
+      // Verifica che il preventivo sia firmato
+      if (quote.status !== "approved" && quote.status !== "confermato") {
+        return res.status(400).json({ 
+          message: "Solo i preventivi firmati possono avere link permanenti senza scadenza" 
+        });
+      }
+
+      // Se il preventivo ha già un token, lo rendiamo permanente
+      if (quote.isShared && quote.shareToken) {
+        // Rimuoviamo la scadenza
+        await storage.updateQuote(id, {
+          shareTokenExpiry: null
+        });
+        
+        return res.json({
+          token: quote.shareToken,
+          permanent: true
+        });
+      }
+      
+      // Altrimenti generiamo un nuovo token senza scadenza
+      // Genera un token univoco
+      const token = crypto.randomUUID();
+      
+      // Aggiorna il preventivo con il token di condivisione permanente
+      await storage.updateQuote(id, {
+        isShared: true,
+        shareToken: token,
+        shareTokenExpiry: null // Nessuna scadenza
+      });
+      
+      res.json({ 
+        success: true, 
+        token,
+        permanent: true
+      });
+    } catch (err) {
+      console.error("Errore nella generazione del link permanente:", err);
+      res.status(500).json({ message: "Errore nella generazione del link permanente" });
     }
   });
   
@@ -1633,7 +1715,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
 
       // Verifica se il preventivo è già stato firmato
-      if (quote.status === "approved") {
+      if (quote.status === "approved" || quote.status === "confermato") {
         return res.status(400).json({ message: "Il preventivo è già stato firmato" });
       }
 

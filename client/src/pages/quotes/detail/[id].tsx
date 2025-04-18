@@ -181,8 +181,12 @@ export default function QuoteDetailPage() {
   // Mutation per generare il link di condivisione
   const generateShareLinkMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/quotes/${id}/share`, {
-        expiryDays
+      // Se il preventivo è firmato, usiamo un'altra API che non imposta scadenza
+      const isApproved = quote?.status === "approved" || quote?.status === "confermato";
+      const path = isApproved ? `/api/quotes/${id}/share/permanent` : `/api/quotes/${id}/share`;
+        
+      const res = await apiRequest("POST", path, {
+        expiryDays: isApproved ? null : expiryDays
       });
       return res.json();
     },
@@ -194,9 +198,15 @@ export default function QuoteDetailPage() {
         setShareLink(shareUrl);
         // Ricarica i dati del preventivo per avere le informazioni aggiornate
         queryClient.invalidateQueries({ queryKey: ["/api/quotes", id] });
+        
+        // Messaggio differente in base allo stato del preventivo
+        const isApproved = quote?.status === "approved" || quote?.status === "confermato";
+        
         toast({
-          title: "Link generato",
-          description: `Il link di condivisione è stato generato con validità di ${data.expiryDays} giorni`,
+          title: isApproved ? "Link permanente" : "Link generato",
+          description: isApproved 
+            ? "Il link permanente al preventivo firmato è stato generato." 
+            : `Il link di condivisione è stato generato con validità di ${data.expiryDays} giorni`,
         });
       } else {
         toast({
@@ -213,6 +223,28 @@ export default function QuoteDetailPage() {
         description: "Si è verificato un errore durante la generazione del link di condivisione",
         variant: "destructive",
       });
+    },
+  });
+  
+  // Mutation per ottenere il link permanente di un preventivo firmato
+  const getShareTokenMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("GET", `/api/quotes/${id}/share-token`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.token) {
+        const shareUrl = `${window.location.origin}/quotes/public/${data.token}`;
+        setShareLink(shareUrl);
+        setIsShareDialogOpen(true);
+      } else {
+        // Se non c'è un token esistente, generiamo uno nuovo
+        generateShareLinkMutation.mutate();
+      }
+    },
+    onError: () => {
+      // Se non riusciamo a recuperare un token esistente, proviamo a generarne uno nuovo
+      generateShareLinkMutation.mutate();
     },
   });
   
@@ -379,13 +411,37 @@ export default function QuoteDetailPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Se il preventivo è firmato, mostriamo un pulsante specifico per il link permanente */}
+            {(quote.status === "approved" || quote.status === "confermato") ? (
+              <Button 
+                variant="secondary" 
+                onClick={() => getShareTokenMutation.mutate()}
+                disabled={getShareTokenMutation.isPending}
+              >
+                {getShareTokenMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Recupero link...
+                  </>
+                ) : (
+                  <>
+                    <FileSignature className="mr-2 h-4 w-4" />
+                    Link documento firmato
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button 
+                variant="secondary"
+                onClick={() => setIsShareDialogOpen(true)}
+              >
+                <Share className="mr-2 h-4 w-4" />
+                Condividi
+              </Button>
+            )}
+            
+            {/* Dialog di condivisione */}
             <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="secondary">
-                  <Share className="mr-2 h-4 w-4" />
-                  Condividi
-                </Button>
-              </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Condividi preventivo</DialogTitle>

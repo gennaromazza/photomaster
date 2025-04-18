@@ -48,6 +48,20 @@ export const galleries = pgTable("galleries", {
   seoKeywords: text("seo_keywords"), // Parole chiave per SEO
   allowSocialSharing: boolean("allow_social_sharing").default(true).notNull(), // Abilitare la condivisione sui social
   
+  // Social Media dello Studio
+  instagramHandle: text("instagram_handle"), // Username Instagram dello studio
+  facebookPage: text("facebook_page"), // URL o username della pagina Facebook
+  twitterHandle: text("twitter_handle"), // Username Twitter dello studio
+  pinterestHandle: text("pinterest_handle"), // Username Pinterest dello studio
+  tiktokHandle: text("tiktok_handle"), // Username TikTok dello studio
+  
+  // Opzioni per incentivare il tagging
+  showFollowPrompt: boolean("show_follow_prompt").default(true).notNull(), // Mostrare invito a seguire sui social
+  showTaggingPrompt: boolean("show_tagging_prompt").default(true).notNull(), // Mostrare invito a taggare lo studio
+  followPromptText: text("follow_prompt_text"), // Testo personalizzato per invito a seguire
+  taggingPromptText: text("tagging_prompt_text"), // Testo personalizzato per invito a taggare
+  socialSharingImage: text("social_sharing_image"), // Immagine specifica per condivisione social
+  
   // Notifiche
   notificationsEnabled: boolean("notifications_enabled").default(true).notNull(), // Se abilitare le notifiche per nuove foto
   notificationEmailSubject: text("notification_email_subject"), // Oggetto delle email di notifica
@@ -74,11 +88,29 @@ export const insertGallerySchema = createInsertSchema(galleries).pick({
   metaData: true,
   studio: true,
   watermarkEnabled: true,
+  
+  // Social e SEO
   ogTitle: true,
   ogDescription: true,
   ogImage: true,
   seoKeywords: true,
   allowSocialSharing: true,
+  
+  // Social Media dello Studio
+  instagramHandle: true,
+  facebookPage: true,
+  twitterHandle: true,
+  pinterestHandle: true,
+  tiktokHandle: true,
+  
+  // Opzioni per incentivare il tagging
+  showFollowPrompt: true,
+  showTaggingPrompt: true,
+  followPromptText: true,
+  taggingPromptText: true,
+  socialSharingImage: true,
+  
+  // Notifiche
   notificationsEnabled: true,
   notificationEmailSubject: true,
   notificationEmailTemplate: true,
@@ -261,6 +293,24 @@ export const gallerySubscriptions = pgTable("gallery_subscriptions", {
   clientId: integer("client_id").references(() => clients.id), // Se l'utente è un cliente registrato
 });
 
+// Tabella per le condivisioni sui social
+export const socialShares = pgTable("social_shares", {
+  id: serial("id").primaryKey(),
+  galleryId: integer("gallery_id").notNull().references(() => galleries.id, { onDelete: "cascade" }),
+  photoId: integer("photo_id").references(() => photos.id, { onDelete: "cascade" }), // Opzionale, può essere null se si condivide la galleria
+  platform: text("platform").notNull(), // instagram, facebook, twitter, pinterest, etc.
+  sharedBy: integer("shared_by").references(() => users.id), // Opzionale, solo per utenti autenticati
+  clientId: integer("client_id").references(() => clients.id), // Opzionale, se condiviso da un cliente
+  sessionId: text("session_id"), // ID sessione per utenti non autenticati
+  sharedAt: timestamp("shared_at").defaultNow().notNull(),
+  postUrl: text("post_url"), // URL al post sui social (se disponibile)
+  tagged: boolean("tagged").default(false).notNull(), // Se lo studio è stato taggato
+  ipAddress: text("ip_address"), // Opzionale per statistiche
+  userAgent: text("user_agent"), // Informazioni sul browser/dispositivo
+  referrer: text("referrer"), // Provenienza dell'utente
+  metaData: jsonb("meta_data"), // Dati aggiuntivi sul post
+});
+
 export const insertGallerySubscriptionSchema = createInsertSchema(gallerySubscriptions).pick({
   galleryId: true,
   email: true,
@@ -273,6 +323,25 @@ export const insertGallerySubscriptionSchema = createInsertSchema(gallerySubscri
 export type InsertGallerySubscription = z.infer<typeof insertGallerySubscriptionSchema>;
 export type GallerySubscription = typeof gallerySubscriptions.$inferSelect;
 
+// Schema per le condivisioni social
+export const insertSocialShareSchema = createInsertSchema(socialShares).pick({
+  galleryId: true,
+  photoId: true,
+  platform: true,
+  sharedBy: true,
+  clientId: true,
+  sessionId: true,
+  postUrl: true,
+  tagged: true,
+  ipAddress: true,
+  userAgent: true,
+  referrer: true,
+  metaData: true,
+});
+
+export type InsertSocialShare = z.infer<typeof insertSocialShareSchema>;
+export type SocialShare = typeof socialShares.$inferSelect;
+
 // Relazioni
 export const galleriesRelations = relations(galleries, ({ one, many }) => ({
   event: one(events, {
@@ -283,6 +352,7 @@ export const galleriesRelations = relations(galleries, ({ one, many }) => ({
   photos: many(photos),
   selections: many(photoSelections),
   subscriptions: many(gallerySubscriptions),
+  shares: many(socialShares),
 }));
 
 export const galleryChaptersRelations = relations(galleryChapters, ({ one, many }) => ({
@@ -309,6 +379,7 @@ export const photosRelations = relations(photos, ({ one, many }) => ({
   likes: many(photoLikes),
   comments: many(photoComments),
   selections: many(photoSelections),
+  shares: many(socialShares),
 }));
 
 export const photoLikesRelations = relations(photoLikes, ({ one }) => ({
@@ -355,6 +426,25 @@ export const gallerySubscriptionsRelations = relations(gallerySubscriptions, ({ 
   }),
   client: one(clients, {
     fields: [gallerySubscriptions.clientId],
+    references: [clients.id],
+  }),
+}));
+
+export const socialSharesRelations = relations(socialShares, ({ one }) => ({
+  gallery: one(galleries, {
+    fields: [socialShares.galleryId],
+    references: [galleries.id],
+  }),
+  photo: one(photos, {
+    fields: [socialShares.photoId],
+    references: [photos.id],
+  }),
+  user: one(users, {
+    fields: [socialShares.sharedBy],
+    references: [users.id],
+  }),
+  client: one(clients, {
+    fields: [socialShares.clientId],
     references: [clients.id],
   }),
 }));

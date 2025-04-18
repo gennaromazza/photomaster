@@ -13,7 +13,7 @@ import { sendPaymentNotification } from "../services/email-service";
  */
 export const financeController = {
   // TRANSAZIONI
-  
+
   /**
    * Ottiene tutte le transazioni
    */
@@ -21,14 +21,14 @@ export const financeController = {
     try {
       const result = await db.select().from(transactions)
         .orderBy(desc(transactions.date));
-      
+
       return result;
     } catch (error) {
       console.error("Errore nel recupero delle transazioni:", error);
       throw error;
     }
   },
-  
+
   /**
    * Ottiene una transazione per ID
    */
@@ -37,18 +37,18 @@ export const financeController = {
       const [transaction] = await db.select()
         .from(transactions)
         .where(eq(transactions.id, id));
-      
+
       if (!transaction) {
         throw new Error("Transazione non trovata");
       }
-      
+
       return transaction;
     } catch (error) {
       console.error(`Errore nel recupero della transazione ${id}:`, error);
       throw error;
     }
   },
-  
+
   /**
    * Crea una nuova transazione
    */
@@ -64,7 +64,7 @@ export const financeController = {
           })
           .where(eq(scheduledPayments.id, data.scheduledPaymentId));
       }
-      
+
       // Creo la transazione
       const [transaction] = await db.insert(transactions)
         .values({
@@ -84,27 +84,27 @@ export const financeController = {
           scheduledPaymentId: data.scheduledPaymentId || null
         })
         .returning();
-      
+
       // Se collegata a un pagamento programmato, aggiorno il riferimento
       if (data.scheduledPaymentId) {
         await db.update(scheduledPayments)
           .set({ transactionId: transaction.id })
           .where(eq(scheduledPayments.id, data.scheduledPaymentId));
       }
-      
+
       // Se è una transazione di tipo "income" e associata a un preventivo, invio una notifica
       if (data.type === "income" && data.sourceId) {
         // Recupero i dati del preventivo e cliente
         const [quote] = await db.select()
           .from(quotes)
           .where(eq(quotes.id, data.sourceId));
-        
+
         if (quote) {
           // Recupero il cliente
           const [client] = await db.select()
             .from(clients)
             .where(eq(clients.id, quote.clientId));
-          
+
           if (client && client.email) {
             // Invio notifica
             try {
@@ -116,7 +116,7 @@ export const financeController = {
                 quoteTitle: quote.title,
                 date: format(new Date(data.date), "dd/MM/yyyy")
               });
-              
+
               // Aggiorno il flag di notifica
               await db.update(transactions)
                 .set({ notificationSent: true })
@@ -127,14 +127,14 @@ export const financeController = {
           }
         }
       }
-      
+
       return transaction;
     } catch (error) {
       console.error("Errore nella creazione della transazione:", error);
       throw error;
     }
   },
-  
+
   /**
    * Aggiorna una transazione esistente
    */
@@ -148,7 +148,6 @@ export const financeController = {
           description: data.description || null,
           // Usando il nome corretto per l'ORM
           sourceId: data.sourceId || null,
-          source: data.source || "quote",
           status: data.status || "completed",
           paymentMethod: data.paymentMethod || null,
           reference: data.reference || null,
@@ -158,18 +157,18 @@ export const financeController = {
         })
         .where(eq(transactions.id, id))
         .returning();
-      
+
       if (!updatedTransaction) {
         throw new Error("Transazione non trovata");
       }
-      
+
       return updatedTransaction;
     } catch (error) {
       console.error(`Errore nell'aggiornamento della transazione ${id}:`, error);
       throw error;
     }
   },
-  
+
   /**
    * Elimina una transazione
    */
@@ -179,11 +178,11 @@ export const financeController = {
       const [transaction] = await db.select()
         .from(transactions)
         .where(eq(transactions.id, id));
-      
+
       if (!transaction) {
         throw new Error("Transazione non trovata");
       }
-      
+
       // Se collegata a un pagamento programmato, aggiorno lo stato
       if (transaction.scheduledPaymentId) {
         await db.update(scheduledPayments)
@@ -193,19 +192,19 @@ export const financeController = {
           })
           .where(eq(scheduledPayments.id, transaction.scheduledPaymentId));
       }
-      
+
       // Elimino la transazione
       const [deletedTransaction] = await db.delete(transactions)
         .where(eq(transactions.id, id))
         .returning();
-      
+
       return deletedTransaction;
     } catch (error) {
       console.error(`Errore nell'eliminazione della transazione ${id}:`, error);
       throw error;
     }
   },
-  
+
   /**
    * Ottiene le transazioni relative a un preventivo
    */
@@ -215,23 +214,23 @@ export const financeController = {
         .from(transactions)
         .where(eq(transactions.sourceId, quoteId))
         .orderBy(desc(transactions.date));
-      
+
       return result;
     } catch (error) {
       console.error(`Errore nel recupero delle transazioni per il preventivo ${quoteId}:`, error);
       throw error;
     }
   },
-  
+
   // PAGAMENTI PROGRAMMATI
-  
+
   /**
    * Ottiene tutti i pagamenti programmati
    */
   async getScheduledPayments() {
     try {
       const currentDate = new Date();
-      
+
       // Recupero i pagamenti programmati
       const payments = await db.select({
         payment: scheduledPayments,
@@ -244,23 +243,23 @@ export const financeController = {
       .from(scheduledPayments)
       .leftJoin(quotes, eq(scheduledPayments.quoteId, quotes.id))
       .orderBy(asc(scheduledPayments.dueDate));
-      
+
       // Arricchisco con i dati del cliente
       const result = await Promise.all(payments.map(async (item) => {
         let client = null;
-        
+
         if (item.quote?.clientId) {
           [client] = await db.select()
             .from(clients)
             .where(eq(clients.id, item.quote.clientId));
         }
-        
+
         // Aggiungo lo stato overdue se necessario
         let status = item.payment.status;
         if (status === "pending" && isBefore(new Date(item.payment.dueDate), currentDate)) {
           status = "overdue";
         }
-        
+
         return {
           ...item.payment,
           status,
@@ -274,33 +273,33 @@ export const financeController = {
           }
         };
       }));
-      
+
       return result;
     } catch (error) {
       console.error("Errore nel recupero dei pagamenti programmati:", error);
       throw error;
     }
   },
-  
+
   /**
    * Ottiene i pagamenti programmati per un preventivo
    */
   async getScheduledPaymentsByQuoteId(quoteId: number) {
     try {
       const currentDate = new Date();
-      
+
       const payments = await db.select()
         .from(scheduledPayments)
         .where(eq(scheduledPayments.quoteId, quoteId))
         .orderBy(asc(scheduledPayments.dueDate));
-      
+
       // Aggiungo lo stato overdue se necessario
       return payments.map(payment => {
         let status = payment.status;
         if (status === "pending" && isBefore(new Date(payment.dueDate), currentDate)) {
           status = "overdue";
         }
-        
+
         return {
           ...payment,
           status
@@ -311,7 +310,7 @@ export const financeController = {
       throw error;
     }
   },
-  
+
   /**
    * Crea un nuovo pagamento programmato
    */
@@ -329,14 +328,14 @@ export const financeController = {
           reminderSent: false
         })
         .returning();
-      
+
       return payment;
     } catch (error) {
       console.error("Errore nella creazione del pagamento programmato:", error);
       throw error;
     }
   },
-  
+
   /**
    * Aggiorna un pagamento programmato
    */
@@ -353,18 +352,18 @@ export const financeController = {
         })
         .where(eq(scheduledPayments.id, id))
         .returning();
-      
+
       if (!updatedPayment) {
         throw new Error("Pagamento programmato non trovato");
       }
-      
+
       return updatedPayment;
     } catch (error) {
       console.error(`Errore nell'aggiornamento del pagamento programmato ${id}:`, error);
       throw error;
     }
   },
-  
+
   /**
    * Elimina un pagamento programmato
    */
@@ -373,27 +372,27 @@ export const financeController = {
       const [payment] = await db.select()
         .from(scheduledPayments)
         .where(eq(scheduledPayments.id, id));
-      
+
       if (!payment) {
         throw new Error("Pagamento programmato non trovato");
       }
-      
+
       // Se è già collegato a una transazione, non posso eliminarlo
       if (payment.transactionId) {
         throw new Error("Impossibile eliminare un pagamento già effettuato");
       }
-      
+
       const [deletedPayment] = await db.delete(scheduledPayments)
         .where(eq(scheduledPayments.id, id))
         .returning();
-      
+
       return deletedPayment;
     } catch (error) {
       console.error(`Errore nell'eliminazione del pagamento programmato ${id}:`, error);
       throw error;
     }
   },
-  
+
   /**
    * Invia un promemoria per un pagamento programmato
    */
@@ -402,55 +401,55 @@ export const financeController = {
       const [payment] = await db.select()
         .from(scheduledPayments)
         .where(eq(scheduledPayments.id, id));
-      
+
       if (!payment) {
         throw new Error("Pagamento programmato non trovato");
       }
-      
+
       if (payment.status === "paid") {
         throw new Error("Impossibile inviare un promemoria per un pagamento già effettuato");
       }
-      
+
       if (payment.reminderSent) {
         throw new Error("Promemoria già inviato per questo pagamento");
       }
-      
+
       // Recupero i dati del preventivo e cliente
       const [quote] = await db.select()
         .from(quotes)
         .where(eq(quotes.id, payment.quoteId));
-      
+
       if (!quote) {
         throw new Error("Preventivo non trovato");
       }
-      
+
       const [client] = await db.select()
         .from(clients)
         .where(eq(clients.id, quote.clientId));
-      
+
       if (!client || !client.email) {
         throw new Error("Cliente non trovato o email non disponibile");
       }
-      
+
       // Invio promemoria
       // TODO: Implementare il servizio di invio email per i promemoria
       console.log(`Invio promemoria per il pagamento ${id} a ${client.email}`);
-      
+
       // Aggiorno il flag di promemoria
       const [updatedPayment] = await db.update(scheduledPayments)
         .set({ reminderSent: true })
         .where(eq(scheduledPayments.id, id))
         .returning();
-      
+
       return updatedPayment;
     } catch (error) {
       console.error(`Errore nell'invio del promemoria per il pagamento ${id}:`, error);
       throw error;
     }
   },
-  
+
   // STATISTICHE FINANZIARIE
-  
+
   /**
    * Ottiene le statistiche finanziarie per la dashboard
    */
@@ -459,11 +458,11 @@ export const financeController = {
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth();
-      
+
       // Periodo predefinito: mese corrente
       let startDate = startOfMonth(currentDate);
       let endDate = endOfMonth(currentDate);
-      
+
       // Se specificato, utilizzo il periodo richiesto
       if (params.period) {
         switch (params.period) {
@@ -495,7 +494,7 @@ export const financeController = {
             break;
         }
       }
-      
+
       // Query per incassi totali nel periodo
       const [incomeResult] = await db
         .select({ total: sql`SUM(CAST(${transactions.amount} AS DECIMAL))` })
@@ -504,7 +503,7 @@ export const financeController = {
           eq(transactions.type, "income"),
           between(transactions.date, startDate, endDate)
         ));
-      
+
       // Query per spese totali nel periodo
       const [expensesResult] = await db
         .select({ total: sql`SUM(CAST(${transactions.amount} AS DECIMAL))` })
@@ -513,7 +512,7 @@ export const financeController = {
           eq(transactions.type, "expense"),
           between(transactions.date, startDate, endDate)
         ));
-      
+
       // Query per pagamenti programmati scaduti
       const [overdueResult] = await db
         .select({ count: count() })
@@ -522,7 +521,7 @@ export const financeController = {
           eq(scheduledPayments.status, "pending"),
           sql`${scheduledPayments.dueDate} < CURRENT_DATE`
         ));
-      
+
       // Query per pagamenti programmati in arrivo
       const [upcomingResult] = await db
         .select({ count: count() })
@@ -532,12 +531,12 @@ export const financeController = {
           sql`${scheduledPayments.dueDate} >= CURRENT_DATE`,
           sql`${scheduledPayments.dueDate} <= CURRENT_DATE + INTERVAL '30 day'`
         ));
-      
+
       // Query per dati mensili dell'anno corrente (per grafici)
       const monthlyData = await Promise.all([...Array(12).keys()].map(async (month) => {
         const monthStartDate = new Date(currentYear, month, 1);
         const monthEndDate = endOfMonth(monthStartDate);
-        
+
         // Incassi del mese
         const [incomeItem] = await db
           .select({ total: sql`SUM(CAST(${transactions.amount} AS DECIMAL))` })
@@ -546,7 +545,7 @@ export const financeController = {
             eq(transactions.type, "income"),
             between(transactions.date, monthStartDate, monthEndDate)
           ));
-        
+
         // Spese del mese
         const [expenseItem] = await db
           .select({ total: sql`SUM(CAST(${transactions.amount} AS DECIMAL))` })
@@ -555,7 +554,7 @@ export const financeController = {
             eq(transactions.type, "expense"),
             between(transactions.date, monthStartDate, monthEndDate)
           ));
-        
+
         return {
           month: format(monthStartDate, "MMMM", { locale: it }),
           income: parseFloat(incomeItem.total || "0"),
@@ -563,7 +562,7 @@ export const financeController = {
           profit: parseFloat(incomeItem.total || "0") - parseFloat(expenseItem.total || "0")
         };
       }));
-      
+
       // Query per categorie di spesa nel periodo
       const expenseCategories = await db
         .select({
@@ -577,7 +576,7 @@ export const financeController = {
         ))
         .groupBy(transactions.category)
         .orderBy(sql`SUM(CAST(${transactions.amount} AS DECIMAL))` as any, "desc"); // Usare any per evitare errori TS
-      
+
       return {
         period: {
           start: format(startDate, "yyyy-MM-dd"),
@@ -602,7 +601,7 @@ export const financeController = {
       throw error;
     }
   },
-  
+
   /**
    * Ottiene i dati finanziari per un preventivo
    */
@@ -610,33 +609,33 @@ export const financeController = {
     try {
       // Recupero le transazioni
       const payments = await this.getTransactionsByQuoteId(quoteId);
-      
+
       // Recupero i pagamenti programmati
       const scheduledPaymentsList = await this.getScheduledPaymentsByQuoteId(quoteId);
-      
+
       // Calcolo totali
       const totalPaid = payments
         .filter(p => p.type === "income")
         .reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
-      
+
       const totalScheduled = scheduledPaymentsList
         .reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
-      
+
       // Recupero il preventivo per ottenere il totale
       const [quote] = await db.select()
         .from(quotes)
         .where(eq(quotes.id, quoteId));
-      
+
       if (!quote) {
         throw new Error("Preventivo non trovato");
       }
-      
+
       // I campi subtotal, total, discount sono virtuali e calcolati dal frontend
       // Utilizzo il campo total se definito, altrimenti calcolo in base ai pagamenti
       const quoteTotal = quote.subtotal !== undefined && quote.total !== undefined 
         ? (quote.total as number) 
         : (totalPaid + totalScheduled); // Stima basata su pagamenti
-      
+
       return {
         payments,
         scheduledPayments: scheduledPaymentsList,

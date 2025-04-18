@@ -37,7 +37,8 @@ export async function googleAuthCallback(req: Request, res: Response) {
     await handleAuthCallback(code.toString(), state.toString());
     
     // Reindirizza l'utente alla pagina delle impostazioni
-    res.redirect('/settings');
+    // Usa l'URL assoluto per evitare problemi di reindirizzamento
+    res.redirect('https://workspace.imagestudiofoto.repl.co/settings');
   } catch (error) {
     console.error('Errore nel callback di autorizzazione Google:', error);
     res.status(500).json({ message: 'Errore durante l\'autorizzazione con Google' });

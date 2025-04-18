@@ -137,20 +137,39 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
     return null;
   };
 
-  // Inizializza gli item selezionati in base al minSelectCount
+  // Inizializza gli item selezionati in base al minSelectCount e precedenti selezioni (se disponibili)
   useEffect(() => {
+    // Se il preventivo è già firmato (disabled=true), estraiamo le selezioni reali dal server
+    // altrimenti le selezioni iniziali sono solo quelle obbligatorie
     const initialSelected: SelectedItem[] = [];
 
     if (module.items && Array.isArray(module.items)) {
       module.items.forEach((item: ModuleItem, index: number) => {
         if (!item || !item.id) return;
 
-        if (isItemRequired(item)) {
-          initialSelected.push({
-            id: item.id,
-            index: index,
-            isRequired: true
-          });
+        // In modalità visualizzazione, mostra solo gli elementi realmente selezionati
+        // In modalità modifica, mostra gli elementi obbligatori come preselezionati
+        if (disabled) {
+          // Se è disabled (preventivo firmato), considera selezionati solo quelli
+          // segnalati come tali dal server (che hanno quantity > 0 o altro flag)
+          const isReallySelected = item.quantity > 0;
+          
+          if (isReallySelected) {
+            initialSelected.push({
+              id: item.id,
+              index: index,
+              isRequired: isItemRequired(item)
+            });
+          }
+        } else {
+          // In modalità modifica, seleziona automaticamente gli elementi obbligatori
+          if (isItemRequired(item)) {
+            initialSelected.push({
+              id: item.id,
+              index: index,
+              isRequired: true
+            });
+          }
         }
       });
     }
@@ -170,7 +189,7 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
       });
     }
     setImageLoadState(initialImageLoadState);
-  }, [module.items]);
+  }, [module.items, disabled]);
 
   // Calcola il totale in base agli elementi selezionati e valida la selezione
   useEffect(() => {

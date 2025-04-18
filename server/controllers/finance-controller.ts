@@ -70,9 +70,9 @@ export const financeController = {
         .values({
           type: data.type,
           amount: data.amount.toString(),
-          date: new Date(data.date),
+          date: format(new Date(data.date), 'yyyy-MM-dd'),
           description: data.description || null,
-          sourceId: data.sourceId || null,
+          quote_id: data.sourceId || null, // Correzione: usiamo quote_id invece di sourceId
           status: data.status || "completed",
           paymentMethod: data.paymentMethod || null,
           reference: data.reference || null,
@@ -144,10 +144,10 @@ export const financeController = {
         .set({
           type: data.type,
           amount: data.amount.toString(),
-          date: new Date(data.date),
+          date: format(new Date(data.date), 'yyyy-MM-dd'),
           description: data.description || null,
           // Usando il nome corretto per l'ORM
-          sourceId: data.sourceId || null,
+          quote_id: data.sourceId || null,
           status: data.status || "completed",
           paymentMethod: data.paymentMethod || null,
           reference: data.reference || null,
@@ -320,7 +320,7 @@ export const financeController = {
         .values({
           quoteId: data.quoteId,
           amount: data.amount.toString(),
-          dueDate: new Date(data.dueDate),
+          dueDate: format(new Date(data.dueDate), 'yyyy-MM-dd'),
           description: data.description || null,
           status: data.status || "pending",
           paymentMethod: data.paymentMethod || null,
@@ -344,7 +344,7 @@ export const financeController = {
       const [updatedPayment] = await db.update(scheduledPayments)
         .set({
           amount: data.amount.toString(),
-          dueDate: new Date(data.dueDate),
+          dueDate: format(new Date(data.dueDate), 'yyyy-MM-dd'),
           description: data.description || null,
           status: data.status || "pending",
           paymentMethod: data.paymentMethod || null,
@@ -501,7 +501,7 @@ export const financeController = {
         .from(transactions)
         .where(and(
           eq(transactions.type, "income"),
-          between(transactions.date, startDate, endDate)
+          sql`${transactions.date} BETWEEN ${format(startDate, 'yyyy-MM-dd')} AND ${format(endDate, 'yyyy-MM-dd')}`
         ));
 
       // Query per spese totali nel periodo

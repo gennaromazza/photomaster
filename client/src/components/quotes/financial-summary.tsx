@@ -242,7 +242,7 @@ export function FinancialSummary({ quoteId, quoteTotal = 0, readOnly = false, cl
     const newTransaction = {
       type: 'income',
       amount: parseFloat(transactionData.amount),
-      date: new Date(transactionData.date),
+      date: transactionData.date, // Inviamo la data come stringa, sarà formattata lato server
       description: transactionData.description || `Pagamento per preventivo #${quoteId}`,
       source: 'quote',
       sourceId: quoteId,
@@ -274,7 +274,7 @@ export function FinancialSummary({ quoteId, quoteTotal = 0, readOnly = false, cl
     const newScheduledPayment = {
       quoteId,
       amount: parseFloat(scheduledData.amount),
-      dueDate: new Date(scheduledData.dueDate),
+      dueDate: scheduledData.dueDate, // Inviamo la data come stringa, verrà formattata dal server
       description: scheduledData.description || `Rata per preventivo #${quoteId}`,
       status: 'pending',
       paymentMethod: scheduledData.paymentMethod || null,
@@ -299,7 +299,7 @@ export function FinancialSummary({ quoteId, quoteTotal = 0, readOnly = false, cl
     const transactionData = {
       type: 'income',
       amount: parseFloat(payment.amount),
-      date: new Date(),
+      date: format(new Date(), 'yyyy-MM-dd'), // Inviamo la data come stringa formattata
       description: payment.description || `Pagamento per preventivo #${quoteId}`,
       source: 'quote',
       sourceId: quoteId,

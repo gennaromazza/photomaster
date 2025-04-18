@@ -415,25 +415,25 @@ export default function QuoteDetailPage() {
 
   return (
 
-      <div className="container py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
+      <div className="container py-4 px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <Button 
               variant="outline" 
               onClick={() => setLocation("/quotes")} 
-              className="mr-4"
+              className="self-start"
+              size="sm"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Indietro
+              <span className="hidden sm:inline">Indietro</span>
             </Button>
             <div>
-              <h1 className="text-3xl font-playfair font-bold">{quote.title}</h1>
-              <div className="flex items-center mt-1">
+              <h1 className="text-2xl sm:text-3xl font-playfair font-bold">{quote.title}</h1>
+              <div className="flex flex-wrap items-center gap-2 mt-1">
                 <Badge 
                   variant={quote.status === "confermato" || quote.status === "approved" ? "success" : 
                            quote.status === "in attesa" || quote.status === "pending" ? "warning" : 
                            "default"}
-                  className="mr-2"
                 >
                   {quote.status === "draft" ? "Bozza" : 
                    quote.status === "pending" || quote.status === "in attesa" ? "In attesa" : 
@@ -451,23 +451,27 @@ export default function QuoteDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Se il preventivo è firmato, mostriamo un pulsante specifico per il link permanente */}
             {(quote.status === "approved" || quote.status === "confermato") ? (
               <Button 
                 variant="secondary" 
                 onClick={() => getShareTokenMutation.mutate()}
                 disabled={getShareTokenMutation.isPending}
+                size="sm"
+                className="w-full sm:w-auto"
               >
                 {getShareTokenMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Recupero link...
+                    <span className="hidden sm:inline">Recupero link...</span>
+                    <span className="inline sm:hidden">Recupero...</span>
                   </>
                 ) : (
                   <>
                     <FileSignature className="mr-2 h-4 w-4" />
-                    Link documento firmato
+                    <span className="hidden sm:inline">Link documento firmato</span>
+                    <span className="inline sm:hidden">Documento</span>
                   </>
                 )}
               </Button>
@@ -475,9 +479,12 @@ export default function QuoteDetailPage() {
               <Button 
                 variant="secondary"
                 onClick={() => setIsShareDialogOpen(true)}
+                size="sm"
+                className="w-full sm:w-auto"
               >
                 <Share className="mr-2 h-4 w-4" />
-                Condividi
+                <span className="hidden sm:inline">Condividi</span>
+                <span className="inline sm:hidden">Condividi</span>
               </Button>
             )}
             
@@ -711,9 +718,9 @@ export default function QuoteDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
           {/* Colonna principale - 8/12 */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-4 sm:space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="details">Dettagli</TabsTrigger>

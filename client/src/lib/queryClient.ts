@@ -1,12 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
-  }
-}
-
 // Variabile per memorizzare il token CSRF
 let csrfToken: string | null = null;
 
@@ -22,27 +15,36 @@ export async function getCsrfToken(): Promise<string> {
     const response = await fetch('/api/csrf-token');
     
     if (!response.ok) {
-      throw new Error('Impossibile ottenere il token CSRF');
+      // Gestisci il caso in cui il server non risponde o restituisce un errore
+      console.warn('Server non ha restituito un token CSRF, continuo senza token');
+      return ''; // Restituiamo una stringa vuota invece di fallire
     }
     
     const data = await response.json();
     csrfToken = data.token; // L'API restituisce il token con chiave 'token'
     
     if (!csrfToken) {
-      throw new Error('Token CSRF non valido');
+      console.warn('Token CSRF non valido o mancante, continuo senza token');
+      return ''; // Restituiamo una stringa vuota invece di fallire
     }
     
     return csrfToken;
   } catch (error) {
-    console.error('Errore durante il recupero del token CSRF:', error);
-    throw error;
+    console.warn('Errore durante il recupero del token CSRF, continuo senza token:', error);
+    return ''; // Restituiamo una stringa vuota invece di fallire
   }
+}
+
+// Funzione per invalidare il token CSRF (utile dopo logout o errori 403)
+export function invalidateCsrfToken(): void {
+  csrfToken = null;
 }
 
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  retryOnCsrf: boolean = true,
 ): Promise<Response> {
   // Controlla se c'è un token JWT nel localStorage
   const token = localStorage.getItem("auth_token");
@@ -65,22 +67,44 @@ export async function apiRequest(
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
     try {
       const csrfToken = await getCsrfToken();
-      headers['X-CSRF-Token'] = csrfToken;
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
     } catch (error) {
-      console.error('Errore nel recupero del token CSRF:', error);
+      console.warn('Errore nel recupero del token CSRF:', error);
       // Non blocchiamo la richiesta, il server respingerà se necessario
     }
   }
   
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include", // Manteniamo per compatibilità con sessioni
-  });
+  try {
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include", // Manteniamo per compatibilità con sessioni
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    // Se riceviamo 403 e c'è un errore CSRF, proviamo a invalidare il token e ritentare
+    if (res.status === 403 && retryOnCsrf) {
+      const responseText = await res.text();
+      if (responseText.includes('CSRF') || responseText.includes('csrf')) {
+        // Invalidiamo il token CSRF e ritentiamo una volta
+        invalidateCsrfToken();
+        return apiRequest(method, url, data, false); // Ritenta senza ulteriori retry
+      }
+      throw new Error(`${res.status}: ${responseText}`);
+    }
+
+    if (!res.ok) {
+      const errorMessage = await res.text();
+      throw new Error(`${res.status}: ${errorMessage}`);
+    }
+
+    return res;
+  } catch (error) {
+    console.error(`Errore durante la richiesta ${method} a ${url}:`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -118,7 +142,11 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    await throwIfResNotOk(res);
+    if (!res.ok) {
+      const errorMessage = await res.text();
+      throw new Error(`${res.status}: ${errorMessage}`);
+    }
+    
     return await res.json();
   };
 

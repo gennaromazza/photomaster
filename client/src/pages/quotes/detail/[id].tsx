@@ -5,6 +5,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import "@/components/rich-text-content.css";
 // Rimuovo import Layout per evitare la duplicazione del layout
 import ModuleManager from "@/components/quotes/modules/module-manager";
+import { FinancialSummary } from "@/components/quotes/financial-summary";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -956,8 +957,21 @@ export default function QuoteDetailPage() {
               </CardFooter>
             </Card>
 
+            {/* Riepilogo finanziario */}
+            <FinancialSummary 
+              quoteId={parseInt(id as string)} 
+              totalAmount={quote.total || 0} 
+              onAddPaymentClick={() => {
+                // In futuro implementeremo un dialog per l'aggiunta di pagamenti
+                toast({
+                  title: "Funzionalità in arrivo",
+                  description: "L'aggiunta di pagamenti sarà disponibile a breve.",
+                });
+              }} 
+            />
+
             {/* Timeline/stato */}
-            <Card>
+            <Card className="mt-6">
               <CardHeader>
                 <CardTitle>Stato Preventivo</CardTitle>
               </CardHeader>

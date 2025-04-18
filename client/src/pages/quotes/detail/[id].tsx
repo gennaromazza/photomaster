@@ -1004,7 +1004,7 @@ export default function QuoteDetailPage() {
               <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-lg sm:text-xl flex items-center">
                   <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary/80" />
-                  Riepilogo Finanziario
+                  Riepilogo Preventivo
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 sm:space-y-4 pb-4 sm:pb-6">
@@ -1070,12 +1070,22 @@ export default function QuoteDetailPage() {
               </CardFooter>
             </Card>
 
-            {/* Riepilogo finanziario */}
-            <FinancialSummary 
-              quoteId={parseInt(id as string)} 
-              totalAmount={quote.total || 0}
-              clientName={clientFullName}
-            />
+            {/* Riepilogo finanziario dettagliato */}
+            <Card>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-lg sm:text-xl flex items-center">
+                  <Euro className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary/80" />
+                  Riepilogo Finanziario
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <FinancialSummary 
+                  quoteId={parseInt(id as string)} 
+                  quoteTotal={quote.total || 0}
+                  clientName={clientFullName}
+                />
+              </CardContent>
+            </Card>
 
             {/* Timeline/stato */}
             <Card>

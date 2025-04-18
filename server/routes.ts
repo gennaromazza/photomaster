@@ -15,6 +15,16 @@ import { handleFileUpload, importClients, importDirectClients, exportClientsCSV 
 import multer from "multer";
 import { tmpdir } from "os";
 import { join } from "path";
+import {
+  connectGoogleCalendar,
+  googleAuthCallback,
+  syncEventToGoogle,
+  deleteEventFromGoogle,
+  syncAllEvents,
+  importGoogleEvents,
+  getGoogleAuthStatus,
+  toggleGoogleSync
+} from './controllers/google-calendar-controller';
 
 import { 
   insertClientSchema, 
@@ -3019,6 +3029,32 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.post('/api/clients/import', isAuthenticated, importClients);
   app.post('/api/clients/direct-import', isAuthenticated, importDirectClients);
   app.get('/api/clients/export', isAuthenticated, exportClientsCSV);
+
+  // Google Calendar routes
+
+  // Endpoint per ottenere l'URL di autorizzazione di Google
+  apiRouter.get("/google/auth", isAuthenticated, connectGoogleCalendar);
+  
+  // Callback per l'autorizzazione di Google (non ha bisogno di CSRF poiché gestisce il redirect da Google)
+  app.get("/api/google/callback", googleAuthCallback);
+  
+  // Endpoint per verificare lo stato di connessione a Google Calendar
+  apiRouter.get("/google/status", isAuthenticated, getGoogleAuthStatus);
+  
+  // Endpoint per sincronizzare un evento specifico con Google Calendar
+  apiRouter.post("/google/events/:eventId/sync", isAuthenticated, syncEventToGoogle);
+  
+  // Endpoint per rimuovere un evento specifico da Google Calendar
+  apiRouter.delete("/google/events/:eventId", isAuthenticated, deleteEventFromGoogle);
+  
+  // Endpoint per sincronizzare tutti gli eventi con Google Calendar
+  apiRouter.post("/google/sync-all", isAuthenticated, syncAllEvents);
+  
+  // Endpoint per importare eventi da Google Calendar
+  apiRouter.post("/google/import", isAuthenticated, importGoogleEvents);
+  
+  // Endpoint per attivare/disattivare la sincronizzazione di un evento
+  apiRouter.post("/google/events/:eventId/toggle", isAuthenticated, toggleGoogleSync);
 
   app.use("/api", apiRouter);
 

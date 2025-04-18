@@ -77,7 +77,7 @@ async function getAuthClientForUser(userId: number): Promise<any> {
         .where(eq(users.id, userId));
       oauth2Client.setCredentials(credentials);
     } catch (error) {
-      console.error('Errore durante l'aggiornamento del token:', error);
+      console.error('Errore durante aggiornamento del token:', error);
       throw new Error('Impossibile aggiornare il token Google');
     }
   }

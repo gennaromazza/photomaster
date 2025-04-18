@@ -1,30 +1,28 @@
-import { useState, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-import { UploadCloud, X, Image, Check, Loader2 } from "lucide-react";
+import { Upload, X, Check, Image as ImageIcon, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { apiRequest } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface PhotoUploaderProps {
   galleryId: number;
   chapterId?: number | null;
-  onUploadComplete?: (newPhotos: any[]) => void;
+  onUploadComplete?: () => void;
   maxFiles?: number;
+  maxSize?: number; // in bytes
   acceptedFileTypes?: string[];
-  className?: string;
 }
 
-interface UploadingFile {
-  id: string;
-  file: File;
+interface FileWithPreview extends File {
   preview: string;
+  id: string;
+  status: "idle" | "uploading" | "success" | "error";
   progress: number;
   error?: string;
-  uploading: boolean;
-  uploaded: boolean;
 }
 
 export function PhotoUploader({
@@ -32,350 +30,320 @@ export function PhotoUploader({
   chapterId = null,
   onUploadComplete,
   maxFiles = 20,
+  maxSize = 10 * 1024 * 1024, // 10MB
   acceptedFileTypes = ["image/jpeg", "image/png", "image/webp"],
-  className = "",
 }: PhotoUploaderProps) {
-  const [files, setFiles] = useState<UploadingFile[]>([]);
+  const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
-  const uploadPromisesRef = useRef<Record<string, { controller: AbortController, promise: Promise<any> }>>({});
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    accept: acceptedFileTypes.reduce((acc, type) => ({ ...acc, [type]: [] }), {}),
-    maxFiles,
-    maxSize: 20 * 1024 * 1024, // 20MB
-    noClick: files.length > 0,
-    onDrop: (acceptedFiles) => {
-      // Limitare il numero totale di file
-      const remainingSlots = maxFiles - files.length;
-      const filesToAdd = acceptedFiles.slice(0, remainingSlots);
-      
-      if (filesToAdd.length < acceptedFiles.length) {
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (files.length + acceptedFiles.length > maxFiles) {
         toast({
-          title: "Troppi file",
-          description: `Puoi caricare un massimo di ${maxFiles} file alla volta.`,
+          title: "Troppe foto",
+          description: `Puoi caricare al massimo ${maxFiles} foto alla volta`,
           variant: "destructive",
         });
+        return;
       }
-      
-      // Aggiungere i nuovi file alla lista
-      const newFiles = filesToAdd.map(file => ({
-        id: Math.random().toString(36).substring(2, 11),
-        file,
-        preview: URL.createObjectURL(file),
-        progress: 0,
-        uploading: false,
-        uploaded: false
-      }));
-      
-      setFiles(prev => [...prev, ...newFiles]);
+
+      const filesToAdd = acceptedFiles.map((file) =>
+        Object.assign(file, {
+          preview: URL.createObjectURL(file),
+          id: `${file.name}-${Date.now()}`,
+          status: "idle" as const,
+          progress: 0,
+        })
+      );
+
+      setFiles((prev) => [...prev, ...filesToAdd]);
     },
-    onDropRejected: (rejectedFiles) => {
-      // Gestire i file rifiutati (troppo grandi o di tipo non supportato)
-      const errors = rejectedFiles.map(({ file, errors }) => {
-        return `${file.name}: ${errors.map(e => e.message).join(", ")}`;
-      });
-      
-      toast({
-        title: "File non accettati",
-        description: errors.join("\n"),
-        variant: "destructive",
-      });
-    }
+    [files.length, maxFiles, toast]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "image/*": acceptedFileTypes.map((type) => `.${type.split("/")[1]}`),
+    },
+    maxSize,
+    multiple: true,
   });
 
   const removeFile = (id: string) => {
-    // Se il file è in fase di caricamento, annulla la richiesta
-    if (uploadPromisesRef.current[id]) {
-      uploadPromisesRef.current[id].controller.abort();
-      delete uploadPromisesRef.current[id];
-    }
-    
-    // Rilascia l'URL dell'anteprima
-    const file = files.find(f => f.id === id);
-    if (file) {
-      URL.revokeObjectURL(file.preview);
-    }
-    
-    setFiles(files.filter(file => file.id !== id));
-  };
-
-  const uploadFile = async (file: UploadingFile) => {
-    // Aggiorna lo stato del file
-    setFiles(prevFiles => 
-      prevFiles.map(f => 
-        f.id === file.id ? { ...f, uploading: true, progress: 0 } : f
-      )
-    );
-    
-    const formData = new FormData();
-    formData.append("photo", file.file);
-    formData.append("galleryId", galleryId.toString());
-    if (chapterId) formData.append("chapterId", chapterId.toString());
-    
-    // Crea un controller per poter annullare la richiesta
-    const controller = new AbortController();
-    const { signal } = controller;
-    
-    try {
-      // Simula l'upload con progress tracking
-      const uploadPromise = new Promise<any>(async (resolve, reject) => {
-        try {
-          // Simula l'avanzamento durante l'upload
-          const progressInterval = setInterval(() => {
-            setFiles(prevFiles => 
-              prevFiles.map(f => {
-                if (f.id === file.id && f.progress < 90) {
-                  return { ...f, progress: f.progress + 5 };
-                }
-                return f;
-              })
-            );
-          }, 300);
-          
-          // Invia la richiesta effettiva
-          const response = await apiRequest("POST", "/api/gallery/photos", formData, { signal });
-          
-          // Ferma la simulazione dell'avanzamento
-          clearInterval(progressInterval);
-          
-          // Completa al 100%
-          setFiles(prevFiles => 
-            prevFiles.map(f => 
-              f.id === file.id ? { ...f, uploading: false, uploaded: true, progress: 100 } : f
-            )
-          );
-          
-          const data = await response.json();
-          resolve(data);
-        } catch (error: any) {
-          if (error.name === 'AbortError') {
-            reject(new Error('Upload annullato'));
-          } else {
-            setFiles(prevFiles => 
-              prevFiles.map(f => 
-                f.id === file.id ? { ...f, uploading: false, error: "Errore durante l'upload" } : f
-              )
-            );
-            reject(error);
-          }
-        }
-      });
-      
-      // Salva il promise e il controller per poter annullare l'upload in seguito
-      uploadPromisesRef.current[file.id] = { promise: uploadPromise, controller };
-      
-      // Attendi il completamento dell'upload
-      const result = await uploadPromise;
-      return result;
-    } catch (error: any) {
-      console.error(`Errore nell'upload di ${file.file.name}:`, error);
-      return null;
-    } finally {
-      // Rimuovi il promise dalla lista
-      delete uploadPromisesRef.current[file.id];
-    }
-  };
-
-  const uploadAllFiles = async () => {
-    if (files.length === 0 || isUploading) return;
-    
-    setIsUploading(true);
-    
-    const filesToUpload = files.filter(f => !f.uploaded && !f.uploading);
-    const results = [];
-    
-    toast({
-      title: "Caricamento in corso",
-      description: `Caricamento di ${filesToUpload.length} file...`,
+    setFiles((prev) => {
+      const updatedFiles = prev.filter((file) => file.id !== id);
+      return updatedFiles;
     });
-    
-    for (const file of filesToUpload) {
-      try {
-        const result = await uploadFile(file);
-        if (result) results.push(result);
-      } catch (error) {
-        console.error(`Errore nell'upload di ${file.file.name}:`, error);
+  };
+
+  const uploadFiles = async () => {
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
+    const uploadPromises = files.map(async (file) => {
+      if (file.status === "success") return file;
+
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === file.id ? { ...f, status: "uploading", progress: 0 } : f
+        )
+      );
+
+      const formData = new FormData();
+      formData.append("photo", file);
+      if (chapterId) {
+        formData.append("chapterId", chapterId.toString());
       }
-    }
-    
-    setIsUploading(false);
-    
-    if (results.length > 0) {
+
+      try {
+        const xhr = new XMLHttpRequest();
+        
+        const progressPromise = new Promise<void>((resolve, reject) => {
+          xhr.upload.addEventListener("progress", (event) => {
+            if (event.lengthComputable) {
+              const progress = Math.round((event.loaded * 100) / event.total);
+              setFiles((prev) =>
+                prev.map((f) =>
+                  f.id === file.id ? { ...f, progress } : f
+                )
+              );
+            }
+          });
+          
+          xhr.addEventListener("load", () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error(`HTTP Error: ${xhr.status}`));
+            }
+          });
+          
+          xhr.addEventListener("error", () => reject(new Error("Network Error")));
+          xhr.addEventListener("abort", () => reject(new Error("Upload Aborted")));
+        });
+        
+        xhr.open("POST", `/api/gallery/galleries/${galleryId}/photos`);
+        xhr.send(formData);
+        
+        await progressPromise;
+        
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === file.id ? { ...f, status: "success", progress: 100 } : f
+          )
+        );
+        
+        return { ...file, status: "success", progress: 100 };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto";
+        
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === file.id
+              ? { ...f, status: "error", error: errorMessage }
+              : f
+          )
+        );
+        
+        console.error(`Errore durante il caricamento di ${file.name}:`, error);
+        return { ...file, status: "error", error: errorMessage };
+      }
+    });
+
+    try {
+      await Promise.all(uploadPromises);
+      
       toast({
         title: "Caricamento completato",
-        description: `${results.length} file caricati con successo.`,
+        description: "Le foto sono state caricate con successo",
       });
       
       if (onUploadComplete) {
-        onUploadComplete(results);
+        onUploadComplete();
       }
       
-      // Rimuovi i file caricati con successo dopo 1 secondo
+      // Rimuovi i file caricati con successo dopo un breve ritardo
       setTimeout(() => {
-        setFiles(prevFiles => prevFiles.filter(f => !f.uploaded));
-      }, 1000);
+        setFiles((prev) => prev.filter((f) => f.status !== "success"));
+      }, 2000);
+    } catch (error) {
+      console.error("Errore durante il caricamento:", error);
+      
+      toast({
+        title: "Errore di caricamento",
+        description: "Si è verificato un errore durante il caricamento delle foto",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      abortControllerRef.current = null;
     }
   };
 
-  const cancelAllUploads = () => {
-    // Annulla tutti gli upload in corso
-    Object.values(uploadPromisesRef.current).forEach(({ controller }) => {
-      controller.abort();
+  const cancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsUploading(false);
+    
+    toast({
+      title: "Caricamento annullato",
+      description: "Il caricamento delle foto è stato annullato",
     });
-    
-    // Pulisci gli URL delle anteprime
-    files.forEach(file => {
-      URL.revokeObjectURL(file.preview);
-    });
-    
-    // Svuota la lista dei file
-    setFiles([]);
-    
-    uploadPromisesRef.current = {};
   };
 
+  const allFilesUploaded = files.length > 0 && files.every((file) => file.status === "success");
+  const hasErrors = files.some((file) => file.status === "error");
+  
   return (
-    <div className={className}>
+    <div className="space-y-6">
       <div
         {...getRootProps()}
         className={cn(
-          "border-2 border-dashed rounded-lg p-4 text-center transition-colors",
-          isDragActive 
-            ? "border-primary bg-primary/10"
-            : "border-muted-foreground/30 hover:border-muted-foreground/50",
-          files.length > 0 && "border-primary/50"
+          "border-2 border-dashed rounded-lg p-6 transition-colors cursor-pointer flex flex-col items-center justify-center min-h-[200px]",
+          isDragActive
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/25 hover:border-muted-foreground/50"
         )}
       >
         <input {...getInputProps()} />
-        
-        {files.length === 0 ? (
-          <div className="py-8 flex flex-col items-center space-y-2 text-muted-foreground">
-            <UploadCloud className="h-10 w-10 mb-2" />
-            <h3 className="text-lg font-medium">
-              {isDragActive ? "Rilascia i file qui" : "Trascina e rilascia le foto"}
-            </h3>
-            <p className="text-sm">oppure</p>
-            <Button 
-              variant="outline" 
-              onClick={open}
-              type="button"
-            >
-              Seleziona file
-            </Button>
-            <p className="text-xs mt-2">
-              JPG, PNG, WebP • Max {maxFiles} file • Max 20MB per file
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col space-y-4 mt-4 mb-2">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">
-                {files.length} {files.length === 1 ? "file selezionato" : "file selezionati"}
-              </h3>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={open}
-                  type="button"
-                  disabled={files.length >= maxFiles || isUploading}
-                >
-                  <Image className="h-4 w-4 mr-1" /> 
-                  Aggiungi
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    cancelAllUploads();
-                  }}
-                  type="button"
-                  disabled={isUploading}
-                >
-                  <X className="h-4 w-4 mr-1" /> 
-                  Rimuovi tutti
-                </Button>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {files.map((file) => (
-                <Card key={file.id} className="relative overflow-hidden group">
-                  <div className="aspect-square overflow-hidden bg-muted rounded-md">
-                    <img
-                      src={file.preview}
-                      className="w-full h-full object-cover"
-                      alt={file.file.name}
-                      onLoad={() => {
-                        URL.revokeObjectURL(file.preview);
-                      }}
-                    />
-                  </div>
-                  
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className={cn(
-                      "absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity",
-                      file.uploading && "opacity-0 !important"
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFile(file.id);
-                    }}
-                    disabled={file.uploading}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                  
-                  {(file.uploading || file.uploaded) && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white">
-                      {file.uploading && <Loader2 className="h-6 w-6 animate-spin mb-2" />}
-                      {file.uploaded && <Check className="h-8 w-8 text-green-500 mb-2" />}
-                      <Progress
-                        value={file.progress}
-                        className="w-4/5 h-2"
-                      />
-                      <p className="text-xs mt-1">{file.progress}%</p>
-                    </div>
-                  )}
-                  
-                  {file.error && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/60 text-white">
-                      <X className="h-6 w-6 mb-1" />
-                      <p className="text-xs text-center px-2">{file.error}</p>
-                    </div>
-                  )}
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+        <Upload
+          className={cn(
+            "h-10 w-10 mb-4",
+            isDragActive ? "text-primary" : "text-muted-foreground"
+          )}
+        />
+        <p className="text-center mb-1">
+          {isDragActive
+            ? "Rilascia le foto qui"
+            : "Trascina le foto qui, o clicca per selezionarle"}
+        </p>
+        <p className="text-sm text-muted-foreground text-center">
+          Formati supportati: JPG, PNG, WEBP. Dimensione massima: 10MB per foto.
+        </p>
+        <p className="text-sm text-muted-foreground text-center mt-1">
+          Puoi caricare fino a {maxFiles} foto alla volta.
+        </p>
       </div>
-      
+
       {files.length > 0 && (
-        <div className="mt-4 flex justify-end">
-          <Button
-            variant="default"
-            onClick={uploadAllFiles}
-            disabled={isUploading || files.every(f => f.uploaded)}
-            className="w-full md:w-auto"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Caricamento in corso...
-              </>
-            ) : (
-              <>
-                <UploadCloud className="h-4 w-4 mr-2" />
-                Carica {files.filter(f => !f.uploaded).length} foto
-              </>
-            )}
-          </Button>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">
+              Foto selezionate ({files.length})
+            </h3>
+            <div className="flex gap-2">
+              {isUploading ? (
+                <Button variant="outline" onClick={cancelUpload}>
+                  Annulla
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setFiles([])}
+                    disabled={isUploading}
+                  >
+                    Rimuovi tutto
+                  </Button>
+                  <Button
+                    onClick={uploadFiles}
+                    disabled={isUploading || allFilesUploaded}
+                  >
+                    {isUploading ? (
+                      "Caricamento in corso..."
+                    ) : allFilesUploaded ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Caricamento completato
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Carica foto
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {files.map((file) => (
+              <Card
+                key={file.id}
+                className="overflow-hidden flex flex-col relative group"
+              >
+                <div className="aspect-square overflow-hidden relative bg-muted">
+                  <img
+                    src={file.preview}
+                    alt={file.name}
+                    className="object-cover h-full w-full transition-all group-hover:scale-105"
+                    onLoad={() => {
+                      URL.revokeObjectURL(file.preview);
+                    }}
+                  />
+                  <Badge
+                    variant={
+                      file.status === "idle"
+                        ? "outline"
+                        : file.status === "uploading"
+                        ? "secondary"
+                        : file.status === "success"
+                        ? "default"
+                        : "destructive"
+                    }
+                    className="absolute top-2 right-2"
+                  >
+                    {file.status === "idle" && "In attesa"}
+                    {file.status === "uploading" && "Caricamento..."}
+                    {file.status === "success" && "Completato"}
+                    {file.status === "error" && "Errore"}
+                  </Badge>
+                  
+                  {file.status !== "uploading" && file.status !== "success" && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(file.id);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                
+                {file.status === "uploading" && (
+                  <Progress value={file.progress} className="rounded-none h-1" />
+                )}
+                
+                <div className="p-3 text-sm">
+                  <p className="truncate font-medium">{file.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                  
+                  {file.status === "error" && (
+                    <div className="mt-2 flex items-start gap-2 text-destructive">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <p className="text-xs">{file.error || "Errore durante il caricamento"}</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>

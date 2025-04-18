@@ -56,6 +56,11 @@ import SignSuccessPage from "@/pages/quotes/sign-success";
 import FinancesPage from "@/pages/dashboard/finances";
 import ScheduledPaymentsPage from "@/pages/dashboard/finances/scheduled";
 
+// Importa le pagine delle gallerie
+import GalleriesPage from "@/pages/galleries";
+import NewGalleryPage from "@/pages/galleries/new";
+import GalleryDetailPage from "@/pages/galleries/[id]";
+
 
 function Router() {
   return (
@@ -88,6 +93,9 @@ function Router() {
       <ProtectedRoute path="/settings/origins" component={OriginsPage} />
       <ProtectedRoute path="/dashboard/finances" component={FinancesPage} />
       <ProtectedRoute path="/dashboard/finances/scheduled" component={ScheduledPaymentsPage} />
+      <ProtectedRoute path="/galleries" component={GalleriesPage} />
+      <ProtectedRoute path="/galleries/new" component={NewGalleryPage} />
+      <ProtectedRoute path="/galleries/:id" component={GalleryDetailPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />

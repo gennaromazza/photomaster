@@ -1,18 +1,19 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PageWrapper } from '@/components/ui/page-wrapper';
-import { Button } from '@/components/ui/button';
+import { format, parseISO, isAfter, isBefore } from 'date-fns';
+import { it } from 'date-fns/locale';
 import { 
   Plus, 
-  FilterX, 
-  Download, 
+  Search, 
   CalendarIcon, 
-  ChevronLeft,
-  CheckCircle2
+  ChevronDown, 
+  Check, 
+  AlertCircle, 
+  Clock 
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format, isAfter, isBefore, parseISO } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -22,84 +23,35 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export default function ScheduledPaymentsPage() {
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterDueDate, setFilterDueDate] = useState<Date | undefined>(undefined);
-  const [filterClient, setFilterClient] = useState('');
-
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  
   // Ottieni i pagamenti programmati
   const { 
-    data: scheduledPayments, 
+    data: payments,
     isLoading,
-    error 
   } = useQuery({
-    queryKey: ['/api/finance/scheduled-payments'],
+    queryKey: ['/api/finance/scheduled']
   });
-
-  // Filtra i pagamenti in base ai criteri selezionati
-  const filteredPayments = scheduledPayments?.filter((payment: any) => {
-    // Filtra per stato
-    if (filterStatus !== 'all') {
-      if (filterStatus === 'pending' && payment.paid) return false;
-      if (filterStatus === 'paid' && !payment.paid) return false;
-      if (filterStatus === 'overdue' && 
-          (!payment.dueDate || 
-           payment.paid || 
-           !isAfter(new Date(), parseISO(payment.dueDate)))) {
-        return false;
-      }
-    }
-    
-    // Filtra per data scadenza
-    if (filterDueDate && payment.dueDate) {
-      const dueDate = parseISO(payment.dueDate);
-      if (dueDate.getDate() !== filterDueDate.getDate() || 
-          dueDate.getMonth() !== filterDueDate.getMonth() || 
-          dueDate.getFullYear() !== filterDueDate.getFullYear()) {
-        return false;
-      }
-    }
-    
-    // Filtra per cliente
-    if (filterClient && payment.client) {
-      const clientName = `${payment.client.firstName} ${payment.client.lastName}`.toLowerCase();
-      if (!clientName.includes(filterClient.toLowerCase())) {
-        return false;
-      }
-    }
-    
-    return true;
-  }) || [];
-
-  // Funzione per ottenere lo stato del pagamento
-  const getPaymentStatus = (payment: any) => {
-    if (payment.paid) {
-      return { label: 'Pagato', color: 'bg-green-100 text-green-800' };
-    }
-    
-    if (payment.dueDate && isAfter(new Date(), parseISO(payment.dueDate))) {
-      return { label: 'Scaduto', color: 'bg-red-100 text-red-800' };
-    }
-    
-    return { label: 'In attesa', color: 'bg-yellow-100 text-yellow-800' };
-  };
-
+  
   // Funzione per formattare l'importo come valuta
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', { 
@@ -107,180 +59,184 @@ export default function ScheduledPaymentsPage() {
       currency: 'EUR' 
     }).format(amount);
   };
-
-  // Pulisce tutti i filtri
-  const clearFilters = () => {
-    setFilterStatus('all');
-    setFilterDueDate(undefined);
-    setFilterClient('');
+  
+  // Filtra i pagamenti in base alla ricerca e al filtro di stato
+  const filteredPayments = payments?.filter((payment: any) => {
+    const matchesSearch = searchTerm === '' || 
+      payment.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.quote?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.quote?.client?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.quote?.client?.lastName?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  }) || [];
+  
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge variant="success">Pagato</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="bg-amber-100 text-amber-800">In attesa</Badge>;
+      case 'overdue':
+        return <Badge variant="destructive">Scaduto</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
-
-  // Skeleon per il caricamento
-  const loadingSkeleton = (
-    <div className="space-y-4">
-      {Array(5).fill(0).map((_, index) => (
-        <div key={index} className="flex space-x-4">
-          <Skeleton className="h-12 w-full" />
-        </div>
-      ))}
-    </div>
-  );
-
+  
   return (
     <PageWrapper 
       title="Pagamenti Programmati" 
-      subtitle="Gestisci e monitora tutti i pagamenti futuri"
-      action={
-        <div className="flex space-x-2">
-          <Button onClick={() => window.location.href = '/dashboard/finances/scheduled/new'}>
-            <Plus className="h-4 w-4 mr-2" />
+      subtitle="Gestisci i pagamenti pianificati e le scadenze"
+      actions={
+        <Button asChild>
+          <a href="/dashboard/finances/scheduled/new">
+            <Plus className="mr-2 h-4 w-4" />
             Nuovo Pagamento
-          </Button>
-        </div>
+          </a>
+        </Button>
       }
     >
-      <div className="space-y-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <a href="/dashboard/finances" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-4">
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Torna alla panoramica
-            </a>
-          </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm" onClick={clearFilters}>
-              <FilterX className="h-4 w-4 mr-2" />
-              Pulisci filtri
-            </Button>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Esporta
-            </Button>
-          </div>
-        </div>
-        
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="w-full max-w-xs">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Stato pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti gli stati</SelectItem>
-                <SelectItem value="pending">In attesa</SelectItem>
-                <SelectItem value="paid">Pagati</SelectItem>
-                <SelectItem value="overdue">Scaduti</SelectItem>
-              </SelectContent>
-            </Select>
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cerca per descrizione, preventivo o cliente..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div className="w-full md:w-48">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtra per stato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti</SelectItem>
+                  <SelectItem value="pending">In attesa</SelectItem>
+                  <SelectItem value="paid">Pagati</SelectItem>
+                  <SelectItem value="overdue">Scaduti</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
-          <div className="w-full max-w-xs">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !filterDueDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filterDueDate ? (
-                    format(filterDueDate, "PPP", { locale: it })
-                  ) : (
-                    "Filtra per data scadenza"
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={filterDueDate}
-                  onSelect={setFilterDueDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          
-          <div className="w-full max-w-xs">
-            <Input
-              placeholder="Cerca cliente"
-              value={filterClient}
-              onChange={(e) => setFilterClient(e.target.value)}
-              className="w-full"
-            />
-          </div>
-        </div>
-        
-        {isLoading ? (
-          loadingSkeleton
-        ) : error ? (
-          <div className="text-center py-12 text-destructive">
-            Si è verificato un errore durante il caricamento dei pagamenti programmati.
-          </div>
-        ) : filteredPayments.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            Nessun pagamento programmato trovato.
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Preventivo</TableHead>
-                <TableHead>Importo</TableHead>
-                <TableHead>Data Scadenza</TableHead>
-                <TableHead>Stato</TableHead>
-                <TableHead className="text-right">Azioni</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPayments.map((payment: any) => {
-                const status = getPaymentStatus(payment);
-                
-                return (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-medium">
-                      {payment.client ? `${payment.client.firstName} ${payment.client.lastName}` : '-'}
-                    </TableCell>
-                    <TableCell>{payment.quote?.title || '-'}</TableCell>
-                    <TableCell>{formatCurrency(payment.amount)}</TableCell>
-                    <TableCell>
-                      {payment.dueDate 
-                        ? format(parseISO(payment.dueDate), 'dd MMM yyyy', { locale: it })
-                        : '-'
-                      }
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={status.color}>
-                        {status.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end items-center space-x-2">
-                        {!payment.paid && (
-                          <Button variant="outline" size="sm">
-                            <CheckCircle2 className="h-4 w-4 mr-2" />
-                            Segna pagato
-                          </Button>
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : filteredPayments.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Scadenza</TableHead>
+                  <TableHead>Descrizione</TableHead>
+                  <TableHead>Preventivo/Cliente</TableHead>
+                  <TableHead>Importo</TableHead>
+                  <TableHead>Stato</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPayments.map((payment: any) => {
+                  const isPastDue = payment.status === "overdue";
+                  
+                  return (
+                    <TableRow key={payment.id}>
+                      <TableCell className={cn(isPastDue && "text-red-600 font-medium")}>
+                        <div className="flex items-center">
+                          <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                          {format(parseISO(payment.dueDate), 'dd MMM yyyy', { locale: it })}
+                          {isPastDue && (
+                            <AlertCircle className="h-4 w-4 ml-2 text-red-500" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{payment.description || "-"}</TableCell>
+                      <TableCell>
+                        {payment.quote ? (
+                          <div>
+                            <div className="font-medium">{payment.quote.title}</div>
+                            {payment.quote.client && (
+                              <div className="text-sm text-muted-foreground">
+                                {payment.quote.client.firstName} {payment.quote.client.lastName}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          "-"
                         )}
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => window.location.href = `/dashboard/finances/scheduled/${payment.id}`}
-                        >
-                          Dettaglio
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(payment.amount)}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(payment.status)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <span className="sr-only">Apri menu</span>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <a href={`/dashboard/finances/scheduled/edit/${payment.id}`}>
+                                Modifica
+                              </a>
+                            </DropdownMenuItem>
+                            {payment.status !== 'paid' && (
+                              <DropdownMenuItem asChild>
+                                <a href={`/dashboard/finances/transaction/new?scheduledPaymentId=${payment.id}`}>
+                                  <Check className="mr-2 h-4 w-4" />
+                                  Registra pagamento
+                                </a>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem asChild>
+                              <a href={`/quotes/detail/${payment.quoteId}`}>
+                                Vai al preventivo
+                              </a>
+                            </DropdownMenuItem>
+                            {payment.status === 'pending' && (
+                              <DropdownMenuItem 
+                                className="text-amber-600"
+                                onClick={() => console.log('Invia promemoria', payment.id)}
+                              >
+                                <Clock className="mr-2 h-4 w-4" />
+                                Invia promemoria
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm || statusFilter !== 'all' ? (
+                <p>Nessun pagamento programmato corrisponde ai filtri selezionati.</p>
+              ) : (
+                <p>Non ci sono pagamenti programmati. Crea il tuo primo pagamento programmato!</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </PageWrapper>
   );
 }

@@ -1,50 +1,32 @@
-import { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import React from 'react';
 import { Heading } from './heading';
 
 interface PageWrapperProps {
+  children: React.ReactNode;
   title: string;
   subtitle?: string;
-  children: ReactNode;
-  action?: ReactNode;
-  container?: boolean;
-  className?: string;
-  contentClassName?: string;
+  actions?: React.ReactNode;
 }
 
-/**
- * Wrapper per le pagine che include un titolo, un sottotitolo opzionale e un'azione opzionale
- */
-export const PageWrapper = ({
+export const PageWrapper: React.FC<PageWrapperProps> = ({
+  children,
   title,
   subtitle,
-  children,
-  action,
-  container = true,
-  className,
-  contentClassName,
-}: PageWrapperProps) => {
+  actions
+}) => {
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <Heading title={title} subtitle={subtitle} />
-        {action && <div className="flex items-center justify-end">{action}</div>}
+        {actions && (
+          <div className="flex items-center space-x-2">
+            {actions}
+          </div>
+        )}
       </div>
-      
-      <div className={cn(container && 'container', contentClassName)}>
+      <div className="space-y-4">
         {children}
       </div>
-    </div>
-  );
-};
-
-/**
- * Componente per visualizzare un insieme di azioni nell'header della pagina
- */
-export const HeaderActions = ({ children }: { children: ReactNode }) => {
-  return (
-    <div className="flex items-center space-x-2">
-      {children}
     </div>
   );
 };

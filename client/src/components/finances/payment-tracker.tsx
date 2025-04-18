@@ -1,9 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { ArrowUpCircle, ArrowDownCircle, Search, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { ArrowUpCircle, ArrowDownCircle, ChevronDown, ChevronUp, Search, SlidersHorizontal } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -12,70 +10,43 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface PaymentTrackerProps {
   transactions: any[];
   isLoading: boolean;
+  showFilters?: boolean;
   limit?: number;
 }
 
-export function PaymentTracker({ transactions = [], isLoading, limit }: PaymentTrackerProps) {
+export function PaymentTracker({ 
+  transactions = [], 
+  isLoading, 
+  showFilters = false,
+  limit 
+}: PaymentTrackerProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<string>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // Funzione per filtrare le transazioni in base al termine di ricerca
-  const filteredTransactions = transactions.filter((transaction) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      transaction.description?.toLowerCase().includes(searchLower) ||
-      transaction.client?.firstName?.toLowerCase().includes(searchLower) ||
-      transaction.client?.lastName?.toLowerCase().includes(searchLower) ||
-      transaction.type?.toLowerCase().includes(searchLower)
-    );
-  });
-
-  // Funzione per ordinare le transazioni
-  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
-    if (sortField === 'date') {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return sortOrder === 'asc' ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
-    }
-    
-    if (sortField === 'amount') {
-      return sortOrder === 'asc' ? a.amount - b.amount : b.amount - a.amount;
-    }
-    
-    if (sortField === 'type') {
-      return sortOrder === 'asc' 
-        ? a.type.localeCompare(b.type) 
-        : b.type.localeCompare(a.type);
-    }
-    
-    if (sortField === 'client') {
-      const clientNameA = a.client ? `${a.client.firstName} ${a.client.lastName}` : '';
-      const clientNameB = b.client ? `${b.client.firstName} ${b.client.lastName}` : '';
-      return sortOrder === 'asc' 
-        ? clientNameA.localeCompare(clientNameB) 
-        : clientNameB.localeCompare(clientNameA);
-    }
-    
-    return 0;
-  });
-
-  // Funzione per alternare l'ordinamento quando si fa clic su un'intestazione
-  const toggleSort = (field: string) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('desc');
-    }
-  };
-
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [showFiltersMenu, setShowFiltersMenu] = useState(false);
+  
   // Funzione per formattare l'importo come valuta
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', { 
@@ -83,138 +54,268 @@ export function PaymentTracker({ transactions = [], isLoading, limit }: PaymentT
       currency: 'EUR' 
     }).format(amount);
   };
-
-  // Funzione per ottenere un'icona basata sul tipo di transazione
-  const getTransactionIcon = (type: string) => {
-    if (type.toLowerCase() === 'income' || type.toLowerCase() === 'entrata') {
-      return <ArrowUpCircle className="h-5 w-5 text-green-500" />;
+  
+  // Funzione per invertire l'ordinamento
+  const toggleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
     }
-    return <ArrowDownCircle className="h-5 w-5 text-red-500" />;
   };
-
-  // Limita le transazioni mostrate se specificato
-  const displayTransactions = limit 
-    ? sortedTransactions.slice(0, limit) 
-    : sortedTransactions;
-
-  // Componente per le icone di ordinamento
-  const SortIcon = ({ field }: { field: string }) => {
-    if (sortField !== field) {
-      return <ChevronDown className="h-4 w-4 opacity-50" />;
+  
+  // Ordina e filtra le transazioni
+  const filteredTransactions = useMemo(() => {
+    // Filtra per tipo di transazione
+    let filtered = transactions;
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(transaction => 
+        transaction.type?.toLowerCase() === typeFilter.toLowerCase()
+      );
     }
-    return sortOrder === 'asc' 
-      ? <ChevronUp className="h-4 w-4" /> 
-      : <ChevronDown className="h-4 w-4" />;
-  };
-
-  // Skeleon per il caricamento
-  const loadingSkeleton = (
-    <div className="space-y-4">
-      {Array(limit || 5).fill(0).map((_, index) => (
-        <div key={index} className="flex space-x-4">
-          <Skeleton className="h-12 w-full" />
-        </div>
-      ))}
-    </div>
-  );
-
+    
+    // Filtra per termine di ricerca
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      filtered = filtered.filter(transaction => 
+        transaction.description?.toLowerCase().includes(lowerSearchTerm) ||
+        transaction.paymentMethod?.toLowerCase().includes(lowerSearchTerm) ||
+        transaction.reference?.toLowerCase().includes(lowerSearchTerm) ||
+        transaction.notes?.toLowerCase().includes(lowerSearchTerm)
+      );
+    }
+    
+    // Ordina le transazioni
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortField === 'date') {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+      
+      if (sortField === 'amount') {
+        const amountA = parseFloat(a.amount);
+        const amountB = parseFloat(b.amount);
+        return sortDirection === 'asc' ? amountA - amountB : amountB - amountA;
+      }
+      
+      return 0;
+    });
+    
+    // Limita il numero di transazioni se specificato
+    if (limit && sorted.length > limit) {
+      return sorted.slice(0, limit);
+    }
+    
+    return sorted;
+  }, [transactions, searchTerm, sortField, sortDirection, typeFilter, limit]);
+  
+  // Calcola i totali
+  const totals = useMemo(() => {
+    const income = filteredTransactions
+      .filter(t => t.type?.toLowerCase() === 'income' || t.type?.toLowerCase() === 'entrata')
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+      
+    const expense = filteredTransactions
+      .filter(t => t.type?.toLowerCase() === 'expense' || t.type?.toLowerCase() === 'uscita')
+      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+      
+    return {
+      income,
+      expense,
+      balance: income - expense
+    };
+  }, [filteredTransactions]);
+  
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        {showFilters && <Skeleton className="h-10 w-full" />}
+      </div>
+    );
+  }
+  
   return (
-    <div className="space-y-4">
-      {!limit && (
-        <div className="flex items-center pb-4">
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Cerca transazioni..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    <div>
+      {showFilters && (
+        <div className={`space-y-4 ${showFiltersMenu ? 'mb-6' : 'mb-4'}`}>
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFiltersMenu(!showFiltersMenu)}
+            >
+              <SlidersHorizontal className="h-4 w-4 mr-2" />
+              Filtri
+              {showFiltersMenu ? (
+                <ChevronUp className="h-4 w-4 ml-2" />
+              ) : (
+                <ChevronDown className="h-4 w-4 ml-2" />
+              )}
+            </Button>
+            
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Tipo transazione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le transazioni</SelectItem>
+                <SelectItem value="income">Solo entrate</SelectItem>
+                <SelectItem value="expense">Solo uscite</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          {showFiltersMenu && (
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cerca nelle transazioni..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          )}
         </div>
       )}
       
-      {isLoading ? (
-        loadingSkeleton
-      ) : displayTransactions.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          {searchTerm 
-            ? "Nessuna transazione corrisponde alla ricerca." 
-            : "Nessuna transazione trovata. Crea la tua prima transazione!"}
-        </div>
-      ) : (
-        <div className="border rounded-md">
+      {filteredTransactions.length > 0 ? (
+        <>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead onClick={() => toggleSort('date')} className="cursor-pointer">
+                <TableHead className="cursor-pointer w-1/4" onClick={() => toggleSort('date')}>
                   <div className="flex items-center">
-                    Data <SortIcon field="date" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => toggleSort('type')} className="cursor-pointer">
-                  <div className="flex items-center">
-                    Tipo <SortIcon field="type" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => toggleSort('client')} className="cursor-pointer hidden md:table-cell">
-                  <div className="flex items-center">
-                    Cliente <SortIcon field="client" />
+                    Data
+                    {sortField === 'date' && (
+                      sortDirection === 'asc' ? 
+                        <ChevronUp className="ml-1 h-4 w-4" /> : 
+                        <ChevronDown className="ml-1 h-4 w-4" />
+                    )}
                   </div>
                 </TableHead>
                 <TableHead>Descrizione</TableHead>
-                <TableHead onClick={() => toggleSort('amount')} className="text-right cursor-pointer">
+                <TableHead className="cursor-pointer text-right" onClick={() => toggleSort('amount')}>
                   <div className="flex items-center justify-end">
-                    Importo <SortIcon field="amount" />
+                    Importo
+                    {sortField === 'amount' && (
+                      sortDirection === 'asc' ? 
+                        <ChevronUp className="ml-1 h-4 w-4" /> : 
+                        <ChevronDown className="ml-1 h-4 w-4" />
+                    )}
                   </div>
                 </TableHead>
+                {showFilters && (
+                  <TableHead className="text-right">Azioni</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {displayTransactions.map((transaction) => {
+              {filteredTransactions.map((transaction) => {
                 const isIncome = transaction.type?.toLowerCase() === 'income' || 
                                  transaction.type?.toLowerCase() === 'entrata';
                 
                 return (
-                  <TableRow key={transaction.id} className="group hover:bg-muted/50">
+                  <TableRow key={transaction.id}>
                     <TableCell>
-                      {getTransactionIcon(transaction.type)}
+                      <div className="flex items-center">
+                        {isIncome ? (
+                          <ArrowUpCircle className="h-4 w-4 mr-2 text-green-500 shrink-0" />
+                        ) : (
+                          <ArrowDownCircle className="h-4 w-4 mr-2 text-red-500 shrink-0" />
+                        )}
+                        <span>
+                          {format(parseISO(transaction.date), 'dd MMM yyyy', { locale: it })}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      {format(parseISO(transaction.date), 'dd MMM yyyy', { locale: it })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={isIncome ? "success" : "destructive"}>
-                        {isIncome ? 'Entrata' : 'Uscita'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {transaction.client 
-                        ? `${transaction.client.firstName} ${transaction.client.lastName}`
-                        : '-'
-                      }
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {transaction.description || '-'}
+                      <div>
+                        <div className="font-medium">{transaction.description || (isIncome ? 'Entrata' : 'Uscita')}</div>
+                        {transaction.paymentMethod && (
+                          <div className="text-xs text-muted-foreground">
+                            {transaction.paymentMethod}
+                            {transaction.reference && ` • ${transaction.reference}`}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className={`text-right font-medium ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
-                      {isIncome ? '+ ' : '- '}{formatCurrency(Math.abs(transaction.amount))}
+                      {formatCurrency(parseFloat(transaction.amount))}
                     </TableCell>
+                    {showFilters && (
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <span className="sr-only">Apri menu</span>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <a href={`/dashboard/finances/transaction/edit/${transaction.id}`}>
+                                Modifica
+                              </a>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <a href={`/dashboard/finances/transaction/${transaction.id}`}>
+                                Visualizza dettaglio
+                              </a>
+                            </DropdownMenuItem>
+                            {transaction.sourceId && transaction.source === "quote" && (
+                              <DropdownMenuItem asChild>
+                                <a href={`/quotes/detail/${transaction.sourceId}`}>
+                                  Vai al preventivo
+                                </a>
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
-        </div>
-      )}
-      
-      {limit && displayTransactions.length > 0 && (
-        <div className="text-center">
-          <Button variant="link" asChild>
-            <a href="/dashboard/finances?tab=transactions">Visualizza tutte le transazioni</a>
-          </Button>
+          
+          {showFilters && (
+            <div className="mt-4 flex flex-col sm:flex-row sm:justify-between space-y-2 sm:space-y-0">
+              <div className="text-sm text-muted-foreground">
+                {filteredTransactions.length} transazioni visualizzate
+              </div>
+              <div className="flex space-x-4">
+                <div className="text-sm">
+                  <span className="font-medium">Entrate:</span>{' '}
+                  <span className="text-green-600">{formatCurrency(totals.income)}</span>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Uscite:</span>{' '}
+                  <span className="text-red-600">{formatCurrency(totals.expense)}</span>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium">Saldo:</span>{' '}
+                  <span className={totals.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                    {formatCurrency(totals.balance)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-center py-8 text-muted-foreground">
+          {searchTerm || typeFilter !== 'all' ? (
+            <p>Nessuna transazione corrisponde ai filtri selezionati.</p>
+          ) : (
+            <p>Non ci sono transazioni registrate. Crea la tua prima transazione!</p>
+          )}
         </div>
       )}
     </div>

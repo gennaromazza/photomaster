@@ -5,7 +5,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import "@/components/rich-text-content.css";
 // Rimuovo import Layout per evitare la duplicazione del layout
 import ModuleManager from "@/components/quotes/modules/module-manager";
-import { FinancialSummary } from "@/components/quotes/financial-summary";
+import { FinancialSummaryWrapper } from "@/components/quotes/financial-summary-wrapper";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -1079,10 +1079,11 @@ export default function QuoteDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <FinancialSummary 
+                <FinancialSummaryWrapper 
                   quoteId={parseInt(id as string)} 
                   quoteTotal={quote.total || 0}
                   clientName={clientFullName}
+                  quoteStatus={quote.status || ''}
                 />
               </CardContent>
             </Card>

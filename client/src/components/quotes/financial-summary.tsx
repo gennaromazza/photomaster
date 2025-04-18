@@ -353,13 +353,12 @@ export function FinancialSummary({
     markAsPaidMutation.mutate(transactionData);
   };
   
-  // Funzione per formattare l'importo come valuta
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', { 
-      style: 'currency', 
-      currency: 'EUR' 
-    }).format(amount);
-  };
+  // Utilizziamo la funzione formatCurrency importata da utils.ts
+  // La funzione importata gestisce la conversione da centesimi a euro
+  // Funzione per convertire i valori da euro a centesimi prima di formattarli
+  const formatAmount = (amount: number) => {
+    return formatCurrency(amount * 100);
+  }
   
   // Calcola il totale pagato
   const totalPaid = transactions

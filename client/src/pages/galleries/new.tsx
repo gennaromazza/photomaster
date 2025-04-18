@@ -148,7 +148,30 @@ export default function NewGalleryPage() {
   };
 
   const onSubmit = (data: GalleryFormValues) => {
-    createGalleryMutation.mutate(data);
+    // Creazione del FormData con tutti i dati
+    const formData = new FormData();
+    formData.append("name", data.name);
+    
+    if (data.description) {
+      formData.append("description", data.description);
+    }
+    
+    formData.append("isPublic", data.isPublic ? "true" : "false");
+    
+    if (passwordProtected && data.password) {
+      formData.append("password", data.password);
+    }
+    
+    if (data.eventId && data.eventId !== "0") {
+      formData.append("eventId", data.eventId);
+    }
+    
+    if (coverImageFile) {
+      formData.append("coverImage", coverImageFile);
+    }
+    
+    // Invio al server
+    createGalleryMutation.mutate(formData);
   };
 
   return (

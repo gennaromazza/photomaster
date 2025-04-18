@@ -139,7 +139,20 @@ export const getGalleryBySlug = async (req: Request, res: Response) => {
 // Crea una nuova galleria
 export const createGallery = async (req: Request, res: Response) => {
   try {
-    const galleryData = insertGallerySchema.parse(req.body);
+    console.log("Dati ricevuti nella richiesta:", req.body);
+    
+    // Creiamo un oggetto con i dati del form
+    const galleryData = {
+      name: req.body.name,
+      description: req.body.description || null,
+      isPublic: req.body.isPublic === 'true',
+      password: req.body.password || null,
+      eventId: req.body.eventId ? parseInt(req.body.eventId, 10) : null,
+      viewCount: 0,
+      // Gestione di altri campi se necessario
+    };
+    
+    console.log("Dati della galleria elaborati:", galleryData);
     
     // Genera uno slug unico basato sul nome
     let slug = slugify(galleryData.name, { lower: true, strict: true });
@@ -168,7 +181,11 @@ export const createGallery = async (req: Request, res: Response) => {
     res.status(201).json(newGallery);
   } catch (error) {
     console.error("Errore nella creazione della galleria:", error);
-    res.status(500).json({ error: "Errore nella creazione della galleria" });
+    if (error instanceof Error) {
+      res.status(500).json({ error: `Errore nella creazione della galleria: ${error.message}` });
+    } else {
+      res.status(500).json({ error: "Errore nella creazione della galleria" });
+    }
   }
 };
 

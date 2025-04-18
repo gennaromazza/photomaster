@@ -23,6 +23,7 @@ import { StudioInfo } from "@/components/quotes/studio-info";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { PublicFixedModule } from "@/components/quotes/public-fixed-module";
 import { PublicVariableModule } from "@/components/quotes/public-variable-module";
+import { FinancialSummary } from "@/components/quotes/financial-summary";
 import { Watermark } from "@/components/ui/watermark";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -474,6 +475,28 @@ export default function PublicQuotePage() {
             </div>
           </CardFooter>
         </Card>
+
+        {/* Sezione Pagamenti - visibile solo se il preventivo è stato firmato */}
+        {(quote.status === "approved" || quote.status === "confermato") && (
+          <Card className="mb-8 border-primary/20">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="flex items-center">
+                <Euro className="h-5 w-5 mr-2 text-primary" />
+                Pagamenti
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <FinancialSummary 
+                quoteId={quote.id} 
+                quoteTotal={quote.total || 0} 
+                readOnly={true}
+                clientName={quote.client?.firstName && quote.client?.lastName 
+                  ? `${quote.client.firstName} ${quote.client.lastName}` 
+                  : undefined}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Moduli del preventivo */}
         {modules && modules.length > 0 && (

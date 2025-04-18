@@ -455,6 +455,8 @@ export const quotesRelations = relations(quotes, ({ one, many }) => ({
   }),
   quoteItems: many(quoteItems),
   modules: many(quoteModules),
+  transactions: many(transactions),
+  scheduledPayments: many(scheduledPayments),
 }));
 
 // Quote Items Schema
@@ -838,5 +840,94 @@ export const bundleLeadsRelations = relations(bundleLeads, ({ one }) => ({
   client: one(clients, {
     fields: [bundleLeads.clientId],
     references: [clients.id],
+  }),
+}));
+
+// Modello per le transazioni finanziarie (pagamenti e spese)
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(), // 'payment' (incasso) o 'expense' (spesa)
+  amount: numeric("amount").notNull(),
+  date: date("date").notNull(),
+  description: text("description"),
+  quoteId: integer("quote_id"), // Opzionale, se associato a un preventivo
+  status: text("status").notNull().default("completed"), // completed, pending, cancelled
+  paymentMethod: text("payment_method"), // contanti, bonifico, carta, ecc.
+  reference: text("reference"), // numero di riferimento per bonifici, ecc.
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: integer("created_by"), // ID dell'utente che ha creato la transazione
+  category: text("category"), // categoria della transazione (solo per spese)
+  attachmentPath: text("attachment_path"), // percorso di un eventuale allegato (fattura, ricevuta)
+  notificationSent: boolean("notification_sent").default(false), // indica se è stata inviata una notifica
+});
+
+export const insertTransactionSchema = createInsertSchema(transactions).pick({
+  type: true,
+  amount: true,
+  date: true,
+  description: true,
+  quoteId: true,
+  status: true,
+  paymentMethod: true,
+  reference: true,
+  notes: true,
+  createdBy: true,
+  category: true,
+  attachmentPath: true,
+  notificationSent: true,
+});
+
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type Transaction = typeof transactions.$inferSelect;
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  quote: one(quotes, {
+    fields: [transactions.quoteId],
+    references: [quotes.id],
+  }),
+  creator: one(users, {
+    fields: [transactions.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Modello per i pagamenti programmati (scadenze)
+export const scheduledPayments = pgTable("scheduled_payments", {
+  id: serial("id").primaryKey(),
+  quoteId: integer("quote_id").notNull(),
+  amount: numeric("amount").notNull(),
+  dueDate: date("due_date").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("pending"), // pending, paid, overdue
+  paymentMethod: text("payment_method"), // preferenza per metodo di pagamento
+  notes: text("notes"),
+  transactionId: integer("transaction_id"), // ID della transazione quando il pagamento viene effettuato
+  reminderSent: boolean("reminder_sent").default(false), // indica se è stato inviato un promemoria
+});
+
+export const insertScheduledPaymentSchema = createInsertSchema(scheduledPayments).pick({
+  quoteId: true,
+  amount: true,
+  dueDate: true,
+  description: true,
+  status: true,
+  paymentMethod: true,
+  notes: true,
+  transactionId: true,
+  reminderSent: true,
+});
+
+export type InsertScheduledPayment = z.infer<typeof insertScheduledPaymentSchema>;
+export type ScheduledPayment = typeof scheduledPayments.$inferSelect;
+
+export const scheduledPaymentsRelations = relations(scheduledPayments, ({ one }) => ({
+  quote: one(quotes, {
+    fields: [scheduledPayments.quoteId],
+    references: [quotes.id],
+  }),
+  transaction: one(transactions, {
+    fields: [scheduledPayments.transactionId],
+    references: [transactions.id],
   }),
 }));

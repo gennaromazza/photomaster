@@ -105,16 +105,22 @@ export function FinancialSummary({
   const { 
     data: transactions = [],
     isLoading: transactionsLoading,
+    refetch: refetchTransactions
   } = useQuery({
-    queryKey: ['/api/finance/transactions/quote', quoteId]
+    queryKey: ['/api/finance/transactions/quote', quoteId],
+    refetchOnWindowFocus: true, // Ricarica quando l'utente torna sulla pagina
+    staleTime: 5000 // Considera i dati validi per 5 secondi per evitare richieste eccessive
   });
   
   // Ottieni i pagamenti programmati per questo preventivo
   const { 
     data: scheduledPayments = [],
     isLoading: scheduledLoading,
+    refetch: refetchScheduled
   } = useQuery({
-    queryKey: ['/api/finance/scheduled/quote', quoteId]
+    queryKey: ['/api/finance/scheduled/quote', quoteId],
+    refetchOnWindowFocus: true, // Ricarica quando l'utente torna sulla pagina
+    staleTime: 5000 // Considera i dati validi per 5 secondi per evitare richieste eccessive
   });
   
   // Mutation per creare una nuova transazione
@@ -134,8 +140,14 @@ export function FinancialSummary({
         notes: ''
       });
       
-      // Invalida le query per aggiornare i dati
+      // Invalida le query e forza un aggiornamento immediato
       queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
+      
+      // Forza il refetch per aggiornare immediatamente i dati visualizzati
+      refetchTransactions();
+      
+      // Invalida anche altre queries che potrebbero dipendere da questi dati
+      queryClient.invalidateQueries({ queryKey: ['/api/quotes', quoteId] });
       
       toast({
         title: 'Pagamento registrato',
@@ -171,6 +183,12 @@ export function FinancialSummary({
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
       
+      // Forza il refetch immediato dei dati
+      refetchScheduled();
+      
+      // Invalida anche altre queries che potrebbero dipendere da questi dati
+      queryClient.invalidateQueries({ queryKey: ['/api/quotes', quoteId] });
+      
       toast({
         title: 'Rata programmata',
         description: 'La rata di pagamento è stata programmata con successo.',
@@ -195,6 +213,12 @@ export function FinancialSummary({
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      
+      // Forza il refetch immediato
+      refetchScheduled();
+      
+      // Invalida anche altre queries che potrebbero dipendere da questi dati
+      queryClient.invalidateQueries({ queryKey: ['/api/quotes', quoteId] });
       
       toast({
         title: 'Rata eliminata',
@@ -221,6 +245,13 @@ export function FinancialSummary({
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
       queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      
+      // Forza il refetch immediato dei dati
+      refetchTransactions();
+      refetchScheduled();
+      
+      // Invalida anche altre queries che potrebbero dipendere da questi dati
+      queryClient.invalidateQueries({ queryKey: ['/api/quotes', quoteId] });
       
       toast({
         title: 'Pagamento registrato',

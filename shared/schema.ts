@@ -705,7 +705,7 @@ export const transactions = pgTable("transactions", {
   category: text("category"),
   attachmentPath: text("attachment_path"),
   notificationSent: boolean("notification_sent").default(false),
-  scheduledPaymentId: integer("scheduled_payment_id"), // FK verso scheduled_payments
+  // Nota: scheduled_payment_id non esiste nella tabella del database
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).pick({
@@ -722,7 +722,7 @@ export const insertTransactionSchema = createInsertSchema(transactions).pick({
   category: true,
   attachmentPath: true,
   notificationSent: true,
-  scheduledPaymentId: true,
+  // scheduledPaymentId rimosso perché non esiste nella tabella
 });
 
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
@@ -738,10 +738,8 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
     fields: [transactions.createdBy],
     references: [users.id],
   }),
-  scheduledPayment: one(scheduledPayments, {
-    fields: [transactions.scheduledPaymentId],
-    references: [scheduledPayments.id],
-  }),
+  // La relazione scheduledPayment è rimossa perché la tabella transactions non ha scheduledPaymentId
+  // La relazione esiste solo all'inverso: scheduledPayments ha transactionId
 }));
 
 // Modello per i pagamenti programmati (scadenze)

@@ -81,7 +81,7 @@ export const financeController = {
           category: data.category || null,
           attachmentPath: data.attachmentPath || null,
           notificationSent: false,
-          scheduledPaymentId: data.scheduledPaymentId || null
+          // Rimosso scheduledPaymentId perché non esiste nella tabella
         })
         .returning();
 
@@ -182,14 +182,21 @@ export const financeController = {
         throw new Error("Transazione non trovata");
       }
 
-      // Se collegata a un pagamento programmato, aggiorno lo stato
-      if (transaction.scheduledPaymentId) {
-        await db.update(scheduledPayments)
-          .set({ 
-            status: "pending",
-            transactionId: null
-          })
-          .where(eq(scheduledPayments.id, transaction.scheduledPaymentId));
+      // Verifichiamo se esistono pagamenti programmati collegati a questa transazione
+      const relatedPayments = await db.select()
+        .from(scheduledPayments)
+        .where(eq(scheduledPayments.transactionId, id));
+      
+      // Se ci sono pagamenti programmati collegati, li aggiorniamo
+      if (relatedPayments.length > 0) {
+        for (const payment of relatedPayments) {
+          await db.update(scheduledPayments)
+            .set({ 
+              status: "pending",
+              transactionId: null
+            })
+            .where(eq(scheduledPayments.id, payment.id));
+        }
       }
 
       // Elimino la transazione

@@ -81,6 +81,8 @@ import {
   Clock,
   ClockIcon,
   RefreshCw,
+  Euro,
+  ClipboardList,
 } from "lucide-react";
 import { format, formatDistance, formatDistanceToNow, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
@@ -992,13 +994,16 @@ export default function QuoteDetailPage() {
           </div>
 
           {/* Colonna laterale - 4/12 */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4 space-y-4 sm:space-y-6">
             {/* Riepilogo finanziario */}
             <Card>
-              <CardHeader>
-                <CardTitle>Riepilogo Finanziario</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-lg sm:text-xl flex items-center">
+                  <Euro className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary/80" />
+                  Riepilogo Finanziario
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4 pb-4 sm:pb-6">
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotale</span>
@@ -1075,15 +1080,18 @@ export default function QuoteDetailPage() {
             />
 
             {/* Timeline/stato */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Stato Preventivo</CardTitle>
+            <Card>
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-lg sm:text-xl flex items-center">
+                  <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary/80" />
+                  Stato Preventivo
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">
-                      <Check className="h-4 w-4" />
+              <CardContent className="pb-4 sm:pb-6">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary text-white flex items-center justify-center">
+                      <Check className="h-3 w-3 sm:h-4 sm:w-4" />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">Creazione Preventivo</p>
@@ -1093,13 +1101,13 @@ export default function QuoteDetailPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                       quote.status !== "draft" 
                         ? "bg-primary text-white" 
                         : "bg-muted text-muted-foreground"
                     }`}>
-                      {quote.status !== "draft" ? <Check className="h-4 w-4" /> : "2"}
+                      {quote.status !== "draft" ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> : <span className="text-xs sm:text-sm">2</span>}
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">Configurazione Moduli</p>
@@ -1111,8 +1119,8 @@ export default function QuoteDetailPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                       (quote.status === "pending" || quote.status === "in attesa" ||
                        quote.status === "approved" || quote.status === "confermato" ||
                        quote.status === "rejected" || quote.status === "rifiutato") 
@@ -1122,8 +1130,8 @@ export default function QuoteDetailPage() {
                       {(quote.status === "pending" || quote.status === "in attesa" ||
                         quote.status === "approved" || quote.status === "confermato" ||
                         quote.status === "rejected" || quote.status === "rifiutato") 
-                        ? <Check className="h-4 w-4" /> 
-                        : "3"}
+                        ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> 
+                        : <span className="text-xs sm:text-sm">3</span>}
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">Condivisione con Cliente</p>

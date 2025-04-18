@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Briefcase,
   BookMarked,
+  Euro,
 } from "lucide-react";
 
 interface SidebarLinkProps {
@@ -131,6 +132,13 @@ export default function Sidebar() {
           icon={<BarChart2 className="h-4 w-4" />}
           text="Reportistica"
           isActive={isActive("/reports")}
+        />
+        
+        <SidebarLink
+          href="/dashboard/finances"
+          icon={<Euro className="h-4 w-4" />}
+          text="Finanza"
+          isActive={isActive("/dashboard/finances")}
         />
       </div>
       

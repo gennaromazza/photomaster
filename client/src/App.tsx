@@ -52,6 +52,10 @@ import QuoteDetailPage from "@/pages/quotes/detail/[id]";
 import QuotePublicPage from "@/pages/quotes/public/[token]";
 import SignSuccessPage from "@/pages/quotes/sign-success";
 
+// Importa le pagine finanziarie
+import FinancesPage from "@/pages/dashboard/finances";
+import ScheduledPaymentsPage from "@/pages/dashboard/finances/scheduled";
+
 
 function Router() {
   return (
@@ -82,6 +86,8 @@ function Router() {
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/settings/categories" component={CategoriesPage} />
       <ProtectedRoute path="/settings/origins" component={OriginsPage} />
+      <ProtectedRoute path="/dashboard/finances" component={FinancesPage} />
+      <ProtectedRoute path="/dashboard/finances/scheduled" component={ScheduledPaymentsPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />

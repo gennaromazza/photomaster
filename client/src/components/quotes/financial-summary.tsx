@@ -56,6 +56,7 @@ interface FinancialSummaryProps {
   totalAmount?: number; // Supporta anche totalAmount per retrocompatibilità
   readOnly?: boolean;
   clientName?: string;
+  quoteStatus?: string; // Lo stato del preventivo per verificare se è firmato
 }
 
 export function FinancialSummary({ 
@@ -63,7 +64,8 @@ export function FinancialSummary({
   quoteTotal = 0, 
   totalAmount, 
   readOnly = false, 
-  clientName = '' 
+  clientName = '',
+  quoteStatus = ''
 }: FinancialSummaryProps) {
   // Usa totalAmount se fornito, altrimenti usa quoteTotal
   const totalPreventivo = totalAmount !== undefined ? totalAmount : quoteTotal;
@@ -237,6 +239,16 @@ export function FinancialSummary({
   const handleTransactionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Verifica che il preventivo sia firmato prima di permettere l'aggiunta di pagamenti
+    if (!isQuoteSigned()) {
+      toast({
+        title: 'Operazione non consentita',
+        description: 'Puoi registrare pagamenti solo dopo che il preventivo è stato firmato dal cliente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     // Validazione dei campi richiesti
     if (!transactionData.amount || !transactionData.date) {
       toast({
@@ -267,6 +279,16 @@ export function FinancialSummary({
   // Funzione per gestire la sottomissione del form di pagamento programmato
   const handleScheduledSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Verifica che il preventivo sia firmato prima di permettere l'aggiunta di pagamenti programmati
+    if (!isQuoteSigned()) {
+      toast({
+        title: 'Operazione non consentita',
+        description: 'Puoi programmare pagamenti solo dopo che il preventivo è stato firmato dal cliente.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     // Validazione dei campi richiesti
     if (!scheduledData.amount || !scheduledData.dueDate) {
@@ -304,6 +326,16 @@ export function FinancialSummary({
   
   // Funzione per registrare un pagamento per una rata programmata
   const handleMarkAsPaid = (payment: any) => {
+    // Verifica che il preventivo sia firmato prima di permettere la registrazione del pagamento
+    if (!isQuoteSigned()) {
+      toast({
+        title: 'Operazione non consentita',
+        description: 'Puoi registrare pagamenti solo dopo che il preventivo è stato firmato dal cliente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     const transactionData = {
       type: 'income',
       amount: parseFloat(payment.amount),
@@ -339,6 +371,15 @@ export function FinancialSummary({
   const totalScheduled = scheduledPayments
     .filter((p: any) => p.status === 'pending' || p.status === 'overdue')
     .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
+  
+  // Verifica se il preventivo è firmato (status=confermato o approved)
+  const isQuoteSigned = (): boolean => {
+    // Se siamo in modalità sola lettura (link pubblico), consideriamo il preventivo firmato
+    if (readOnly) return true;
+    
+    // Altrimenti controlliamo lo status del preventivo
+    return quoteStatus === 'confermato' || quoteStatus === 'approved';
+  };
   
   // Badge di stato per i pagamenti programmati
   const getStatusBadge = (status: string) => {
@@ -437,7 +478,11 @@ export function FinancialSummary({
             {!readOnly && (
               <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button 
+                    size="sm" 
+                    disabled={!isQuoteSigned()}
+                    title={!isQuoteSigned() ? "Puoi aggiungere pagamenti solo dopo che il preventivo è stato firmato" : ""}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Aggiungi Pagamento
                   </Button>

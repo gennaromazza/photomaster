@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { format, parseISO, isAfter } from 'date-fns';
+import React, { useState, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format, parseISO, isAfter, isBefore } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowUpRight, ArrowDownRight, Euro, Plus, Calendar, AlertCircle, Check, Clock } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Euro, Plus, Calendar, AlertCircle, Check, Clock, Trash2, Edit } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -24,19 +24,69 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface FinancialSummaryProps {
   quoteId: number;
   quoteTotal?: number;
+  readOnly?: boolean;
+  clientName?: string;
 }
 
-export function FinancialSummary({ quoteId, quoteTotal = 0 }: FinancialSummaryProps) {
+export function FinancialSummary({ quoteId, quoteTotal = 0, readOnly = false, clientName = '' }: FinancialSummaryProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isAddScheduledOpen, setIsAddScheduledOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
+  const [isEditingPayment, setIsEditingPayment] = useState(false);
+  
+  // Riferimenti ai form
+  const transactionFormRef = useRef<HTMLFormElement>(null);
+  const scheduledFormRef = useRef<HTMLFormElement>(null);
+  
+  // Stati per i form
+  const [transactionData, setTransactionData] = useState({
+    amount: '',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    method: '',
+    reference: '',
+    description: '',
+    notes: ''
+  });
+  
+  const [scheduledData, setScheduledData] = useState({
+    amount: '',
+    dueDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    description: '',
+    paymentMethod: '',
+    notes: ''
+  });
   
   // Ottieni le transazioni per questo preventivo
   const { 
@@ -53,6 +103,214 @@ export function FinancialSummary({ quoteId, quoteTotal = 0 }: FinancialSummaryPr
   } = useQuery({
     queryKey: ['/api/finance/scheduled/quote', quoteId]
   });
+  
+  // Mutation per creare una nuova transazione
+  const createTransactionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/finance/transactions', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsAddTransactionOpen(false);
+      setTransactionData({
+        amount: '',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        method: '',
+        reference: '',
+        description: '',
+        notes: ''
+      });
+      
+      // Invalida le query per aggiornare i dati
+      queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
+      
+      toast({
+        title: 'Pagamento registrato',
+        description: 'Il pagamento è stato registrato con successo.',
+      });
+    },
+    onError: (error: any) => {
+      console.error('Errore nella registrazione del pagamento:', error);
+      toast({
+        title: 'Errore',
+        description: 'Impossibile registrare il pagamento. Riprova più tardi.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Mutation per creare un nuovo pagamento programmato
+  const createScheduledPaymentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/finance/scheduled-payments', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsAddScheduledOpen(false);
+      setScheduledData({
+        amount: '',
+        dueDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+        description: '',
+        paymentMethod: '',
+        notes: ''
+      });
+      
+      // Invalida le query per aggiornare i dati
+      queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      
+      toast({
+        title: 'Rata programmata',
+        description: 'La rata di pagamento è stata programmata con successo.',
+      });
+    },
+    onError: (error: any) => {
+      console.error('Errore nella programmazione della rata:', error);
+      toast({
+        title: 'Errore',
+        description: 'Impossibile programmare la rata. Riprova più tardi.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Mutation per eliminare un pagamento programmato
+  const deleteScheduledPaymentMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/finance/scheduled-payments/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalida le query per aggiornare i dati
+      queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      
+      toast({
+        title: 'Rata eliminata',
+        description: 'La rata di pagamento è stata eliminata con successo.',
+      });
+    },
+    onError: (error: any) => {
+      console.error('Errore nell\'eliminazione della rata:', error);
+      toast({
+        title: 'Errore',
+        description: 'Impossibile eliminare la rata. Riprova più tardi.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Mutation per registrare un pagamento programmato
+  const markAsPaidMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/finance/transactions', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalida le query per aggiornare i dati
+      queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      
+      toast({
+        title: 'Pagamento registrato',
+        description: 'La rata di pagamento è stata registrata come pagata.',
+      });
+    },
+    onError: (error: any) => {
+      console.error('Errore nella registrazione del pagamento:', error);
+      toast({
+        title: 'Errore',
+        description: 'Impossibile registrare il pagamento. Riprova più tardi.',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Funzione per gestire la sottomissione del form di transazione
+  const handleTransactionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validazione dei campi richiesti
+    if (!transactionData.amount || !transactionData.date) {
+      toast({
+        title: 'Errore di validazione',
+        description: 'Importo e data sono campi obbligatori.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Prepara l'oggetto transazione
+    const newTransaction = {
+      type: 'income',
+      amount: parseFloat(transactionData.amount),
+      date: new Date(transactionData.date),
+      description: transactionData.description || `Pagamento per preventivo #${quoteId}`,
+      source: 'quote',
+      sourceId: quoteId,
+      status: 'completed',
+      paymentMethod: transactionData.method || null,
+      reference: transactionData.reference || null,
+      notes: transactionData.notes || null
+    };
+    
+    // Invia la richiesta per creare la transazione
+    createTransactionMutation.mutate(newTransaction);
+  };
+  
+  // Funzione per gestire la sottomissione del form di pagamento programmato
+  const handleScheduledSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validazione dei campi richiesti
+    if (!scheduledData.amount || !scheduledData.dueDate) {
+      toast({
+        title: 'Errore di validazione',
+        description: 'Importo e data di scadenza sono campi obbligatori.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Prepara l'oggetto pagamento programmato
+    const newScheduledPayment = {
+      quoteId,
+      amount: parseFloat(scheduledData.amount),
+      dueDate: new Date(scheduledData.dueDate),
+      description: scheduledData.description || `Rata per preventivo #${quoteId}`,
+      status: 'pending',
+      paymentMethod: scheduledData.paymentMethod || null,
+      notes: scheduledData.notes || null
+    };
+    
+    // Invia la richiesta per creare il pagamento programmato
+    createScheduledPaymentMutation.mutate(newScheduledPayment);
+  };
+  
+  // Funzione per eliminare un pagamento programmato
+  const handleDeleteScheduledPayment = () => {
+    if (selectedPaymentId) {
+      deleteScheduledPaymentMutation.mutate(selectedPaymentId);
+      setIsDeleteDialogOpen(false);
+      setSelectedPaymentId(null);
+    }
+  };
+  
+  // Funzione per registrare un pagamento per una rata programmata
+  const handleMarkAsPaid = (payment: any) => {
+    const transactionData = {
+      type: 'income',
+      amount: parseFloat(payment.amount),
+      date: new Date(),
+      description: payment.description || `Pagamento per preventivo #${quoteId}`,
+      source: 'quote',
+      sourceId: quoteId,
+      status: 'completed',
+      paymentMethod: payment.paymentMethod || null,
+      notes: payment.notes || null,
+      scheduledPaymentId: payment.id // Collegamento alla rata programmata
+    };
+    
+    markAsPaidMutation.mutate(transactionData);
+  };
   
   // Funzione per formattare l'importo come valuta
   const formatCurrency = (amount: number) => {

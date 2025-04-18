@@ -72,7 +72,7 @@ export const financeController = {
           amount: data.amount.toString(),
           date: format(new Date(data.date), 'yyyy-MM-dd'),
           description: data.description || null,
-          quote_id: data.sourceId || null, // Correzione: usiamo quote_id invece di sourceId
+          quoteId: data.quoteId || null, 
           status: data.status || "completed",
           paymentMethod: data.paymentMethod || null,
           reference: data.reference || null,
@@ -93,11 +93,11 @@ export const financeController = {
       }
 
       // Se è una transazione di tipo "income" e associata a un preventivo, invio una notifica
-      if (data.type === "income" && data.sourceId) {
+      if (data.type === "income" && data.quoteId) {
         // Recupero i dati del preventivo e cliente
         const [quote] = await db.select()
           .from(quotes)
-          .where(eq(quotes.id, data.sourceId));
+          .where(eq(quotes.id, data.quoteId));
 
         if (quote) {
           // Recupero il cliente
@@ -146,8 +146,7 @@ export const financeController = {
           amount: data.amount.toString(),
           date: format(new Date(data.date), 'yyyy-MM-dd'),
           description: data.description || null,
-          // Usando il nome corretto per l'ORM
-          quote_id: data.sourceId || null,
+          quoteId: data.quoteId || null,
           status: data.status || "completed",
           paymentMethod: data.paymentMethod || null,
           reference: data.reference || null,
@@ -212,7 +211,7 @@ export const financeController = {
     try {
       const result = await db.select()
         .from(transactions)
-        .where(eq(transactions.sourceId, quoteId))
+        .where(eq(transactions.quoteId, quoteId))
         .orderBy(desc(transactions.date));
 
       return result;

@@ -51,6 +51,17 @@ export async function apiRequest(
   
   // Prepara gli headers di base
   const headers: Record<string, string> = {};
+
+  // For non-GET requests, always get a fresh CSRF token
+  if (method.toUpperCase() !== 'GET') {
+    try {
+      const csrfResponse = await fetch('/api/csrf-token');
+      const { csrfToken } = await csrfResponse.json();
+      headers['X-CSRF-Token'] = csrfToken;
+    } catch (error) {
+      console.error('Failed to fetch CSRF token:', error);
+    }
+  }
   
   // Aggiungi Content-Type se c'è un body
   if (data) {

@@ -6,6 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ChevronLeft, Save, Loader2, Camera } from "lucide-react";
 
+// Definiamo un'interfaccia per l'evento
+interface Event {
+  id: number;
+  title: string;
+  description?: string;
+}
+
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -48,7 +55,7 @@ export default function NewGalleryPage() {
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
 
   // Query per ottenere gli eventi disponibili
-  const { data: events } = useQuery({
+  const { data: events = [] } = useQuery<Event[]>({
     queryKey: ["/api/events"],
   });
 
@@ -76,7 +83,7 @@ export default function NewGalleryPage() {
         formData.append("password", data.password);
       }
       
-      if (data.eventId && data.eventId !== "") {
+      if (data.eventId && data.eventId !== "0") {
         formData.append("eventId", data.eventId);
       }
       
@@ -238,8 +245,8 @@ export default function NewGalleryPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Nessun evento</SelectItem>
-                        {events?.map((event: any) => (
+                        <SelectItem value="0">Nessun evento</SelectItem>
+                        {Array.isArray(events) && events.map((event) => (
                           <SelectItem key={event.id} value={event.id.toString()}>
                             {event.title}
                           </SelectItem>

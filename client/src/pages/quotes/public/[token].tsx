@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
@@ -37,9 +38,11 @@ import { Button } from "@/components/ui/button";
 
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
-  // Query per ottenere le impostazioni dell'applicazione
+  // Query per ottenere le impostazioni dell'applicazione (con staleTime per migliorare performance)
   const { data: settings } = useQuery({
     queryKey: ["/api/settings"],
+    staleTime: 30 * 60 * 1000, // 30 minuti - le impostazioni cambiano raramente
+    gcTime: 60 * 60 * 1000, // 1 ora
   });
 
   // Estrai le impostazioni della filigrana, o usa valori predefiniti
@@ -113,44 +116,60 @@ export default function PublicQuotePage() {
   const [signature, setSignature] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Utilizziamo useMemo per ottenere una reference stabile nel tempo del token
+  // Questo evita query inutili causate dal token che cambia reference
+  const memoizedToken = useMemo(() => token, [token]);
+
   // Carica i dati del preventivo tramite token di condivisione con aggiornamento automatico
   const {
     data: quote,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["/api/quotes/share", token],
-    queryFn: async () => {
-      // Aggiungiamo un parametro di timestamp per evitare caching
-      const timestamp = new Date().getTime();
-      const res = await fetch(`/api/quotes/share/${token}?_t=${timestamp}`);
-      if (!res.ok) {
-        if (res.status === 404) {
-          setIsExpired(true);
-          throw new Error("Preventivo non trovato o link scaduto");
-        }
-        throw new Error("Errore nel caricamento del preventivo");
+    queryKey: ["/api/quotes/share", memoizedToken],
+    queryFn: async ({ queryKey }) => {
+      // Tipo esplicito per evitare problemi con QueryKey
+      const [_baseUrl, tokenValue] = queryKey as [string, string];
+      if (!tokenValue) {
+        setIsExpired(true);
+        throw new Error("Token preventivo mancante");
       }
-      return res.json();
+      
+      try {
+        const res = await fetch(`/api/quotes/share/${tokenValue}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            setIsExpired(true);
+            throw new Error("Preventivo non trovato o link scaduto");
+          }
+          throw new Error("Errore nel caricamento del preventivo");
+        }
+        return res.json();
+      } catch (error) {
+        console.error("Errore caricamento preventivo:", error);
+        throw error;
+      }
     },
-    // Aggiornamento automatico ogni 30 secondi
-    refetchInterval: 30000,
-    // Se la pagina non è attiva, interrompiamo l'aggiornamento automatico
+    // Performance optimization:
+    staleTime: 60 * 1000, // 1 minuto prima di considerare i dati obsoleti
+    gcTime: 5 * 60 * 1000, // 5 minuti in cache
+    // Aggiornamento automatico ogni 60 secondi invece di 30
+    // Un intervallo più lungo riduce il carico sul server
+    refetchInterval: 60 * 1000,
+    // Disabilitiamo il refetch in background per risparmiare risorse
     refetchIntervalInBackground: false,
   });
 
-  // Carica i moduli del preventivo con aggiornamento automatico ogni 15 secondi
+  // Carica i moduli del preventivo 
   const { data: modules = [], isLoading: isLoadingModules } = useQuery({
-    queryKey: ["/api/quotes/share", token, "modules"],
-    queryFn: async () => {
-      if (!quote?.id) return [];
+    queryKey: ["/api/quotes/modules", quote?.id],
+    queryFn: async ({ queryKey }) => {
+      // Tipo esplicito per evitare problemi con QueryKey
+      const [_baseUrl, quoteId] = queryKey as [string, number | undefined];
+      if (!quoteId) return [];
 
       try {
-        // Aggiungiamo un parametro di timestamp per evitare caching
-        const timestamp = new Date().getTime();
-        const res = await fetch(
-          `/api/quotes/${quote.id}/modules?_t=${timestamp}`,
-        );
+        const res = await fetch(`/api/quotes/${quoteId}/modules`);
         if (!res.ok) return [];
         return res.json();
       } catch (err) {
@@ -158,41 +177,35 @@ export default function PublicQuotePage() {
         return [];
       }
     },
+    // Abilita la query solo quando il quoteId è disponibile
     enabled: !!quote?.id,
-    // Aggiornamento automatico ogni 15 secondi per visualizzare in tempo reale eventuali modifiche ai moduli
-    refetchInterval: 15000,
-    // Se la pagina non è attiva, interrompiamo l'aggiornamento automatico
+    // Performance optimization:
+    staleTime: 2 * 60 * 1000, // 2 minuti prima di considerare i dati obsoleti
+    gcTime: 5 * 60 * 1000, // 5 minuti in cache
+    // Aggiornamento automatico ogni 30 secondi invece di 15 
+    refetchInterval: 30 * 1000,
+    // Disabilitiamo il refetch in background per risparmiare risorse
     refetchIntervalInBackground: false,
   });
 
   // Funzione per gestire la selezione degli elementi nei moduli variabili
-  const handleModuleItemSelection = (
+  // Funzione memorizzata con useMemo per evitare ricreazioni inutili
+  const handleModuleItemSelection = useMemo(() => (
     moduleId: number,
     selectedItems: number[],
   ) => {
-    console.log(
-      `[LOG] Selezione modulo ${moduleId}, elementi selezionati:`,
-      selectedItems,
-    );
+    setSelectedModuleItems((prev) => ({
+      ...prev,
+      [moduleId]: selectedItems,
+    }));
+  }, []);
 
-    setSelectedModuleItems((prev) => {
-      const newSelections = {
-        ...prev,
-        [moduleId]: selectedItems,
-      };
-
-      // Log per debugging
-      console.log(`[LOG] Nuovo stato selezioni moduli:`, newSelections);
-      return newSelections;
-    });
-  };
-
-  // Funzione di validazione per i moduli variabili
-  const isSelectionValidForAllModules = (): {
+  // Funzione di validazione per i moduli variabili - usando useMemo per evitare ricalcoli inutili
+  const isSelectionValidForAllModules = useMemo(() => (): {
     isValid: boolean;
     message?: string;
   } => {
-    if (!modules) return { isValid: true };
+    if (!modules?.length) return { isValid: true };
 
     // Esamina tutti i moduli variabili
     for (const module of modules) {
@@ -225,10 +238,10 @@ export default function PublicQuotePage() {
     }
 
     return { isValid: true };
-  };
+  }, [modules, selectedModuleItems]);
 
-  // Gestione firma e conferma preventivo
-  const handleSignQuote = async () => {
+  // Gestione firma e conferma preventivo - implementato come funzione memorizzata per evitare ricrazioni inutili
+  const handleSignQuote = useMemo(() => async () => {
     //Check if quote is already signed
     if (
       quote &&
@@ -266,22 +279,12 @@ export default function PublicQuotePage() {
 
     setIsSubmitting(true);
     try {
-      // Get CSRF token
-      const csrfResponse = await fetch('/api/csrf-token');
-      const { csrfToken } = await csrfResponse.json();
-
-      const response = await fetch(`/api/quotes/share/${token}/sign`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken, // Added CSRF token to headers
-        },
-        body: JSON.stringify({
-          signature: signature.trim(),
-          status: "approved",
-          signedAt: new Date().toISOString(),
-          selectedModuleItems: selectedModuleItems,
-        }),
+      // Utilizziamo apiRequest che gestisce automaticamente il token CSRF e implementa retry
+      const response = await apiRequest("POST", `/api/quotes/share/${token}/sign`, {
+        signature: signature.trim(),
+        status: "approved",
+        signedAt: new Date().toISOString(),
+        selectedModuleItems: selectedModuleItems,
       });
 
       if (!response.ok) {
@@ -346,7 +349,7 @@ export default function PublicQuotePage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [quote, toast, token, signature, selectedModuleItems, isSelectionValidForAllModules, setLocation, setIsSubmitting]);
 
   useEffect(() => {
     if (error) {

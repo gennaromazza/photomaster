@@ -1,43 +1,83 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// Variabile per memorizzare il token CSRF
-let csrfToken: string | null = null;
+// Sistema avanzato per la gestione del token CSRF con cache timeout
+interface CsrfTokenCache {
+  token: string | null;
+  timestamp: number;
+  pending: Promise<string> | null;
+}
 
-// Funzione per ottenere il token CSRF
+// Cache con timestamp
+const csrfCache: CsrfTokenCache = {
+  token: null,
+  timestamp: 0,
+  pending: null
+};
+
+// Tempo di validità del token in ms (30 minuti)
+const CSRF_TOKEN_VALIDITY = 30 * 60 * 1000;
+
+// Funzione per ottenere il token CSRF con migliore caching
 export async function getCsrfToken(): Promise<string> {
-  // Se abbiamo già un token, lo restituiamo
-  if (csrfToken) {
-    return csrfToken;
+  const now = Date.now();
+  
+  // Se un token è già in fase di recupero, attendiamo quella richiesta invece di farne una nuova
+  if (csrfCache.pending) {
+    return csrfCache.pending;
   }
   
-  // Altrimenti, lo richiediamo all'API
+  // Se abbiamo già un token valido, lo restituiamo
+  if (csrfCache.token && (now - csrfCache.timestamp) < CSRF_TOKEN_VALIDITY) {
+    return csrfCache.token;
+  }
+  
+  // Altrimenti, avviamo una nuova richiesta e la memorizziamo come pending
   try {
-    const response = await fetch('/api/csrf-token');
+    // Creazione della promise per la richiesta del token
+    csrfCache.pending = (async () => {
+      try {
+        const response = await fetch('/api/csrf-token');
+        
+        if (!response.ok) {
+          console.warn('Server non ha restituito un token CSRF valido, continuo senza token');
+          return '';
+        }
+        
+        const data = await response.json();
+        const token = data.token || (data.csrfToken ? data.csrfToken : '');
+        
+        if (!token) {
+          console.warn('Token CSRF non valido o mancante nella risposta');
+          return '';
+        }
+        
+        // Aggiorna la cache con il nuovo token
+        csrfCache.token = token;
+        csrfCache.timestamp = now;
+        
+        return token;
+      } catch (error) {
+        console.warn('Errore durante il recupero del token CSRF:', error);
+        return '';
+      } finally {
+        // Resetta la promise pendente
+        csrfCache.pending = null;
+      }
+    })();
     
-    if (!response.ok) {
-      // Gestisci il caso in cui il server non risponde o restituisce un errore
-      console.warn('Server non ha restituito un token CSRF, continuo senza token');
-      return ''; // Restituiamo una stringa vuota invece di fallire
-    }
-    
-    const data = await response.json();
-    csrfToken = data.token; // L'API restituisce il token con chiave 'token'
-    
-    if (!csrfToken) {
-      console.warn('Token CSRF non valido o mancante, continuo senza token');
-      return ''; // Restituiamo una stringa vuota invece di fallire
-    }
-    
-    return csrfToken;
+    return await csrfCache.pending;
   } catch (error) {
-    console.warn('Errore durante il recupero del token CSRF, continuo senza token:', error);
-    return ''; // Restituiamo una stringa vuota invece di fallire
+    console.error('Errore non gestito durante il recupero del token CSRF:', error);
+    csrfCache.pending = null;
+    return '';
   }
 }
 
 // Funzione per invalidare il token CSRF (utile dopo logout o errori 403)
 export function invalidateCsrfToken(): void {
-  csrfToken = null;
+  csrfCache.token = null;
+  csrfCache.timestamp = 0;
+  csrfCache.pending = null;
 }
 
 export async function apiRequest(
@@ -52,17 +92,6 @@ export async function apiRequest(
   // Prepara gli headers di base
   const headers: Record<string, string> = {};
 
-  // For non-GET requests, always get a fresh CSRF token
-  if (method.toUpperCase() !== 'GET') {
-    try {
-      const csrfResponse = await fetch('/api/csrf-token');
-      const { csrfToken } = await csrfResponse.json();
-      headers['X-CSRF-Token'] = csrfToken;
-    } catch (error) {
-      console.error('Failed to fetch CSRF token:', error);
-    }
-  }
-  
   // Aggiungi Content-Type se c'è un body
   if (data) {
     headers["Content-Type"] = "application/json";
@@ -73,13 +102,14 @@ export async function apiRequest(
     headers["Authorization"] = `Bearer ${token}`;
   }
   
-  // Ottieni e aggiungi il token CSRF per le richieste che modificano dati 
-  // (ma non per GET e HEAD che non richiedono protezione CSRF)
+  // Otteniamo il token CSRF solo per richieste che modificano dati e solo una volta
+  // Questo evita di fare due chiamate separate come nel codice originale
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
     try {
-      const csrfToken = await getCsrfToken();
-      if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
+      // Usa la funzione getCsrfToken che implementa la memorizzazione nella cache
+      const token = await getCsrfToken();
+      if (token) {
+        headers['X-CSRF-Token'] = token;
       }
     } catch (error) {
       console.warn('Errore nel recupero del token CSRF:', error);
@@ -119,6 +149,40 @@ export async function apiRequest(
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
+// Funzione per costruire URL in modo più efficiente e flessibile
+function buildQueryUrl(queryKey: readonly unknown[]): string {
+  // Se il primo elemento è già una stringa completa (URL), la usiamo direttamente
+  const baseUrl = queryKey[0] as string;
+  
+  // Se abbiamo solo la base URL, la restituiamo
+  if (queryKey.length === 1) {
+    return baseUrl;
+  }
+  
+  // Se il secondo elemento è undefined, null o false, lo ignoriamo
+  if (queryKey.length > 1 && (queryKey[1] === undefined || queryKey[1] === null || queryKey[1] === false)) {
+    return baseUrl;
+  }
+  
+  // Se il secondo elemento è un oggetto, lo trattiamo come parametri di query
+  if (queryKey.length > 1 && typeof queryKey[1] === 'object' && queryKey[1] !== null && !Array.isArray(queryKey[1])) {
+    const queryParams = new URLSearchParams();
+    const params = queryKey[1] as Record<string, any>;
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value));
+      }
+    });
+    
+    const queryString = queryParams.toString();
+    return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  }
+  
+  // Altrimenti aggiungiamo il secondo elemento come parametro di percorso
+  return `${baseUrl}/${queryKey[1]}`;
+}
+
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
@@ -128,37 +192,51 @@ export const getQueryFn: <T>(options: {
     const token = localStorage.getItem("auth_token");
     
     // Prepara gli headers
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      // Aggiungiamo Accept per migliorare le prestazioni specificando il tipo di risposta atteso
+      "Accept": "application/json"
+    };
     
     // Aggiungi il token all'header Authorization se presente
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
     
-    // Costruisci l'URL completo in base alla queryKey
-    let url = queryKey[0] as string;
+    // Costruisci l'URL in modo più flessibile
+    const url = buildQueryUrl(queryKey);
     
-    // Se c'è un secondo elemento nella queryKey, è l'id da aggiungere all'URL
-    if (queryKey.length > 1 && queryKey[1] !== undefined) {
-      url = `${url}/${queryKey[1]}`;
+    try {
+      const res = await fetch(url, {
+        headers,
+        credentials: "include", // Manteniamo per compatibilità con sessioni
+        signal, // Passa il segnale di abort
+      });
+  
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+  
+      if (!res.ok) {
+        const errorMessage = await res.text();
+        throw new Error(`${res.status}: ${errorMessage}`);
+      }
+      
+      return await res.json();
+    } catch (error) {
+      // Migliore gestione degli errori di rete o timeout
+      if (error instanceof Error) {
+        // Se è un errore di DOMException con tipo AbortError, significa che la richiesta è stata annullata
+        if ('name' in error && error.name === 'AbortError') {
+          console.warn(`Richiesta annullata: ${url}`);
+          throw new Error(`Richiesta annullata: ${url}`);
+        }
+        
+        console.error(`Errore durante il recupero dei dati da ${url}:`, error);
+        throw error;
+      } else {
+        throw new Error(`Errore non gestito durante il recupero dei dati da ${url}`);
+      }
     }
-    
-    const res = await fetch(url, {
-      headers,
-      credentials: "include", // Manteniamo per compatibilità con sessioni
-      signal, // Passa il segnale di abort
-    });
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-
-    if (!res.ok) {
-      const errorMessage = await res.text();
-      throw new Error(`${res.status}: ${errorMessage}`);
-    }
-    
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({
@@ -167,11 +245,17 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      // Modifica dello staleTime per renderlo più flessibile
+      // staleTime: Infinity, <- era troppo restrittivo, causava dati obsoleti
+      staleTime: 5 * 60 * 1000, // 5 minuti - bilanciamento tra prestazioni e aggiornamento
+      retry: 1, // Aggiungiamo un singolo retry per gestire errori temporanei di rete
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+      // Aggiunta della persistenza nella cache per migliorare l'esperienza utente
+      gcTime: 10 * 60 * 1000, // 10 minuti - mantiene i dati in cache più a lungo
     },
     mutations: {
-      retry: false,
+      retry: 1, // Aggiungiamo un singolo retry anche per le mutations
+      retryDelay: 1000, // Ritardo fisso per i retry delle mutations
     },
   },
 });

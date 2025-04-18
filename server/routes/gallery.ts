@@ -66,7 +66,7 @@ router.get("/galleries/:id", getGalleryById);
 router.get("/public/galleries/:slug", checkGalleryAccess, getGalleryBySlug);
 
 // Crea una nuova galleria (richiede autenticazione)
-router.post("/galleries", isAuthenticated, createGallery);
+router.post("/galleries", isAuthenticated, upload.single("coverImage"), createGallery);
 
 // Aggiorna una galleria (richiede autenticazione)
 router.put("/galleries/:id", isAuthenticated, updateGallery);

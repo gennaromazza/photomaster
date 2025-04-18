@@ -100,6 +100,8 @@ export const events = pgTable("events", {
   status: text("status").notNull().default("upcoming"),
   notes: text("notes"),
   coverImage: text("cover_image"),
+  googleCalendarEventId: text("google_calendar_event_id"), // ID dell'evento in Google Calendar
+  googleCalendarSynced: boolean("google_calendar_synced").default(false), // Indica se l'evento è stato sincronizzato con Google Calendar
 });
 
 // Base insert schema senza transform per poter usare .partial()
@@ -119,6 +121,8 @@ const baseEventInsertSchema = createInsertSchema(events).pick({
   status: true,
   notes: true,
   coverImage: true,
+  googleCalendarEventId: true,
+  googleCalendarSynced: true,
 });
 
 // Schema per insert con transform delle date

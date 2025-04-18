@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
-import { Storage } from '../storage';
+import { storage } from '../storage';
 import { Quote, Contract } from '../../shared/schema';
 
 /**
@@ -9,8 +9,7 @@ import { Quote, Contract } from '../../shared/schema';
  * e restituisce il percorso dell'immagine risultante
  */
 export async function generateWatermarkedPreview(
-  quoteData: Quote, 
-  storage: Storage
+  quoteData: Quote
 ): Promise<string> {
   try {
     // Creiamo una cartella temporanea per le anteprime se non esiste

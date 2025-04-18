@@ -999,7 +999,7 @@ export default function QuoteDetailPage() {
             <Card>
               <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-lg sm:text-xl flex items-center">
-                  <Euro className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary/80" />
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary/80" />
                   Riepilogo Finanziario
                 </CardTitle>
               </CardHeader>
@@ -1083,7 +1083,7 @@ export default function QuoteDetailPage() {
             <Card>
               <CardHeader className="pb-2 sm:pb-3">
                 <CardTitle className="text-lg sm:text-xl flex items-center">
-                  <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary/80" />
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary/80" />
                   Stato Preventivo
                 </CardTitle>
               </CardHeader>

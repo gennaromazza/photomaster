@@ -29,7 +29,7 @@ export function FinancialSummaryWrapper(props: FinancialSummaryWrapperProps) {
   return (
     <div className="space-y-4">
       {!props.readOnly && !isQuoteSigned() && (
-        <Alert variant="warning" className="bg-amber-50 text-amber-800 border-amber-200 mb-4">
+        <Alert className="bg-amber-50 text-amber-800 border-amber-200 mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Preventivo non firmato</AlertTitle>
           <AlertDescription>

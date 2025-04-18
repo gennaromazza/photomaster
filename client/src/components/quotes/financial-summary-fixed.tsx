@@ -355,9 +355,10 @@ export function FinancialSummary({
   
   // Utilizziamo la funzione formatCurrency importata da utils.ts
   // La funzione importata gestisce la conversione da centesimi a euro
-  // Funzione per convertire i valori da euro a centesimi prima di formattarli
+  // Nota: poiché nell'applicazione ora passiamo già i valori in centesimi,
+  // non è più necessario moltiplicare per 100 nella nostra funzione formatAmount
   const formatAmount = (amount: number) => {
-    return formatCurrency(amount * 100);
+    return formatCurrency(amount);
   }
   
   // Calcola il totale pagato

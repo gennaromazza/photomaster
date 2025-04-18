@@ -72,10 +72,11 @@ export const financeController = {
           amount: data.amount.toString(),
           date: new Date(data.date),
           description: data.description || null,
-          source: data.source || null,
-          sourceId: data.sourceId || null,
+          // Nota: la colonna 'source' non esiste nella tabella transactions
+          // usiamo direttamente quote_id per tracciare l'origine
+          quote_id: data.sourceId || null,
           status: data.status || "completed",
-          paymentMethod: data.paymentMethod || null,
+          payment_method: data.paymentMethod || null,
           reference: data.reference || null,
           notes: data.notes || null,
           createdBy: data.createdBy || null,
@@ -93,8 +94,8 @@ export const financeController = {
           .where(eq(scheduledPayments.id, data.scheduledPaymentId));
       }
       
-      // Se è una transazione di tipo "income" e source = "quote", invio una notifica
-      if (data.type === "income" && data.source === "quote" && data.sourceId) {
+      // Se è una transazione di tipo "income" e associata a un preventivo, invio una notifica
+      if (data.type === "income" && data.sourceId) {
         // Recupero i dati del preventivo e cliente
         const [quote] = await db.select()
           .from(quotes)
@@ -147,14 +148,14 @@ export const financeController = {
           amount: data.amount.toString(),
           date: new Date(data.date),
           description: data.description || null,
-          source: data.source || null,
-          sourceId: data.sourceId || null,
+          // Utilizziamo quote_id direttamente invece di sourceId
+          quote_id: data.sourceId || null,
           status: data.status || "completed",
-          paymentMethod: data.paymentMethod || null,
+          payment_method: data.paymentMethod || null,
           reference: data.reference || null,
           notes: data.notes || null,
           category: data.category || null,
-          attachmentPath: data.attachmentPath || null
+          attachment_path: data.attachmentPath || null
         })
         .where(eq(transactions.id, id))
         .returning();
@@ -213,10 +214,7 @@ export const financeController = {
     try {
       const result = await db.select()
         .from(transactions)
-        .where(and(
-          eq(transactions.source, "quote"),
-          eq(transactions.sourceId, quoteId)
-        ))
+        .where(eq(transactions.quote_id, quoteId))
         .orderBy(desc(transactions.date));
       
       return result;

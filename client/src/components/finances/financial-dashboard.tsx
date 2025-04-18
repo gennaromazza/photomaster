@@ -1,488 +1,266 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState } from 'react';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { it } from 'date-fns/locale';
-import { PaymentTracker } from './payment-tracker';
 import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  TrendingUp, 
-  TrendingDown,
-  CalendarIcon,
-  BarChart3,
-  PiggyBank,
-  Euro
+  CreditCard, 
+  DollarSign, 
+  Users, 
+  ArrowUpCircle, 
+  ArrowDownCircle,
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
-import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell
-} from "recharts";
-import { Skeleton } from "@/components/ui/skeleton";
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { PaymentTracker } from './payment-tracker';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Interfaccia per i dati finanziari
-interface FinancialData {
-  summary: {
-    monthlyIncome: number;
-    monthlyExpenses: number;
-    yearlyIncome: number;
-    yearlyExpenses: number;
-    pendingPayments: number;
-    overduePayments: number;
-  };
-  monthlyStats: {
-    month: string;
-    income: number;
-    expenses: number;
-  }[];
-  expenseCategories: {
-    category: string;
-    amount: number;
-    percentage: number;
-  }[];
-  recentTransactions: {
-    id: number;
-    date: string;
-    description: string;
-    amount: number;
-    type: string;
-  }[];
+interface FinancialDashboardProps {
+  stats: any;
+  isLoading: boolean;
+  transactions: any[];
 }
 
-export function FinancialDashboard() {
-  const [fromDate, setFromDate] = useState<Date | undefined>(subMonths(new Date(), 6));
-  const [toDate, setToDate] = useState<Date | undefined>(new Date());
-  const [activeTab, setActiveTab] = useState('overview');
+export function FinancialDashboard({ stats, isLoading, transactions }: FinancialDashboardProps) {
+  const [period, setPeriod] = useState('month');
   
-  // Query per recuperare i dati finanziari
-  const { data, isLoading, error } = useQuery<FinancialData>({
-    queryKey: ['/api/finance/summary', fromDate, toDate],
-    queryFn: async () => {
-      // Formatta le date per la query
-      const fromDateStr = fromDate ? format(fromDate, 'yyyy-MM-dd') : '';
-      const toDateStr = toDate ? format(toDate, 'yyyy-MM-dd') : '';
-      
-      const response = await fetch(
-        `/api/finance/summary?fromDate=${fromDateStr}&toDate=${toDateStr}`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch financial data');
-      }
-      
-      return response.json();
+  // Funzione per formattare l'importo come valuta
+  const formatCurrency = (amount: number = 0) => {
+    return new Intl.NumberFormat('it-IT', { 
+      style: 'currency', 
+      currency: 'EUR' 
+    }).format(amount);
+  };
+  
+  // Funzione per calcolare l'andamento percentuale
+  const calculateChange = (current: number = 0, previous: number = 0) => {
+    if (previous === 0) {
+      return current > 0 ? 100 : 0;
     }
-  });
-  
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(amount);
+    
+    return ((current - previous) / previous) * 100;
   };
   
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'd MMM yyyy', { locale: it });
+  const getChangeClassName = (change: number) => {
+    return change >= 0 
+      ? 'text-emerald-500' 
+      : 'text-rose-500';
   };
   
-  const formatMonth = (monthString: string) => {
-    const [year, month] = monthString.split('-');
-    return format(new Date(parseInt(year), parseInt(month) - 1), 'MMM yyyy', { locale: it });
+  const getChangeSymbol = (change: number) => {
+    return change >= 0 ? '+' : '';
   };
   
-  // Colori per i grafici
-  const COLORS = ['#4f46e5', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef'];
+  const getRevenueData = () => {
+    if (!stats) return { current: 0, previous: 0, change: 0 };
+    
+    const current = stats.income?.current || 0;
+    const previous = stats.income?.previous || 0;
+    const change = calculateChange(current, previous);
+    
+    return { current, previous, change };
+  };
   
-  // Custom tooltip per i grafici
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
+  const getExpensesData = () => {
+    if (!stats) return { current: 0, previous: 0, change: 0 };
+    
+    const current = stats.expenses?.current || 0;
+    const previous = stats.expenses?.previous || 0;
+    const change = calculateChange(current, previous);
+    
+    return { current, previous, change };
+  };
+  
+  const getProfitData = () => {
+    if (!stats) return { current: 0, previous: 0, change: 0 };
+    
+    const current = (stats.income?.current || 0) - (stats.expenses?.current || 0);
+    const previous = (stats.income?.previous || 0) - (stats.expenses?.previous || 0);
+    const change = calculateChange(current, previous);
+    
+    return { current, previous, change };
+  };
+  
+  const getClientsData = () => {
+    if (!stats) return { current: 0, previous: 0, change: 0 };
+    
+    const current = stats.clientCount?.current || 0;
+    const previous = stats.clientCount?.previous || 0;
+    const change = calculateChange(current, previous);
+    
+    return { current, previous, change };
+  };
+  
+  const renderStatsCard = (
+    title: string, 
+    value: string, 
+    change: number, 
+    icon: JSX.Element,
+    description: string
+  ) => {
+    const changeClass = getChangeClassName(change);
+    const changeSymbol = getChangeSymbol(change);
+    
+    if (isLoading) {
       return (
-        <div className="bg-background p-2 border rounded-md shadow-sm">
-          <p className="text-sm font-medium">{formatMonth(label)}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={`item-${index}`} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: {formatCurrency(entry.value)}
-            </p>
-          ))}
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              <Skeleton className="h-4 w-24" />
+            </CardTitle>
+            <Skeleton className="h-8 w-8 rounded-full" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-28 mb-1" />
+            <Skeleton className="h-4 w-16" />
+          </CardContent>
+        </Card>
       );
     }
-    return null;
+    
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          {icon}
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{value}</div>
+          <p className="text-xs text-muted-foreground pt-1">
+            <span className={changeClass}>
+              {changeSymbol}{change.toFixed(1)}%
+            </span>
+            {' '}{description}
+          </p>
+        </CardContent>
+      </Card>
+    );
   };
   
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard Finanziaria</h2>
-          <div className="flex items-center space-x-2">
-            <Skeleton className="h-10 w-40" />
-            <Skeleton className="h-10 w-40" />
-          </div>
-        </div>
-        
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-        </div>
-        
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Skeleton className="h-96 lg:col-span-4" />
-          <Skeleton className="h-96 lg:col-span-3" />
-        </div>
-      </div>
-    );
-  }
+  // Ottieni i dati per le card
+  const revenueData = getRevenueData();
+  const expensesData = getExpensesData();
+  const profitData = getProfitData();
+  const clientsData = getClientsData();
   
-  if (error || !data) {
-    return (
-      <div className="space-y-4">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard Finanziaria</h2>
-        <Card>
-          <CardHeader>
-            <CardTitle>Errore</CardTitle>
-            <CardDescription>
-              Si è verificato un errore nel caricamento dei dati finanziari. Riprova più tardi.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
+  const currentMonthName = format(new Date(), 'MMMM', { locale: it });
+  const previousMonthName = format(subMonths(new Date(), 1), 'MMMM', { locale: it });
   
-  const { summary, monthlyStats, expenseCategories, recentTransactions } = data;
+  // Determina la descrizione in base al periodo selezionato
+  const getPeriodDescription = () => {
+    if (period === 'month') {
+      return `rispetto a ${previousMonthName}`;
+    } else if (period === 'quarter') {
+      return 'rispetto al trimestre precedente';
+    } else {
+      return 'rispetto all\'anno precedente';
+    }
+  };
   
+  const description = getPeriodDescription();
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard Finanziaria</h2>
+    <div className="space-y-8">
+      <div className="flex justify-between">
+        <h3 className="text-lg font-medium">Panoramica Finanziaria</h3>
+        <Select value={period} onValueChange={setPeriod}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Seleziona periodo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="month">Mensile</SelectItem>
+            <SelectItem value="quarter">Trimestrale</SelectItem>
+            <SelectItem value="year">Annuale</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {renderStatsCard(
+          'Entrate', 
+          formatCurrency(revenueData.current), 
+          revenueData.change, 
+          <ArrowUpCircle className="h-4 w-4 text-emerald-500" />,
+          description
+        )}
         
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto justify-start">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {fromDate ? format(fromDate, 'PP', { locale: it }) : 'Seleziona inizio'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={fromDate}
-                onSelect={setFromDate}
-                initialFocus
-                locale={it}
-              />
-            </PopoverContent>
-          </Popover>
-          
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-auto justify-start">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {toDate ? format(toDate, 'PP', { locale: it }) : 'Seleziona fine'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={toDate}
-                onSelect={setToDate}
-                initialFocus
-                locale={it}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
+        {renderStatsCard(
+          'Uscite', 
+          formatCurrency(expensesData.current), 
+          -expensesData.change, 
+          <ArrowDownCircle className="h-4 w-4 text-rose-500" />,
+          description
+        )}
+        
+        {renderStatsCard(
+          'Profitto', 
+          formatCurrency(profitData.current), 
+          profitData.change, 
+          <DollarSign className="h-4 w-4 text-blue-500" />,
+          description
+        )}
+        
+        {renderStatsCard(
+          'Clienti Attivi', 
+          clientsData.current.toString(), 
+          clientsData.change, 
+          <Users className="h-4 w-4 text-violet-500" />,
+          description
+        )}
       </div>
       
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex justify-between items-center">
-          <TabsList>
-            <TabsTrigger value="overview" className="flex items-center gap-1">
-              <BarChart3 className="h-4 w-4" />
-              <span>Panoramica</span>
-            </TabsTrigger>
-            <TabsTrigger value="transactions" className="flex items-center gap-1">
-              <Euro className="h-4 w-4" />
-              <span>Transazioni</span>
-            </TabsTrigger>
-            <TabsTrigger value="scheduled" className="flex items-center gap-1">
-              <PiggyBank className="h-4 w-4" />
-              <span>Pagamenti Programmati</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsTrigger value="overview">Transazioni Recenti</TabsTrigger>
+          <TabsTrigger value="analytics">Analisi</TabsTrigger>
+          <TabsTrigger value="forecast">Previsioni</TabsTrigger>
+        </TabsList>
         
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Entrate Mensili
-                </CardTitle>
-                <ArrowUpRight className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(summary.monthlyIncome)}</div>
-                <p className="text-xs text-muted-foreground">
-                  +{((summary.monthlyIncome / (summary.yearlyIncome / 12)) * 100 - 100).toFixed(1)}% rispetto alla media
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Uscite Mensili
-                </CardTitle>
-                <ArrowDownRight className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(summary.monthlyExpenses)}</div>
-                <p className="text-xs text-muted-foreground">
-                  {((summary.monthlyExpenses / (summary.yearlyExpenses / 12)) * 100 - 100).toFixed(1)}% rispetto alla media
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Pagamenti in Attesa
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(summary.pendingPayments)}</div>
-                <p className="text-xs text-muted-foreground">
-                  Da ricevere nei prossimi 30 giorni
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Pagamenti Scaduti
-                </CardTitle>
-                <TrendingDown className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(summary.overduePayments)}</div>
-                <p className="text-xs text-muted-foreground">
-                  Pagamenti non ricevuti in tempo
-                </p>
-              </CardContent>
-            </Card>
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold">Ultime Transazioni</h4>
+            <Button variant="outline" size="sm">
+              <Calendar className="mr-2 h-4 w-4" />
+              Vedi Calendario
+            </Button>
           </div>
           
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="lg:col-span-4">
-              <CardHeader>
-                <CardTitle>Entrate e Uscite</CardTitle>
-                <CardDescription>
-                  Confronto tra entrate e uscite negli ultimi mesi
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pl-2">
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={monthlyStats}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 5,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="month" 
-                        tickFormatter={formatMonth}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis 
-                        tickFormatter={(value) => new Intl.NumberFormat('it-IT', {
-                          style: 'currency',
-                          currency: 'EUR',
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0
-                        }).format(value)}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <RechartsTooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar 
-                        dataKey="income" 
-                        name="Entrate" 
-                        fill="#4f46e5" 
-                        radius={[4, 4, 0, 0]}
-                      />
-                      <Bar 
-                        dataKey="expenses" 
-                        name="Uscite" 
-                        fill="#ef4444" 
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="lg:col-span-3">
-              <CardHeader>
-                <CardTitle>Categorie di Spesa</CardTitle>
-                <CardDescription>
-                  Ripartizione delle spese per categoria
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={expenseCategories}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="amount"
-                        nameKey="category"
-                      >
-                        {expenseCategories.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip 
-                        formatter={(value: number) => formatCurrency(value)}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="mt-2">
-                  <ScrollArea className="h-[100px]">
-                    <div className="space-y-1">
-                      {expenseCategories.map((category, index) => (
-                        <div key={index} className="flex justify-between items-center text-sm">
-                          <div className="flex items-center">
-                            <span
-                              className="mr-2 h-3 w-3 rounded-full"
-                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                            />
-                            <span>{category.category}</span>
-                          </div>
-                          <span>{formatCurrency(category.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="lg:col-span-7">
-              <CardHeader>
-                <CardTitle>Transazioni Recenti</CardTitle>
-                <CardDescription>
-                  Le ultime 5 transazioni registrate
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentTransactions.length > 0 ? (
-                    recentTransactions.map((transaction, index) => (
-                      <div key={index} className="flex items-center">
-                        <div className={cn(
-                          "mr-4 rounded-full p-2",
-                          transaction.type === 'payment' || transaction.type === 'deposit'
-                            ? "bg-green-100"
-                            : "bg-red-100"
-                        )}>
-                          {transaction.type === 'payment' || transaction.type === 'deposit' ? (
-                            <ArrowUpRight className={cn(
-                              "h-4 w-4",
-                              transaction.type === 'payment' || transaction.type === 'deposit'
-                                ? "text-green-600"
-                                : "text-red-600"
-                            )} />
-                          ) : (
-                            <ArrowDownRight className="h-4 w-4 text-red-600" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{transaction.description}</p>
-                          <p className="text-xs text-muted-foreground">{formatDate(transaction.date)}</p>
-                        </div>
-                        <div className={cn(
-                          "font-medium",
-                          transaction.type === 'payment' || transaction.type === 'deposit'
-                            ? "text-green-600"
-                            : "text-red-600"
-                        )}>
-                          {transaction.type === 'payment' || transaction.type === 'deposit'
-                            ? `+${formatCurrency(transaction.amount)}`
-                            : `-${formatCurrency(transaction.amount)}`}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground">Nessuna transazione recente</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+          <PaymentTracker 
+            transactions={transactions} 
+            isLoading={isLoading} 
+            limit={5} 
+          />
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="h-[300px] flex items-center justify-center border rounded-md">
+          <div className="text-center">
+            <p className="text-muted-foreground">
+              Le analisi finanziarie saranno disponibili prossimamente.
+            </p>
           </div>
         </TabsContent>
         
-        <TabsContent value="transactions">
-          <PaymentTracker hideTitle={true} />
-        </TabsContent>
-        
-        <TabsContent value="scheduled">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pagamenti Programmati</CardTitle>
-              <CardDescription>
-                Visualizza tutti i pagamenti programmati per i tuoi preventivi
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <iframe 
-                src="/dashboard/finances/scheduled"
-                style={{ width: '100%', height: '600px', border: 'none' }}
-                title="Pagamenti Programmati"
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="forecast" className="h-[300px] flex items-center justify-center border rounded-md">
+          <div className="text-center">
+            <p className="text-muted-foreground">
+              Le previsioni finanziarie saranno disponibili prossimamente.
+            </p>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

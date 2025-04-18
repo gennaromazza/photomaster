@@ -72,11 +72,11 @@ export const financeController = {
           amount: data.amount.toString(),
           date: new Date(data.date),
           description: data.description || null,
-          // Nota: la colonna 'source' non esiste nella tabella transactions
-          // usiamo direttamente quote_id per tracciare l'origine
-          quote_id: data.sourceId || null,
+          // Nota: nel database il campo si chiama 'quote_id' ma nell'ORM è mappato come 'sourceId'
+          sourceId: data.sourceId || null,
+          source: data.source || "quote", // Aggiungiamo comunque questo valore (anche se non usato dal database)
           status: data.status || "completed",
-          payment_method: data.paymentMethod || null,
+          paymentMethod: data.paymentMethod || null,
           reference: data.reference || null,
           notes: data.notes || null,
           createdBy: data.createdBy || null,
@@ -148,14 +148,15 @@ export const financeController = {
           amount: data.amount.toString(),
           date: new Date(data.date),
           description: data.description || null,
-          // Utilizziamo quote_id direttamente invece di sourceId
-          quote_id: data.sourceId || null,
+          // Usando il nome corretto per l'ORM
+          sourceId: data.sourceId || null,
+          source: data.source || "quote",
           status: data.status || "completed",
-          payment_method: data.paymentMethod || null,
+          paymentMethod: data.paymentMethod || null,
           reference: data.reference || null,
           notes: data.notes || null,
           category: data.category || null,
-          attachment_path: data.attachmentPath || null
+          attachmentPath: data.attachmentPath || null
         })
         .where(eq(transactions.id, id))
         .returning();
@@ -214,7 +215,7 @@ export const financeController = {
     try {
       const result = await db.select()
         .from(transactions)
-        .where(eq(transactions.quote_id, quoteId))
+        .where(eq(transactions.sourceId, quoteId))
         .orderBy(desc(transactions.date));
       
       return result;

@@ -299,6 +299,90 @@ export function FinancialSummary({
       });
     },
   });
+  
+  // Mutation per aggiornare una transazione esistente
+  const updateTransactionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest(
+        "PUT",
+        `/api/finance/transactions/${data.id}`,
+        data,
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsEditingPayment(false);
+      setTransactionData({
+        amount: "",
+        date: format(new Date(), "yyyy-MM-dd"),
+        method: "",
+        reference: "",
+        description: "",
+        notes: "",
+      });
+      setSelectedPaymentId(null);
+
+      // Invalida le query per aggiornare i dati
+      queryClient.invalidateQueries({
+        queryKey: ['quoteTransactions', quoteId],
+      });
+
+      // Forza il refetch immediato
+      refetchTransactions();
+
+      // Invalida anche altre queries che potrebbero dipendere da questi dati
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+
+      toast({
+        title: "Pagamento aggiornato",
+        description: "Il pagamento è stato aggiornato con successo.",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Errore nell'aggiornamento del pagamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il pagamento. Riprova più tardi.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation per eliminare una transazione
+  const deleteTransactionMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest(
+        "DELETE",
+        `/api/finance/transactions/${id}`,
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalida le query per aggiornare i dati
+      queryClient.invalidateQueries({
+        queryKey: ['quoteTransactions', quoteId],
+      });
+
+      // Forza il refetch immediato
+      refetchTransactions();
+
+      // Invalida anche altre queries che potrebbero dipendere da questi dati
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+
+      toast({
+        title: "Pagamento eliminato",
+        description: "Il pagamento è stato eliminato con successo.",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Errore nell'eliminazione del pagamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il pagamento. Riprova più tardi.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Mutation per registrare un pagamento programmato
   const markAsPaidMutation = useMutation({
@@ -435,6 +519,28 @@ export function FinancialSummary({
       setIsDeleteDialogOpen(false);
       setSelectedPaymentId(null);
     }
+  };
+  
+  // Funzione per gestire l'eliminazione di una transazione
+  const handleDeleteTransaction = (id: number) => {
+    if (id) {
+      deleteTransactionMutation.mutate(id);
+    }
+  };
+
+  // Funzione per gestire la modifica di una transazione
+  const handleEditTransaction = (transaction: any) => {
+    setSelectedPaymentId(transaction.id);
+    setTransactionData({
+      amount: transaction.amount.toString(),
+      date: format(new Date(transaction.date), "yyyy-MM-dd"),
+      method: transaction.paymentMethod || "",
+      reference: transaction.reference || "",
+      description: transaction.description || "",
+      notes: transaction.notes || "",
+    });
+    setIsEditingPayment(true);
+    setIsAddTransactionOpen(true);
   };
 
   // Funzione per registrare un pagamento per una rata programmata
@@ -639,6 +745,7 @@ export function FinancialSummary({
                     <TableHead className="w-[100px]">Data</TableHead>
                     <TableHead>Dettagli</TableHead>
                     <TableHead className="text-right">Importo</TableHead>
+                    {!readOnly && <TableHead className="w-[100px]"></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -666,6 +773,48 @@ export function FinancialSummary({
                         <TableCell className="text-right">
                           {formatAmount(parseFloat(transaction.amount))}
                         </TableCell>
+                        {!readOnly && (
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditTransaction(transaction)}
+                                className="h-8 w-8"
+                                title="Modifica"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-600"
+                                    title="Elimina"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Eliminare questo pagamento?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Questa operazione non può essere annullata. Il pagamento verrà
+                                      rimosso permanentemente.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annulla</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteTransaction(transaction.id)}>
+                                      Elimina
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                 </TableBody>
@@ -707,16 +856,23 @@ export function FinancialSummary({
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Registra un nuovo pagamento</DialogTitle>
+                    <DialogTitle>
+                      {isEditingPayment
+                        ? "Modifica pagamento"
+                        : "Registra un nuovo pagamento"}
+                    </DialogTitle>
                     <DialogDescription>
-                      Inserisci i dettagli del pagamento ricevuto{" "}
-                      {clientName ? `da ${clientName}` : "dal cliente"}.
+                      {isEditingPayment
+                        ? "Modifica i dettagli del pagamento selezionato."
+                        : `Inserisci i dettagli del pagamento ricevuto ${
+                            clientName ? `da ${clientName}` : "dal cliente"
+                          }.`}
                     </DialogDescription>
                   </DialogHeader>
 
                   <form
                     ref={transactionFormRef}
-                    onSubmit={handleTransactionSubmit}
+                    onSubmit={isEditingPayment ? handleUpdateTransactionSubmit : handleTransactionSubmit}
                     className="space-y-4 py-4"
                   >
                     <div className="space-y-2">

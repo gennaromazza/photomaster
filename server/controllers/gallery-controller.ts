@@ -142,35 +142,51 @@ export const createGallery = async (req: Request, res: Response) => {
     console.log("Dati ricevuti nella richiesta:", req.body);
     console.log("File caricato:", req.file);
     
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: "Utente non autorizzato" });
+    }
+    
     // Creiamo un oggetto con i dati del form
     const galleryData: any = {
       name: req.body.name,
       description: req.body.description || null,
-      isPublic: req.body.isPublic === 'true',
-      password: req.body.password || null,
+      isPublic: req.body.isPublic === 'true' || req.body.isPublic === true,
+      password: req.body.isPasswordProtected === 'true' || req.body.isPasswordProtected === true ? 
+                req.body.password || null : null,
       eventId: req.body.eventId && req.body.eventId !== "0" ? parseInt(req.body.eventId, 10) : null,
       viewCount: 0,
+      userId: req.user.id, // Assicuriamoci che l'userId sia incluso
     };
     
     // Se c'è un file caricato, aggiungiamo il percorso all'oggetto dati
     if (req.file) {
-      // Definisci le directory per i file
-      const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'galleries');
-      
-      // Assicurati che la directory esista
-      if (!fs.existsSync(UPLOAD_DIR)) {
-        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      try {
+        // Definisci le directory per i file
+        const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'galleries');
+        
+        console.log("Directory upload:", UPLOAD_DIR);
+        
+        // Assicurati che la directory esista
+        if (!fs.existsSync(UPLOAD_DIR)) {
+          fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+        }
+        
+        // Genera un nome file unico per l'immagine di copertina
+        const uniqueFilename = `cover-${Date.now()}-${uuidv4().substring(0, 8)}${path.extname(req.file.originalname)}`;
+        const filePath = path.join(UPLOAD_DIR, uniqueFilename);
+        
+        console.log("Salvando il file in:", filePath);
+        
+        // Salva il file
+        fs.writeFileSync(filePath, req.file.buffer);
+        
+        // Aggiungi il percorso alla galleria (usa slash per URL)
+        galleryData.coverImage = `/uploads/galleries/${uniqueFilename}`;
+        
+        console.log("URL immagine di copertina:", galleryData.coverImage);
+      } catch (fileError) {
+        console.error("Errore nel salvataggio del file:", fileError);
       }
-      
-      // Genera un nome file unico per l'immagine di copertina
-      const uniqueFilename = `cover-${Date.now()}-${uuidv4().substring(0, 8)}${path.extname(req.file.originalname)}`;
-      const filePath = path.join(UPLOAD_DIR, uniqueFilename);
-      
-      // Salva il file
-      fs.writeFileSync(filePath, req.file.buffer);
-      
-      // Aggiungi il percorso alla galleria
-      galleryData.coverImage = `/uploads/galleries/${uniqueFilename}`;
     }
     
     console.log("Dati della galleria elaborati:", galleryData);

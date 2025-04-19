@@ -28,6 +28,7 @@ export default function NewGalleryPage() {
       formData.append("name", data.name);
       if (data.description) formData.append("description", data.description);
       formData.append("isPublic", String(data.isPublic));
+      formData.append("isPasswordProtected", String(data.isPasswordProtected));
 
       if (data.isPasswordProtected && data.password) {
         formData.append("password", data.password);
@@ -35,6 +36,12 @@ export default function NewGalleryPage() {
 
       if (data.eventId) {
         formData.append("eventId", String(data.eventId));
+      }
+      
+      // Aggiungi il file dell'immagine di copertina se esiste
+      if (data.coverImage) {
+        formData.append("coverImage", data.coverImage);
+        console.log("Aggiunto file di copertina:", data.coverImage.name);
       }
 
       // Utilizziamo apiRequest che gestisce automaticamente il CSRF token

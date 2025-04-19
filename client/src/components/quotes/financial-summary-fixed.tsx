@@ -70,6 +70,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+// Funzione di formattazione degli importi specifica per i valori già in euro (non in centesimi)
+const formatAmount = (amount: number) => {
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(amount);
+};
+
 interface FinancialSummaryProps {
   quoteId: number;
   quoteTotal?: number;

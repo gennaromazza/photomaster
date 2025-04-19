@@ -710,6 +710,20 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
+      // Carica i moduli del preventivo
+      const modules = await this.getModulesByQuote(id);
+      
+      // Per ogni modulo, carica gli elementi associati
+      const modulesWithItems = await Promise.all(
+        modules.map(async (module) => {
+          const moduleItems = await this.getQuoteModuleItemsByModule(module.id);
+          return {
+            ...module,
+            items: moduleItems
+          };
+        })
+      );
+      
       // Formatta il risultato completo
       const formattedQuote = {
         ...quote,
@@ -717,7 +731,8 @@ export class DatabaseStorage implements IStorage {
         secondClient: secondClient,
         category: category,
         leadSource: leadSource,
-        quoteItems: itemsWithServices
+        quoteItems: itemsWithServices,
+        modules: modulesWithItems
       };
       
       return formattedQuote;

@@ -1212,8 +1212,134 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(404).json({ message: "Quote not found" });
       }
 
-      res.json(quote);
+      // Recupera il client
+      const client = quote.clientId ? await storage.getClient(quote.clientId) : null;
+      
+      // Recupera il secondo client se presente
+      const secondClient = quote.secondClientId ? await storage.getClient(quote.secondClientId) : null;
+      
+      // Recupera la categoria
+      const category = quote.categoryId ? await storage.getQuoteCategory(quote.categoryId) : null;
+      
+      // Recupera gli item del preventivo
+      const quoteItems = await storage.getQuoteItemsByQuote(id);
+      
+      // Arricchisci gli item con i dettagli dei servizi
+      const enrichedQuoteItems = await Promise.all(
+        quoteItems.map(async (item) => {
+          let enrichedItem = { ...item };
+          
+          if (item.serviceId) {
+            const service = await storage.getService(item.serviceId);
+            if (service) {
+              enrichedItem = {
+                ...enrichedItem,
+                serviceName: service.name,
+                serviceDescription: service.description,
+                serviceImagePath: service.imagePath
+              };
+            }
+          }
+          
+          if (item.bundleId) {
+            const bundle = await storage.getServiceBundle(item.bundleId);
+            if (bundle) {
+              enrichedItem = {
+                ...enrichedItem,
+                bundleName: bundle.name,
+                bundleDescription: bundle.description,
+                bundleImagePath: bundle.imagePath
+              };
+            }
+          }
+          
+          return enrichedItem;
+        })
+      );
+      
+      // Recupera i moduli del preventivo
+      const modules = await storage.getModulesByQuote(id);
+      
+      // Arricchisci i moduli con i loro elementi
+      const enrichedModules = await Promise.all(
+        modules.map(async (module) => {
+          const items = await storage.getQuoteModuleItemsByModule(module.id);
+          
+          // Arricchisci ogni elemento del modulo con dettagli aggiuntivi
+          const enrichedItems = await Promise.all(
+            items.map(async (item) => {
+              let enrichedItem = { ...item };
+              
+              // Se l'item ha un serviceId, aggiungi i dettagli del servizio
+              if (item.serviceId) {
+                const service = await storage.getService(item.serviceId);
+                if (service) {
+                  enrichedItem = {
+                    ...enrichedItem,
+                    serviceName: service.name,
+                    serviceDescription: service.description,
+                    serviceImagePath: service.imagePath
+                  };
+                }
+              }
+              
+              // Se l'item ha un bundleId, aggiungi i dettagli del bundle
+              if (item.bundleId) {
+                const bundle = await storage.getServiceBundle(item.bundleId);
+                if (bundle) {
+                  enrichedItem = {
+                    ...enrichedItem,
+                    bundleName: bundle.name,
+                    bundleDescription: bundle.description,
+                    bundleImagePath: bundle.imagePath
+                  };
+                }
+              }
+              
+              return enrichedItem;
+            })
+          );
+          
+          // Restituisci il modulo con i suoi elementi
+          return {
+            ...module,
+            items: enrichedItems,
+            minSelectCount: module.minSelectCount !== undefined ? module.minSelectCount : 0,
+            maxSelectCount: module.maxSelectCount !== undefined ? module.maxSelectCount : null
+          };
+        })
+      );
+      
+      // Calcola somma dei servizi "base"
+      const itemsSum = enrichedQuoteItems.reduce(
+        (sum, it) => sum + (it.total || 0),
+        0
+      );
+      
+      // Calcola somma di tutti gli item di tutti i moduli
+      const modulesSum = enrichedModules
+        .flatMap(m => m.items)
+        .reduce(
+          (sum, it) => sum + (it.total || 0),
+          0
+        );
+      
+      // Prepara l'oggetto completo del preventivo con tutte le informazioni
+      const completeQuote = {
+        ...quote,
+        quoteItems: enrichedQuoteItems,
+        client: client || undefined,
+        secondClient: secondClient || undefined,
+        category: category || undefined,
+        modules: enrichedModules,
+        modulesSum: modulesSum,
+        itemsSum: itemsSum,
+        total: itemsSum + modulesSum
+      };
+      
+      res.json(completeQuote);
     } catch (err) {
+      console.error("Errore nel recupero del preventivo:", err);
       res.status(500).json({ message: "Failed to fetch quote" });
     }
   });

@@ -6,7 +6,7 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, getCsrfToken } from "@/lib/queryClient";
 import { GalleryForm } from "@/components/galleries/gallery-form";
 import type { GalleryFormValues } from "@/types/gallery";
 
@@ -52,8 +52,31 @@ export default function NewGalleryPage() {
         hasCoverImage: !!data.coverImage
       });
       
-      // Utilizziamo apiRequest che gestisce automaticamente il CSRF token
-      const response = await apiRequest("POST", "/api/gallery/galleries", formData, true);
+      // Ottieni il token CSRF prima della richiesta
+      const csrfToken = await getCsrfToken();
+      console.log("Token CSRF ottenuto:", csrfToken ? "Sì" : "No");
+      
+      // Prepara gli headers per la richiesta
+      const headers: Record<string, string> = {};
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+      
+      // Controlla se c'è un token JWT nel localStorage
+      const jwtToken = localStorage.getItem("auth_token");
+      if (jwtToken) {
+        headers["Authorization"] = `Bearer ${jwtToken}`;
+      }
+      
+      // Usa fetch direttamente per maggiore controllo
+      console.log("Invio richiesta con headers:", Object.keys(headers));
+      const response = await fetch("/api/gallery/galleries", {
+        method: "POST",
+        headers,
+        body: formData,
+        credentials: "include", // Importante per inviare i cookie di sessione
+      });
+      
       console.log("Status risposta:", response.status, response.statusText);
       
       if (!response.ok) {

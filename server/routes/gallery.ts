@@ -1,5 +1,6 @@
 import express from "express";
 import multer from "multer";
+import { isAuthenticated } from "../auth"; // Importa il middleware di autenticazione globale
 import {
   getAllGalleries,
   getGalleryById,
@@ -38,14 +39,6 @@ const upload = multer({
     }
   }
 });
-
-// Middleware per verificare l'autenticazione
-const isAuthenticated = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: "Non autorizzato" });
-};
 
 // Middleware per verificare l'autorizzazione per le gallerie pubbliche
 const checkGalleryAccess = async (req, res, next) => {

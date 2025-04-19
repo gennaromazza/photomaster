@@ -20,6 +20,7 @@ export interface GalleryFormValues {
   isPublic: boolean;
   isPasswordProtected: boolean;
   password?: string;
+  coverImage?: File | null;
 }
 
 export interface GalleryChapter {

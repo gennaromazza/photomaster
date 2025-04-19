@@ -1,8 +1,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Info, Loader2 } from "lucide-react";
+import { Info, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 import {
   Form,
@@ -38,6 +39,8 @@ interface GalleryFormProps {
 }
 
 export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = false }: GalleryFormProps) {
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  
   const form = useForm<GalleryFormValues>({
     resolver: zodResolver(galleryFormSchema),
     defaultValues: {
@@ -47,9 +50,25 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
       password: "",
       isPublic: true,
       isPasswordProtected: false,
+      coverImage: null,
       ...defaultValues
     },
   });
+  
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    form.setValue("coverImage", file);
+    
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setCoverImagePreview(null);
+    }
+  };
 
   const watchIsPasswordProtected = form.watch("isPasswordProtected");
 
@@ -126,6 +145,35 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
             </FormItem>
           )}
         />
+        
+        <FormItem>
+          <FormLabel>Immagine di Copertina</FormLabel>
+          <div className="flex flex-col space-y-2">
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleCoverImageChange}
+                className="cursor-pointer"
+                id="coverImage"
+              />
+            </div>
+            {coverImagePreview && (
+              <div className="mt-2">
+                <div className="relative w-full max-w-sm h-40 overflow-hidden rounded-md">
+                  <img 
+                    src={coverImagePreview} 
+                    alt="Anteprima copertina" 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          <FormDescription>
+            Carica un'immagine di copertina per la galleria (consigliato)
+          </FormDescription>
+        </FormItem>
         
         <Separator className="my-4" />
         

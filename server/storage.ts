@@ -735,6 +735,26 @@ export class DatabaseStorage implements IStorage {
         modules: modulesWithItems
       };
       
+      // Calcolo dinamico del subtotal e total in base ai moduli
+      let calculatedSubtotal = 0;
+      let calculatedTotal = 0;
+      
+      if (modulesWithItems && modulesWithItems.length > 0) {
+        // Somma i subtotal e total di tutti i moduli
+        modulesWithItems.forEach(module => {
+          if (module.subtotal !== undefined && module.subtotal !== null) {
+            calculatedSubtotal += module.subtotal;
+          }
+          if (module.total !== undefined && module.total !== null) {
+            calculatedTotal += module.total;
+          }
+        });
+      }
+      
+      // Aggiorna i valori virtuali con quelli calcolati
+      formattedQuote.subtotal = calculatedSubtotal;
+      formattedQuote.total = calculatedTotal;
+      
       return formattedQuote;
     } catch (error) {
       console.error("Error in getQuote:", error);
@@ -749,16 +769,25 @@ export class DatabaseStorage implements IStorage {
         .from(quotes)
         .where(eq(quotes.clientId, clientId));
       
-      // Aggiungiamo i campi virtuali che mancano
-      return result.map(quote => {
-        return {
-          ...quote,
-          subtotal: 0,
-          total: 0,
-          discount: 0,
-          shareExpiry: null
-        } as unknown as Quote;
-      });
+      // Carichiamo i preventivi completi per ottenere i totali calcolati correttamente
+      const fullQuotes = [];
+      for (const quote of result) {
+        const fullQuote = await this.getQuote(quote.id);
+        if (fullQuote) {
+          fullQuotes.push(fullQuote);
+        } else {
+          // Fallback nel caso in cui getQuote fallisca
+          fullQuotes.push({
+            ...quote,
+            subtotal: 0,
+            total: 0,
+            discount: 0,
+            shareExpiry: null
+          } as unknown as Quote);
+        }
+      }
+      
+      return fullQuotes;
     } catch (error) {
       console.error("Error in getQuotesByClient:", error);
       return [];
@@ -969,21 +998,8 @@ export class DatabaseStorage implements IStorage {
       
       // Se non ci sono campi da aggiornare, otteniamo solo il preventivo
       if (Object.keys(safeQuoteData).length === 0) {
-        const [existingQuote] = await db
-          .select()
-          .from(quotes)
-          .where(eq(quotes.id, id));
-          
-        if (!existingQuote) return undefined;
-        
-        // Aggiungiamo i campi virtuali
-        return {
-          ...existingQuote,
-          subtotal: 0,
-          total: 0,
-          discount: 0,
-          shareExpiry: null
-        } as Quote;
+        // Usiamo getQuote per ottenere i totali calcolati correttamente
+        return await this.getQuote(id);
       }
       
       // Aggiorniamo solo con i campi sicuri
@@ -995,16 +1011,8 @@ export class DatabaseStorage implements IStorage {
       
       if (!updatedQuote) return undefined;
       
-      // Aggiungiamo i campi virtuali
-      const result = {
-        ...updatedQuote,
-        subtotal: 0,
-        total: 0,
-        discount: 0,
-        shareExpiry: null
-      };
-      
-      return result as Quote;
+      // Usiamo getQuote per ottenere i totali calcolati correttamente
+      return await this.getQuote(id);
     } catch (error) {
       console.error("Error in updateQuote:", error);
       return undefined;

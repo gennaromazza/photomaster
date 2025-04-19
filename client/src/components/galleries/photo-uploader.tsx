@@ -134,7 +134,7 @@ export function PhotoUploader({
           xhr.addEventListener("abort", () => reject(new Error("Upload Aborted")));
         });
 
-        xhr.open("POST", `/api/photos`);
+        xhr.open("POST", `/api/gallery/photos`);
 
         // Aggiungiamo gli header necessari
         if (csrfToken) {

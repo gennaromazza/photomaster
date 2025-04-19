@@ -415,6 +415,9 @@ export default function VariableModuleEditor({
   // Rimuove una selezione con aggiornamento immediato sul server
   const handleRemoveSelection = (selectionId: string) => {
     if (window.confirm("Sei sicuro di voler rimuovere questa categoria di selezione?")) {
+      // Troviamo la selezione per capire quali elementi vanno eliminati
+      const selectionToRemove = moduleSelections.find(s => s.id === selectionId);
+      
       // Prima aggiorniamo lo stato locale per un feedback immediato
       setModuleSelections(prev => prev.filter(s => s.id !== selectionId));
       
@@ -439,6 +442,24 @@ export default function VariableModuleEditor({
           type: "variable",
           quoteId
         };
+        
+        // Per ogni opzione nella selezione rimossa, dobbiamo anche eliminare i record nel database
+        // ma solo se esistono items persistenti (con ID) associati al modulo
+        if (selectionToRemove && module.id && selectionToRemove.options) {
+          // Filtriamo solo le opzioni che hanno un ID (che sono già salvate nel DB)
+          const itemsToDelete = selectionToRemove.options.filter(option => option.id);
+          
+          // Per ogni item da eliminare, chiamiamo l'endpoint DELETE
+          itemsToDelete.forEach(async (item) => {
+            try {
+              // Chiamiamo l'endpoint DELETE per ogni elemento del modulo
+              console.log(`Eliminazione item ${item.id} del modulo ${module.id}`);
+              await apiRequest("DELETE", `/api/quotes/${quoteId}/items/${item.id}`);
+            } catch (error) {
+              console.error(`Errore nell'eliminazione dell'item ${item.id}:`, error);
+            }
+          });
+        }
         
         // Inviamo l'aggiornamento al server
         updateModuleMutation.mutate(moduleData);

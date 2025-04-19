@@ -122,6 +122,47 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
   // Mutation per eliminare un modulo
   const deleteModuleMutation = useMutation({
     mutationFn: async (moduleId: number) => {
+      console.log(`Eliminazione modulo ${moduleId}`);
+      
+      // Prima otteniamo i dettagli completi del modulo per recuperare eventuali items da eliminare
+      try {
+        // Per i moduli di tipo variabile, recuperiamo prima tutti gli elementi associati
+        const moduleDetailsRes = await fetch(`/api/modules/${moduleId}`);
+        if (moduleDetailsRes.ok) {
+          const moduleDetails = await moduleDetailsRes.json();
+          
+          // Se è un modulo variabile con selections, eliminiamo ogni opzione
+          if (moduleDetails.type === 'variable' && 
+              moduleDetails.selections && 
+              Array.isArray(moduleDetails.selections)) {
+            
+            console.log(`Modulo ${moduleId} è variabile con ${moduleDetails.selections.length} categorie`);
+            
+            // Per ogni categoria, eliminiamo le opzioni associate
+            for (const selection of moduleDetails.selections) {
+              if (selection.options && Array.isArray(selection.options)) {
+                console.log(`Categoria ${selection.name} ha ${selection.options.length} opzioni`);
+                
+                // Eliminiamo ogni opzione associata alla categoria
+                for (const option of selection.options) {
+                  if (option.id) {
+                    try {
+                      console.log(`Eliminazione opzione ${option.id} dal modulo ${moduleId}`);
+                      await apiRequest("DELETE", `/api/quotes/${quoteId}/items/${option.id}`);
+                    } catch (optionError) {
+                      console.error(`Errore eliminazione opzione ${option.id}:`, optionError);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Errore nel recupero dei dettagli del modulo:", error);
+      }
+      
+      // Infine, eliminiamo il modulo stesso
       const res = await apiRequest("DELETE", `/api/modules/${moduleId}`);
       return res.ok;
     },

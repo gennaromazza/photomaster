@@ -50,7 +50,23 @@ const checkGalleryAccess = async (req, res, next) => {
 // ROUTES PER GALLERIE
 
 // Ottieni tutte le gallerie
-router.get("/galleries", getAllGalleries);
+router.get("/galleries", async (req, res) => {
+  try {
+    const { eventId } = req.query;
+    
+    let query = db.select().from(galleries).orderBy(desc(galleries.createdAt));
+    
+    if (eventId) {
+      query = query.where(eq(galleries.eventId, Number(eventId)));
+    }
+    
+    const allGalleries = await query;
+    res.json(allGalleries || []);
+  } catch (error) {
+    console.error("Errore nel recupero delle gallerie:", error);
+    res.status(500).json({ error: "Errore nel recupero delle gallerie" });
+  }
+});
 
 // Ottieni una galleria tramite ID (admin)
 router.get("/galleries/:id", getGalleryById);

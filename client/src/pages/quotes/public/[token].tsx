@@ -683,25 +683,18 @@ export default function PublicQuotePage() {
               <div className="text-center space-y-4">
                 <div className="max-w-sm mx-auto">
                   <div className="border-2 border-primary/10 rounded-lg p-6 bg-primary/5">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Preventivo firmato da:
-                    </p>
-                    <p
-                      className="font-playfair text-2xl text-primary mb-2"
-                      style={{ fontFamily: "Dancing Script, cursive" }}
-                    >
-                      {quote.signature}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Firmato il{" "}
-                      {quote.signedAt
-                        ? format(
-                            new Date(quote.signedAt),
-                            "dd/MM/yyyy 'alle' HH:mm",
-                            { locale: it },
-                          )
-                        : ""}
-                    </p>
+                    <div className="text-center space-y-2">
+                      <p className="text-xs text-muted-foreground mb-1">Preventivo firmato da:</p>
+                      <p
+                        className="font-handwriting text-3xl text-primary"
+                        style={{ fontFamily: "Dancing Script, cursive" }}
+                      >
+                        {quote.signature || "<Nome non disponibile>"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Firmato il {quote.signedAt ? new Date(quote.signedAt).toLocaleDateString("it-IT") : "<data non disponibile>"}
+                      </p>
+                    </div>
                   </div>
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center justify-center text-sm text-green-600">

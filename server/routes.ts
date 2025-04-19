@@ -2004,7 +2004,10 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         modulesSum: modulesSum,
         itemsSum: itemsSum,
         // Assegna il totale complessivo al preventivo condiviso
-        total: itemsSum + modulesSum
+        total: itemsSum + modulesSum,
+        // Aggiungi i campi di firma
+        signature: quote.signature,
+        signedAt: quote.signedAt
       };
 
       console.log(`Preventivo completato con ${enrichedModules.length} moduli caricati dinamicamente`);

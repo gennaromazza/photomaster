@@ -2,7 +2,8 @@ import express from "express";
 import multer from "multer";
 import { isAuthenticated } from "../auth";
 import { db } from "../db";
-import { galleries, desc, eq } from "../../schema_gallery"; // Importa il middleware di autenticazione globale
+import { galleries } from "../../schema_gallery";
+import { desc, eq } from "drizzle-orm"; // Importa il middleware di autenticazione globale
 import {
   getAllGalleries,
   getGalleryById,

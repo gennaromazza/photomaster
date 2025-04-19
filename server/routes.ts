@@ -1971,6 +1971,13 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.delete("/quotes/:quoteId/items/:itemId", async (req, res) => {
     try {
       const itemId = parseInt(req.params.itemId);
+      const quoteId = parseInt(req.params.quoteId);
+      
+      if (isNaN(itemId) || isNaN(quoteId)) {
+        return res.status(400).json({ message: "ID non valido" });
+      }
+      
+      console.log(`Eliminazione elemento ${itemId} dal preventivo ${quoteId} richiesta`);
       const success = await storage.deleteQuoteItem(itemId);
 
       if (!success) {

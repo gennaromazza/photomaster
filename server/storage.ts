@@ -1466,12 +1466,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteQuoteModule(id: number): Promise<boolean> {
-    // Prima eliminiamo gli elementi del modulo
-    await db.delete(quoteModuleItems).where(eq(quoteModuleItems.moduleId, id));
-    
-    // Poi eliminiamo il modulo
-    const result = await db.delete(quoteModules).where(eq(quoteModules.id, id));
-    return result !== undefined;
+    try {
+      return await db.transaction(async (tx) => {
+        // Prima eliminiamo gli elementi del modulo
+        await tx.delete(quoteModuleItems).where(eq(quoteModuleItems.moduleId, id));
+        
+        // Poi eliminiamo il modulo
+        const result = await tx.delete(quoteModules).where(eq(quoteModules.id, id));
+        
+        // Registriamo il successo dell'operazione
+        console.log(`Modulo ID ${id} eliminato con successo con tutti i suoi elementi associati`);
+        
+        return result !== undefined;
+      });
+    } catch (error) {
+      console.error(`Errore nell'eliminazione del modulo ID ${id}:`, error);
+      throw error; // La transazione farà rollback automaticamente
+    }
   }
 
   async getQuoteModuleByShareToken(token: string): Promise<QuoteModule | undefined> {

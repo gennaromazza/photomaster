@@ -1,7 +1,10 @@
+
 import React from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { FinancialSummary } from './financial-summary-fixed';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/utils';
 
 interface FinancialSummaryWrapperProps {
   quoteId: number;
@@ -12,17 +15,15 @@ interface FinancialSummaryWrapperProps {
   quoteStatus?: string;
 }
 
-/**
- * Componente wrapper che mostra un avviso quando il preventivo non è firmato
- * e include il componente FinancialSummary standard
- */
 export function FinancialSummaryWrapper(props: FinancialSummaryWrapperProps) {
-  // Verifica se il preventivo è firmato
+  const { data } = useQuery({
+    queryKey: ['quoteStats', props.quoteId],
+    queryFn: () => apiRequest('GET', `/api/finance/quotes/${props.quoteId}`).then(res => res.json()),
+    enabled: !!props.quoteId
+  });
+
   const isQuoteSigned = (): boolean => {
-    // Se siamo in modalità sola lettura (link pubblico), consideriamo il preventivo firmato
     if (props.readOnly) return true;
-    
-    // Altrimenti controlliamo lo status del preventivo
     return props.quoteStatus === 'confermato' || props.quoteStatus === 'approved';
   };
 
@@ -38,8 +39,10 @@ export function FinancialSummaryWrapper(props: FinancialSummaryWrapperProps) {
         </Alert>
       )}
       
-      {/* Componente originale FinancialSummary */}
-      <FinancialSummary {...props} />
+      <FinancialSummary 
+        {...props}
+        quoteTotal={data?.summary?.quoteTotal ?? props.quoteTotal}
+      />
     </div>
   );
 }

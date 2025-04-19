@@ -797,7 +797,35 @@ export default function QuoteDetailPage() {
 
                       {/* Secondo cliente */}
                       <div className="space-y-3">
-                        <h3 className="font-medium text-sm">Secondo Cliente</h3>
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium text-sm">Secondo Cliente</h3>
+                          {/* Pulsante per aggiungere un secondo cliente se non esiste */}
+                          {!quote.secondClientId && !quote.isSigned && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 text-xs">
+                                  <Plus className="mr-1 h-3 w-3" />
+                                  Aggiungi
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Aggiungi secondo cliente</DialogTitle>
+                                  <DialogDescription>
+                                    Inserisci i dati del secondo cliente per associarlo a questo preventivo.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <SecondClientForm quoteId={parseInt(id)} onSuccess={() => {
+                                  queryClient.invalidateQueries({ queryKey: ["/api/quotes", id] });
+                                  toast({
+                                    title: "Cliente aggiunto",
+                                    description: "Il secondo cliente è stato aggiunto con successo",
+                                  });
+                                }} />
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                        </div>
                         {quote.secondClientId ? (
                           isSecondClientLoading ? (
                             <div className="flex items-center space-x-2">

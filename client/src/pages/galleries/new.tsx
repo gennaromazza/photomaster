@@ -37,18 +37,8 @@ export default function NewGalleryPage() {
         formData.append("eventId", String(data.eventId));
       }
 
-      // Ottieni il token CSRF
-      const csrfResponse = await fetch('/api/csrf-token');
-      const csrfData = await csrfResponse.json();
-
-      const response = await fetch("/api/gallery/galleries", {
-        method: "POST",
-        headers: {
-          'X-CSRF-Token': csrfData.csrfToken
-        },
-        body: formData,
-        credentials: 'include'
-      });
+      // Utilizziamo apiRequest che gestisce automaticamente il CSRF token
+      const response = await apiRequest("POST", "/api/gallery/galleries", formData, true);
 
       if (!response.ok) {
         throw new Error("Errore durante la creazione della galleria");

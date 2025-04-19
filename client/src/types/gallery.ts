@@ -13,6 +13,15 @@ export interface GalleryItem {
   eventId: number | null;
 }
 
+export interface GalleryFormValues {
+  name: string;
+  description?: string;
+  eventId: number | null;
+  isPublic: boolean;
+  isPasswordProtected: boolean;
+  password?: string;
+}
+
 export interface GalleryChapter {
   id: number;
   galleryId: number;

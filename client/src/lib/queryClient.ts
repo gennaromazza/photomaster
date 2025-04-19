@@ -92,8 +92,8 @@ export async function apiRequest(
   // Prepara gli headers di base
   const headers: Record<string, string> = {};
 
-  // Aggiungi Content-Type se c'è un body
-  if (data) {
+  // Aggiungi Content-Type se c'è un body e non è FormData
+  if (data && !(data instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
   
@@ -121,7 +121,9 @@ export async function apiRequest(
     const res = await fetch(url, {
       method,
       headers,
-      body: data ? JSON.stringify(data) : undefined,
+      body: data 
+        ? (data instanceof FormData ? data : JSON.stringify(data)) 
+        : undefined,
       credentials: "include", // Manteniamo per compatibilità con sessioni
     });
 

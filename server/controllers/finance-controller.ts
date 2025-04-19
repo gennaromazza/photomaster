@@ -60,6 +60,8 @@ export const financeController = {
    */
   async createTransaction(data: any) {
     try {
+      console.log("Received transaction amount:", data.amount);
+      
       // Verifica che il preventivo sia confermato o approvato se è collegato a un preventivo
       if (data.quoteId) {
         const [quote] = await db.select()

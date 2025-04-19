@@ -356,6 +356,9 @@ export function FinancialSummary({
       return;
     }
 
+    // Log della transazione prima dell'invio
+    console.log("Creating transaction:", transactionData);
+
     // Prepara l'oggetto transazione
     const newTransaction = {
       type: "income",

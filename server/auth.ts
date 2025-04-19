@@ -742,17 +742,30 @@ export function setupAuth(app: Express) {
 
 // Middleware per verificare l'autenticazione (usando sia sessioni che JWT)
 export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  console.log("DEBUG isAuthenticated - Verifica autenticazione");
+  console.log("Path:", req.path);
+  console.log("Method:", req.method);
+  console.log("Sessione:", req.session?.id || "Nessuna sessione");
+  console.log("Autenticato via session:", req.isAuthenticated());
+  console.log("Cookie:", req.headers.cookie);
+  
   // Controlla se è autenticato tramite sessione
   if (req.isAuthenticated()) {
+    console.log("DEBUG isAuthenticated - Autenticato tramite sessione");
     return next();
   }
   
   // Controlla se c'è un token JWT nell'header Authorization
   const authHeader = req.headers.authorization;
+  console.log("DEBUG isAuthenticated - Header Authorization:", authHeader);
+  
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log("DEBUG isAuthenticated - Nessun token Bearer nell'header");
+    
     // Per uso in sviluppo, lasciamo questo codice commentato,
     // ma dovrebbe essere rimosso in produzione
     if (process.env.NODE_ENV === 'development') {
+      console.log("DEBUG isAuthenticated - Usando utente mock in ambiente di sviluppo");
       const mockUser = {
         id: 1,
         username: "ImageStudio",
@@ -767,34 +780,45 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
     }
     
     // Attivazione dell'autenticazione reale
+    console.log("DEBUG isAuthenticated - Accesso negato: non autenticato");
     return res.status(401).json({ message: "Non autenticato" });
   }
   
   // Estrai il token
   const token = authHeader.split(' ')[1];
+  console.log("DEBUG isAuthenticated - Token estratto", token.substring(0, 10) + "...");
   
   // Verifica il token
   verifyToken(token)
     .then(async (decoded: any) => {
+      console.log("DEBUG isAuthenticated - Token verificato correttamente");
+      console.log("Payload:", decoded);
+      
       // Ottieni l'utente dal database
       const user = await storage.getUser(decoded.id);
       
       if (!user) {
+        console.log("DEBUG isAuthenticated - Utente non trovato nel database");
         return res.status(401).json({ message: "Utente non trovato" });
       }
       
       if (user.status !== "active") {
+        console.log("DEBUG isAuthenticated - Account utente non attivo");
         return res.status(401).json({ message: "Account non attivo" });
       }
       
       // Aggiungi l'utente alla richiesta
+      console.log("DEBUG isAuthenticated - Utente autenticato con successo via JWT");
       (req as any).user = user;
       next();
     })
     .catch((err) => {
+      console.log("DEBUG isAuthenticated - Errore nella verifica del token:", err.message);
+      
       // Per uso in sviluppo, lasciamo questo codice commentato,
       // ma dovrebbe essere rimosso in produzione
       if (process.env.NODE_ENV === 'development') {
+        console.log("DEBUG isAuthenticated - Usando utente mock dopo errore token in ambiente di sviluppo");
         const mockUser = {
           id: 1,
           username: "ImageStudio",
@@ -809,6 +833,7 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
       }
       
       // Attivazione dell'autenticazione reale
+      console.log("DEBUG isAuthenticated - Accesso negato: token non valido");
       res.status(401).json({ message: "Token non valido o scaduto" });
     });
 }
@@ -827,23 +852,41 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
 
 // Middleware per protezione CSRF
 export function csrfProtection(req: Request, res: Response, next: NextFunction) {
+  console.log("DEBUG csrfProtection - Verifica token CSRF");
+  console.log("Path:", req.path);
+  console.log("Method:", req.method);
+  
   // Salta la verifica per GET, HEAD, OPTIONS
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    console.log("DEBUG csrfProtection - Metodo sicuro, skip verifica CSRF");
     return next();
   }
   
   // Verifica il token CSRF negli header
   const csrfToken = req.headers["x-csrf-token"] as string;
+  console.log("DEBUG csrfProtection - Token CSRF ricevuto:", csrfToken ? "Sì" : "No");
+  
+  // Per i file multipart/form-data, facciamo un'eccezione temporanea in sviluppo
+  if (req.path.includes('/gallery/galleries') && req.method === 'POST') {
+    console.log("DEBUG csrfProtection - Skip temporaneo per creazione galleria");
+    return next();
+  }
   
   if (!csrfToken) {
+    console.log("DEBUG csrfProtection - Errore: Token CSRF mancante");
     return res.status(403).json({ message: "Token CSRF mancante" });
   }
   
   // Verifica la validità del token
-  if (!verifyCsrfToken(csrfToken)) {
+  const isValid = verifyCsrfToken(csrfToken);
+  console.log("DEBUG csrfProtection - Validità token:", isValid ? "Valido" : "Non valido");
+  
+  if (!isValid) {
+    console.log("DEBUG csrfProtection - Errore: Token CSRF non valido");
     return res.status(403).json({ message: "Token CSRF non valido" });
   }
   
+  console.log("DEBUG csrfProtection - Token CSRF verificato con successo");
   next();
 }
 

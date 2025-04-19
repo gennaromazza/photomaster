@@ -59,7 +59,26 @@ router.get("/galleries/:id", getGalleryById);
 router.get("/public/galleries/:slug", checkGalleryAccess, getGalleryBySlug);
 
 // Crea una nuova galleria (richiede autenticazione)
-router.post("/galleries", isAuthenticated, upload.single("coverImage"), createGallery);
+router.post("/galleries", 
+  (req, res, next) => {
+    console.log("DEBUG - Richiesta creazione galleria ricevuta");
+    console.log("Headers:", req.headers);
+    console.log("Autenticato:", req.isAuthenticated());
+    console.log("Utente:", req.user);
+    next();
+  },
+  isAuthenticated, 
+  (req, res, next) => {
+    console.log("DEBUG - Autenticazione verificata, procedendo con upload");
+    next();
+  },
+  upload.single("coverImage"), 
+  (req, res, next) => {
+    console.log("DEBUG - Upload completato, file ricevuto:", req.file ? "Sì" : "No");
+    next();
+  },
+  createGallery
+);
 
 // Aggiorna una galleria (richiede autenticazione)
 router.put("/galleries/:id", isAuthenticated, updateGallery);

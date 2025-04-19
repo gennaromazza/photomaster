@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getCsrfToken } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import { GalleryForm } from "@/components/galleries/gallery-form";
 import type { GalleryFormValues } from "@/types/gallery";
 
@@ -14,6 +15,7 @@ export default function NewGalleryPage() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { token } = useAuth();
 
   // Query per ottenere gli eventi disponibili
   const { data: events = [] } = useQuery<any[]>({
@@ -62,10 +64,12 @@ export default function NewGalleryPage() {
         headers['X-CSRF-Token'] = csrfToken;
       }
       
-      // Controlla se c'è un token JWT nel localStorage
-      const jwtToken = localStorage.getItem("auth_token");
-      if (jwtToken) {
-        headers["Authorization"] = `Bearer ${jwtToken}`;
+      // Usa il token JWT dall'hook useAuth
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+        console.log("Token JWT aggiunto dall'hook useAuth");
+      } else {
+        console.log("Nessun token JWT disponibile nell'hook useAuth");
       }
       
       // Usa fetch direttamente per maggiore controllo

@@ -683,8 +683,9 @@ export const financeController = {
       // (non esiste nella definizione della tabella ma è aggiunto dinamicamente)
       const hasTotal = Object.prototype.hasOwnProperty.call(quote, 'total');
       
-      // Utilizzo solo se il total è definito come proprietà e non è null o 0
-      const quoteTotal = hasTotal && (quote as any).total ? 
+      // Utilizzo il campo total dal preventivo se esiste come proprietà
+      // Verifichiamo esplicitamente che non sia undefined o null, ma permettiamo il valore 0
+      const quoteTotal = hasTotal && (quote as any).total !== undefined && (quote as any).total !== null ?
         (quote as any).total as number : 
         (totalPaid + totalScheduled); // Stima basata su pagamenti
 

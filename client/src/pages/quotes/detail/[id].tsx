@@ -1026,7 +1026,7 @@ export default function QuoteDetailPage() {
                         - {formatCurrency(
                           quote.discountType === "percentage"
                             ? ((quote.subtotal || 0) * quote.discountValue) / 100
-                            : quote.discountValue || 0
+                            : quote.discountValue || 0)}
                           style={{
                             wordWrap: "break-word",
                             maxWidth: "100%",

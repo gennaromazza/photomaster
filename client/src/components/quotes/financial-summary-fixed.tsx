@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -522,12 +523,27 @@ export function FinancialSummary({
             </div>
             {!transactionsLoading && (
               <p className="text-xs text-muted-foreground mt-1">
-                {
-                  transactions.filter(
-                    (t: any) => t.type === "income" || t.type === "entrata",
-                  ).length
-                }{" "}
-                pagamenti registrati
+                {transactions.filter(
+                  (t: any) => t.type === "income" || t.type === "entrata"
+                ).length > 0
+                  ? `${
+                      transactions.filter(
+                        (t: any) => t.type === "income" || t.type === "entrata"
+                      ).length
+                    } pagament${
+                      transactions.filter(
+                        (t: any) => t.type === "income" || t.type === "entrata"
+                      ).length === 1
+                        ? "o"
+                        : "i"
+                    } registrat${
+                      transactions.filter(
+                        (t: any) => t.type === "income" || t.type === "entrata"
+                      ).length === 1
+                        ? "o"
+                        : "i"
+                    }`
+                  : "Nessun pagamento registrato"}
               </p>
             )}
           </CardContent>
@@ -548,22 +564,27 @@ export function FinancialSummary({
                 formatAmount(remainingBalance)
               )}
             </div>
-            {!transactionsLoading && !scheduledLoading && (
+            {!scheduledLoading && (
               <p className="text-xs text-muted-foreground mt-1">
-                {totalScheduled > 0 ? (
-                  <>
-                    {formatAmount(totalScheduled)} programmati in{" "}
-                    {
+                {scheduledPayments.filter(
+                  (p: any) => p.status === "pending" || p.status === "overdue"
+                ).length > 0
+                  ? `${formatAmount(
+                      totalScheduled
+                    )} programmati in ${
                       scheduledPayments.filter(
                         (p: any) =>
-                          p.status === "pending" || p.status === "overdue",
+                          p.status === "pending" || p.status === "overdue"
                       ).length
-                    }{" "}
-                    rate
-                  </>
-                ) : (
-                  "Nessun pagamento programmato"
-                )}
+                    } rat${
+                      scheduledPayments.filter(
+                        (p: any) =>
+                          p.status === "pending" || p.status === "overdue"
+                      ).length === 1
+                        ? "a"
+                        : "e"
+                    }`
+                  : "Nessuna rata programmata"}
               </p>
             )}
           </CardContent>
@@ -571,23 +592,83 @@ export function FinancialSummary({
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="flex flex-col h-full">
+          <CardHeader>
             <div>
               <CardTitle>Pagamenti</CardTitle>
               <CardDescription>
                 Pagamenti registrati per questo preventivo
               </CardDescription>
             </div>
-
-            {!readOnly && (
+          </CardHeader>
+          <CardContent className="flex-grow">
+            {transactionsLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : transactions.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Data</TableHead>
+                    <TableHead>Dettagli</TableHead>
+                    <TableHead className="text-right">Importo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions
+                    .filter(
+                      (t: any) => t.type === "income" || t.type === "entrata",
+                    )
+                    .map((transaction: any) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="font-medium">
+                          {format(new Date(transaction.date), "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">
+                            {transaction.description}
+                          </div>
+                          {transaction.paymentMethod && (
+                            <div className="text-xs text-muted-foreground">
+                              Pagamento con {transaction.paymentMethod}
+                              {transaction.reference &&
+                                ` (${transaction.reference})`}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatAmount(parseFloat(transaction.amount))}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                <Euro className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium">
+                  Nessun pagamento registrato
+                </h3>
+                <p className="text-sm">
+                  {isQuoteSigned()
+                    ? "Non sono ancora stati registrati pagamenti per questo preventivo."
+                    : "I pagamenti potranno essere registrati solo dopo che il preventivo sarà stato firmato dal cliente."}
+                </p>
+              </div>
+            )}
+          </CardContent>
+          
+          {!readOnly && (
+            <CardFooter>
               <Dialog
                 open={isAddTransactionOpen}
                 onOpenChange={setIsAddTransactionOpen}
               >
                 <DialogTrigger asChild>
                   <Button
-                    size="sm"
+                    className="w-full"
                     disabled={!isQuoteSigned()}
                     title={
                       !isQuoteSigned()
@@ -770,85 +851,139 @@ export function FinancialSummary({
                   </form>
                 </DialogContent>
               </Dialog>
-            )}
-          </CardHeader>
-          <CardContent>
-            {transactionsLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : transactions.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[100px]">Data</TableHead>
-                    <TableHead>Dettagli</TableHead>
-                    <TableHead className="text-right">Importo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions
-                    .filter(
-                      (t: any) => t.type === "income" || t.type === "entrata",
-                    )
-                    .map((transaction: any) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell className="font-medium">
-                          {format(new Date(transaction.date), "dd/MM/yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">
-                            {transaction.description}
-                          </div>
-                          {transaction.paymentMethod && (
-                            <div className="text-xs text-muted-foreground">
-                              Pagamento con {transaction.paymentMethod}
-                              {transaction.reference &&
-                                ` (${transaction.reference})`}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatAmount(parseFloat(transaction.amount))}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                <Euro className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">
-                  Nessun pagamento registrato
-                </h3>
-                <p className="text-sm">
-                  {isQuoteSigned()
-                    ? "Non sono ancora stati registrati pagamenti per questo preventivo."
-                    : "I pagamenti potranno essere registrati solo dopo che il preventivo sarà stato firmato dal cliente."}
-                </p>
-              </div>
-            )}
-          </CardContent>
+            </CardFooter>
+          )}
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="flex flex-col h-full">
+          <CardHeader>
             <div>
               <CardTitle>Rate di Pagamento</CardTitle>
               <CardDescription>
                 Pagamenti programmati per questo preventivo
               </CardDescription>
             </div>
+          </CardHeader>
+          <CardContent className="flex-grow">
+            {scheduledLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : scheduledPayments.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Scadenza</TableHead>
+                    <TableHead>Dettagli</TableHead>
+                    <TableHead className="text-right">Importo</TableHead>
+                    {!readOnly && <TableHead className="w-[100px]">Azioni</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {scheduledPayments.map((payment: any) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>{format(new Date(payment.dueDate), "dd/MM/yyyy")}</span>
+                          <span className="text-xs mt-1">
+                            {getStatusBadge(payment.status)}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">
+                          {payment.description}
+                        </div>
+                        {payment.paymentMethod && (
+                          <div className="text-xs text-muted-foreground">
+                            Metodo: {payment.paymentMethod}
+                          </div>
+                        )}
+                        {payment.notes && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {payment.notes}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatAmount(parseFloat(payment.amount))}
+                      </TableCell>
+                      {!readOnly && (
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-2">
+                            {payment.status !== "paid" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleMarkAsPaid(payment)}
+                                className="h-8 w-8 text-green-600"
+                                title="Segna come pagato"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <AlertDialog open={isDeleteDialogOpen && selectedPaymentId === payment.id} onOpenChange={setIsDeleteDialogOpen}>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setSelectedPaymentId(payment.id)}
+                                  className="h-8 w-8 text-red-600"
+                                  title="Elimina"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Eliminare questa rata?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Questa operazione non può essere annullata. La rata di pagamento verrà
+                                    rimossa permanentemente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel onClick={() => setSelectedPaymentId(null)}>
+                                    Annulla
+                                  </AlertDialogCancel>
+                                  <AlertDialogAction onClick={handleDeleteScheduledPayment}>
+                                    Elimina
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                <Calendar className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium">
+                  Nessuna rata programmata
+                </h3>
+                <p className="text-sm">
+                  {isQuoteSigned()
+                    ? "Non sono ancora state programmate rate di pagamento per questo preventivo."
+                    : "Le rate di pagamento potranno essere programmate solo dopo che il preventivo sarà stato firmato dal cliente."}
+                </p>
+              </div>
+            )}
+          </CardContent>
 
-            {!readOnly && (
+          {!readOnly && (
+            <CardFooter>
               <Dialog
                 open={isAddScheduledOpen}
                 onOpenChange={setIsAddScheduledOpen}
               >
                 <DialogTrigger asChild>
                   <Button
-                    size="sm"
+                    className="w-full"
                     disabled={!isQuoteSigned()}
                     title={
                       !isQuoteSigned()
@@ -875,11 +1010,11 @@ export function FinancialSummary({
                     className="space-y-4 py-4"
                   >
                     <div className="space-y-2">
-                      <Label htmlFor="amount">Importo *</Label>
+                      <Label htmlFor="scheduled-amount">Importo *</Label>
                       <div className="relative">
                         <Euro className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                          id="amount"
+                          id="scheduled-amount"
                           placeholder="0,00"
                           className="pl-8"
                           type="number"
@@ -897,9 +1032,9 @@ export function FinancialSummary({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="dueDate">Data di scadenza *</Label>
+                      <Label htmlFor="due-date">Data di scadenza *</Label>
                       <Input
-                        id="dueDate"
+                        id="due-date"
                         type="date"
                         value={scheduledData.dueDate}
                         onChange={(e) =>
@@ -913,10 +1048,10 @@ export function FinancialSummary({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="description">Descrizione</Label>
+                      <Label htmlFor="scheduled-description">Descrizione</Label>
                       <Input
-                        id="description"
-                        placeholder="Prima rata, Saldo, ecc."
+                        id="scheduled-description"
+                        placeholder="Acconto, Saldo, ecc."
                         value={scheduledData.description}
                         onChange={(e) =>
                           setScheduledData({
@@ -928,8 +1063,8 @@ export function FinancialSummary({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="paymentMethod">
-                        Metodo di pagamento consigliato
+                      <Label htmlFor="scheduled-method">
+                        Metodo di pagamento
                       </Label>
                       <Select
                         value={scheduledData.paymentMethod}
@@ -956,10 +1091,10 @@ export function FinancialSummary({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="notes">Note</Label>
+                      <Label htmlFor="scheduled-notes">Note</Label>
                       <Textarea
-                        id="notes"
-                        placeholder="Eventuali note sulla rata..."
+                        id="scheduled-notes"
+                        placeholder="Eventuali note sul pagamento..."
                         rows={3}
                         value={scheduledData.notes}
                         onChange={(e) =>
@@ -1005,11 +1140,11 @@ export function FinancialSummary({
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                               ></path>
                             </svg>
-                            Salvataggio...
+                            Registrazione...
                           </>
                         ) : (
                           <>
-                            <Check className="h-4 w-4 mr-2" />
+                            <Calendar className="h-4 w-4 mr-2" />
                             Programma Pagamento
                           </>
                         )}
@@ -1018,147 +1153,8 @@ export function FinancialSummary({
                   </form>
                 </DialogContent>
               </Dialog>
-            )}
-          </CardHeader>
-          <CardContent>
-            {scheduledLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : scheduledPayments.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[100px]">Scadenza</TableHead>
-                    <TableHead>Descrizione</TableHead>
-                    <TableHead className="text-right">Importo</TableHead>
-                    {!readOnly && (
-                      <TableHead className="w-[80px]">Azioni</TableHead>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {scheduledPayments.map((payment: any) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span>
-                            {format(new Date(payment.dueDate), "dd/MM/yyyy")}
-                          </span>
-                          <span className="mt-1">
-                            {getStatusBadge(payment.status)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{payment.description}</div>
-                        {payment.paymentMethod && (
-                          <div className="text-xs text-muted-foreground">
-                            Metodo: {payment.paymentMethod}
-                          </div>
-                        )}
-                        {payment.notes && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {payment.notes}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatAmount(parseFloat(payment.amount))}
-                      </TableCell>
-                      {!readOnly && (
-                        <TableCell>
-                          <div className="flex items-center justify-end space-x-1">
-                            {payment.status === "pending" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleMarkAsPaid(payment)}
-                                title="Registra come pagato"
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {(payment.status === "pending" ||
-                              payment.status === "overdue") && (
-                              <AlertDialog
-                                open={
-                                  isDeleteDialogOpen &&
-                                  selectedPaymentId === payment.id
-                                }
-                                onOpenChange={setIsDeleteDialogOpen}
-                              >
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() =>
-                                      setSelectedPaymentId(payment.id)
-                                    }
-                                    title="Elimina rata"
-                                  >
-                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Sei sicuro?
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Questa azione non può essere annullata. La
-                                      rata di pagamento verrà eliminata
-                                      definitivamente dal sistema.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel
-                                      onClick={() => setSelectedPaymentId(null)}
-                                    >
-                                      Annulla
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={handleDeleteScheduledPayment}
-                                      className="bg-red-500 hover:bg-red-600"
-                                    >
-                                      Elimina
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            )}
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-                <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">
-                  Nessuna rata programmata
-                </h3>
-                <p className="text-sm">
-                  {isQuoteSigned() ? (
-                    remainingBalance > 0 ? (
-                      <>
-                        Questo preventivo ha un saldo di{" "}
-                        {formatAmount(remainingBalance)} da pagare, ma non hai
-                        ancora definito le rate di pagamento.
-                      </>
-                    ) : (
-                      "Tutte le rate sono state pagate. Il preventivo è completamente saldato."
-                    )
-                  ) : (
-                    "Le rate di pagamento potranno essere programmate solo dopo che il preventivo sarà stato firmato dal cliente."
-                  )}
-                </p>
-              </div>
-            )}
-          </CardContent>
+            </CardFooter>
+          )}
         </Card>
       </div>
     </div>

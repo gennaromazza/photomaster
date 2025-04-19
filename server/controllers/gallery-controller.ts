@@ -14,7 +14,7 @@ import slugify from "slugify";
 import QRCode from "qrcode";
 
 // Directory per file caricati
-const UPLOAD_DIR = path.join(process.cwd(), "uploads", "gallery");
+const UPLOAD_DIR = path.join(process.cwd(), "uploads", "galleries");
 const THUMBNAILS_DIR = path.join(UPLOAD_DIR, "thumbnails");
 const MEDIUM_DIR = path.join(UPLOAD_DIR, "medium");
 const LARGE_DIR = path.join(UPLOAD_DIR, "large");

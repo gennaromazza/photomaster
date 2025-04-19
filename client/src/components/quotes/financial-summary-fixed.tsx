@@ -130,9 +130,15 @@ export function FinancialSummary({
     isLoading: transactionsLoading,
     refetch: refetchTransactions,
   } = useQuery({
-    queryKey: ["/api/finance/transactions/quote", quoteId],
-    refetchOnWindowFocus: true, // Ricarica quando l'utente torna sulla pagina
-    staleTime: 5000, // Considera i dati validi per 5 secondi per evitare richieste eccessive
+    queryKey: ['quoteTransactions', quoteId],
+    queryFn: () => apiRequest(
+      'GET',
+      `/api/finance/quotes/${quoteId}/transactions`
+    ).then(res => res.json()),
+    enabled: !!quoteId, 
+    refetchOnWindowFocus: true, 
+    staleTime: 5000,
+    refetchInterval: 60 * 1000 
   });
 
   // Ottieni i pagamenti programmati per questo preventivo
@@ -141,9 +147,15 @@ export function FinancialSummary({
     isLoading: scheduledLoading,
     refetch: refetchScheduled,
   } = useQuery({
-    queryKey: ["/api/finance/scheduled/quote", quoteId],
-    refetchOnWindowFocus: true, // Ricarica quando l'utente torna sulla pagina
-    staleTime: 5000, // Considera i dati validi per 5 secondi per evitare richieste eccessive
+    queryKey: ['quoteScheduledPayments', quoteId],
+    queryFn: () => apiRequest(
+      'GET',
+      `/api/finance/quotes/${quoteId}/scheduled`
+    ).then(res => res.json()),
+    enabled: !!quoteId, 
+    refetchOnWindowFocus: true, 
+    staleTime: 5000,
+    refetchInterval: 60 * 1000 
   });
 
   // Mutation per creare una nuova transazione
@@ -169,7 +181,7 @@ export function FinancialSummary({
 
       // Invalida le query e forza un aggiornamento immediato
       queryClient.invalidateQueries({
-        queryKey: ["/api/finance/transactions/quote", quoteId],
+        queryKey: ['quoteTransactions', quoteId],
       });
 
       // Forza il refetch per aggiornare immediatamente i dati visualizzati

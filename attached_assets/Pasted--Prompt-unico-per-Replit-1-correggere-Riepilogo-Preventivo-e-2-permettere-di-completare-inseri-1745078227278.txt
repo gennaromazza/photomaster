@@ -1,0 +1,157 @@
+# Prompt unico per Replit: 1) correggere “Riepilogo Preventivo” e 2) permettere di completare/inserire i dati cliente (primo e secondo) da dettaglio preventivo
+
+# 1) BACKEND – server/routes.ts & server/storage.ts
+
+## 1.1 Attiva e rinforza PATCH /api/clients/:id
+vim server/routes.ts
+# Verifica che esista:
+apiRouter.put("/clients/:id", async (req, res) => { … });
+# Se manca, aggiungilo subito sotto il POST /clients:
+apiRouter.put("/clients/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const parseResult = insertClientSchema.partial().safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ message: fromZodError(parseResult.error).message });
+    }
+    const updated = await storage.updateClient(id, parseResult.data);
+    if (!updated) return res.status(404).json({ message: "Client not found" });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update client" });
+  }
+});
+
+## 1.2 Abilita creazione di secondo cliente ed associazione al preventivo
+vim server/routes.ts
+# Aggiungi sotto POST /quotes/:id/share… (o vicino a PUT /quotes/:id):
+apiRouter.post("/quotes/:id/second-client", async (req, res) => {
+  try {
+    const quoteId = parseInt(req.params.id);
+    const parseResult = insertClientSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ message: fromZodError(parseResult.error).message });
+    }
+    const newClient = await storage.createClient(parseResult.data);
+    await storage.updateQuote(quoteId, { secondClientId: newClient.id });
+    res.status(201).json({ secondClient: newClient });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to add second client" });
+  }
+});
+
+## 1.3 Storage layer
+vim server/storage.ts
+# Verifica che esistano:
+async updateClient(id: number, data: Partial<InsertClient>): Promise<Client|undefined>
+async createClient(data: InsertClient): Promise<Client>
+# Se manca updateQuote con partial, aggiungi:
+async updateQuote(id: number, data: Partial<InsertQuote>): Promise<Quote|undefined> {
+  const [q] = await db.update(quotes).set(data).where(eq(quotes.id, id)).returning();
+  return q || undefined;
+}
+
+# 2) FRONTEND – client/src/pages/quotes/detail/[id].tsx
+
+## 2.1 Importa hook e utilità in cima al file
+vim client/src/pages/quotes/detail/[id].tsx
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { formatCurrency } from "@/lib/utils";
+
+## 2.2 Carica dati finanziari del preventivo
+# subito dentro il componente prima del return:
+const queryClient = useQueryClient();
+const { data: finData } = useQuery(
+  ["quoteFinancial", id],
+  () => apiRequest("GET", `/api/finance/quotes/${id}`).then(r => r.json()),
+  { enabled: !!id }
+);
+
+## 2.3 Correggi il Card “Riepilogo Preventivo”
+# sostituisci il blocco esistente con:
+<Card className="mb-4">
+  <CardHeader className="pb-2">
+    <CardTitle>Riepilogo Preventivo</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-2">
+    <div className="flex justify-between">
+      <span>Subtotale</span>
+      <span>{formatCurrency(finData?.summary.subtotal ?? 0)}</span>
+    </div>
+    <div className="flex justify-between">
+      <span>Totale Preventivo</span>
+      <span>{formatCurrency(finData?.summary.quoteTotal ?? 0)}</span>
+    </div>
+    <div className="flex justify-between">
+      <span>Saldo residuo</span>
+      <span>
+        {formatCurrency(
+          (finData?.summary.quoteTotal ?? 0) - (finData?.summary.totalPaid ?? 0)
+        )}
+      </span>
+    </div>
+  </CardContent>
+</Card>
+
+## 2.4 Renderizza e modifica dati cliente
+# Sotto “Informazioni Cliente”, sostituisci testo statico con form inline:
+const { data: client, isLoading: clientLoading } = useQuery(
+  ["client", quote?.clientId],
+  () => apiRequest("GET", `/api/clients/${quote.clientId}`).then(r => r.json()),
+  { enabled: !!quote?.clientId }
+);
+const updateClientMut = useMutation(
+  data => apiRequest("PUT", `/api/clients/${client.id}`, data),
+  { onSuccess: () => queryClient.invalidateQueries(["client", client.id]) }
+);
+
+# Nella UI:
+{clientLoading ? <Skeleton /> : (
+  <div className="space-y-2">
+    <Input
+      value={client.firstName}
+      placeholder="Nome"
+      onBlur={e => updateClientMut.mutate({ firstName: e.target.value })}
+    />
+    <Input
+      value={client.lastName}
+      placeholder="Cognome"
+      onBlur={e => updateClientMut.mutate({ lastName: e.target.value })}
+    />
+    <Input
+      value={client.email}
+      placeholder="Email"
+      type="email"
+      onBlur={e => updateClientMut.mutate({ email: e.target.value })}
+    />
+    {/* altri campi analoghi per telefono, indirizzo… */}
+  </div>
+)}
+
+## 2.5 Aggiungi secondo cliente
+const addSecondClientMut = useMutation(
+  data => apiRequest("POST", `/api/quotes/${id}/second-client`, data),
+  { onSuccess: data => queryClient.invalidateQueries(["quote", id]) }
+);
+// UI:
+{!quote.secondClientId && (
+  <Dialog open={isSecondClientOpen} onOpenChange={setIsSecondClientOpen}>
+    <DialogTrigger asChild><Button>+ Aggiungi secondo cliente</Button></DialogTrigger>
+    <DialogContent>
+      <form onSubmit={e => {
+        e.preventDefault();
+        addSecondClientMut.mutate(secondClientData);
+      }} className="space-y-4">
+        {/* campi come sopra */}
+        <DialogFooter>
+          <Button type="submit">Crea e Associa</Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+)}
+
+# 3) VERIFICA
+# – backend: npm run test (o yarn test)
+# – frontend: ricarica /quotes/detail/{id}, modifica dati cliente, aggiungi secondo cliente, guarda Riepilogo Preventivo

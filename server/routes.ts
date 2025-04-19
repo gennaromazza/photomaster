@@ -1396,6 +1396,34 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     }
   });
 
+  // API per aggiungere un secondo cliente al preventivo
+  apiRouter.post("/quotes/:id/second-client", async (req, res) => {
+    try {
+      const quoteId = parseInt(req.params.id);
+      const parseResult = insertClientSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ message: fromZodError(parseResult.error).message });
+      }
+      
+      // Verifica che il preventivo esista
+      const quote = await storage.getQuote(quoteId);
+      if (!quote) {
+        return res.status(404).json({ message: "Preventivo non trovato" });
+      }
+      
+      // Crea il nuovo cliente
+      const newClient = await storage.createClient(parseResult.data);
+      
+      // Aggiorna il preventivo con il secondClientId
+      await storage.updateQuote(quoteId, { secondClientId: newClient.id });
+      
+      res.status(201).json({ secondClient: newClient });
+    } catch (err) {
+      console.error("Errore nell'aggiunta del secondo cliente:", err);
+      res.status(500).json({ message: "Impossibile aggiungere il secondo cliente" });
+    }
+  });
+
   // API per inviare il preventivo via email
   apiRouter.post("/quotes/:id/send", async (req, res) => {
     try {

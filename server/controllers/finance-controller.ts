@@ -678,7 +678,9 @@ export const financeController = {
 
       // I campi subtotal, total, discount sono virtuali e calcolati dal frontend
       // Utilizzo il campo total se definito, altrimenti calcolo in base ai pagamenti
-      const quoteTotal = quote.subtotal !== undefined && quote.total !== undefined 
+      // Nota: controlliamo che total esista e non sia null, non controlliamo subtotal
+      // in quanto potrebbe essere zero ma è comunque un valore valido
+      const quoteTotal = quote.total !== undefined && quote.total !== null
         ? (quote.total as number) 
         : (totalPaid + totalScheduled); // Stima basata su pagamenti
 

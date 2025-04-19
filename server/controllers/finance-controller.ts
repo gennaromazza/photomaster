@@ -678,11 +678,15 @@ export const financeController = {
 
       // I campi subtotal, total, discount sono virtuali e calcolati dal frontend
       // Utilizzo il campo total se definito, altrimenti calcolo in base ai pagamenti
-      // Nota: controlliamo che total esista e non sia null, non controlliamo subtotal
-      // in quanto potrebbe essere zero ma è comunque un valore valido
-      const quoteTotal = quote.total !== undefined && quote.total !== null
-        ? (quote.total as number) 
-        : (totalPaid + totalScheduled); // Stima basata su pagamenti
+
+      // Verifichiamo se il preventivo ha un campo 'total' come proprietà aggiunta 
+      // (non esiste nella definizione della tabella ma è aggiunto dinamicamente)
+      const hasTotal = Object.prototype.hasOwnProperty.call(quote, 'total');
+      
+      // Utilizzo solo se il total è definito come proprietà e non è null o 0
+      const quoteTotal = hasTotal && (quote as any).total ? 
+        (quote as any).total as number : 
+        (totalPaid + totalScheduled); // Stima basata su pagamenti
 
       return {
         payments,

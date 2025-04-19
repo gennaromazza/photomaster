@@ -30,7 +30,7 @@ import { StudioInfo } from "@/components/quotes/studio-info";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { PublicFixedModule } from "@/components/quotes/public-fixed-module";
 import { PublicVariableModule } from "@/components/quotes/public-variable-module";
-import { FinancialSummary } from "@/components/quotes/financial-summary";
+import { FinancialSummaryWrapper } from "@/components/quotes/financial-summary-wrapper";
 import { SignaturePad } from "@/components/quotes/signature-pad";
 import { Watermark } from "@/components/ui/watermark";
 import { Label } from "@/components/ui/label";
@@ -526,7 +526,7 @@ export default function PublicQuotePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <FinancialSummary
+              <FinancialSummaryWrapper
                 quoteId={quote.id}
                 quoteTotal={quote.total || 0}
                 readOnly={true}
@@ -535,6 +535,7 @@ export default function PublicQuotePage() {
                     ? `${quote.client.firstName} ${quote.client.lastName}`
                     : undefined
                 }
+                quoteStatus={quote.status || ''}
               />
             </CardContent>
           </Card>

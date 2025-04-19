@@ -60,6 +60,22 @@ export const financeController = {
    */
   async createTransaction(data: any) {
     try {
+      // Verifica che il preventivo sia confermato o approvato se è collegato a un preventivo
+      if (data.quoteId) {
+        const [quote] = await db.select()
+          .from(quotes)
+          .where(eq(quotes.id, data.quoteId));
+          
+        if (!quote) {
+          throw new Error("Preventivo non trovato");
+        }
+        
+        // Verifica che il preventivo sia firmato (confermato o approvato)
+        if (quote.status !== "confermato" && quote.status !== "approved") {
+          throw new Error("Non è possibile registrare pagamenti per preventivi non firmati");
+        }
+      }
+
       // Verifico se è collegata a un pagamento programmato
       if (data.scheduledPaymentId) {
         // Aggiorno lo stato del pagamento programmato
@@ -328,6 +344,22 @@ export const financeController = {
    */
   async createScheduledPayment(data: any) {
     try {
+      // Verifica che il preventivo sia confermato o approvato
+      if (data.quoteId) {
+        const [quote] = await db.select()
+          .from(quotes)
+          .where(eq(quotes.id, data.quoteId));
+          
+        if (!quote) {
+          throw new Error("Preventivo non trovato");
+        }
+        
+        // Verifica che il preventivo sia firmato (confermato o approvato)
+        if (quote.status !== "confermato" && quote.status !== "approved") {
+          throw new Error("Non è possibile programmare pagamenti per preventivi non firmati");
+        }
+      }
+
       const [payment] = await db.insert(scheduledPayments)
         .values({
           quoteId: data.quoteId,

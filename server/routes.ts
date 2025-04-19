@@ -1951,7 +1951,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
       // Calcola somma dei servizi "base"
       const itemsSum = enrichedQuoteItems.reduce(
-        (sum, it) => sum + (it.price || 0) * (it.quantity || 1),
+        (sum, it) => sum + (it.total || 0),
         0
       );
       
@@ -1959,7 +1959,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       const modulesSum = enrichedModules
         .flatMap(m => m.items)
         .reduce(
-          (sum, it) => sum + (it.price || 0) * (it.selectedQuantity || 1),
+          (sum, it) => sum + (it.total || 0),
           0
         );
       

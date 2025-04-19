@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { getCsrfToken } from "@/lib/queryClient";
 
 interface PhotoUploaderProps {
   galleryId: number;
@@ -97,11 +98,16 @@ export function PhotoUploader({
 
       const formData = new FormData();
       formData.append("photo", file);
+      formData.append("galleryId", galleryId.toString());
       if (chapterId) {
         formData.append("chapterId", chapterId.toString());
       }
 
       try {
+        // Otteniamo il token CSRF prima di iniziare il caricamento
+        const csrfToken = await getCsrfToken();
+        const token = localStorage.getItem("auth_token");
+        
         const xhr = new XMLHttpRequest();
         
         const progressPromise = new Promise<void>((resolve, reject) => {
@@ -128,7 +134,19 @@ export function PhotoUploader({
           xhr.addEventListener("abort", () => reject(new Error("Upload Aborted")));
         });
         
-        xhr.open("POST", `/api/gallery/galleries/${galleryId}/photos`);
+        xhr.open("POST", `/api/photos`);
+        
+        // Aggiungiamo gli header necessari
+        if (csrfToken) {
+          xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+        }
+        
+        if (token) {
+          xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        }
+        
+        xhr.withCredentials = true; // Necessario per inviare i cookie di sessione
+        
         xhr.send(formData);
         
         await progressPromise;

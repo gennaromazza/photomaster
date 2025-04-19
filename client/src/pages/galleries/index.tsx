@@ -147,7 +147,7 @@ export default function GalleriesPage() {
 
   // Query per ottenere l'elenco di tutte le gallerie
   const { data: galleries, isLoading } = useQuery({
-    queryKey: ["/api/gallery/galleries"],
+    queryKey: ["/api/galleries"],
   });
 
   // Filtro e ordinamento delle gallerie

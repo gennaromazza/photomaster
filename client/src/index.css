@@ -149,24 +149,24 @@
     @apply bg-red-100 text-red-800;
   }
   
-  /* Classi per i font di firma */
+  /* Classi per i font handwriting */
   .font-handwriting-dancing {
-    font-family: "Dancing Script", cursive;
+    font-family: 'Dancing Script', cursive;
   }
   
   .font-handwriting-pacifico {
-    font-family: "Pacifico", cursive;
+    font-family: 'Pacifico', cursive;
   }
   
   .font-handwriting-satisfy {
-    font-family: "Satisfy", cursive;
+    font-family: 'Satisfy', cursive;
   }
   
   .font-handwriting-great-vibes {
-    font-family: "Great Vibes", cursive;
+    font-family: 'Great Vibes', cursive;
   }
   
   .font-handwriting-caveat {
-    font-family: "Caveat", cursive;
+    font-family: 'Caveat', cursive;
   }
 }

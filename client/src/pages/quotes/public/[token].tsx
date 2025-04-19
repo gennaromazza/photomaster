@@ -241,8 +241,8 @@ export default function PublicQuotePage() {
     return { isValid: true };
   }, [modules, selectedModuleItems]);
 
-  // Gestione firma e conferma preventivo - implementato come funzione memorizzata per evitare ricrazioni inutili
-  const handleSignQuote = useMemo(() => async () => {
+  // Gestione firma e conferma preventivo - implementato come funzione per gestire la firma
+  const handleSignQuote = async (signatureValue: string) => {
     //Check if quote is already signed
     if (
       quote &&
@@ -256,7 +256,7 @@ export default function PublicQuotePage() {
       return;
     }
 
-    if (!signature.trim()) {
+    if (!signatureValue.trim()) {
       toast({
         title: "Errore",
         description: "Inserisci il tuo nome e cognome per firmare",
@@ -264,6 +264,9 @@ export default function PublicQuotePage() {
       });
       return;
     }
+    
+    // Aggiorna lo stato locale della firma
+    setSignature(signatureValue);
 
     // Verifica tutti i moduli variabili per assicurarsi che rispettino i requisiti minimi/massimi
     const validationResult = isSelectionValidForAllModules();
@@ -282,7 +285,7 @@ export default function PublicQuotePage() {
     try {
       // Utilizziamo apiRequest che gestisce automaticamente il token CSRF e implementa retry
       const response = await apiRequest("POST", `/api/quotes/share/${token}/sign`, {
-        signature: signature.trim(),
+        signature: signatureValue.trim(),
         status: "approved",
         signedAt: new Date().toISOString(),
         selectedModuleItems: selectedModuleItems,
@@ -350,7 +353,7 @@ export default function PublicQuotePage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [quote, toast, token, signature, selectedModuleItems, isSelectionValidForAllModules, setLocation, setIsSubmitting]);
+  };
 
   useEffect(() => {
     if (error) {
@@ -683,27 +686,30 @@ export default function PublicQuotePage() {
             {quote.status === "approved" || quote.status === "confermato" ? (
               <div className="text-center space-y-4">
                 <div className="max-w-sm mx-auto">
-                  <div className="border-2 border-primary/10 rounded-lg p-6 bg-primary/5">
-                    <div className="text-center space-y-2">
-                      <p className="text-xs text-muted-foreground mb-1">Preventivo firmato da:</p>
-                      <p
-                        className="font-handwriting text-3xl text-primary"
-                        style={{ fontFamily: "Dancing Script, cursive" }}
-                      >
-                        {quote.signature || "<Nome non disponibile>"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Firmato il {quote.signedAt ? new Date(quote.signedAt).toLocaleDateString("it-IT") : "<data non disponibile>"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-center text-sm text-green-600">
-                      <CheckCircle className="h-4 w-4 mr-2" />
+                  <div className="p-4 rounded-lg bg-green-50 border border-green-200 mb-4">
+                    <div className="flex items-center justify-center text-sm text-green-700">
+                      <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
                       Preventivo confermato e firmato
                     </div>
-                    <p className="text-sm text-muted-foreground text-center">
-                      da {quote.signature}
+                  </div>
+                  
+                  <div className="border-2 border-dashed border-primary/30 rounded-lg p-6 bg-primary/5">
+                    <p className="text-sm text-muted-foreground mb-3 text-center">Firmato da:</p>
+                    <p className="text-center text-3xl text-primary font-handwriting-great-vibes">
+                      {quote.signature || "Nome non disponibile"}
+                    </p>
+                    {quote.signedAt && (
+                      <p className="text-xs text-muted-foreground mt-3 text-center">
+                        in data {format(new Date(quote.signedAt), "d MMMM yyyy", { locale: it })}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="mt-8 p-4 rounded-md bg-muted text-center">
+                    <p className="text-sm">
+                      Questo preventivo è stato approvato e non può essere modificato.
+                      <br />
+                      <span className="text-primary font-medium">Grazie per la vostra fiducia!</span>
                     </p>
                   </div>
                 </div>

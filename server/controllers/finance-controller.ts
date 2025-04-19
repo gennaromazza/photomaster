@@ -667,10 +667,13 @@ export const financeController = {
       const totalScheduled = scheduledPaymentsList
         .reduce((sum, p) => sum + parseFloat(p.amount.toString()), 0);
 
-      // Recupero il preventivo per ottenere il totale
+      // Recupero il preventivo per ottenere i dettagli base
       const [quote] = await db.select()
         .from(quotes)
         .where(eq(quotes.id, quoteId));
+        
+      // Recupero anche il preventivo tramite storage per ottenere i campi virtuali
+      const quoteWithTotal = await storage.getQuote(quoteId);
 
       if (!quote) {
         throw new Error("Preventivo non trovato");
@@ -679,14 +682,13 @@ export const financeController = {
       // I campi subtotal, total, discount sono virtuali e calcolati dal frontend
       // Utilizzo il campo total se definito, altrimenti calcolo in base ai pagamenti
 
-      // Verifichiamo se il preventivo ha un campo 'total' come proprietà aggiunta 
-      // (non esiste nella definizione della tabella ma è aggiunto dinamicamente)
-      const hasTotal = Object.prototype.hasOwnProperty.call(quote, 'total');
+      // Utilizziamo il total dal preventivo recuperato tramite storage (che include i campi virtuali)
+      const hasTotal = quoteWithTotal && quoteWithTotal.total !== undefined && quoteWithTotal.total !== null;
       
-      // Utilizzo il campo total dal preventivo se esiste come proprietà
-      // Verifichiamo esplicitamente che non sia undefined o null, ma permettiamo il valore 0
-      const quoteTotal = hasTotal && (quote as any).total !== undefined && (quote as any).total !== null ?
-        (quote as any).total as number : 
+      // Utilizzo il campo total dal preventivo se esiste e non è undefined/null
+      // Permettiamo anche il valore 0 che è un valore valido per il totale (0 euro)
+      const quoteTotal = hasTotal ? 
+        quoteWithTotal.total as number : 
         (totalPaid + totalScheduled); // Stima basata su pagamenti
 
       return {

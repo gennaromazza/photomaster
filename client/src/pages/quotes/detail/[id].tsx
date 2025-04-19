@@ -1022,16 +1022,15 @@ export default function QuoteDetailPage() {
                         {quote.discountType === "percentage" && 
                          ` (${quote.discountValue}%)`}
                       </span>
-                      <span>
+                      <span style={{
+                          wordWrap: "break-word",
+                          maxWidth: "100%",
+                          overflow: "hidden"
+                        }}>
                         - {formatCurrency(
                           quote.discountType === "percentage"
                             ? ((quote.subtotal || 0) * quote.discountValue) / 100
-                            : quote.discountValue || 0)}
-                          style={{
-                            wordWrap: "break-word",
-                            maxWidth: "100%",
-                            overflow: "hidden"
-                          }}
+                            : quote.discountValue || 0
                         )}
                       </span>
                     </div>

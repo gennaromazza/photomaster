@@ -158,7 +158,7 @@ export function PhotoUploader({
         );
 
         return { ...file, status: "success", progress: 100 };
-      } catch (error) => {
+      } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto";
 
         setFiles((prev) =>

@@ -16,7 +16,7 @@ export default function NewGalleryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Query per ottenere gli eventi disponibili
-  const { data: events = [] } = useQuery({
+  const { data: events = [] } = useQuery<any[]>({
     queryKey: ["/api/events"],
   });
 

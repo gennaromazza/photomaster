@@ -1,7 +1,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Info } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 import {
   Form,
@@ -31,7 +32,7 @@ const galleryFormSchema = z.object({
 
 interface GalleryFormProps {
   defaultValues?: Partial<GalleryFormValues>;
-  events?: any[];
+  events: any[];
   onSubmit: (data: GalleryFormValues) => void;
   isSubmitting?: boolean;
 }
@@ -210,8 +211,12 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
           </Alert>
         )}
         
-        <div className="hidden">
-          <button type="submit" disabled={isSubmitting}></button>
+        <div className="mt-6 flex justify-end">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creazione in corso...</> : 
+              'Crea Galleria'}
+          </Button>
         </div>
       </form>
     </Form>

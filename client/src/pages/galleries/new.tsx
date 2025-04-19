@@ -44,11 +44,22 @@ export default function NewGalleryPage() {
         console.log("Aggiunto file di copertina:", data.coverImage.name);
       }
 
+      console.log("Creazione galleria - dati:", {
+        name: data.name,
+        isPublic: data.isPublic,
+        isPasswordProtected: data.isPasswordProtected,
+        hasEventId: !!data.eventId,
+        hasCoverImage: !!data.coverImage
+      });
+      
       // Utilizziamo apiRequest che gestisce automaticamente il CSRF token
       const response = await apiRequest("POST", "/api/gallery/galleries", formData, true);
-
+      console.log("Status risposta:", response.status, response.statusText);
+      
       if (!response.ok) {
-        throw new Error("Errore durante la creazione della galleria");
+        const errorText = await response.text();
+        console.error("Dettagli errore:", errorText);
+        throw new Error(`Errore durante la creazione della galleria: ${response.status} ${response.statusText}`);
       }
 
       const gallery = await response.json();

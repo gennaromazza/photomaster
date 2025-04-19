@@ -5,6 +5,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import "@/components/rich-text-content.css";
 // Rimuovo import Layout per evitare la duplicazione del layout
 import ModuleManager from "@/components/quotes/modules/module-manager";
+import { SecondClientForm } from "@/components/quotes/second-client-form";
 import { FinancialSummaryWrapper } from "@/components/quotes/financial-summary-wrapper";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -83,6 +84,7 @@ import {
   RefreshCw,
   Euro,
   ClipboardList,
+  Plus,
 } from "lucide-react";
 import { format, formatDistance, formatDistanceToNow, parseISO } from "date-fns";
 import { it } from "date-fns/locale";

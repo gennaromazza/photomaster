@@ -121,8 +121,8 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
             <FormItem>
               <FormLabel>Evento Collegato</FormLabel>
               <Select
-                onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))}
-                value={field.value?.toString() || "null"}
+                onValueChange={(value) => field.onChange(value === "0" ? null : parseInt(value))}
+                value={field.value?.toString() || "0"}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -130,7 +130,7 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="null">Nessun evento</SelectItem>
+                  <SelectItem value="0">Nessun evento</SelectItem>
                   {events?.map((event: any) => (
                     <SelectItem key={event.id} value={event.id.toString()}>
                       {event.title}

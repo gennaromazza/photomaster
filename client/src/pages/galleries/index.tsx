@@ -152,7 +152,7 @@ export default function GalleriesPage() {
 
   // Filtro e ordinamento delle gallerie
   const filteredGalleries = galleries
-    ? galleries
+    ? (Array.isArray(galleries) ? galleries : [])
         .filter((gallery: GalleryItem) => {
           // Filtra per stato pubblico/privato
           if (filterStatus === "public" && !gallery.isPublic) return false;
@@ -286,7 +286,7 @@ export default function GalleriesPage() {
           <TooltipProvider>
             <Tabs
               value={viewMode}
-              onValueChange={(value: "grid" | "list") => setViewMode(value)}
+              onValueChange={(value: string) => setViewMode(value as "grid" | "list")}
               className="inline-flex"
             >
               <TabsList className="p-0.5 h-10">

@@ -107,9 +107,9 @@ export function PhotoUploader({
         // Otteniamo il token CSRF prima di iniziare il caricamento
         const csrfToken = await getCsrfToken();
         const token = localStorage.getItem("auth_token");
-        
+
         const xhr = new XMLHttpRequest();
-        
+
         const progressPromise = new Promise<void>((resolve, reject) => {
           xhr.upload.addEventListener("progress", (event) => {
             if (event.lengthComputable) {
@@ -121,7 +121,7 @@ export function PhotoUploader({
               );
             }
           });
-          
+
           xhr.addEventListener("load", () => {
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve();
@@ -129,38 +129,38 @@ export function PhotoUploader({
               reject(new Error(`HTTP Error: ${xhr.status}`));
             }
           });
-          
+
           xhr.addEventListener("error", () => reject(new Error("Network Error")));
           xhr.addEventListener("abort", () => reject(new Error("Upload Aborted")));
         });
-        
+
         xhr.open("POST", `/api/photos`);
-        
+
         // Aggiungiamo gli header necessari
         if (csrfToken) {
           xhr.setRequestHeader('X-CSRF-Token', csrfToken);
         }
-        
+
         if (token) {
           xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         }
-        
+
         xhr.withCredentials = true; // Necessario per inviare i cookie di sessione
-        
+
         xhr.send(formData);
-        
+
         await progressPromise;
-        
+
         setFiles((prev) =>
           prev.map((f) =>
             f.id === file.id ? { ...f, status: "success", progress: 100 } : f
           )
         );
-        
+
         return { ...file, status: "success", progress: 100 };
-      } catch (error) {
+      } catch (error) => {
         const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto";
-        
+
         setFiles((prev) =>
           prev.map((f) =>
             f.id === file.id
@@ -168,31 +168,36 @@ export function PhotoUploader({
               : f
           )
         );
-        
+
         console.error(`Errore durante il caricamento di ${file.name}:`, error);
+        toast({
+          title: "Errore",
+          description: `Impossibile caricare ${file.name}. Verifica il formato e la dimensione del file.`,
+          variant: "destructive"
+        });
         return { ...file, status: "error", error: errorMessage };
       }
     });
 
     try {
       await Promise.all(uploadPromises);
-      
+
       toast({
         title: "Caricamento completato",
         description: "Le foto sono state caricate con successo",
       });
-      
+
       if (onUploadComplete) {
         onUploadComplete();
       }
-      
+
       // Rimuovi i file caricati con successo dopo un breve ritardo
       setTimeout(() => {
         setFiles((prev) => prev.filter((f) => f.status !== "success"));
       }, 2000);
     } catch (error) {
       console.error("Errore durante il caricamento:", error);
-      
+
       toast({
         title: "Errore di caricamento",
         description: "Si è verificato un errore durante il caricamento delle foto",
@@ -210,7 +215,7 @@ export function PhotoUploader({
       abortControllerRef.current = null;
     }
     setIsUploading(false);
-    
+
     toast({
       title: "Caricamento annullato",
       description: "Il caricamento delle foto è stato annullato",
@@ -219,7 +224,7 @@ export function PhotoUploader({
 
   const allFilesUploaded = files.length > 0 && files.every((file) => file.status === "success");
   const hasErrors = files.some((file) => file.status === "error");
-  
+
   return (
     <div className="space-y-6">
       <div
@@ -326,7 +331,7 @@ export function PhotoUploader({
                     {file.status === "success" && "Completato"}
                     {file.status === "error" && "Errore"}
                   </Badge>
-                  
+
                   {file.status !== "uploading" && file.status !== "success" && (
                     <Button
                       variant="destructive"
@@ -341,17 +346,17 @@ export function PhotoUploader({
                     </Button>
                   )}
                 </div>
-                
+
                 {file.status === "uploading" && (
                   <Progress value={file.progress} className="rounded-none h-1" />
                 )}
-                
+
                 <div className="p-3 text-sm">
                   <p className="truncate font-medium">{file.name}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
-                  
+
                   {file.status === "error" && (
                     <div className="mt-2 flex items-start gap-2 text-destructive">
                       <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />

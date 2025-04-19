@@ -49,6 +49,8 @@ const checkGalleryAccess = async (req, res, next) => {
   next();
 };
 
+import { db } from '../db';
+
 // ROUTES PER GALLERIE
 
 // Ottieni tutte le gallerie

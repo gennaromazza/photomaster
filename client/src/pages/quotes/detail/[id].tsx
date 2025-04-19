@@ -155,6 +155,13 @@ export default function QuoteDetailPage() {
     enabled: !!quote && !!quote.secondClientId,
   });
 
+  // Query per ottenere i dati finanziari del preventivo
+  const { data: finData } = useQuery({
+    queryKey: ["quoteFinancial", id],
+    queryFn: () => apiRequest("GET", `/api/finance/quotes/${id}`).then(res => res.json()),
+    enabled: !!id
+  });
+
   // Mutation per eliminare il preventivo  
   const deleteQuoteMutation = useMutation({
     mutationFn: async () => {
@@ -1071,51 +1078,27 @@ export default function QuoteDetailPage() {
           {/* Colonna laterale - 4/12 */}
           <div className="lg:col-span-4 space-y-4 sm:space-y-6">
             {/* Riepilogo finanziario */}
-            <Card>
-              <CardHeader className="pb-2 sm:pb-3">
-                <CardTitle className="text-lg sm:text-xl flex items-center">
-                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-primary/80" />
-                  Riepilogo Preventivo
-                </CardTitle>
+            <Card className="mb-4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Riepilogo Preventivo</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4 pb-4 sm:pb-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotale</span>
-                    <span>{formatCurrency(quote.subtotal || 0)}</span>
-                  </div>
-
-                  {/* Mostro lo sconto solo se presente */}
-                  {quote.discount > 0 && (
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>
-                        Sconto
-                        {quote.discountType === "percentage" && 
-                         ` (${quote.discountValue}%)`}
-                      </span>
-                      <span style={{
-                          wordWrap: "break-word",
-                          maxWidth: "100%",
-                          overflow: "hidden"
-                        }}>
-                        - {formatCurrency(
-                          quote.discountType === "percentage"
-                            ? ((quote.subtotal || 0) * quote.discountValue) / 100
-                            : quote.discountValue || 0
-                        )}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Eventuali altre voci */}
-
-                  <Separator />
-                  <div className="flex justify-between font-medium text-lg">
-                    <span>Totale</span>
-                    <span>{formatCurrency(quote.total || 0)}</span>
-                  </div>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Subtotale</span>
+                  <span>{formatCurrency(finData?.summary.subtotal ?? 0)}</span>
                 </div>
-
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Totale Preventivo</span>
+                  <span>{formatCurrency(finData?.summary.quoteTotal ?? 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Saldo residuo</span>
+                  <span>
+                    {formatCurrency(
+                      (finData?.summary.quoteTotal ?? 0) - (finData?.summary.totalPaid ?? 0)
+                    )}
+                  </span>
+                </div>
                 <div className="text-sm text-muted-foreground mt-2">
                   Preventivo {quote.status === "draft" ? "in bozza" : quote.status}
                 </div>
@@ -1156,7 +1139,7 @@ export default function QuoteDetailPage() {
               <CardContent className="p-0">
                 <FinancialSummaryWrapper 
                   quoteId={parseInt(id as string)} 
-                  quoteTotal={(quote.total || 0) * 100} 
+                  quoteTotal={(finData?.summary.quoteTotal ?? 0) * 100} 
                   clientName={clientFullName}
                   quoteStatus={quote.status || ''}
                 />

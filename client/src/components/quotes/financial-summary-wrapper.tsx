@@ -4,7 +4,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { FinancialSummary } from './financial-summary-fixed';
 import { useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/utils';
+import { apiRequest } from '@/lib/queryClient';
 
 interface FinancialSummaryWrapperProps {
   quoteId: number;

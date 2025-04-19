@@ -107,7 +107,7 @@ export function FinancialSummary({
     isLoading: transactionsLoading,
     refetch: refetchTransactions
   } = useQuery({
-    queryKey: ['/api/finance/transactions/quote', quoteId],
+    queryKey: [`/api/finance/quotes/${quoteId}/transactions`],
     // Configurazioni per garantire che i dati siano sempre aggiornati
     refetchOnWindowFocus: true, // Aggiorna quando la finestra torna in focus
     staleTime: 30 * 1000, // Considera i dati "freschi" per 30 secondi
@@ -121,7 +121,7 @@ export function FinancialSummary({
     isLoading: scheduledLoading,
     refetch: refetchScheduled
   } = useQuery({
-    queryKey: ['/api/finance/scheduled/quote', quoteId],
+    queryKey: [`/api/finance/quotes/${quoteId}/scheduled`],
     // Configurazioni per garantire che i dati siano sempre aggiornati
     refetchOnWindowFocus: true, // Aggiorna quando la finestra torna in focus
     staleTime: 30 * 1000, // Considera i dati "freschi" per 30 secondi
@@ -147,7 +147,7 @@ export function FinancialSummary({
       });
       
       // Invalida le query per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/finance/quotes/${quoteId}/transactions`] });
       
       // Refetch esplicito per garantire la sincronizzazione immediata dei dati
       refetchTransactions();
@@ -184,7 +184,7 @@ export function FinancialSummary({
       });
       
       // Invalida le query per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/finance/quotes/${quoteId}/scheduled`] });
       
       // Refetch esplicito per garantire la sincronizzazione immediata dei dati
       refetchScheduled();
@@ -212,7 +212,7 @@ export function FinancialSummary({
     },
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/finance/quotes/${quoteId}/scheduled`] });
       
       // Refetch esplicito per garantire la sincronizzazione immediata dei dati
       refetchScheduled();
@@ -240,8 +240,8 @@ export function FinancialSummary({
     },
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/finance/quotes/${quoteId}/transactions`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/finance/quotes/${quoteId}/scheduled`] });
       
       // Refetch esplicito per garantire la sincronizzazione immediata dei dati
       refetchTransactions();

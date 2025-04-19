@@ -1978,15 +1978,33 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       }
       
       console.log(`Eliminazione elemento ${itemId} dal preventivo ${quoteId} richiesta`);
-      const success = await storage.deleteQuoteItem(itemId);
+      
+      // Prima verifichiamo se si tratta di un elemento di modulo
+      let success = false;
+      
+      try {
+        // Proviamo prima a eliminare come elemento di modulo
+        success = await storage.deleteQuoteModuleItem(itemId);
+        if (success) {
+          console.log(`Elemento di modulo ${itemId} eliminato con successo`);
+        }
+      } catch (moduleItemError) {
+        console.log(`Elemento ${itemId} non è un elemento di modulo:`, moduleItemError);
+        // Se fallisce, proviamo a eliminare come elemento diretto del preventivo
+        success = await storage.deleteQuoteItem(itemId);
+        if (success) {
+          console.log(`Elemento di preventivo ${itemId} eliminato con successo`);
+        }
+      }
 
       if (!success) {
-        return res.status(404).json({ message: "Quote item not found" });
+        return res.status(404).json({ message: "Item not found" });
       }
 
       res.status(204).send();
     } catch (err) {
-      res.status(500).json({ message: "Failed to delete quote item" });
+      console.error(`Errore nell'eliminazione dell'elemento ${req.params.itemId}:`, err);
+      res.status(500).json({ message: "Failed to delete item" });
     }
   });
 

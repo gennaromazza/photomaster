@@ -147,7 +147,14 @@ export default function GalleriesPage() {
 
   // Query per ottenere l'elenco di tutte le gallerie
   const { data: galleries, isLoading } = useQuery({
-    queryKey: ["/api/galleries"],
+    queryKey: ["/api/gallery/galleries"],
+    queryFn: async () => {
+      const response = await fetch("/api/gallery/galleries");
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    }
   });
 
   // Filtro e ordinamento delle gallerie

@@ -61,10 +61,10 @@ router.get("/galleries", async (req, res) => {
     }
     
     const allGalleries = await query;
-    res.json(allGalleries || []);
+    return res.json({ galleries: allGalleries || [] });
   } catch (error) {
     console.error("Errore nel recupero delle gallerie:", error);
-    res.status(500).json({ error: "Errore nel recupero delle gallerie" });
+    return res.status(500).json({ error: "Errore nel recupero delle gallerie" });
   }
 });
 

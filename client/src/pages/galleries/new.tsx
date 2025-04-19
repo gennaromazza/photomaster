@@ -71,25 +71,30 @@ export default function NewGalleryPage() {
   });
 
   const createGalleryMutation = useMutation({
-    mutationFn: async (data: GalleryFormValues) => {
-      const formData = new FormData();
+    mutationFn: async (formData: FormData | GalleryFormValues) => {
+      let dataToSend: FormData;
       
-      // Aggiungi dati della galleria
-      formData.append("name", data.name);
-      if (data.description) formData.append("description", data.description);
-      formData.append("isPublic", data.isPublic.toString());
-      
-      if (passwordProtected && data.password) {
-        formData.append("password", data.password);
-      }
-      
-      if (data.eventId && data.eventId !== "0") {
-        formData.append("eventId", data.eventId);
-      }
-      
-      // Aggiungi immagine di copertina se presente
-      if (coverImageFile) {
-        formData.append("coverImage", coverImageFile);
+      // Se i dati non sono già FormData, li convertiamo
+      if (!(formData instanceof FormData)) {
+        dataToSend = new FormData();
+        dataToSend.append("name", formData.name);
+        if (formData.description) dataToSend.append("description", formData.description);
+        dataToSend.append("isPublic", formData.isPublic.toString());
+        
+        if (passwordProtected && formData.password) {
+          dataToSend.append("password", formData.password);
+        }
+        
+        if (formData.eventId && formData.eventId !== "0") {
+          dataToSend.append("eventId", formData.eventId);
+        }
+        
+        // Aggiungi immagine di copertina se presente
+        if (coverImageFile) {
+          dataToSend.append("coverImage", coverImageFile);
+        }
+      } else {
+        dataToSend = formData;
       }
       
       // Utilizziamo fetch direttamente poiché apiRequest non gestisce bene FormData
@@ -102,7 +107,7 @@ export default function NewGalleryPage() {
         headers: {
           'X-CSRF-Token': csrfToken,
         },
-        body: formData,
+        body: dataToSend,
         credentials: 'include'
       });
       

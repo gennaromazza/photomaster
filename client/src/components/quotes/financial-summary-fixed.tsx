@@ -230,7 +230,7 @@ export function FinancialSummary({
 
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
-        queryKey: ["/api/finance/scheduled/quote", quoteId],
+        queryKey: ['quoteScheduledPayments', quoteId],
       });
 
       // Forza il refetch immediato dei dati
@@ -266,7 +266,7 @@ export function FinancialSummary({
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
-        queryKey: ["/api/finance/scheduled/quote", quoteId],
+        queryKey: ['quoteScheduledPayments', quoteId],
       });
 
       // Forza il refetch immediato
@@ -303,10 +303,10 @@ export function FinancialSummary({
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
-        queryKey: ["/api/finance/transactions/quote", quoteId],
+        queryKey: ['quoteTransactions', quoteId],
       });
       queryClient.invalidateQueries({
-        queryKey: ["/api/finance/scheduled/quote", quoteId],
+        queryKey: ['quoteScheduledPayments', quoteId],
       });
 
       // Forza il refetch immediato dei dati

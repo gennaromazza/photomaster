@@ -1949,6 +1949,20 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         })
       );
 
+      // Calcola somma dei servizi "base"
+      const itemsSum = enrichedQuoteItems.reduce(
+        (sum, it) => sum + (it.price || 0) * (it.quantity || 1),
+        0
+      );
+      
+      // Calcola somma di tutti gli item di tutti i moduli
+      const modulesSum = enrichedModules
+        .flatMap(m => m.items)
+        .reduce(
+          (sum, it) => sum + (it.price || 0) * (it.selectedQuantity || 1),
+          0
+        );
+      
       // Prepara l'oggetto completo del preventivo con tutte le informazioni
       const completeQuote = {
         ...quote,
@@ -1957,7 +1971,12 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         secondClient: secondClient || undefined,
         category: category || undefined,
         // Aggiungi i moduli arricchiti
-        modules: enrichedModules
+        modules: enrichedModules,
+        // Aggiungiamo i totali calcolati
+        modulesSum: modulesSum,
+        itemsSum: itemsSum,
+        // Assegna il totale complessivo al preventivo condiviso
+        total: itemsSum + modulesSum
       };
 
       console.log(`Preventivo completato con ${enrichedModules.length} moduli caricati dinamicamente`);

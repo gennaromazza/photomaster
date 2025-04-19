@@ -1310,19 +1310,20 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         })
       );
       
-      // Calcola somma dei servizi "base"
+      // --- inizio patch totale server ---
+      // Calcola la somma di quoteItems (servizi fissi)
       const itemsSum = enrichedQuoteItems.reduce(
-        (sum, it) => sum + (it.total || 0),
+        (s, item) => s + (item.unitPrice || item.total || 0) * (item.quantity || 1),
         0
       );
-      
-      // Calcola somma di tutti gli item di tutti i moduli
+      // Calcola la somma di tutti gli items in tutti i moduli
       const modulesSum = enrichedModules
         .flatMap(m => m.items)
         .reduce(
-          (sum, it) => sum + (it.total || 0),
+          (s, it) => s + (it.unitPrice || it.total || 0) * (it.selectedQuantity || 1),
           0
         );
+      // --- fine patch totale server ---
       
       // Prepara l'oggetto completo del preventivo con tutte le informazioni
       const completeQuote = {
@@ -2101,19 +2102,20 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         })
       );
 
-      // Calcola somma dei servizi "base"
+      // --- inizio patch totale server ---
+      // Calcola la somma di quoteItems (servizi fissi)
       const itemsSum = enrichedQuoteItems.reduce(
-        (sum, it) => sum + (it.total || 0),
+        (s, item) => s + (item.unitPrice || item.total || 0) * (item.quantity || 1),
         0
       );
-      
-      // Calcola somma di tutti gli item di tutti i moduli
+      // Calcola la somma di tutti gli items in tutti i moduli
       const modulesSum = enrichedModules
         .flatMap(m => m.items)
         .reduce(
-          (sum, it) => sum + (it.total || 0),
+          (s, it) => s + (it.unitPrice || it.total || 0) * (it.selectedQuantity || 1),
           0
         );
+      // --- fine patch totale server ---
       
       // Prepara l'oggetto completo del preventivo con tutte le informazioni
       const completeQuote = {

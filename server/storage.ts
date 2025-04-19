@@ -825,6 +825,7 @@ export class DatabaseStorage implements IStorage {
         discount: 0
       };
 
+      // Non utilizza una transazione - usare createQuoteWithModules per atomicità
       const [newQuote] = await db.insert(quotes).values(insertData).returning();
       
       if (!newQuote) {
@@ -841,6 +842,90 @@ export class DatabaseStorage implements IStorage {
       console.error("Error in createQuote:", error);
       throw error;
     }
+  }
+  
+  /**
+   * Crea un preventivo e i suoi moduli associati in un'unica transazione atomica.
+   * Se si verifica un errore in qualsiasi punto, viene eseguito il rollback completo.
+   * 
+   * @param quoteData - Dati del preventivo
+   * @param modules - Array di moduli da creare insieme al preventivo
+   * @returns Il preventivo creato e i moduli associati
+   */
+  async createQuoteWithModules(
+    quoteData: InsertQuote, 
+    modules: Array<Omit<InsertQuoteModule, "quoteId">> = []
+  ): Promise<{ quote: Quote, modules: QuoteModule[] }> {
+    return await db.transaction(async (tx) => {
+      try {
+        // Preparazione dati preventivo
+        const insertData = {
+          title: quoteData.title || 'Nuovo preventivo',
+          clientId: quoteData.clientId,
+          secondClientId: quoteData.secondClientId,
+          eventId: quoteData.eventId,
+          categoryId: quoteData.categoryId,
+          leadSourceId: quoteData.leadSourceId,
+          eventDate: quoteData.eventDate,
+          isFullDay: quoteData.isFullDay,
+          eventTime: quoteData.eventTime,
+          eventEndTime: quoteData.eventEndTime,
+          location: quoteData.location,
+          ceremonyLocation: quoteData.ceremonyLocation,
+          ceremonyTime: quoteData.ceremonyTime,
+          eventType: quoteData.eventType,
+          workflow: quoteData.workflow || 'default',
+          status: quoteData.status || 'draft',
+          notes: quoteData.notes,
+          isShared: false,
+          subtotal: 0,
+          total: 0,
+          discount: 0
+        };
+
+        // Inserimento del preventivo
+        const [newQuote] = await tx.insert(quotes).values(insertData).returning();
+        
+        if (!newQuote) {
+          throw new Error("Impossibile creare il preventivo");
+        }
+
+        // Creazione dei moduli associati
+        const createdModules: QuoteModule[] = [];
+        
+        for (const moduleData of modules) {
+          // Generiamo un token di condivisione casuale per i moduli variabili
+          const moduleToCreate: InsertQuoteModule = {
+            ...moduleData,
+            quoteId: newQuote.id,
+            shareToken: moduleData.type === 'variable' && !moduleData.shareToken 
+              ? crypto.randomBytes(16).toString('hex')
+              : moduleData.shareToken
+          };
+          
+          const [createdModule] = await tx.insert(quoteModules).values(moduleToCreate).returning();
+          
+          if (!createdModule) {
+            throw new Error(`Impossibile creare il modulo "${moduleData.name}" per il preventivo`);
+          }
+          
+          createdModules.push(createdModule);
+        }
+
+        return {
+          quote: {
+            ...newQuote,
+            subtotal: 0,
+            total: 0,
+            discount: 0
+          } as Quote,
+          modules: createdModules
+        };
+      } catch (error) {
+        console.error("Errore nella creazione del preventivo con moduli:", error);
+        throw error; // La transazione farà rollback automaticamente
+      }
+    });
   }
 
   async updateQuote(id: number, quote: Partial<InsertQuote>): Promise<Quote | undefined> {
@@ -914,6 +999,47 @@ export class DatabaseStorage implements IStorage {
   async deleteQuote(id: number): Promise<boolean> {
     const result = await db.delete(quotes).where(eq(quotes.id, id));
     return result !== undefined;
+  }
+  
+  /**
+   * Elimina un preventivo con tutti i suoi moduli e elementi in un'unica transazione atomica.
+   * Se si verifica un errore in qualsiasi punto, viene eseguito il rollback completo.
+   * 
+   * @param quoteId - ID del preventivo da eliminare
+   * @returns true se l'eliminazione è riuscita, false altrimenti
+   */
+  async deleteQuoteWithModulesAndItems(quoteId: number): Promise<boolean> {
+    return await db.transaction(async (tx) => {
+      try {
+        // 1. Troviamo tutti i moduli del preventivo
+        const modules = await tx.select({ id: quoteModules.id })
+          .from(quoteModules)
+          .where(eq(quoteModules.quoteId, quoteId));
+        
+        // 2. Per ogni modulo, eliminiamo tutti i suoi elementi
+        for (const module of modules) {
+          await tx.delete(quoteModuleItems)
+            .where(eq(quoteModuleItems.moduleId, module.id));
+        }
+        
+        // 3. Eliminiamo tutti i moduli del preventivo
+        await tx.delete(quoteModules)
+          .where(eq(quoteModules.quoteId, quoteId));
+        
+        // 4. Eliminiamo tutti gli elementi direttamente collegati al preventivo
+        await tx.delete(quoteItems)
+          .where(eq(quoteItems.quoteId, quoteId));
+        
+        // 5. Eliminiamo il preventivo stesso
+        const result = await tx.delete(quotes)
+          .where(eq(quotes.id, quoteId));
+        
+        return result !== undefined;
+      } catch (error) {
+        console.error("Errore nell'eliminazione del preventivo con moduli:", error);
+        throw error; // La transazione farà rollback automaticamente
+      }
+    });
   }
   
 
@@ -1270,8 +1396,64 @@ export class DatabaseStorage implements IStorage {
       module.shareToken = crypto.randomBytes(16).toString('hex');
     }
     
+    // Non utilizza una transazione - usare createQuoteModuleWithItems per atomicità
     const [newModule] = await db.insert(quoteModules).values(module).returning();
     return newModule;
+  }
+  
+  /**
+   * Crea un modulo di preventivo con i suoi elementi associati in un'unica transazione atomica.
+   * Se si verifica un errore in qualsiasi punto, viene eseguito il rollback completo.
+   * 
+   * @param module - Dati del modulo
+   * @param items - Array di elementi da aggiungere al modulo
+   * @returns Il modulo creato e gli elementi associati
+   */
+  async createQuoteModuleWithItems(
+    module: InsertQuoteModule,
+    items: Array<Omit<InsertQuoteModuleItem, "moduleId">> = []
+  ): Promise<{ module: QuoteModule, items: QuoteModuleItem[] }> {
+    return await db.transaction(async (tx) => {
+      try {
+        // Generiamo un token di condivisione casuale per i moduli variabili
+        if (module.type === 'variable' && !module.shareToken) {
+          module.shareToken = crypto.randomBytes(16).toString('hex');
+        }
+        
+        // Creiamo il modulo
+        const [newModule] = await tx.insert(quoteModules).values(module).returning();
+        
+        if (!newModule) {
+          throw new Error("Impossibile creare il modulo del preventivo");
+        }
+        
+        // Creazione degli elementi associati
+        const createdItems: QuoteModuleItem[] = [];
+        
+        for (const itemData of items) {
+          const itemToCreate: InsertQuoteModuleItem = {
+            ...itemData,
+            moduleId: newModule.id
+          };
+          
+          const [createdItem] = await tx.insert(quoteModuleItems).values(itemToCreate).returning();
+          
+          if (!createdItem) {
+            throw new Error("Impossibile creare l'elemento del modulo");
+          }
+          
+          createdItems.push(createdItem);
+        }
+        
+        return {
+          module: newModule,
+          items: createdItems
+        };
+      } catch (error) {
+        console.error("Errore nella creazione del modulo con elementi:", error);
+        throw error; // La transazione farà rollback automaticamente
+      }
+    });
   }
 
   async updateQuoteModule(id: number, module: Partial<InsertQuoteModule>): Promise<QuoteModule | undefined> {

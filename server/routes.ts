@@ -1240,8 +1240,8 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
   apiRouter.post("/quotes", async (req, res) => {
     try {
-      // Estrai campi speciali per la gestione della conversione evento -> preventivo
-      const { eventDate, _convertAndDelete, _originalEventId, ...rest } = req.body;
+      // Estrai campi speciali per la gestione della conversione evento -> preventivo e moduli
+      const { eventDate, _convertAndDelete, _originalEventId, modules = [], ...rest } = req.body;
 
       // Filtra solo i campi validi per lo schema del preventivo
       const parseResult = insertQuoteSchema.safeParse({
@@ -1268,8 +1268,11 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         }
       }
 
-      // Crea il preventivo con i dati validati
-      const quote = await storage.createQuote(parseResult.data);
+      // Utilizziamo la nuova funzione createQuoteWithModules per garantire l'atomicità dell'operazione
+      const { quote, modules: createdModules } = await storage.createQuoteWithModules(
+        parseResult.data,
+        Array.isArray(modules) ? modules : []
+      );
 
       // Se c'è un evento associato al preventivo, gestisci la relazione
       if (quote && parseResult.data.eventId) {
@@ -1485,13 +1488,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         return res.status(400).json({ message: "Invalid quote ID" });
       }
 
-      // Delete any associated modules first
-      const modules = await storage.getModulesByQuote(id);
-      for (const module of modules) {
-        await storage.deleteQuoteModule(module.id);
-      }
-
-      // Delete any associated events
+      // Aggiorna gli eventi prima di eliminare il preventivo
       try {
         // Utilizziamo una query diretta sull'oggetto Event per trovare gli eventi associati
         // al preventivo corrente utilizzando il campo quoteId
@@ -1510,8 +1507,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         // Continua comunque con l'eliminazione del preventivo
       }
 
-      // Delete the quote and all related items
-      const success = await storage.deleteQuote(id);
+      // Utilizziamo la nuova funzione per eliminare il preventivo in un'unica transazione atomica
+      const success = await storage.deleteQuoteWithModulesAndItems(id);
+      
       if (!success) {
         return res.status(404).json({ message: "Quote not found" });
       }

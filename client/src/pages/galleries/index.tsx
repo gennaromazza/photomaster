@@ -158,8 +158,8 @@ export default function GalleriesPage() {
   });
 
   // Filtro e ordinamento delle gallerie
-  const filteredGalleries = galleries
-    ? (Array.isArray(galleries) ? galleries : [])
+  const filteredGalleries = galleries?.galleries 
+    ? (Array.isArray(galleries.galleries) ? galleries.galleries : [])
         .filter((gallery: GalleryItem) => {
           // Filtra per stato pubblico/privato
           if (filterStatus === "public" && !gallery.isPublic) return false;

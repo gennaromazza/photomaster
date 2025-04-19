@@ -39,15 +39,15 @@ const LARGE_SIZE = 1600;
 export const getAllGalleries = async (req: Request, res: Response) => {
   try {
     const { eventId } = req.query;
-    
+
     let query = db.select().from(galleries).orderBy(desc(galleries.createdAt));
-    
+
     if (eventId) {
       query = query.where(eq(galleries.eventId, Number(eventId)));
     }
-    
+
     const allGalleries = await query;
-    
+
     res.json(allGalleries);
   } catch (error) {
     console.error("Errore nel recupero delle gallerie:", error);
@@ -59,16 +59,16 @@ export const getAllGalleries = async (req: Request, res: Response) => {
 export const getGalleryById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     const [gallery] = await db
       .select()
       .from(galleries)
       .where(eq(galleries.id, Number(id)));
-    
+
     if (!gallery) {
       return res.status(404).json({ error: "Galleria non trovata" });
     }
-    
+
     res.json(gallery);
   } catch (error) {
     console.error("Errore nel recupero della galleria:", error);
@@ -80,16 +80,16 @@ export const getGalleryById = async (req: Request, res: Response) => {
 export const getGalleryBySlug = async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
-    
+
     const [gallery] = await db
       .select()
       .from(galleries)
       .where(eq(galleries.slug, slug));
-    
+
     if (!gallery) {
       return res.status(404).json({ error: "Galleria non trovata" });
     }
-    
+
     // Se la galleria richiede password e non è stato fornito il token
     if (gallery.password && !req.query.token) {
       // Restituisci solo informazioni di base senza contenuti
@@ -101,20 +101,20 @@ export const getGalleryBySlug = async (req: Request, res: Response) => {
         coverImage: gallery.coverImage
       });
     }
-    
+
     // Aggiorna il contatore visualizzazioni
     await db
       .update(galleries)
       .set({ viewCount: sql`${galleries.viewCount} + 1` })
       .where(eq(galleries.id, gallery.id));
-    
+
     // Ottieni capitoli, foto in evidenza, ecc.
     const chapters = await db
       .select()
       .from(galleryChapters)
       .where(eq(galleryChapters.galleryId, gallery.id))
       .orderBy(galleryChapters.sortOrder);
-    
+
     const featuredPhotos = await db
       .select()
       .from(photos)
@@ -124,7 +124,7 @@ export const getGalleryBySlug = async (req: Request, res: Response) => {
         eq(photos.isHidden, false)
       ))
       .limit(10);
-    
+
     res.json({
       ...gallery,
       chapters,
@@ -141,11 +141,11 @@ export const createGallery = async (req: Request, res: Response) => {
   try {
     console.log("Dati ricevuti nella richiesta:", req.body);
     console.log("File caricato:", req.file);
-    
+
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: "Utente non autorizzato" });
     }
-    
+
     // Creiamo un oggetto con i dati del form
     const galleryData: any = {
       name: req.body.name,
@@ -157,54 +157,54 @@ export const createGallery = async (req: Request, res: Response) => {
       viewCount: 0,
       userId: req.user.id, // Assicuriamoci che l'userId sia incluso
     };
-    
+
     // Se c'è un file caricato, aggiungiamo il percorso all'oggetto dati
     if (req.file) {
       try {
         // Definisci le directory per i file
         const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'galleries');
-        
+
         console.log("Directory upload:", UPLOAD_DIR);
-        
+
         // Assicurati che la directory esista
         if (!fs.existsSync(UPLOAD_DIR)) {
           fs.mkdirSync(UPLOAD_DIR, { recursive: true });
         }
-        
+
         // Genera un nome file unico per l'immagine di copertina
         const uniqueFilename = `cover-${Date.now()}-${uuidv4().substring(0, 8)}${path.extname(req.file.originalname)}`;
         const filePath = path.join(UPLOAD_DIR, uniqueFilename);
-        
+
         console.log("Salvando il file in:", filePath);
-        
+
         // Salva il file
         fs.writeFileSync(filePath, req.file.buffer);
-        
+
         // Aggiungi il percorso alla galleria (usa slash per URL)
         galleryData.coverImage = `/uploads/galleries/${uniqueFilename}`;
-        
+
         console.log("URL immagine di copertina:", galleryData.coverImage);
       } catch (fileError) {
         console.error("Errore nel salvataggio del file:", fileError);
       }
     }
-    
+
     console.log("Dati della galleria elaborati:", galleryData);
-    
+
     // Genera uno slug unico basato sul nome
     let slug = slugify(galleryData.name, { lower: true, strict: true });
-    
+
     // Controlla se lo slug esiste già
     const existingSlug = await db
       .select()
       .from(galleries)
       .where(eq(galleries.slug, slug));
-    
+
     if (existingSlug.length > 0) {
       // Aggiungi un UUID breve allo slug per renderlo unico
       slug = `${slug}-${uuidv4().substring(0, 8)}`;
     }
-    
+
     const [newGallery] = await db
       .insert(galleries)
       .values({
@@ -214,7 +214,7 @@ export const createGallery = async (req: Request, res: Response) => {
         updatedAt: new Date(),
       })
       .returning();
-    
+
     res.status(201).json(newGallery);
   } catch (error) {
     console.error("Errore nella creazione della galleria:", error);
@@ -231,7 +231,7 @@ export const updateGallery = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const galleryData = insertGallerySchema.parse(req.body);
-    
+
     const [updatedGallery] = await db
       .update(galleries)
       .set({
@@ -240,11 +240,11 @@ export const updateGallery = async (req: Request, res: Response) => {
       })
       .where(eq(galleries.id, Number(id)))
       .returning();
-    
+
     if (!updatedGallery) {
       return res.status(404).json({ error: "Galleria non trovata" });
     }
-    
+
     res.json(updatedGallery);
   } catch (error) {
     console.error("Errore nell'aggiornamento della galleria:", error);
@@ -256,13 +256,13 @@ export const updateGallery = async (req: Request, res: Response) => {
 export const deleteGallery = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     // Prima ottieni tutti i file associati per eliminarli
     const allPhotos = await db
       .select()
       .from(photos)
       .where(eq(photos.galleryId, Number(id)));
-    
+
     // Elimina i file dal filesystem
     for (const photo of allPhotos) {
       try {
@@ -276,10 +276,10 @@ export const deleteGallery = async (req: Request, res: Response) => {
         console.error(`Errore nell'eliminazione del file ${photo.filename}:`, err);
       }
     }
-    
+
     // Elimina tutti i dati correlati (l'eliminazione a cascata gestirà le relazioni)
     await db.delete(galleries).where(eq(galleries.id, Number(id)));
-    
+
     res.json({ success: true, message: "Galleria eliminata con successo" });
   } catch (error) {
     console.error("Errore nell'eliminazione della galleria:", error);
@@ -293,13 +293,13 @@ export const deleteGallery = async (req: Request, res: Response) => {
 export const getGalleryChapters = async (req: Request, res: Response) => {
   try {
     const { galleryId } = req.params;
-    
+
     const chapters = await db
       .select()
       .from(galleryChapters)
       .where(eq(galleryChapters.galleryId, Number(galleryId)))
       .orderBy(galleryChapters.sortOrder);
-    
+
     res.json(chapters);
   } catch (error) {
     console.error("Errore nel recupero dei capitoli:", error);
@@ -311,10 +311,10 @@ export const getGalleryChapters = async (req: Request, res: Response) => {
 export const createChapter = async (req: Request, res: Response) => {
   try {
     const chapterData = insertGalleryChapterSchema.parse(req.body);
-    
+
     // Genera uno slug basato sul titolo
     let slug = slugify(chapterData.title, { lower: true, strict: true });
-    
+
     const [newChapter] = await db
       .insert(galleryChapters)
       .values({
@@ -324,7 +324,7 @@ export const createChapter = async (req: Request, res: Response) => {
         updatedAt: new Date(),
       })
       .returning();
-    
+
     res.status(201).json(newChapter);
   } catch (error) {
     console.error("Errore nella creazione del capitolo:", error);
@@ -339,41 +339,41 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
   try {
     const { galleryId } = req.params;
     const { chapter, page = 1, limit = 50, featured } = req.query;
-    
+
     const offset = (Number(page) - 1) * Number(limit);
-    
+
     let query = db
       .select()
       .from(photos)
       .where(eq(photos.galleryId, Number(galleryId)));
-    
+
     // Filtra per capitolo se specificato
     if (chapter) {
       query = query.where(eq(photos.chapterId, Number(chapter)));
     }
-    
+
     // Filtra solo le foto in evidenza se richiesto
     if (featured === 'true') {
       query = query.where(eq(photos.isFeatured, true));
     }
-    
+
     // Non mostrare le foto nascoste
     query = query.where(eq(photos.isHidden, false));
-    
+
     // Ordina per posizione e poi per data di upload
     query = query.orderBy(photos.sortOrder, desc(photos.uploadedAt));
-    
+
     // Applica paginazione
     query = query.limit(Number(limit)).offset(offset);
-    
+
     const photoList = await query;
-    
+
     // Ottieni il conteggio totale per la paginazione
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(photos)
       .where(eq(photos.galleryId, Number(galleryId)));
-    
+
     res.json({
       photos: photoList,
       pagination: {
@@ -395,19 +395,19 @@ export const uploadPhoto = async (req: Request, res: Response) => {
     if (!req.file) {
       return res.status(400).json({ error: "Nessun file caricato" });
     }
-    
+
     const { galleryId, chapterId, title, caption, isFeatured } = req.body;
-    
+
     // Genera un nome file unico
     const uniqueFilename = `${Date.now()}-${uuidv4()}${path.extname(req.file.originalname)}`;
     const filePath = path.join(UPLOAD_DIR, uniqueFilename);
-    
+
     // Salva il file originale
     fs.writeFileSync(filePath, req.file.buffer);
-    
+
     // Elabora l'immagine con sharp
     const metadata = await sharp(req.file.buffer).metadata();
-    
+
     // Determina l'orientamento
     let orientation = 'landscape';
     if (metadata.width && metadata.height) {
@@ -417,7 +417,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
         orientation = 'square';
       }
     }
-    
+
     // Crea thumbnail
     const thumbnailFilename = `thumb-${uniqueFilename}`;
     const thumbnailPath = path.join(THUMBNAILS_DIR, thumbnailFilename);
@@ -428,7 +428,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
         fit: 'inside'
       })
       .toFile(thumbnailPath);
-    
+
     // Crea versione media
     const mediumFilename = `medium-${uniqueFilename}`;
     const mediumPath = path.join(MEDIUM_DIR, mediumFilename);
@@ -439,7 +439,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
         fit: 'inside'
       })
       .toFile(mediumPath);
-    
+
     // Crea versione grande
     const largeFilename = `large-${uniqueFilename}`;
     const largePath = path.join(LARGE_DIR, largeFilename);
@@ -450,7 +450,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
         fit: 'inside'
       })
       .toFile(largePath);
-    
+
     // Crea versione WebP per browser moderni
     const webpFilename = `${path.parse(uniqueFilename).name}.webp`;
     const webpPath = path.join(WEBP_DIR, webpFilename);
@@ -462,7 +462,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
       })
       .webp({ quality: 80 })
       .toFile(webpPath);
-    
+
     // Salva nel database
     const [photo] = await db.insert(photos).values({
       galleryId: Number(galleryId),
@@ -485,11 +485,14 @@ export const uploadPhoto = async (req: Request, res: Response) => {
       uploadedBy: req.user?.id,
       orientation
     }).returning();
-    
+
     res.status(201).json(photo);
   } catch (error) {
     console.error("Errore nel caricamento della foto:", error);
-    res.status(500).json({ error: "Errore nel caricamento della foto" });
+    res.status(500).json({ 
+      error: "Errore nel caricamento della foto",
+      details: error instanceof Error ? error.message : "Errore sconosciuto"
+    });
   }
 };
 
@@ -498,7 +501,7 @@ export const updatePhoto = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { title, caption, isFeatured, isHidden, chapterId, sortOrder, tags } = req.body;
-    
+
     const [updatedPhoto] = await db
       .update(photos)
       .set({
@@ -512,11 +515,11 @@ export const updatePhoto = async (req: Request, res: Response) => {
       })
       .where(eq(photos.id, Number(id)))
       .returning();
-    
+
     if (!updatedPhoto) {
       return res.status(404).json({ error: "Foto non trovata" });
     }
-    
+
     res.json(updatedPhoto);
   } catch (error) {
     console.error("Errore nell'aggiornamento della foto:", error);
@@ -528,17 +531,17 @@ export const updatePhoto = async (req: Request, res: Response) => {
 export const deletePhoto = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     // Prima recupera le informazioni della foto
     const [photo] = await db
       .select()
       .from(photos)
       .where(eq(photos.id, Number(id)));
-    
+
     if (!photo) {
       return res.status(404).json({ error: "Foto non trovata" });
     }
-    
+
     // Elimina i file dal filesystem
     try {
       if (photo.path && fs.existsSync(photo.path)) fs.unlinkSync(photo.path);
@@ -549,10 +552,10 @@ export const deletePhoto = async (req: Request, res: Response) => {
     } catch (err) {
       console.error(`Errore nell'eliminazione del file ${photo.filename}:`, err);
     }
-    
+
     // Elimina dal database
     await db.delete(photos).where(eq(photos.id, Number(id)));
-    
+
     res.json({ success: true, message: "Foto eliminata con successo" });
   } catch (error) {
     console.error("Errore nell'eliminazione della foto:", error);
@@ -565,24 +568,24 @@ export const generateGalleryQRCode = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { size = 300 } = req.query;
-    
+
     // Recupera lo slug della galleria
     const [gallery] = await db
       .select()
       .from(galleries)
       .where(eq(galleries.id, Number(id)));
-    
+
     if (!gallery) {
       return res.status(404).json({ error: "Galleria non trovata" });
     }
-    
+
     // URL della galleria
     const galleryUrl = `${req.protocol}://${req.get('host')}/gallery/${gallery.slug}`;
-    
+
     // Nome del file QR
     const qrFilename = `gallery-${gallery.id}-qr.png`;
     const qrPath = path.join(QR_DIR, qrFilename);
-    
+
     // Genera il QR code
     await QRCode.toFile(qrPath, galleryUrl, {
       width: Number(size),
@@ -592,7 +595,7 @@ export const generateGalleryQRCode = async (req: Request, res: Response) => {
         light: '#FFFFFF'
       }
     });
-    
+
     // Invia il file
     res.sendFile(qrPath);
   } catch (error) {
@@ -607,7 +610,7 @@ export const generateGalleryQRCode = async (req: Request, res: Response) => {
 export const subscribeToGallery = async (req: Request, res: Response) => {
   try {
     const subscriptionData = insertGallerySubscriptionSchema.parse(req.body);
-    
+
     // Controlla se l'email è già sottoscritta
     const existingSubscription = await db
       .select()
@@ -616,11 +619,11 @@ export const subscribeToGallery = async (req: Request, res: Response) => {
         eq(gallerySubscriptions.galleryId, subscriptionData.galleryId),
         eq(gallerySubscriptions.email, subscriptionData.email)
       ));
-    
+
     if (existingSubscription.length > 0) {
       return res.status(400).json({ error: "Questa email è già sottoscritta agli aggiornamenti" });
     }
-    
+
     const [newSubscription] = await db
       .insert(gallerySubscriptions)
       .values({
@@ -630,9 +633,9 @@ export const subscribeToGallery = async (req: Request, res: Response) => {
         isConfirmed: false
       })
       .returning();
-    
+
     // Qui si invierebbe un'email di conferma
-    
+
     res.status(201).json({ success: true, message: "Sottoscrizione creata con successo" });
   } catch (error) {
     console.error("Errore nella creazione della sottoscrizione:", error);
@@ -646,12 +649,12 @@ export const subscribeToGallery = async (req: Request, res: Response) => {
 export const trackSocialShare = async (req: Request, res: Response) => {
   try {
     const { galleryId, photoId, platform, tagged, postUrl } = req.body;
-    
+
     // Ottieni informazioni sulla sessione / utente
     const sessionId = req.sessionID || uuidv4();
     const userId = req.user?.id;
     const clientId = req.body.clientId || null;
-    
+
     const [socialShare] = await db
       .insert(socialShares)
       .values({
@@ -669,7 +672,7 @@ export const trackSocialShare = async (req: Request, res: Response) => {
         referrer: req.headers.referer
       })
       .returning();
-    
+
     res.status(201).json({ success: true, socialShare });
   } catch (error) {
     console.error("Errore nel tracciamento della condivisione social:", error);
@@ -684,11 +687,11 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
   try {
     const { photoId } = req.params;
     const { galleryId, selectionType, notes } = req.body;
-    
+
     // Ottieni informazioni sulla sessione / utente
     const sessionId = req.sessionID || uuidv4();
     const clientId = req.user?.id || (req.body.clientId ? Number(req.body.clientId) : null);
-    
+
     // Controlla se esiste già una selezione
     const existingSelection = await db
       .select()
@@ -698,7 +701,7 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
         eq(photoSelections.galleryId, Number(galleryId)),
         clientId ? eq(photoSelections.clientId, clientId) : eq(photoSelections.sessionId, sessionId)
       ));
-    
+
     // Se esiste, aggiorna o elimina
     if (existingSelection.length > 0) {
       if (selectionType === 'none') {
@@ -706,7 +709,7 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
         await db
           .delete(photoSelections)
           .where(eq(photoSelections.id, existingSelection[0].id));
-        
+
         return res.json({ success: true, action: 'removed' });
       } else {
         // Aggiorna il tipo di selezione
@@ -718,7 +721,7 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
           })
           .where(eq(photoSelections.id, existingSelection[0].id))
           .returning();
-        
+
         return res.json({ success: true, action: 'updated', selection: updatedSelection });
       }
     } else if (selectionType !== 'none') {
@@ -735,10 +738,10 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
           createdAt: new Date()
         })
         .returning();
-      
+
       return res.status(201).json({ success: true, action: 'added', selection: newSelection });
     }
-    
+
     res.json({ success: true, action: 'none' });
   } catch (error) {
     console.error("Errore nella gestione della selezione:", error);
@@ -750,16 +753,16 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
 export const getClientSelections = async (req: Request, res: Response) => {
   try {
     const { galleryId } = req.params;
-    
+
     // Ottieni informazioni sulla sessione / utente
     const sessionId = req.sessionID;
     const clientId = req.user?.id || (req.query.clientId ? Number(req.query.clientId) : null);
-    
+
     let query = db
       .select()
       .from(photoSelections)
       .where(eq(photoSelections.galleryId, Number(galleryId)));
-    
+
     if (clientId) {
       query = query.where(eq(photoSelections.clientId, clientId));
     } else if (sessionId) {
@@ -767,9 +770,9 @@ export const getClientSelections = async (req: Request, res: Response) => {
     } else {
       return res.status(400).json({ error: "È necessario un ID cliente o una sessione" });
     }
-    
+
     const selections = await query;
-    
+
     res.json(selections);
   } catch (error) {
     console.error("Errore nel recupero delle selezioni:", error);

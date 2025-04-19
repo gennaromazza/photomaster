@@ -4,6 +4,7 @@ import { transactions, quotes, scheduledPayments, clients } from "@shared/schema
 import { format, parseISO, isAfter, isBefore, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { it } from "date-fns/locale";
 import { sendPaymentNotification } from "../services/email-service";
+import { storage } from "../storage";
 
 /**
  * Controller per la gestione delle finanze:
@@ -674,6 +675,7 @@ export const financeController = {
         
       // Recupero anche il preventivo tramite storage per ottenere i campi virtuali
       const quoteWithTotal = await storage.getQuote(quoteId);
+      console.log(`Quote from storage for ID ${quoteId}:`, quoteWithTotal);
 
       if (!quote) {
         throw new Error("Preventivo non trovato");

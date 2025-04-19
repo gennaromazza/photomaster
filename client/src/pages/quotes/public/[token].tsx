@@ -540,9 +540,16 @@ export default function PublicQuotePage() {
         {modules && modules.length > 0 && (
           <Card className="mb-8 border-primary/20">
             <CardHeader className="bg-primary/5 border-b">
-              <CardTitle className="flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-primary" />
-                {modules.length > 1 ? "Moduli" : "Modulo"}
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-primary" />
+                  {modules.length > 1 ? "Moduli" : "Modulo"}
+                </div>
+                {quote.modulesSum > 0 && (
+                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 font-medium border-green-200">
+                    Totale Moduli: {(quote.modulesSum / 100).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5">

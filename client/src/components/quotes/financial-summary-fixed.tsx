@@ -1,15 +1,32 @@
-import React, { useState, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, parseISO, isAfter, isBefore } from 'date-fns';
-import { it } from 'date-fns/locale';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { ArrowUpRight, ArrowDownRight, Euro, Plus, Calendar, AlertCircle, Check, Clock, Trash2, Edit } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import React, { useState, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format, parseISO, isAfter, isBefore } from "date-fns";
+import { it } from "date-fns/locale";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  Euro,
+  Plus,
+  Calendar,
+  AlertCircle,
+  Check,
+  Clock,
+  Trash2,
+  Edit,
+} from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -17,7 +34,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -27,19 +44,19 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,13 +78,13 @@ interface FinancialSummaryProps {
   quoteStatus?: string; // Lo stato del preventivo per verificare se è firmato
 }
 
-export function FinancialSummary({ 
-  quoteId, 
-  quoteTotal = 0, 
-  totalAmount, 
-  readOnly = false, 
-  clientName = '',
-  quoteStatus = ''
+export function FinancialSummary({
+  quoteId,
+  quoteTotal = 0,
+  totalAmount,
+  readOnly = false,
+  clientName = "",
+  quoteStatus = "",
 }: FinancialSummaryProps) {
   // Usa totalAmount se fornito, altrimenti usa quoteTotal
   const totalPreventivo = totalAmount !== undefined ? totalAmount : quoteTotal;
@@ -76,278 +93,315 @@ export function FinancialSummary({
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isAddScheduledOpen, setIsAddScheduledOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(
+    null,
+  );
   const [isEditingPayment, setIsEditingPayment] = useState(false);
-  
+
   // Riferimenti ai form
   const transactionFormRef = useRef<HTMLFormElement>(null);
   const scheduledFormRef = useRef<HTMLFormElement>(null);
-  
+
   // Stati per i form
   const [transactionData, setTransactionData] = useState({
-    amount: '',
-    date: format(new Date(), 'yyyy-MM-dd'),
-    method: '',
-    reference: '',
-    description: '',
-    notes: ''
+    amount: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    method: "",
+    reference: "",
+    description: "",
+    notes: "",
   });
-  
+
   const [scheduledData, setScheduledData] = useState({
-    amount: '',
-    dueDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    description: '',
-    paymentMethod: '',
-    notes: ''
+    amount: "",
+    dueDate: format(
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      "yyyy-MM-dd",
+    ),
+    description: "",
+    paymentMethod: "",
+    notes: "",
   });
-  
+
   // Ottieni le transazioni per questo preventivo
-  const { 
+  const {
     data: transactions = [],
     isLoading: transactionsLoading,
-    refetch: refetchTransactions
+    refetch: refetchTransactions,
   } = useQuery({
-    queryKey: ['/api/finance/transactions/quote', quoteId],
+    queryKey: ["/api/finance/transactions/quote", quoteId],
     refetchOnWindowFocus: true, // Ricarica quando l'utente torna sulla pagina
-    staleTime: 5000 // Considera i dati validi per 5 secondi per evitare richieste eccessive
+    staleTime: 5000, // Considera i dati validi per 5 secondi per evitare richieste eccessive
   });
-  
+
   // Ottieni i pagamenti programmati per questo preventivo
-  const { 
+  const {
     data: scheduledPayments = [],
     isLoading: scheduledLoading,
-    refetch: refetchScheduled
+    refetch: refetchScheduled,
   } = useQuery({
-    queryKey: ['/api/finance/scheduled/quote', quoteId],
+    queryKey: ["/api/finance/scheduled/quote", quoteId],
     refetchOnWindowFocus: true, // Ricarica quando l'utente torna sulla pagina
-    staleTime: 5000 // Considera i dati validi per 5 secondi per evitare richieste eccessive
+    staleTime: 5000, // Considera i dati validi per 5 secondi per evitare richieste eccessive
   });
-  
+
   // Mutation per creare una nuova transazione
   const createTransactionMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/finance/transactions', data);
+      const response = await apiRequest(
+        "POST",
+        "/api/finance/transactions",
+        data,
+      );
       return response.json();
     },
     onSuccess: () => {
       setIsAddTransactionOpen(false);
       setTransactionData({
-        amount: '',
-        date: format(new Date(), 'yyyy-MM-dd'),
-        method: '',
-        reference: '',
-        description: '',
-        notes: ''
+        amount: "",
+        date: format(new Date(), "yyyy-MM-dd"),
+        method: "",
+        reference: "",
+        description: "",
+        notes: "",
       });
-      
+
       // Invalida le query e forza un aggiornamento immediato
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
-      
+      queryClient.invalidateQueries({
+        queryKey: ["/api/finance/transactions/quote", quoteId],
+      });
+
       // Forza il refetch per aggiornare immediatamente i dati visualizzati
       refetchTransactions();
-      
+
       // Invalida anche altre queries che potrebbero dipendere da questi dati
-      queryClient.invalidateQueries({ queryKey: ['/api/quotes', quoteId] });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+
       toast({
-        title: 'Pagamento registrato',
-        description: 'Il pagamento è stato registrato con successo.',
+        title: "Pagamento registrato",
+        description: "Il pagamento è stato registrato con successo.",
       });
     },
     onError: (error: any) => {
-      console.error('Errore nella registrazione del pagamento:', error);
+      console.error("Errore nella registrazione del pagamento:", error);
       toast({
-        title: 'Errore',
-        description: 'Impossibile registrare il pagamento. Riprova più tardi.',
-        variant: 'destructive',
+        title: "Errore",
+        description: "Impossibile registrare il pagamento. Riprova più tardi.",
+        variant: "destructive",
       });
     },
   });
-  
+
   // Mutation per creare un nuovo pagamento programmato
   const createScheduledPaymentMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/finance/scheduled-payments', data);
+      const response = await apiRequest(
+        "POST",
+        "/api/finance/scheduled-payments",
+        data,
+      );
       return response.json();
     },
     onSuccess: () => {
       setIsAddScheduledOpen(false);
       setScheduledData({
-        amount: '',
-        dueDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-        description: '',
-        paymentMethod: '',
-        notes: ''
+        amount: "",
+        dueDate: format(
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          "yyyy-MM-dd",
+        ),
+        description: "",
+        paymentMethod: "",
+        notes: "",
       });
-      
+
       // Invalida le query per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
-      
+      queryClient.invalidateQueries({
+        queryKey: ["/api/finance/scheduled/quote", quoteId],
+      });
+
       // Forza il refetch immediato dei dati
       refetchScheduled();
-      
+
       // Invalida anche altre queries che potrebbero dipendere da questi dati
-      queryClient.invalidateQueries({ queryKey: ['/api/quotes', quoteId] });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+
       toast({
-        title: 'Rata programmata',
-        description: 'La rata di pagamento è stata programmata con successo.',
+        title: "Rata programmata",
+        description: "La rata di pagamento è stata programmata con successo.",
       });
     },
     onError: (error: any) => {
-      console.error('Errore nella programmazione della rata:', error);
+      console.error("Errore nella programmazione della rata:", error);
       toast({
-        title: 'Errore',
-        description: 'Impossibile programmare la rata. Riprova più tardi.',
-        variant: 'destructive',
+        title: "Errore",
+        description: "Impossibile programmare la rata. Riprova più tardi.",
+        variant: "destructive",
       });
     },
   });
-  
+
   // Mutation per eliminare un pagamento programmato
   const deleteScheduledPaymentMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest('DELETE', `/api/finance/scheduled-payments/${id}`);
+      const response = await apiRequest(
+        "DELETE",
+        `/api/finance/scheduled-payments/${id}`,
+      );
       return response.json();
     },
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
-      
+      queryClient.invalidateQueries({
+        queryKey: ["/api/finance/scheduled/quote", quoteId],
+      });
+
       // Forza il refetch immediato
       refetchScheduled();
-      
+
       // Invalida anche altre queries che potrebbero dipendere da questi dati
-      queryClient.invalidateQueries({ queryKey: ['/api/quotes', quoteId] });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+
       toast({
-        title: 'Rata eliminata',
-        description: 'La rata di pagamento è stata eliminata con successo.',
+        title: "Rata eliminata",
+        description: "La rata di pagamento è stata eliminata con successo.",
       });
     },
     onError: (error: any) => {
-      console.error('Errore nell\'eliminazione della rata:', error);
+      console.error("Errore nell'eliminazione della rata:", error);
       toast({
-        title: 'Errore',
-        description: 'Impossibile eliminare la rata. Riprova più tardi.',
-        variant: 'destructive',
+        title: "Errore",
+        description: "Impossibile eliminare la rata. Riprova più tardi.",
+        variant: "destructive",
       });
     },
   });
-  
+
   // Mutation per registrare un pagamento programmato
   const markAsPaidMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/finance/transactions', data);
+      const response = await apiRequest(
+        "POST",
+        "/api/finance/transactions",
+        data,
+      );
       return response.json();
     },
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/transactions/quote', quoteId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/finance/scheduled/quote', quoteId] });
-      
+      queryClient.invalidateQueries({
+        queryKey: ["/api/finance/transactions/quote", quoteId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/finance/scheduled/quote", quoteId],
+      });
+
       // Forza il refetch immediato dei dati
       refetchTransactions();
       refetchScheduled();
-      
+
       // Invalida anche altre queries che potrebbero dipendere da questi dati
-      queryClient.invalidateQueries({ queryKey: ['/api/quotes', quoteId] });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+
       toast({
-        title: 'Pagamento registrato',
-        description: 'La rata di pagamento è stata registrata come pagata.',
+        title: "Pagamento registrato",
+        description: "La rata di pagamento è stata registrata come pagata.",
       });
     },
     onError: (error: any) => {
-      console.error('Errore nella registrazione del pagamento:', error);
+      console.error("Errore nella registrazione del pagamento:", error);
       toast({
-        title: 'Errore',
-        description: 'Impossibile registrare il pagamento. Riprova più tardi.',
-        variant: 'destructive',
+        title: "Errore",
+        description: "Impossibile registrare il pagamento. Riprova più tardi.",
+        variant: "destructive",
       });
     },
   });
-  
+
   // Funzione per gestire la sottomissione del form di transazione
   const handleTransactionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Verifica che il preventivo sia firmato prima di permettere l'aggiunta di pagamenti
     if (!isQuoteSigned()) {
       toast({
-        title: 'Operazione non consentita',
-        description: 'Puoi registrare pagamenti solo dopo che il preventivo è stato firmato dal cliente.',
-        variant: 'destructive',
+        title: "Operazione non consentita",
+        description:
+          "Puoi registrare pagamenti solo dopo che il preventivo è stato firmato dal cliente.",
+        variant: "destructive",
       });
       return;
     }
-    
+
     // Validazione dei campi richiesti
     if (!transactionData.amount || !transactionData.date) {
       toast({
-        title: 'Errore di validazione',
-        description: 'Importo e data sono campi obbligatori.',
-        variant: 'destructive',
+        title: "Errore di validazione",
+        description: "Importo e data sono campi obbligatori.",
+        variant: "destructive",
       });
       return;
     }
-    
+
     // Prepara l'oggetto transazione
     const newTransaction = {
-      type: 'income',
+      type: "income",
       amount: parseFloat(transactionData.amount),
       date: transactionData.date, // Inviamo la data come stringa, sarà formattata lato server
-      description: transactionData.description || `Pagamento per preventivo #${quoteId}`,
+      description:
+        transactionData.description || `Pagamento per preventivo #${quoteId}`,
       quoteId: quoteId, // Utilizziamo il nome del campo corretto
-      status: 'completed',
+      status: "completed",
       paymentMethod: transactionData.method || null,
       reference: transactionData.reference || null,
-      notes: transactionData.notes || null
+      notes: transactionData.notes || null,
     };
-    
+
     // Invia la richiesta per creare la transazione
     createTransactionMutation.mutate(newTransaction);
   };
-  
+
   // Funzione per gestire la sottomissione del form di pagamento programmato
   const handleScheduledSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Verifica che il preventivo sia firmato prima di permettere l'aggiunta di pagamenti programmati
     if (!isQuoteSigned()) {
       toast({
-        title: 'Operazione non consentita',
-        description: 'Puoi programmare pagamenti solo dopo che il preventivo è stato firmato dal cliente.',
-        variant: 'destructive',
+        title: "Operazione non consentita",
+        description:
+          "Puoi programmare pagamenti solo dopo che il preventivo è stato firmato dal cliente.",
+        variant: "destructive",
       });
       return;
     }
-    
+
     // Validazione dei campi richiesti
     if (!scheduledData.amount || !scheduledData.dueDate) {
       toast({
-        title: 'Errore di validazione',
-        description: 'Importo e data di scadenza sono campi obbligatori.',
-        variant: 'destructive',
+        title: "Errore di validazione",
+        description: "Importo e data di scadenza sono campi obbligatori.",
+        variant: "destructive",
       });
       return;
     }
-    
+
     // Prepara l'oggetto pagamento programmato
     const newScheduledPayment = {
       quoteId,
       amount: parseFloat(scheduledData.amount),
       dueDate: scheduledData.dueDate, // Inviamo la data come stringa, verrà formattata dal server
-      description: scheduledData.description || `Rata per preventivo #${quoteId}`,
-      status: 'pending',
+      description:
+        scheduledData.description || `Rata per preventivo #${quoteId}`,
+      status: "pending",
       paymentMethod: scheduledData.paymentMethod || null,
-      notes: scheduledData.notes || null
+      notes: scheduledData.notes || null,
     };
-    
+
     // Invia la richiesta per creare il pagamento programmato
     createScheduledPaymentMutation.mutate(newScheduledPayment);
   };
-  
+
   // Funzione per eliminare un pagamento programmato
   const handleDeleteScheduledPayment = () => {
     if (selectedPaymentId) {
@@ -356,80 +410,86 @@ export function FinancialSummary({
       setSelectedPaymentId(null);
     }
   };
-  
+
   // Funzione per registrare un pagamento per una rata programmata
   const handleMarkAsPaid = (payment: any) => {
     // Verifica che il preventivo sia firmato prima di permettere la registrazione del pagamento
     if (!isQuoteSigned()) {
       toast({
-        title: 'Operazione non consentita',
-        description: 'Puoi registrare pagamenti solo dopo che il preventivo è stato firmato dal cliente.',
-        variant: 'destructive',
+        title: "Operazione non consentita",
+        description:
+          "Puoi registrare pagamenti solo dopo che il preventivo è stato firmato dal cliente.",
+        variant: "destructive",
       });
       return;
     }
-    
+
     const transactionData = {
-      type: 'income',
+      type: "income",
       amount: parseFloat(payment.amount),
-      date: format(new Date(), 'yyyy-MM-dd'), // Inviamo la data come stringa formattata
-      description: payment.description || `Pagamento per preventivo #${quoteId}`,
+      date: format(new Date(), "yyyy-MM-dd"), // Inviamo la data come stringa formattata
+      description:
+        payment.description || `Pagamento per preventivo #${quoteId}`,
       quoteId: quoteId, // Utilizziamo il nome del campo corretto
-      status: 'completed',
+      status: "completed",
       paymentMethod: payment.paymentMethod || null,
       notes: payment.notes || null,
-      scheduledPaymentId: payment.id // Collegamento alla rata programmata
+      scheduledPaymentId: payment.id, // Collegamento alla rata programmata
     };
-    
+
     markAsPaidMutation.mutate(transactionData);
   };
-  
+
   // Utilizziamo la funzione formatCurrency importata da utils.ts
   // La funzione importata gestisce la conversione da centesimi a euro
   // Nota: poiché nell'applicazione ora passiamo già i valori in centesimi,
   // non è più necessario moltiplicare per 100 nella nostra funzione formatAmount
   const formatAmount = (amount: number) => {
     return formatCurrency(amount);
-  }
-  
+  };
+
   // Calcola il totale pagato
   const totalPaid = transactions
-    .filter((t: any) => t.type === 'income' || t.type === 'entrata')
+    .filter((t: any) => t.type === "income" || t.type === "entrata")
     .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0);
-  
+
   // Calcola il saldo da pagare
   const remainingBalance = totalPreventivo - totalPaid;
-  
+
   // Calcola il totale dei pagamenti programmati
   const totalScheduled = scheduledPayments
-    .filter((p: any) => p.status === 'pending' || p.status === 'overdue')
+    .filter((p: any) => p.status === "pending" || p.status === "overdue")
     .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
-  
+
   // Verifica se il preventivo è firmato (status=confermato o approved)
   const isQuoteSigned = (): boolean => {
     // Se siamo in modalità sola lettura (link pubblico), consideriamo il preventivo firmato
     if (readOnly) return true;
-    
+
     // Altrimenti controlliamo lo status del preventivo
-    return quoteStatus === 'confermato' || quoteStatus === 'approved';
+    return quoteStatus === "confermato" || quoteStatus === "approved";
   };
-  
+
   // Badge di stato per i pagamenti programmati
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'paid':
+      case "paid":
         return <Badge variant="success">Pagato</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="bg-amber-100 text-amber-800">In attesa</Badge>;
-      case 'overdue':
+      case "pending":
+        return (
+          <Badge variant="outline" className="bg-amber-100 text-amber-800">
+            In attesa
+          </Badge>
+        );
+      case "overdue":
         return <Badge variant="destructive">Scaduto</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
-  
+
   // Nota: L'avviso di preventivo non firmato è stato spostato nel componente FinancialSummaryWrapper
-  
+
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-3">
@@ -446,12 +506,10 @@ export function FinancialSummary({
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Totale Pagato
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Totale Pagato</CardTitle>
             <ArrowUpRight className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -464,12 +522,17 @@ export function FinancialSummary({
             </div>
             {!transactionsLoading && (
               <p className="text-xs text-muted-foreground mt-1">
-                {transactions.filter((t: any) => t.type === 'income' || t.type === 'entrata').length} pagamenti registrati
+                {
+                  transactions.filter(
+                    (t: any) => t.type === "income" || t.type === "entrata",
+                  ).length
+                }{" "}
+                pagamenti registrati
               </p>
             )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -489,17 +552,24 @@ export function FinancialSummary({
               <p className="text-xs text-muted-foreground mt-1">
                 {totalScheduled > 0 ? (
                   <>
-                    {formatAmount(totalScheduled)} programmati in {
-                      scheduledPayments.filter((p: any) => p.status === 'pending' || p.status === 'overdue').length
-                    } rate
+                    {formatAmount(totalScheduled)} programmati in{" "}
+                    {
+                      scheduledPayments.filter(
+                        (p: any) =>
+                          p.status === "pending" || p.status === "overdue",
+                      ).length
+                    }{" "}
+                    rate
                   </>
-                ) : 'Nessun pagamento programmato'}
+                ) : (
+                  "Nessun pagamento programmato"
+                )}
               </p>
             )}
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -509,14 +579,21 @@ export function FinancialSummary({
                 Pagamenti registrati per questo preventivo
               </CardDescription>
             </div>
-            
+
             {!readOnly && (
-              <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
+              <Dialog
+                open={isAddTransactionOpen}
+                onOpenChange={setIsAddTransactionOpen}
+              >
                 <DialogTrigger asChild>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     disabled={!isQuoteSigned()}
-                    title={!isQuoteSigned() ? "Puoi aggiungere pagamenti solo dopo che il preventivo è stato firmato" : ""}
+                    title={
+                      !isQuoteSigned()
+                        ? "Puoi aggiungere pagamenti solo dopo che il preventivo è stato firmato"
+                        : ""
+                    }
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Aggiungi Pagamento
@@ -526,11 +603,16 @@ export function FinancialSummary({
                   <DialogHeader>
                     <DialogTitle>Registra un nuovo pagamento</DialogTitle>
                     <DialogDescription>
-                      Inserisci i dettagli del pagamento ricevuto {clientName ? `da ${clientName}` : 'dal cliente'}.
+                      Inserisci i dettagli del pagamento ricevuto{" "}
+                      {clientName ? `da ${clientName}` : "dal cliente"}.
                     </DialogDescription>
                   </DialogHeader>
-                  
-                  <form ref={transactionFormRef} onSubmit={handleTransactionSubmit} className="space-y-4 py-4">
+
+                  <form
+                    ref={transactionFormRef}
+                    onSubmit={handleTransactionSubmit}
+                    className="space-y-4 py-4"
+                  >
                     <div className="space-y-2">
                       <Label htmlFor="amount">Importo *</Label>
                       <div className="relative">
@@ -542,38 +624,58 @@ export function FinancialSummary({
                           type="number"
                           step="0.01"
                           value={transactionData.amount}
-                          onChange={(e) => setTransactionData({...transactionData, amount: e.target.value})}
+                          onChange={(e) =>
+                            setTransactionData({
+                              ...transactionData,
+                              amount: e.target.value,
+                            })
+                          }
                           required
                         />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="date">Data pagamento *</Label>
                       <Input
                         id="date"
                         type="date"
                         value={transactionData.date}
-                        onChange={(e) => setTransactionData({...transactionData, date: e.target.value})}
+                        onChange={(e) =>
+                          setTransactionData({
+                            ...transactionData,
+                            date: e.target.value,
+                          })
+                        }
                         required
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="description">Descrizione</Label>
                       <Input
                         id="description"
                         placeholder="Acconto, Saldo, ecc."
                         value={transactionData.description}
-                        onChange={(e) => setTransactionData({...transactionData, description: e.target.value})}
+                        onChange={(e) =>
+                          setTransactionData({
+                            ...transactionData,
+                            description: e.target.value,
+                          })
+                        }
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="method">Metodo di pagamento</Label>
-                      <Select 
-                        value={transactionData.method} 
-                        onValueChange={(value) => setTransactionData({...transactionData, method: value})}
+                      <Select
+                        value={transactionData.method}
+                        onValueChange={(value) =>
+                          setTransactionData({
+                            ...transactionData,
+                            method: value,
+                          })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleziona metodo" />
@@ -581,23 +683,30 @@ export function FinancialSummary({
                         <SelectContent>
                           <SelectItem value="contanti">Contanti</SelectItem>
                           <SelectItem value="bonifico">Bonifico</SelectItem>
-                          <SelectItem value="carta">Carta di Credito/Debito</SelectItem>
+                          <SelectItem value="carta">
+                            Carta di Credito/Debito
+                          </SelectItem>
                           <SelectItem value="assegno">Assegno</SelectItem>
                           <SelectItem value="altro">Altro</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="reference">Riferimento</Label>
                       <Input
                         id="reference"
                         placeholder="Numero transazione, ricevuta, ecc."
                         value={transactionData.reference}
-                        onChange={(e) => setTransactionData({...transactionData, reference: e.target.value})}
+                        onChange={(e) =>
+                          setTransactionData({
+                            ...transactionData,
+                            reference: e.target.value,
+                          })
+                        }
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="notes">Note</Label>
                       <Textarea
@@ -605,20 +714,48 @@ export function FinancialSummary({
                         placeholder="Eventuali note sul pagamento..."
                         rows={3}
                         value={transactionData.notes}
-                        onChange={(e) => setTransactionData({...transactionData, notes: e.target.value})}
+                        onChange={(e) =>
+                          setTransactionData({
+                            ...transactionData,
+                            notes: e.target.value,
+                          })
+                        }
                       />
                     </div>
-                  
+
                     <DialogFooter className="mt-6">
-                      <Button variant="outline" type="button" onClick={() => setIsAddTransactionOpen(false)}>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={() => setIsAddTransactionOpen(false)}
+                      >
                         Annulla
                       </Button>
-                      <Button type="submit" disabled={createTransactionMutation.isPending}>
+                      <Button
+                        type="submit"
+                        disabled={createTransactionMutation.isPending}
+                      >
                         {createTransactionMutation.isPending ? (
                           <>
-                            <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <svg
+                              className="mr-2 h-4 w-4 animate-spin"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
                             </svg>
                             Registrazione...
                           </>
@@ -652,18 +789,23 @@ export function FinancialSummary({
                 </TableHeader>
                 <TableBody>
                   {transactions
-                    .filter((t: any) => t.type === 'income' || t.type === 'entrata')
+                    .filter(
+                      (t: any) => t.type === "income" || t.type === "entrata",
+                    )
                     .map((transaction: any) => (
                       <TableRow key={transaction.id}>
                         <TableCell className="font-medium">
-                          {format(new Date(transaction.date), 'dd/MM/yyyy')}
+                          {format(new Date(transaction.date), "dd/MM/yyyy")}
                         </TableCell>
                         <TableCell>
-                          <div className="font-medium">{transaction.description}</div>
+                          <div className="font-medium">
+                            {transaction.description}
+                          </div>
                           {transaction.paymentMethod && (
                             <div className="text-xs text-muted-foreground">
                               Pagamento con {transaction.paymentMethod}
-                              {transaction.reference && ` (${transaction.reference})`}
+                              {transaction.reference &&
+                                ` (${transaction.reference})`}
                             </div>
                           )}
                         </TableCell>
@@ -677,19 +819,19 @@ export function FinancialSummary({
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
                 <Euro className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">Nessun pagamento registrato</h3>
+                <h3 className="text-lg font-medium">
+                  Nessun pagamento registrato
+                </h3>
                 <p className="text-sm">
-                  {isQuoteSigned() ? (
-                    'Non sono ancora stati registrati pagamenti per questo preventivo.'
-                  ) : (
-                    'I pagamenti potranno essere registrati solo dopo che il preventivo sarà stato firmato dal cliente.'
-                  )}
+                  {isQuoteSigned()
+                    ? "Non sono ancora stati registrati pagamenti per questo preventivo."
+                    : "I pagamenti potranno essere registrati solo dopo che il preventivo sarà stato firmato dal cliente."}
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -698,14 +840,21 @@ export function FinancialSummary({
                 Pagamenti programmati per questo preventivo
               </CardDescription>
             </div>
-            
+
             {!readOnly && (
-              <Dialog open={isAddScheduledOpen} onOpenChange={setIsAddScheduledOpen}>
+              <Dialog
+                open={isAddScheduledOpen}
+                onOpenChange={setIsAddScheduledOpen}
+              >
                 <DialogTrigger asChild>
-                  <Button 
+                  <Button
                     size="sm"
                     disabled={!isQuoteSigned()}
-                    title={!isQuoteSigned() ? "Puoi programmare pagamenti solo dopo che il preventivo è stato firmato" : ""}
+                    title={
+                      !isQuoteSigned()
+                        ? "Puoi programmare pagamenti solo dopo che il preventivo è stato firmato"
+                        : ""
+                    }
                   >
                     <Calendar className="h-4 w-4 mr-2" />
                     Aggiungi Rata
@@ -715,11 +864,16 @@ export function FinancialSummary({
                   <DialogHeader>
                     <DialogTitle>Programma un pagamento</DialogTitle>
                     <DialogDescription>
-                      Inserisci i dettagli della rata da programmare per {clientName ? clientName : 'il cliente'}.
+                      Inserisci i dettagli della rata da programmare per{" "}
+                      {clientName ? clientName : "il cliente"}.
                     </DialogDescription>
                   </DialogHeader>
-                  
-                  <form ref={scheduledFormRef} onSubmit={handleScheduledSubmit} className="space-y-4 py-4">
+
+                  <form
+                    ref={scheduledFormRef}
+                    onSubmit={handleScheduledSubmit}
+                    className="space-y-4 py-4"
+                  >
                     <div className="space-y-2">
                       <Label htmlFor="amount">Importo *</Label>
                       <div className="relative">
@@ -731,38 +885,60 @@ export function FinancialSummary({
                           type="number"
                           step="0.01"
                           value={scheduledData.amount}
-                          onChange={(e) => setScheduledData({...scheduledData, amount: e.target.value})}
+                          onChange={(e) =>
+                            setScheduledData({
+                              ...scheduledData,
+                              amount: e.target.value,
+                            })
+                          }
                           required
                         />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="dueDate">Data di scadenza *</Label>
                       <Input
                         id="dueDate"
                         type="date"
                         value={scheduledData.dueDate}
-                        onChange={(e) => setScheduledData({...scheduledData, dueDate: e.target.value})}
+                        onChange={(e) =>
+                          setScheduledData({
+                            ...scheduledData,
+                            dueDate: e.target.value,
+                          })
+                        }
                         required
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="description">Descrizione</Label>
                       <Input
                         id="description"
                         placeholder="Prima rata, Saldo, ecc."
                         value={scheduledData.description}
-                        onChange={(e) => setScheduledData({...scheduledData, description: e.target.value})}
+                        onChange={(e) =>
+                          setScheduledData({
+                            ...scheduledData,
+                            description: e.target.value,
+                          })
+                        }
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor="paymentMethod">Metodo di pagamento consigliato</Label>
-                      <Select 
-                        value={scheduledData.paymentMethod} 
-                        onValueChange={(value) => setScheduledData({...scheduledData, paymentMethod: value})}
+                      <Label htmlFor="paymentMethod">
+                        Metodo di pagamento consigliato
+                      </Label>
+                      <Select
+                        value={scheduledData.paymentMethod}
+                        onValueChange={(value) =>
+                          setScheduledData({
+                            ...scheduledData,
+                            paymentMethod: value,
+                          })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleziona metodo" />
@@ -770,13 +946,15 @@ export function FinancialSummary({
                         <SelectContent>
                           <SelectItem value="contanti">Contanti</SelectItem>
                           <SelectItem value="bonifico">Bonifico</SelectItem>
-                          <SelectItem value="carta">Carta di Credito/Debito</SelectItem>
+                          <SelectItem value="carta">
+                            Carta di Credito/Debito
+                          </SelectItem>
                           <SelectItem value="assegno">Assegno</SelectItem>
                           <SelectItem value="altro">Altro</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="notes">Note</Label>
                       <Textarea
@@ -784,20 +962,48 @@ export function FinancialSummary({
                         placeholder="Eventuali note sulla rata..."
                         rows={3}
                         value={scheduledData.notes}
-                        onChange={(e) => setScheduledData({...scheduledData, notes: e.target.value})}
+                        onChange={(e) =>
+                          setScheduledData({
+                            ...scheduledData,
+                            notes: e.target.value,
+                          })
+                        }
                       />
                     </div>
-                  
+
                     <DialogFooter className="mt-6">
-                      <Button variant="outline" type="button" onClick={() => setIsAddScheduledOpen(false)}>
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={() => setIsAddScheduledOpen(false)}
+                      >
                         Annulla
                       </Button>
-                      <Button type="submit" disabled={createScheduledPaymentMutation.isPending}>
+                      <Button
+                        type="submit"
+                        disabled={createScheduledPaymentMutation.isPending}
+                      >
                         {createScheduledPaymentMutation.isPending ? (
                           <>
-                            <svg className="mr-2 h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <svg
+                              className="mr-2 h-4 w-4 animate-spin"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
                             </svg>
                             Salvataggio...
                           </>
@@ -827,7 +1033,9 @@ export function FinancialSummary({
                     <TableHead className="w-[100px]">Scadenza</TableHead>
                     <TableHead>Descrizione</TableHead>
                     <TableHead className="text-right">Importo</TableHead>
-                    {!readOnly && <TableHead className="w-[80px]">Azioni</TableHead>}
+                    {!readOnly && (
+                      <TableHead className="w-[80px]">Azioni</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -835,8 +1043,12 @@ export function FinancialSummary({
                     <TableRow key={payment.id}>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
-                          <span>{format(new Date(payment.dueDate), 'dd/MM/yyyy')}</span>
-                          <span className="mt-1">{getStatusBadge(payment.status)}</span>
+                          <span>
+                            {format(new Date(payment.dueDate), "dd/MM/yyyy")}
+                          </span>
+                          <span className="mt-1">
+                            {getStatusBadge(payment.status)}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -858,7 +1070,7 @@ export function FinancialSummary({
                       {!readOnly && (
                         <TableCell>
                           <div className="flex items-center justify-end space-x-1">
-                            {payment.status === 'pending' && (
+                            {payment.status === "pending" && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -868,13 +1080,22 @@ export function FinancialSummary({
                                 <Check className="h-4 w-4" />
                               </Button>
                             )}
-                            {(payment.status === 'pending' || payment.status === 'overdue') && (
-                              <AlertDialog open={isDeleteDialogOpen && selectedPaymentId === payment.id} onOpenChange={setIsDeleteDialogOpen}>
+                            {(payment.status === "pending" ||
+                              payment.status === "overdue") && (
+                              <AlertDialog
+                                open={
+                                  isDeleteDialogOpen &&
+                                  selectedPaymentId === payment.id
+                                }
+                                onOpenChange={setIsDeleteDialogOpen}
+                              >
                                 <AlertDialogTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => setSelectedPaymentId(payment.id)}
+                                    onClick={() =>
+                                      setSelectedPaymentId(payment.id)
+                                    }
                                     title="Elimina rata"
                                   >
                                     <Trash2 className="h-4 w-4 text-red-500" />
@@ -882,14 +1103,25 @@ export function FinancialSummary({
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Sei sicuro?</AlertDialogTitle>
+                                    <AlertDialogTitle>
+                                      Sei sicuro?
+                                    </AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Questa azione non può essere annullata. La rata di pagamento verrà eliminata definitivamente dal sistema.
+                                      Questa azione non può essere annullata. La
+                                      rata di pagamento verrà eliminata
+                                      definitivamente dal sistema.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel onClick={() => setSelectedPaymentId(null)}>Annulla</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDeleteScheduledPayment} className="bg-red-500 hover:bg-red-600">
+                                    <AlertDialogCancel
+                                      onClick={() => setSelectedPaymentId(null)}
+                                    >
+                                      Annulla
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleDeleteScheduledPayment}
+                                      className="bg-red-500 hover:bg-red-600"
+                                    >
                                       Elimina
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
@@ -906,18 +1138,22 @@ export function FinancialSummary({
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
                 <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">Nessuna rata programmata</h3>
+                <h3 className="text-lg font-medium">
+                  Nessuna rata programmata
+                </h3>
                 <p className="text-sm">
                   {isQuoteSigned() ? (
                     remainingBalance > 0 ? (
                       <>
-                        Questo preventivo ha un saldo di {formatAmount(remainingBalance)} da pagare, ma non hai ancora definito le rate di pagamento.
+                        Questo preventivo ha un saldo di{" "}
+                        {formatAmount(remainingBalance)} da pagare, ma non hai
+                        ancora definito le rate di pagamento.
                       </>
                     ) : (
-                      'Tutte le rate sono state pagate. Il preventivo è completamente saldato.'
+                      "Tutte le rate sono state pagate. Il preventivo è completamente saldato."
                     )
                   ) : (
-                    'Le rate di pagamento potranno essere programmate solo dopo che il preventivo sarà stato firmato dal cliente.'
+                    "Le rate di pagamento potranno essere programmate solo dopo che il preventivo sarà stato firmato dal cliente."
                   )}
                 </p>
               </div>

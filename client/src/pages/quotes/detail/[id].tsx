@@ -6,6 +6,7 @@ import "@/components/rich-text-content.css";
 // Rimuovo import Layout per evitare la duplicazione del layout
 import ModuleManager from "@/components/quotes/modules/module-manager";
 import { SecondClientForm } from "@/components/quotes/second-client-form";
+import { EventDetailsForm } from "@/components/quotes/event-details-form";
 import { FinancialSummaryWrapper } from "@/components/quotes/financial-summary-wrapper";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -887,10 +888,50 @@ export default function QuoteDetailPage() {
                 {/* Informazioni evento */}
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-xl flex items-center">
-                      <Calendar className="h-5 w-5 mr-2 text-primary/80" />
-                      Dettagli Evento
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-xl flex items-center">
+                        <Calendar className="h-5 w-5 mr-2 text-primary/80" />
+                        Dettagli Evento
+                      </CardTitle>
+                      {!quote.isSigned && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline" className="h-8 text-xs">
+                              <Pencil className="mr-1 h-3 w-3" />
+                              Modifica
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Modifica dettagli evento</DialogTitle>
+                              <DialogDescription>
+                                Aggiorna le informazioni relative all'evento per questo preventivo.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <EventDetailsForm 
+                              quoteId={parseInt(id)} 
+                              initialData={{
+                                eventDate: quote.eventDate ? new Date(quote.eventDate) : null,
+                                eventType: quote.eventType || null,
+                                location: quote.location || null,
+                                isFullDay: quote.isFullDay || false,
+                                eventTime: quote.eventTime || null,
+                                eventEndTime: quote.eventEndTime || null,
+                                ceremonyLocation: quote.ceremonyLocation || null,
+                                ceremonyTime: quote.ceremonyTime || null,
+                              }}
+                              onSuccess={() => {
+                                queryClient.invalidateQueries({ queryKey: ["/api/quotes", id] });
+                                toast({
+                                  title: "Dettagli aggiornati",
+                                  description: "I dettagli dell'evento sono stati aggiornati con successo",
+                                });
+                              }} 
+                            />
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

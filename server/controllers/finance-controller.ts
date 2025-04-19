@@ -12,6 +12,12 @@ import { sendPaymentNotification } from "../services/email-service";
  * - dashboard finanziaria
  */
 export const financeController = {
+  // Esponendo queste dipendenze per accesso diretto
+  db,
+  quotes,
+  transactions,
+  scheduledPayments,
+  eq,
   // TRANSAZIONI
 
   /**

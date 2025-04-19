@@ -43,6 +43,18 @@ router.get('/transactions/:id', async (req, res) => {
 // Crea una nuova transazione
 router.post('/transactions', async (req, res) => {
   try {
+    // Verifica se il preventivo è confermato
+    if (req.body.quoteId) {
+      const quoteId = parseInt(req.body.quoteId);
+      const [quote] = await financeController.db.select()
+        .from(financeController.quotes)
+        .where(financeController.eq(financeController.quotes.id, quoteId));
+
+      if (quote && quote.status !== "confermato" && quote.status !== "approved") {
+        return res.status(400).json({ error: "Operazione consentita solo su preventivi confermati" });
+      }
+    }
+    
     // Aggiungiamo l'utente corrente come creatore
     const data = {
       ...req.body,
@@ -137,6 +149,18 @@ router.get('/quotes/:quoteId/scheduled', async (req, res) => {
 // Crea un nuovo pagamento programmato
 router.post('/scheduled-payments', async (req, res) => {
   try {
+    // Verifica se il preventivo è confermato
+    if (req.body.quoteId) {
+      const quoteId = parseInt(req.body.quoteId);
+      const [quote] = await financeController.db.select()
+        .from(financeController.quotes)
+        .where(financeController.eq(financeController.quotes.id, quoteId));
+
+      if (quote && quote.status !== "confermato" && quote.status !== "approved") {
+        return res.status(400).json({ error: "Operazione consentita solo su preventivi confermati" });
+      }
+    }
+    
     const payment = await financeController.createScheduledPayment(req.body);
     res.status(201).json(payment);
   } catch (error) {

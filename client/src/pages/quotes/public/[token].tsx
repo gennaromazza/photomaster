@@ -31,6 +31,7 @@ import { CeremonyDetails } from "@/components/quotes/ceremony-details";
 import { PublicFixedModule } from "@/components/quotes/public-fixed-module";
 import { PublicVariableModule } from "@/components/quotes/public-variable-module";
 import { FinancialSummary } from "@/components/quotes/financial-summary";
+import { SignaturePad } from "@/components/quotes/signature-pad";
 import { Watermark } from "@/components/ui/watermark";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -714,35 +715,11 @@ export default function PublicQuotePage() {
                   e tutti i servizi/prodotti inclusi.
                 </p>
 
-                <div className="max-w-sm mx-auto space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signature">Nome e Cognome</Label>
-                    <Input
-                      id="signature"
-                      placeholder="Inserisci il tuo nome e cognome"
-                      value={signature}
-                      onChange={(e) => setSignature(e.target.value)}
-                    />
-                  </div>
-
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={handleSignQuote}
-                    disabled={!signature.trim() || isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Elaborazione...
-                      </>
-                    ) : (
-                      <>
-                        <FileSignature className="mr-2 h-4 w-4" />
-                        Firma e Conferma
-                      </>
-                    )}
-                  </Button>
+                <div className="max-w-sm mx-auto">
+                  <SignaturePad 
+                    onSignatureSubmit={handleSignQuote}
+                    isSubmitting={isSubmitting}
+                  />
                 </div>
               </div>
             )}

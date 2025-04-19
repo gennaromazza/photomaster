@@ -1,4 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Satisfy&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -143,5 +147,26 @@
   
   .badge-red {
     @apply bg-red-100 text-red-800;
+  }
+  
+  /* Classi per i font di firma */
+  .font-handwriting-dancing {
+    font-family: "Dancing Script", cursive;
+  }
+  
+  .font-handwriting-pacifico {
+    font-family: "Pacifico", cursive;
+  }
+  
+  .font-handwriting-satisfy {
+    font-family: "Satisfy", cursive;
+  }
+  
+  .font-handwriting-great-vibes {
+    font-family: "Great Vibes", cursive;
+  }
+  
+  .font-handwriting-caveat {
+    font-family: "Caveat", cursive;
   }
 }

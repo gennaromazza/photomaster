@@ -21,6 +21,13 @@ export function GlobalSearchBar() {
     resetSearch
   } = useGlobalSearch();
   
+  // Forza apertura del risultati su mobile quando il focus è attivo
+  const handleMobileFocus = () => {
+    if (window.innerWidth < 768) { // 768px è la breakpoint md di Tailwind
+      setIsOpen(true);
+    }
+  };
+  
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -112,7 +119,10 @@ export function GlobalSearchBar() {
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => query.length > 0 && setIsOpen(true)}
+          onFocus={() => {
+            handleMobileFocus();
+            if (query.length > 0) setIsOpen(true);
+          }}
           placeholder="Cerca clienti, eventi, preventivi..."
           className="pl-10 pr-10 rounded-full"
           autoComplete="off"

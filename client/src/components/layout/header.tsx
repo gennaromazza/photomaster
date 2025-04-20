@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "@/components/ui/custom-link";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Menu, MessageSquare, CalendarDays, Search } from "lucide-react";
+import { Bell, Menu, MessageSquare, CalendarDays, Search, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { GlobalSearchBar } from "@/components/global-search";
 
@@ -24,6 +30,7 @@ export interface HeaderProps {
  */
 export default function Header({ onOpenSidebar }: HeaderProps) {
   const { user, logoutMutation } = useAuth();
+  const [searchOpen, setSearchOpen] = useState(false);
   
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -69,7 +76,17 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           </Button>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          {/* Pulsante di ricerca mobile */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="md:hidden" 
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -106,6 +123,16 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           </DropdownMenu>
         </div>
       </div>
+      
+      {/* Modal di ricerca per dispositivi mobili */}
+      <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
+        <SheetContent side="top" className="pt-10">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Ricerca</SheetTitle>
+          </SheetHeader>
+          <GlobalSearchBar />
+        </SheetContent>
+      </Sheet>
     </header>
   );
 }

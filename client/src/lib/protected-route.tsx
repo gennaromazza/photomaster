@@ -2,12 +2,15 @@ import { Route, Redirect } from "wouter";
 import Layout from "@/components/layout/layout";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
 
 type ProtectedRouteProps = {
   path: string;
   component: React.ComponentType;
 };
+
+// Definisci una variabile globale per tracciare se il layout è già stato renderizzato
+// questo è un workaround per evitare duplicazioni del layout in componenti annidati
+let layoutMounted = false;
 
 export function ProtectedRoute({
   path,
@@ -31,6 +34,9 @@ export function ProtectedRoute({
           return <Redirect to="/auth" />;
         }
 
+        // Resetta il flag ogni volta che cambia il percorso
+        layoutMounted = false;
+        
         return (
           <Layout>
             <Component />

@@ -73,11 +73,11 @@ import {
 
 // Funzione di formattazione degli importi specifica per i valori già in euro (non in centesimi)
 const formatAmount = (amount: number) => {
-  return new Intl.NumberFormat('it-IT', {
-    style: 'currency',
-    currency: 'EUR',
+  return new Intl.NumberFormat("it-IT", {
+    style: "currency",
+    currency: "EUR",
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   }).format(amount);
 };
 
@@ -141,15 +141,15 @@ export function FinancialSummary({
     isLoading: transactionsLoading,
     refetch: refetchTransactions,
   } = useQuery({
-    queryKey: ['quoteTransactions', quoteId],
-    queryFn: () => apiRequest(
-      'GET',
-      `/api/finance/quotes/${quoteId}/transactions`
-    ).then(res => res.json()),
-    enabled: !!quoteId, 
-    refetchOnWindowFocus: true, 
+    queryKey: ["quoteTransactions", quoteId],
+    queryFn: () =>
+      apiRequest("GET", `/api/finance/quotes/${quoteId}/transactions`).then(
+        (res) => res.json(),
+      ),
+    enabled: !!quoteId,
+    refetchOnWindowFocus: true,
     staleTime: 5000,
-    refetchInterval: 60 * 1000 
+    refetchInterval: 60 * 1000,
   });
 
   // Ottieni i pagamenti programmati per questo preventivo
@@ -158,15 +158,15 @@ export function FinancialSummary({
     isLoading: scheduledLoading,
     refetch: refetchScheduled,
   } = useQuery({
-    queryKey: ['quoteScheduledPayments', quoteId],
-    queryFn: () => apiRequest(
-      'GET',
-      `/api/finance/quotes/${quoteId}/scheduled`
-    ).then(res => res.json()),
-    enabled: !!quoteId, 
-    refetchOnWindowFocus: true, 
+    queryKey: ["quoteScheduledPayments", quoteId],
+    queryFn: () =>
+      apiRequest("GET", `/api/finance/quotes/${quoteId}/scheduled`).then(
+        (res) => res.json(),
+      ),
+    enabled: !!quoteId,
+    refetchOnWindowFocus: true,
     staleTime: 5000,
-    refetchInterval: 60 * 1000 
+    refetchInterval: 60 * 1000,
   });
 
   // Mutation per creare una nuova transazione
@@ -192,7 +192,7 @@ export function FinancialSummary({
 
       // Invalida le query e forza un aggiornamento immediato
       queryClient.invalidateQueries({
-        queryKey: ['quoteTransactions', quoteId],
+        queryKey: ["quoteTransactions", quoteId],
       });
 
       // Forza il refetch per aggiornare immediatamente i dati visualizzati
@@ -241,7 +241,7 @@ export function FinancialSummary({
 
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
-        queryKey: ['quoteScheduledPayments', quoteId],
+        queryKey: ["quoteScheduledPayments", quoteId],
       });
 
       // Forza il refetch immediato dei dati
@@ -304,7 +304,8 @@ export function FinancialSummary({
     const updatedScheduledPayment = {
       id: selectedPaymentId,
       quoteId,
-      amount: parseFloat(scheduledData.amount),
+      // dopo
+      amount: parseFloat(scheduledData.amount) * 100,
       dueDate: scheduledData.dueDate,
       description:
         scheduledData.description || `Rata per preventivo #${quoteId}`,
@@ -344,7 +345,7 @@ export function FinancialSummary({
 
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
-        queryKey: ['quoteScheduledPayments', quoteId],
+        queryKey: ["quoteScheduledPayments", quoteId],
       });
 
       // Forza il refetch immediato dei dati
@@ -380,7 +381,7 @@ export function FinancialSummary({
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
-        queryKey: ['quoteScheduledPayments', quoteId],
+        queryKey: ["quoteScheduledPayments", quoteId],
       });
 
       // Forza il refetch immediato
@@ -403,7 +404,7 @@ export function FinancialSummary({
       });
     },
   });
-  
+
   // Mutation per aggiornare una transazione esistente
   const updateTransactionMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -428,7 +429,7 @@ export function FinancialSummary({
 
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
-        queryKey: ['quoteTransactions', quoteId],
+        queryKey: ["quoteTransactions", quoteId],
       });
 
       // Forza il refetch immediato
@@ -451,7 +452,7 @@ export function FinancialSummary({
       });
     },
   });
-  
+
   // Mutation per eliminare una transazione
   const deleteTransactionMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -464,7 +465,7 @@ export function FinancialSummary({
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
-        queryKey: ['quoteTransactions', quoteId],
+        queryKey: ["quoteTransactions", quoteId],
       });
 
       // Forza il refetch immediato
@@ -501,10 +502,10 @@ export function FinancialSummary({
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
-        queryKey: ['quoteTransactions', quoteId],
+        queryKey: ["quoteTransactions", quoteId],
       });
       queryClient.invalidateQueries({
-        queryKey: ['quoteScheduledPayments', quoteId],
+        queryKey: ["quoteScheduledPayments", quoteId],
       });
 
       // Forza il refetch immediato dei dati
@@ -574,7 +575,7 @@ export function FinancialSummary({
     // Invia la richiesta per creare la transazione
     createTransactionMutation.mutate(newTransaction);
   };
-  
+
   // Funzione per gestire l'aggiornamento di una transazione esistente
   const handleUpdateTransactionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -657,7 +658,7 @@ export function FinancialSummary({
     // Prepara l'oggetto pagamento programmato
     const newScheduledPayment = {
       quoteId,
-      amount: parseFloat(scheduledData.amount),
+      amount: parseFloat(scheduledData.amount) * 100,
       dueDate: scheduledData.dueDate, // Inviamo la data come stringa, verrà formattata dal server
       description:
         scheduledData.description || `Rata per preventivo #${quoteId}`,
@@ -678,14 +679,14 @@ export function FinancialSummary({
       setSelectedPaymentId(null);
     }
   };
-  
+
   // Funzione per gestire l'eliminazione di una transazione
   const handleDeleteTransaction = (id: number) => {
     if (id) {
       deleteTransactionMutation.mutate(id);
     }
   };
-  
+
   // Funzione per gestire la modifica di un pagamento programmato
   const handleEditScheduledPayment = (payment: any) => {
     setSelectedPaymentId(payment.id);
@@ -730,7 +731,7 @@ export function FinancialSummary({
 
     const transactionData = {
       type: "income",
-      amount: parseFloat(payment.amount),
+      amount: parseFloat(payment.amount) * 100,
       date: format(new Date(), "yyyy-MM-dd"), // Inviamo la data come stringa formattata
       description:
         payment.description || `Pagamento per preventivo #${quoteId}`,
@@ -827,21 +828,21 @@ export function FinancialSummary({
             {!transactionsLoading && (
               <p className="text-xs text-muted-foreground mt-1">
                 {transactions.filter(
-                  (t: any) => t.type === "income" || t.type === "entrata"
+                  (t: any) => t.type === "income" || t.type === "entrata",
                 ).length > 0
                   ? `${
                       transactions.filter(
-                        (t: any) => t.type === "income" || t.type === "entrata"
+                        (t: any) => t.type === "income" || t.type === "entrata",
                       ).length
                     } pagament${
                       transactions.filter(
-                        (t: any) => t.type === "income" || t.type === "entrata"
+                        (t: any) => t.type === "income" || t.type === "entrata",
                       ).length === 1
                         ? "o"
                         : "i"
                     } registrat${
                       transactions.filter(
-                        (t: any) => t.type === "income" || t.type === "entrata"
+                        (t: any) => t.type === "income" || t.type === "entrata",
                       ).length === 1
                         ? "o"
                         : "i"
@@ -870,19 +871,17 @@ export function FinancialSummary({
             {!scheduledLoading && (
               <p className="text-xs text-muted-foreground mt-1">
                 {scheduledPayments.filter(
-                  (p: any) => p.status === "pending" || p.status === "overdue"
+                  (p: any) => p.status === "pending" || p.status === "overdue",
                 ).length > 0
-                  ? `${formatAmount(
-                      totalScheduled
-                    )} programmati in ${
+                  ? `${formatAmount(totalScheduled)} programmati in ${
                       scheduledPayments.filter(
                         (p: any) =>
-                          p.status === "pending" || p.status === "overdue"
+                          p.status === "pending" || p.status === "overdue",
                       ).length
                     } rat${
                       scheduledPayments.filter(
                         (p: any) =>
-                          p.status === "pending" || p.status === "overdue"
+                          p.status === "pending" || p.status === "overdue",
                       ).length === 1
                         ? "a"
                         : "e"
@@ -951,7 +950,9 @@ export function FinancialSummary({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleEditTransaction(transaction)}
+                                onClick={() =>
+                                  handleEditTransaction(transaction)
+                                }
                                 className="h-8 w-8"
                                 title="Modifica"
                               >
@@ -970,15 +971,24 @@ export function FinancialSummary({
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Eliminare questo pagamento?</AlertDialogTitle>
+                                    <AlertDialogTitle>
+                                      Eliminare questo pagamento?
+                                    </AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Questa operazione non può essere annullata. Il pagamento verrà
-                                      rimosso permanentemente.
+                                      Questa operazione non può essere
+                                      annullata. Il pagamento verrà rimosso
+                                      permanentemente.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>Annulla</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteTransaction(transaction.id)}>
+                                    <AlertDialogCancel>
+                                      Annulla
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        handleDeleteTransaction(transaction.id)
+                                      }
+                                    >
                                       Elimina
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
@@ -1005,7 +1015,7 @@ export function FinancialSummary({
               </div>
             )}
           </CardContent>
-          
+
           {!readOnly && (
             <CardFooter>
               <Dialog
@@ -1044,7 +1054,11 @@ export function FinancialSummary({
 
                   <form
                     ref={transactionFormRef}
-                    onSubmit={isEditingPayment ? handleUpdateTransactionSubmit : handleTransactionSubmit}
+                    onSubmit={
+                      isEditingPayment
+                        ? handleUpdateTransactionSubmit
+                        : handleTransactionSubmit
+                    }
                     className="space-y-4 py-4"
                   >
                     <div className="space-y-2">
@@ -1181,7 +1195,11 @@ export function FinancialSummary({
                       </Button>
                       <Button
                         type="submit"
-                        disabled={isEditingPayment ? updateTransactionMutation.isPending : createTransactionMutation.isPending}
+                        disabled={
+                          isEditingPayment
+                            ? updateTransactionMutation.isPending
+                            : createTransactionMutation.isPending
+                        }
                       >
                         {isEditingPayment ? (
                           updateTransactionMutation.isPending ? (
@@ -1214,37 +1232,35 @@ export function FinancialSummary({
                               Aggiorna Pagamento
                             </>
                           )
+                        ) : createTransactionMutation.isPending ? (
+                          <>
+                            <svg
+                              className="mr-2 h-4 w-4 animate-spin"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              ></circle>
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                              ></path>
+                            </svg>
+                            Registrazione...
+                          </>
                         ) : (
-                          createTransactionMutation.isPending ? (
-                            <>
-                              <svg
-                                className="mr-2 h-4 w-4 animate-spin"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                              >
-                                <circle
-                                  className="opacity-25"
-                                  cx="12"
-                                  cy="12"
-                                  r="10"
-                                  stroke="currentColor"
-                                  strokeWidth="4"
-                                ></circle>
-                                <path
-                                  className="opacity-75"
-                                  fill="currentColor"
-                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                ></path>
-                              </svg>
-                              Registrazione...
-                            </>
-                          ) : (
-                            <>
-                              <Check className="h-4 w-4 mr-2" />
-                              Registra Pagamento
-                            </>
-                          )
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Registra Pagamento
+                          </>
                         )}
                       </Button>
                     </DialogFooter>
@@ -1277,7 +1293,9 @@ export function FinancialSummary({
                     <TableHead className="w-[100px]">Scadenza</TableHead>
                     <TableHead>Dettagli</TableHead>
                     <TableHead className="text-right">Importo</TableHead>
-                    {!readOnly && <TableHead className="w-[100px]">Azioni</TableHead>}
+                    {!readOnly && (
+                      <TableHead className="w-[100px]">Azioni</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1285,16 +1303,16 @@ export function FinancialSummary({
                     <TableRow key={payment.id}>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
-                          <span>{format(new Date(payment.dueDate), "dd/MM/yyyy")}</span>
+                          <span>
+                            {format(new Date(payment.dueDate), "dd/MM/yyyy")}
+                          </span>
                           <span className="text-xs mt-1">
                             {getStatusBadge(payment.status)}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">
-                          {payment.description}
-                        </div>
+                        <div className="font-medium">{payment.description}</div>
                         {payment.paymentMethod && (
                           <div className="text-xs text-muted-foreground">
                             Metodo: {payment.paymentMethod}
@@ -1326,7 +1344,9 @@ export function FinancialSummary({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleEditScheduledPayment(payment)}
+                                  onClick={() =>
+                                    handleEditScheduledPayment(payment)
+                                  }
                                   className="h-8 w-8"
                                   title="Modifica"
                                 >
@@ -1334,12 +1354,20 @@ export function FinancialSummary({
                                 </Button>
                               </>
                             )}
-                            <AlertDialog open={isDeleteDialogOpen && selectedPaymentId === payment.id} onOpenChange={setIsDeleteDialogOpen}>
+                            <AlertDialog
+                              open={
+                                isDeleteDialogOpen &&
+                                selectedPaymentId === payment.id
+                              }
+                              onOpenChange={setIsDeleteDialogOpen}
+                            >
                               <AlertDialogTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => setSelectedPaymentId(payment.id)}
+                                  onClick={() =>
+                                    setSelectedPaymentId(payment.id)
+                                  }
                                   className="h-8 w-8 text-red-600"
                                   title="Elimina"
                                 >
@@ -1348,17 +1376,24 @@ export function FinancialSummary({
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Eliminare questa rata?</AlertDialogTitle>
+                                  <AlertDialogTitle>
+                                    Eliminare questa rata?
+                                  </AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Questa operazione non può essere annullata. La rata di pagamento verrà
-                                    rimossa permanentemente.
+                                    Questa operazione non può essere annullata.
+                                    La rata di pagamento verrà rimossa
+                                    permanentemente.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setSelectedPaymentId(null)}>
+                                  <AlertDialogCancel
+                                    onClick={() => setSelectedPaymentId(null)}
+                                  >
                                     Annulla
                                   </AlertDialogCancel>
-                                  <AlertDialogAction onClick={handleDeleteScheduledPayment}>
+                                  <AlertDialogAction
+                                    onClick={handleDeleteScheduledPayment}
+                                  >
                                     Elimina
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
@@ -1426,7 +1461,11 @@ export function FinancialSummary({
 
                   <form
                     ref={scheduledFormRef}
-                    onSubmit={isEditingPayment ? handleUpdateScheduledPayment : handleScheduledSubmit}
+                    onSubmit={
+                      isEditingPayment
+                        ? handleUpdateScheduledPayment
+                        : handleScheduledSubmit
+                    }
                     className="space-y-4 py-4"
                   >
                     <div className="space-y-2">
@@ -1536,7 +1575,11 @@ export function FinancialSummary({
                       </Button>
                       <Button
                         type="submit"
-                        disabled={isEditingPayment ? updateScheduledPaymentMutation.isPending : createScheduledPaymentMutation.isPending}
+                        disabled={
+                          isEditingPayment
+                            ? updateScheduledPaymentMutation.isPending
+                            : createScheduledPaymentMutation.isPending
+                        }
                       >
                         {isEditingPayment ? (
                           updateScheduledPaymentMutation.isPending ? (

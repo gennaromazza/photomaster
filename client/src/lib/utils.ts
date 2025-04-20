@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Formatta un valore monetario in Euro
- * @param amount - Importo in centesimi
+ * @param amount - Importo già in euro (non in centesimi)
  * @returns Stringa formattata con simbolo dell'Euro
  */
 export function formatCurrency(amount: number): string {
@@ -21,7 +21,7 @@ export function formatCurrency(amount: number): string {
     currency: 'EUR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 2
-  }).format(amount / 100);
+  }).format(amount);
 }
 
 /**

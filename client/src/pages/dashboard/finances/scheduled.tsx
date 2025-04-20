@@ -1,22 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
-import { PageWrapper } from '@/components/ui/page-wrapper';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { 
+import React, { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { PageWrapper } from "@/components/ui/page-wrapper";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -24,125 +30,137 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { format, parseISO, isAfter, isBefore, isToday } from 'date-fns';
-import { it } from 'date-fns/locale';
-import { 
-  AlertCircle, 
-  Calendar, 
-  ArrowUpDown, 
-  MoreHorizontal, 
-  Check, 
-  Bell, 
+} from "@/components/ui/dropdown-menu";
+import { format, parseISO, isAfter, isBefore, isToday } from "date-fns";
+import { it } from "date-fns/locale";
+import {
+  AlertCircle,
+  Calendar,
+  ArrowUpDown,
+  MoreHorizontal,
+  Check,
+  Bell,
   Search,
   Filter,
   Plus,
   X,
-  Clock
-} from 'lucide-react';
+  Clock,
+} from "lucide-react";
 
 export default function ScheduledPaymentsPage() {
   const [location, setLocation] = useLocation();
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
-  
+
   // Controlla se c'è un filtro nell'URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const filter = urlParams.get('filter');
+    const filter = urlParams.get("filter");
     if (filter) {
       setStatusFilter(filter);
     }
   }, [location]);
-  
+
   // Ottieni tutti i pagamenti programmati
-  const { 
+  const {
     data: scheduledPayments = [],
     isLoading,
-    refetch
+    refetch,
   } = useQuery({
-    queryKey: ['/api/finance/scheduled-payments']
+    queryKey: ["/api/finance/scheduled-payments"],
   });
-  
+
   // Funzione per formattare l'importo come valuta
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', { 
-      style: 'currency', 
-      currency: 'EUR' 
+    return new Intl.NumberFormat("it-IT", {
+      style: "currency",
+      currency: "EUR",
     }).format(amount);
   };
-  
+
   // Filtra i pagamenti programmati in base ai filtri attivi
   const filteredPayments = scheduledPayments.filter((payment: any) => {
     // Filtro per stato
     if (statusFilter && payment.status !== statusFilter) {
       return false;
     }
-    
+
     // Filtro per ricerca
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       return (
-        (payment.description && payment.description.toLowerCase().includes(searchLower)) ||
-        (payment.quoteTitle && payment.quoteTitle.toLowerCase().includes(searchLower)) ||
-        (payment.clientName && payment.clientName.toLowerCase().includes(searchLower))
+        (payment.description &&
+          payment.description.toLowerCase().includes(searchLower)) ||
+        (payment.quoteTitle &&
+          payment.quoteTitle.toLowerCase().includes(searchLower)) ||
+        (payment.clientName &&
+          payment.clientName.toLowerCase().includes(searchLower))
       );
     }
-    
+
     return true;
   });
-  
+
   // Badge di stato per i pagamenti programmati
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'paid':
+      case "paid":
         return <Badge variant="success">Pagato</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="bg-amber-100 text-amber-800">In attesa</Badge>;
-      case 'overdue':
+      case "pending":
+        return (
+          <Badge variant="outline" className="bg-amber-100 text-amber-800">
+            In attesa
+          </Badge>
+        );
+      case "overdue":
         return <Badge variant="destructive">Scaduto</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
-  
+
   // Funzione per gestire lo status della data di scadenza
-  const getDueDateStatus = (dueDate: string): 'overdue' | 'today' | 'upcoming' | 'future' => {
+  const getDueDateStatus = (
+    dueDate: string,
+  ): "overdue" | "today" | "upcoming" | "future" => {
     const date = parseISO(dueDate);
     const now = new Date();
-    
+
     if (isBefore(date, now) && !isToday(date)) {
-      return 'overdue';
+      return "overdue";
     } else if (isToday(date)) {
-      return 'today';
+      return "today";
     } else if (isBefore(date, new Date(now.setDate(now.getDate() + 7)))) {
-      return 'upcoming';
+      return "upcoming";
     } else {
-      return 'future';
+      return "future";
     }
   };
-  
+
   // Calcola i totali
   const totals = {
-    all: filteredPayments.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
+    all: filteredPayments.reduce(
+      (sum: number, p: any) => sum + parseFloat(p.amount),
+      0,
+    ),
     pending: filteredPayments
-      .filter((p: any) => p.status === 'pending')
+      .filter((p: any) => p.status === "pending")
       .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
     overdue: filteredPayments
-      .filter((p: any) => p.status === 'overdue')
-      .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0)
+      .filter((p: any) => p.status === "overdue")
+      .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
   };
-  
+
   return (
     <PageWrapper
       title="Pagamenti Programmati"
@@ -161,13 +179,13 @@ export default function ScheduledPaymentsPage() {
               <Button
                 variant="ghost"
                 className="absolute right-0 top-0 h-9 w-9 p-0"
-                onClick={() => setSearchTerm('')}
+                onClick={() => setSearchTerm("")}
               >
                 <X className="h-4 w-4" />
               </Button>
             )}
           </div>
-          
+
           <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -182,19 +200,16 @@ export default function ScheduledPaymentsPage() {
                   Pianifica una nuova scadenza di pagamento da monitorare.
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="quote">Preventivo collegato</Label>
-                  <Input
-                    id="quote"
-                    placeholder="Seleziona preventivo..."
-                  />
+                  <Input id="quote" placeholder="Seleziona preventivo..." />
                   <p className="text-xs text-muted-foreground">
                     Lascia vuoto se non è associato ad un preventivo specifico
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="amount">Importo</Label>
                   <Input
@@ -204,16 +219,16 @@ export default function ScheduledPaymentsPage() {
                     step="0.01"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="dueDate">Data scadenza</Label>
                   <Input
                     id="dueDate"
                     type="date"
-                    defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                    defaultValue={format(new Date(), "yyyy-MM-dd")}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrizione</Label>
                   <Input
@@ -221,7 +236,7 @@ export default function ScheduledPaymentsPage() {
                     placeholder="Es. Acconto, Saldo finale, ecc."
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="notes">Note</Label>
                   <Input
@@ -229,7 +244,7 @@ export default function ScheduledPaymentsPage() {
                     placeholder="Eventuali note sul pagamento..."
                   />
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox id="sendReminder" />
                   <Label htmlFor="sendReminder">
@@ -237,9 +252,12 @@ export default function ScheduledPaymentsPage() {
                   </Label>
                 </div>
               </div>
-              
+
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddPaymentOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddPaymentOpen(false)}
+                >
                   Annulla
                 </Button>
                 <Button type="submit">
@@ -268,7 +286,7 @@ export default function ScheduledPaymentsPage() {
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -280,11 +298,15 @@ export default function ScheduledPaymentsPage() {
               {isLoading ? "Caricamento..." : formatCurrency(totals.pending)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {filteredPayments.filter((p: any) => p.status === 'pending').length} pagamenti da ricevere
+              {
+                filteredPayments.filter((p: any) => p.status === "pending")
+                  .length
+              }{" "}
+              pagamenti da ricevere
             </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -296,21 +318,30 @@ export default function ScheduledPaymentsPage() {
               {isLoading ? "Caricamento..." : formatCurrency(totals.overdue)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {filteredPayments.filter((p: any) => p.status === 'overdue').length} pagamenti scaduti
+              {
+                filteredPayments.filter((p: any) => p.status === "overdue")
+                  .length
+              }{" "}
+              pagamenti scaduti
             </p>
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="mt-6">
-        <Tabs defaultValue={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? null : value)}>
+        <Tabs
+          defaultValue={statusFilter || "all"}
+          onValueChange={(value) =>
+            setStatusFilter(value === "all" ? null : value)
+          }
+        >
           <TabsList className="mb-4">
             <TabsTrigger value="all">Tutti</TabsTrigger>
             <TabsTrigger value="pending">In attesa</TabsTrigger>
             <TabsTrigger value="overdue">Scaduti</TabsTrigger>
             <TabsTrigger value="paid">Pagati</TabsTrigger>
           </TabsList>
-          
+
           <Card>
             <CardContent className="p-0">
               {isLoading ? (
@@ -320,10 +351,10 @@ export default function ScheduledPaymentsPage() {
               ) : filteredPayments.length === 0 ? (
                 <div className="p-6 text-center">
                   <p className="text-muted-foreground">
-                    {searchTerm 
-                      ? "Nessun pagamento trovato con i criteri di ricerca inseriti." 
-                      : statusFilter 
-                        ? `Nessun pagamento con stato "${statusFilter}".` 
+                    {searchTerm
+                      ? "Nessun pagamento trovato con i criteri di ricerca inseriti."
+                      : statusFilter
+                        ? `Nessun pagamento con stato "${statusFilter}".`
                         : "Nessun pagamento programmato da visualizzare."}
                   </p>
                 </div>
@@ -343,15 +374,30 @@ export default function ScheduledPaymentsPage() {
                   <TableBody>
                     {filteredPayments.map((payment: any) => {
                       const dueDateStatus = getDueDateStatus(payment.dueDate);
-                      
+
                       return (
                         <TableRow key={payment.id}>
-                          <TableCell className={dueDateStatus === 'overdue' ? "font-medium text-destructive" : "font-medium"}>
+                          <TableCell
+                            className={
+                              dueDateStatus === "overdue"
+                                ? "font-medium text-destructive"
+                                : "font-medium"
+                            }
+                          >
                             <div className="flex items-center">
-                              <Calendar className={`h-4 w-4 mr-2 ${dueDateStatus === 'overdue' ? 'text-destructive' : 'text-muted-foreground'}`} />
-                              {format(parseISO(payment.dueDate), 'dd/MM/yyyy', { locale: it })}
-                              {dueDateStatus === 'today' && (
-                                <Badge variant="outline" className="ml-2 bg-blue-100 text-blue-800">Oggi</Badge>
+                              <Calendar
+                                className={`h-4 w-4 mr-2 ${dueDateStatus === "overdue" ? "text-destructive" : "text-muted-foreground"}`}
+                              />
+                              {format(parseISO(payment.dueDate), "dd/MM/yyyy", {
+                                locale: it,
+                              })}
+                              {dueDateStatus === "today" && (
+                                <Badge
+                                  variant="outline"
+                                  className="ml-2 bg-blue-100 text-blue-800"
+                                >
+                                  Oggi
+                                </Badge>
                               )}
                             </div>
                           </TableCell>
@@ -363,18 +409,26 @@ export default function ScheduledPaymentsPage() {
                           </TableCell>
                           <TableCell>
                             {payment.quoteTitle ? (
-                              <Button variant="link" className="p-0 h-auto" asChild>
-                                <a href={`/quotes/detail/${payment.quoteId}`}>{payment.quoteTitle}</a>
+                              <Button
+                                variant="link"
+                                className="p-0 h-auto"
+                                asChild
+                              >
+                                <a href={`/quotes/detail/${payment.quoteId}`}>
+                                  {payment.quoteTitle}
+                                </a>
                               </Button>
                             ) : (
-                              <span className="text-muted-foreground">Non collegato</span>
+                              <span className="text-muted-foreground">
+                                Non collegato
+                              </span>
                             )}
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(payment.status)}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            {formatCurrency(parseFloat(payment.amount))}
+                            {formatCurrency(parseFloat(payment.amount) * 100)}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -386,7 +440,7 @@ export default function ScheduledPaymentsPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Azioni</DropdownMenuLabel>
-                                {payment.status !== 'paid' && (
+                                {payment.status !== "paid" && (
                                   <DropdownMenuItem>
                                     <Check className="mr-2 h-4 w-4" />
                                     Segna come pagato

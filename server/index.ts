@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, log } from "./vite";
+import { serveStaticFixed } from "./static-server";
 import helmet from "helmet";
 
 const app = express();
@@ -64,8 +65,17 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Log dettagliato dell'errore senza causare il crash del server
+    console.error("Errore API:", {
+      status,
+      message,
+      stack: err.stack,
+      timestamp: new Date().toISOString()
+    });
+
+    // Risposta al client con messaggio di errore
     res.status(status).json({ message });
-    throw err;
+    // Il throw è stato rimosso per evitare il crash del server
   });
 
   // importantly only setup vite in development and after
@@ -74,7 +84,8 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // Utilizziamo la versione corretta per servire i file statici in produzione
+    serveStaticFixed(app);
   }
 
   // ALWAYS serve the app on port 5000

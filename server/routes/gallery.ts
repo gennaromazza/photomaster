@@ -73,6 +73,44 @@ router.get("/galleries/:id", getGalleryById);
 // Ottieni una galleria tramite slug (pubblico)
 router.get("/public/galleries/:slug", checkGalleryAccess, getGalleryBySlug);
 
+// Autentica per una galleria protetta da password
+router.post("/public/galleries/:slug/authenticate", async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { password } = req.body;
+    
+    // Verifica se la galleria esiste e se la password è corretta
+    const [gallery] = await db
+      .select()
+      .from(galleries)
+      .where(eq(galleries.slug, slug));
+    
+    if (!gallery) {
+      return res.status(404).json({ error: "Galleria non trovata" });
+    }
+    
+    // Se la galleria non ha password, non è necessaria l'autenticazione
+    if (!gallery.password) {
+      return res.status(200).json({ authenticated: true });
+    }
+    
+    // Verifica la password
+    if (gallery.password !== password) {
+      return res.status(401).json({ error: "Password non valida" });
+    }
+    
+    // Genera un token di accesso temporaneo (JWT o cookie sessione)
+    // Per semplicità, qui usiamo un cookie di sessione
+    req.session.galleryAccess = req.session.galleryAccess || {};
+    req.session.galleryAccess[gallery.id] = true;
+    
+    res.status(200).json({ authenticated: true });
+  } catch (error) {
+    console.error("Errore nell'autenticazione alla galleria:", error);
+    res.status(500).json({ error: "Errore nell'autenticazione" });
+  }
+});
+
 // Crea una nuova galleria (richiede autenticazione)
 router.post("/galleries", 
   (req, res, next) => {

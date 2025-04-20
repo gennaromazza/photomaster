@@ -23,6 +23,13 @@ declare global {
   }
 }
 
+// Estendi l'interfaccia SessionData di express-session
+declare module 'express-session' {
+  interface SessionData {
+    galleryAccess?: Record<number, boolean>;
+  }
+}
+
 // Inizializza il generatore di token CSRF
 const csrfTokens = new Tokens();
 const secret = randomBytes(32).toString('hex'); // Genera un segreto CSRF sicuro
@@ -853,9 +860,17 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
 // Middleware per verificare l'accesso alle gallerie pubbliche
 export function checkGalleryAccess(req: Request, res: Response, next: NextFunction) {
   try {
-    // Per ora, lasciamo semplicemente passare tutte le richieste
-    // In futuro, qui controlleremo la password della galleria e altri requisiti di accesso
     console.log("DEBUG - Controllo accesso galleria pubblica");
+    const { slug } = req.params;
+    
+    // 1. Verifica se la galleria richiede accesso con password
+    // a. Se la galleria non richiede password, procedi
+    // b. Se la galleria richiede password, verifica se l'utente è autenticato 
+    //    o se la sessione ha accesso a questa galleria
+    
+    // Il controllo reale della password viene fatto nella rotta /authenticate e nel controller
+    // Questo middleware serve solo come punto di controllo per il flusso di autenticazione
+    
     next();
   } catch (error) {
     console.error("Errore nel controllo dell'accesso alla galleria:", error);

@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import { db } from "../db";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { db, type DB } from "../db";
 import { 
   galleries, insertGallerySchema, galleryChapters, insertGalleryChapterSchema,
   photos, insertPhotoSchema, photoSelections, gallerySubscriptions, insertGallerySubscriptionSchema,

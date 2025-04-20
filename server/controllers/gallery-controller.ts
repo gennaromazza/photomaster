@@ -388,11 +388,17 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
 
     // Aggiungi gli URL per le immagini
     const basePath = "/uploads";
-    const photosWithUrls = photoList.map((p: typeof photos.$inferSelect) => ({
-      ...p,
-      url: `${basePath}/galleries/medium/${p.filename}`,
-      thumbnailUrl: `${basePath}/galleries/thumbnails/${p.filename}`,
-    }));
+    const photosWithUrls = photoList.map((p: typeof photos.$inferSelect) => {
+      // Estrai il percorso e il nome del file dalle proprietà del database
+      const mediumFile = p.mediumPath ? path.basename(p.mediumPath) : `medium-${p.filename}`;
+      const thumbFile = p.thumbnailPath ? path.basename(p.thumbnailPath) : `thumb-${p.filename}`;
+      
+      return {
+        ...p,
+        url: `${basePath}/galleries/medium/${mediumFile}`,
+        thumbnailUrl: `${basePath}/galleries/thumbnails/${thumbFile}`,
+      };
+    });
 
     res.json({
       photos: photosWithUrls,

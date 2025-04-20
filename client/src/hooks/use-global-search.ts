@@ -18,7 +18,7 @@ export interface SearchResult {
 }
 
 // Rappresenta la risposta dall'API di ricerca
-interface SearchResponse {
+export interface SearchResponse {
   results: SearchResult[];
   totalCount: number;
 }
@@ -46,10 +46,9 @@ export function useGlobalSearch(initialQuery = '') {
     },
     // Non eseguire se la query è vuota o troppo corta
     enabled: debouncedQuery.length >= 2,
-    // Mantieni i dati vecchi mentre si caricano i nuovi
-    keepPreviousData: true,
     // Imposta un tempo di stale più breve per i risultati di ricerca
-    staleTime: 30000, // 30 secondi
+    staleTime: 30000, // 30 secondi,
+    placeholderData: (prevData) => prevData, // Equivalente a keepPreviousData in v5
   });
 
   // Reset della ricerca

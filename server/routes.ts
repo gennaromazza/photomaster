@@ -13,6 +13,7 @@ import bundleLeadsRouter from "./routes/bundle-leads";
 import settingsRouter from "./routes/settings";
 import financeRouter from "./routes/finance";
 import galleryRouter from "./routes/gallery";
+import searchRouter from "./routes/search";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
 import multer from "multer";
 import { tmpdir } from "os";
@@ -3300,6 +3301,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/settings", settingsRouter);
   app.use("/api/finance", financeRouter);
   app.use("/api/gallery", galleryRouter);
+  app.use("/api/search", searchRouter);
 
   // Configurazione di multer per l'upload dei file
   const upload = multer({

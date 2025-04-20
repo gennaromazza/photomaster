@@ -850,6 +850,19 @@ export function isAdmin(req: Request, res: Response, next: NextFunction) {
   });
 }
 
+// Middleware per verificare l'accesso alle gallerie pubbliche
+export function checkGalleryAccess(req: Request, res: Response, next: NextFunction) {
+  try {
+    // Per ora, lasciamo semplicemente passare tutte le richieste
+    // In futuro, qui controlleremo la password della galleria e altri requisiti di accesso
+    console.log("DEBUG - Controllo accesso galleria pubblica");
+    next();
+  } catch (error) {
+    console.error("Errore nel controllo dell'accesso alla galleria:", error);
+    res.status(500).json({ error: "Errore nel controllo dell'accesso alla galleria" });
+  }
+}
+
 // Middleware per protezione CSRF
 export function csrfProtection(req: Request, res: Response, next: NextFunction) {
   console.log("DEBUG csrfProtection - Verifica token CSRF");

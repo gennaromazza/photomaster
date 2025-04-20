@@ -71,7 +71,7 @@ export function PhotoGrid({
     setIsDeleting(true);
     
     try {
-      await apiRequest("DELETE", `/api/gallery/galleries/${galleryId}/photos/${photoToDelete.id}`);
+      await apiRequest("DELETE", `/api/gallery/photos/${photoToDelete.id}`);
       
       // Invalida la cache per ricaricare le foto
       queryClient.invalidateQueries({ 

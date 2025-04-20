@@ -67,7 +67,7 @@ export function PhotoUploader({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      "image/*": acceptedFileTypes.map((type) => `.${type.split("/")[1]}`),
+      "image/*": [".jpg", ".jpeg", ".png", ".webp"]
     },
     maxSize,
     multiple: true,
@@ -159,7 +159,11 @@ export function PhotoUploader({
 
         return { ...file, status: "success", progress: 100 };
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto";
+        console.error(`Errore durante il caricamento di ${file.name}:`, error);
+        
+        let errorMessage = error instanceof Error ? error.message : "Errore sconosciuto";
+        
+        // I messaggi di errore verranno già gestiti dalla Promise
 
         setFiles((prev) =>
           prev.map((f) =>
@@ -169,10 +173,9 @@ export function PhotoUploader({
           )
         );
 
-        console.error(`Errore durante il caricamento di ${file.name}:`, error);
         toast({
           title: "Errore",
-          description: `Impossibile caricare ${file.name}. Verifica il formato e la dimensione del file.`,
+          description: errorMessage || `Impossibile caricare ${file.name}. Verifica il formato e la dimensione del file.`,
           variant: "destructive"
         });
         return { ...file, status: "error", error: errorMessage };

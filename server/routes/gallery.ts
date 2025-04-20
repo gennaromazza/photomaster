@@ -1,9 +1,9 @@
 import express from "express";
 import multer from "multer";
-import { isAuthenticated } from "../auth";
+import { isAuthenticated, checkGalleryAccess } from "../auth";
 import { db } from "../db";
 import { galleries } from "../../schema_gallery";
-import { desc, eq } from "drizzle-orm"; // Importa il middleware di autenticazione globale
+import { desc, eq } from "drizzle-orm";
 import {
   getAllGalleries,
   getGalleryById,
@@ -13,6 +13,7 @@ import {
   deleteGallery,
   getGalleryChapters,
   createChapter,
+  deleteChapter,
   getGalleryPhotos,
   uploadPhoto,
   updatePhoto,
@@ -43,14 +44,7 @@ const upload = multer({
   }
 });
 
-// Middleware per verificare l'autorizzazione per le gallerie pubbliche
-const checkGalleryAccess = async (req, res, next) => {
-  // Per le route pubbliche, controlla la password se necessario
-  // Implementazione qui...
-  next();
-};
-
-import { db } from '../db';
+// Evitando duplicazione import
 
 // ROUTES PER GALLERIE
 
@@ -114,6 +108,9 @@ router.get("/galleries/:galleryId/chapters", getGalleryChapters);
 
 // Crea un nuovo capitolo (richiede autenticazione)
 router.post("/chapters", isAuthenticated, createChapter);
+
+// Elimina un capitolo (richiede autenticazione)
+router.delete("/chapters/:id", isAuthenticated, deleteChapter);
 
 // ROUTES PER FOTO
 

@@ -332,6 +332,18 @@ export const createChapter = async (req: Request, res: Response) => {
   }
 };
 
+// Elimina un capitolo
+export const deleteChapter = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await db.delete(galleryChapters).where(eq(galleryChapters.id, Number(id)));
+    return result ? res.status(204).send() : res.status(404).json({ error: "Capitolo non trovato" });
+  } catch (error) {
+    console.error("Errore nell'eliminazione del capitolo:", error);
+    return res.status(500).json({ error: "Errore nell'eliminazione del capitolo" });
+  }
+};
+
 // GESTIONE FOTO
 
 // Ottieni le foto di una galleria con supporto per paginazione

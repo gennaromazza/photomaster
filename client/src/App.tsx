@@ -60,6 +60,7 @@ import ScheduledPaymentsPage from "@/pages/dashboard/finances/scheduled";
 import GalleriesPage from "@/pages/galleries";
 import NewGalleryPage from "@/pages/galleries/new";
 import GalleryDetailPage from "@/pages/galleries/[id]";
+import PublicGalleryPage from "@/pages/public/galleries/[slug]";
 
 
 function Router() {
@@ -103,6 +104,7 @@ function Router() {
       <Route path="/reset-password/:token" component={ResetPasswordPage} />
       <Route path="/quotes/public/:token" component={QuotePublicPage} />
       <Route path="/quotes/sign-success" component={SignSuccessPage} />
+      <Route path="/galleries/:slug" component={PublicGalleryPage} />
       <Route component={NotFound} />
     </Switch>
   );

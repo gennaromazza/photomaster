@@ -28,5 +28,8 @@ try {
   process.exit(1);
 }
 
+// Esporta il tipo corretto dell'istanza db
+export type DB = typeof db;
+
 // Esporta l'istanza db
 export { db };

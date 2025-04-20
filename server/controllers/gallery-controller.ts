@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../db";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { 
   galleries, insertGallerySchema, galleryChapters, insertGalleryChapterSchema,
   photos, insertPhotoSchema, photoSelections, gallerySubscriptions, insertGallerySubscriptionSchema,
@@ -388,7 +389,7 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
 
     // Aggiungi gli URL per le immagini
     const basePath = "/uploads";
-    const photosWithUrls = photoList.map(p => ({
+    const photosWithUrls = photoList.map((p: typeof photos.$inferSelect) => ({
       ...p,
       url: `${basePath}/galleries/medium-${p.filename}`,
       thumbnailUrl: `${basePath}/galleries/thumbnails/thumb-${p.filename}`,

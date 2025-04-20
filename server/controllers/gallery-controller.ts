@@ -390,7 +390,7 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
     const basePath = "/uploads";
     const photosWithUrls = photoList.map((p: typeof photos.$inferSelect) => ({
       ...p,
-      url: `${basePath}/galleries/medium-${p.filename}`,
+      url: `${basePath}/galleries/medium/${p.filename}`,
       thumbnailUrl: `${basePath}/galleries/thumbnails/thumb-${p.filename}`,
     }));
 
@@ -600,7 +600,7 @@ export const generateGalleryQRCode = async (req: Request, res: Response) => {
     }
 
     // URL della galleria
-    const galleryUrl = `${req.protocol}://${req.get('host')}/public/galleries/${gallery.slug}`;
+    const galleryUrl = `${req.protocol}://${req.get('host')}/galleries/${gallery.slug}`;
 
     // Nome del file QR
     const qrFilename = `gallery-${gallery.id}-qr.png`;

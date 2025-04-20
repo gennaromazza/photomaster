@@ -58,6 +58,7 @@ export function GallerySettings({
   const [galleryUrl, setGalleryUrl] = useState(`${window.location.origin}/public/galleries/${gallery.slug}`);
   const [isSaving, setIsSaving] = useState(false);
   const [resetPasswordDialog, setResetPasswordDialog] = useState(false);
+  const [selectionEnabled, setSelectionEnabled] = useState(gallery.selectionEnabled !== false);
 
   const handleCopyLink = async () => {
     try {
@@ -87,6 +88,7 @@ export function GallerySettings({
         isPublic,
         password: passwordProtected ? password : null,
         eventId,
+        selectionEnabled,
       });
 
       queryClient.invalidateQueries({ 
@@ -276,6 +278,28 @@ export function GallerySettings({
               <p className="text-sm text-muted-foreground">
                 Collega questa galleria a un evento esistente
               </p>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Interazione</h3>
+            
+            <div className="flex flex-row items-center justify-between space-x-2 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center">
+                  <Check className="h-4 w-4 mr-2" />
+                  <Label className="text-base">Selezione Foto</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Consenti ai clienti di selezionare le loro foto preferite
+                </p>
+              </div>
+              <Switch
+                checked={selectionEnabled}
+                onCheckedChange={setSelectionEnabled}
+              />
             </div>
           </div>
           

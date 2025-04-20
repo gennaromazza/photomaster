@@ -11,6 +11,7 @@ export interface GalleryItem {
   updatedAt: string;
   userId: number;
   eventId: number | null;
+  selectionEnabled?: boolean;
 }
 
 export interface GalleryFormValues {

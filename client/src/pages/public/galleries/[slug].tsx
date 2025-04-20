@@ -40,6 +40,7 @@ import { it } from "date-fns/locale";
 
 export default function PublicGalleryPage() {
   const { slug } = useParams();
+  // Stati per la pagina
   const [activeChapter, setActiveChapter] = useState<number | null>(null);
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [password, setPassword] = useState("");
@@ -47,6 +48,16 @@ export default function PublicGalleryPage() {
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
   const [visitorInfo, setVisitorInfo] = useState<{ name: string; email: string } | null>(null);
   const [showVisitorForm, setShowVisitorForm] = useState(false);
+  
+  // Stati per la visualizzazione a schermo intero
+  const [fullscreenView, setFullscreenView] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [slideshow, setSlideshow] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeEmail, setSubscribeEmail] = useState("");
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Query per ottenere i dettagli della galleria
   const { data: gallery, isLoading: isGalleryLoading, error: galleryError } = useQuery({
@@ -234,16 +245,6 @@ export default function PublicGalleryPage() {
       </div>
     );
   }
-
-  // Stati per la visualizzazione a schermo intero
-  const [fullscreenView, setFullscreenView] = useState(false);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [slideshow, setSlideshow] = useState(false);
-  const [subscribing, setSubscribing] = useState(false);
-  const [subscribeEmail, setSubscribeEmail] = useState("");
-  const [showBackToTop, setShowBackToTop] = useState(false);
-  const { toast } = useToast();
-  const contentRef = useRef<HTMLDivElement>(null);
 
   // Monitoraggio dello scroll per mostrare/nascondere il pulsante "Torna su"
   useEffect(() => {

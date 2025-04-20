@@ -73,7 +73,7 @@ const formatPrice = (price: number) => {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
     currency: 'EUR',
-  }).format(price / 100);
+  }).format(price);
 };
 
 // Form schema per creare/modificare un servizio
@@ -960,11 +960,11 @@ const ServicesPage = () => {
                         step="0.01"
                         disabled={form.watch('isComposite') && autoCalculatePrice}
                         onChange={(e) => {
-                          // Converte il valore in centesimi
-                          const valueInCents = Math.round(parseFloat(e.target.value) * 100);
-                          field.onChange(valueInCents);
+                          // Non serve più convertire in centesimi
+                          const value = parseFloat(e.target.value);
+                          field.onChange(value);
                         }}
-                        value={field.value / 100} // Mostra il valore in euro
+                        value={field.value} // Valore già in euro
                       />
                     </FormControl>
                     <FormDescription>
@@ -1037,19 +1037,15 @@ const ServicesPage = () => {
                             type="number" 
                             step={form.watch('discountType') === 'fixed' ? "0.01" : "1"}
                             onChange={(e) => {
-                              // Per gli sconti fissi, converte in centesimi
+                              // Non serve più convertire in centesimi
                               if (form.watch('discountType') === 'fixed') {
-                                const valueInCents = Math.round(parseFloat(e.target.value) * 100);
-                                field.onChange(valueInCents);
+                                const value = parseFloat(e.target.value);
+                                field.onChange(value);
                               } else {
                                 field.onChange(parseInt(e.target.value));
                               }
                             }}
-                            value={
-                              form.watch('discountType') === 'fixed' 
-                                ? (field.value || 0) / 100 
-                                : field.value
-                            }
+                            value={field.value}
                           />
                         </FormControl>
                         <FormDescription>

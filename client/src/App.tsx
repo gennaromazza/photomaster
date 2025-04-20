@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/layout/layout";
 import { AuthProvider } from "@/hooks/use-auth";
-import { LayoutProvider } from "@/hooks/use-layout-context";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 // Importa calendario
@@ -113,10 +112,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <LayoutProvider>
           <Router />
           <Toaster />
-        </LayoutProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

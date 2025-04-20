@@ -130,7 +130,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           <SheetHeader className="mb-4">
             <SheetTitle>Ricerca</SheetTitle>
           </SheetHeader>
-          <GlobalSearchBar />
+          <GlobalSearchBar isMobile={true} />
         </SheetContent>
       </Sheet>
     </header>

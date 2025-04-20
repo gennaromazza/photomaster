@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
  * Componente della barra di ricerca globale
  * Mostra suggerimenti live durante la digitazione
  */
-export function GlobalSearchBar() {
+export function GlobalSearchBar({ isMobile = false }: { isMobile?: boolean }) {
   const {
     query,
     setQuery,
@@ -20,13 +20,6 @@ export function GlobalSearchBar() {
     isError,
     resetSearch
   } = useGlobalSearch();
-  
-  // Forza apertura del risultati su mobile quando il focus è attivo
-  const handleMobileFocus = () => {
-    if (window.innerWidth < 768) { // 768px è la breakpoint md di Tailwind
-      setIsOpen(true);
-    }
-  };
   
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -120,8 +113,10 @@ export function GlobalSearchBar() {
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={() => {
-            handleMobileFocus();
-            if (query.length > 0) setIsOpen(true);
+            // Se è su mobile (< 768px) o ha un testo, apri i risultati
+            if (isMobile || window.innerWidth < 768 || query.length > 0) {
+              setIsOpen(true);
+            }
           }}
           placeholder="Cerca clienti, eventi, preventivi..."
           className="pl-10 pr-10 rounded-full"

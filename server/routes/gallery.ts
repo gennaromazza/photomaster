@@ -22,7 +22,8 @@ import {
   subscribeToGallery,
   trackSocialShare,
   togglePhotoSelection,
-  getClientSelections
+  getClientSelections,
+  createPhotoSelections
 } from "../controllers/gallery-controller";
 
 const router = express.Router();
@@ -184,5 +185,8 @@ router.post("/photos/:photoId/select", togglePhotoSelection);
 
 // Ottieni tutte le selezioni di un cliente per una galleria
 router.get("/galleries/:galleryId/selections", getClientSelections);
+
+// Salva tutte le selezioni in batch
+router.post("/galleries/selections/batch", createPhotoSelections);
 
 export default router;

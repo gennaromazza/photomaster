@@ -812,3 +812,60 @@ export const getClientSelections = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Errore nel recupero delle selezioni" });
   }
 };
+
+// Salva le selezioni foto tutte insieme
+export const createPhotoSelections = async (req: Request, res: Response) => {
+  try {
+    const { galleryId, photoIds, clientName, clientEmail, sessionId, selectionType = "favorite", notes } = req.body;
+    
+    if (!photoIds || !Array.isArray(photoIds) || photoIds.length === 0) {
+      return res.status(400).json({ error: "Nessuna foto selezionata" });
+    }
+    
+    if (!galleryId) {
+      return res.status(400).json({ error: "ID galleria mancante" });
+    }
+    
+    // Ottieni informazioni sulla sessione / utente
+    const actualSessionId = sessionId || req.sessionID || uuidv4();
+    
+    // Controlla se è fornito un ID cliente tramite body o tramite l'utente loggato
+    const clientId = req.user?.id || (req.body.clientId ? Number(req.body.clientId) : null);
+    
+    // Preparare i dati per l'inserimento
+    const insertData = photoIds.map(photoId => ({
+      photoId: Number(photoId),
+      galleryId: Number(galleryId),
+      clientId,
+      sessionId: clientId ? null : actualSessionId,
+      clientEmail: clientEmail || null,
+      clientName: clientName || null,
+      selectionType,
+      notes: notes || null,
+      createdAt: new Date()
+    }));
+    
+    // Elimina eventuali selezioni esistenti
+    await db
+      .delete(photoSelections)
+      .where(and(
+        eq(photoSelections.galleryId, Number(galleryId)),
+        clientId ? eq(photoSelections.clientId, clientId) : eq(photoSelections.sessionId, actualSessionId)
+      ));
+    
+    // Inserisci le nuove selezioni
+    const insertedSelections = await db
+      .insert(photoSelections)
+      .values(insertData)
+      .returning();
+    
+    res.status(201).json({ 
+      success: true, 
+      message: `${insertedSelections.length} selezioni salvate con successo`,
+      selections: insertedSelections 
+    });
+  } catch (error) {
+    console.error("Errore nel salvataggio delle selezioni:", error);
+    res.status(500).json({ error: "Errore nel salvataggio delle selezioni" });
+  }
+};

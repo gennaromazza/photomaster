@@ -391,7 +391,7 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
     const photosWithUrls = photoList.map((p: typeof photos.$inferSelect) => ({
       ...p,
       url: `${basePath}/galleries/medium/${p.filename}`,
-      thumbnailUrl: `${basePath}/galleries/thumbnails/thumb-${p.filename}`,
+      thumbnailUrl: `${basePath}/galleries/thumbnails/${p.filename}`,
     }));
 
     res.json({
@@ -439,7 +439,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
     }
 
     // Crea thumbnail
-    const thumbnailFilename = `thumb-${uniqueFilename}`;
+    const thumbnailFilename = uniqueFilename;
     const thumbnailPath = path.join(THUMBNAILS_DIR, thumbnailFilename);
     await sharp(req.file.buffer)
       .resize({
@@ -450,7 +450,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
       .toFile(thumbnailPath);
 
     // Crea versione media
-    const mediumFilename = `medium-${uniqueFilename}`;
+    const mediumFilename = uniqueFilename;
     const mediumPath = path.join(MEDIUM_DIR, mediumFilename);
     await sharp(req.file.buffer)
       .resize({
@@ -461,7 +461,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
       .toFile(mediumPath);
 
     // Crea versione grande
-    const largeFilename = `large-${uniqueFilename}`;
+    const largeFilename = uniqueFilename;
     const largePath = path.join(LARGE_DIR, largeFilename);
     await sharp(req.file.buffer)
       .resize({

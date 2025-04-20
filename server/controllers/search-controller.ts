@@ -163,6 +163,14 @@ export class SearchController {
    * Cerca tra i preventivi
    */
   private static async searchQuotes(searchTerm: string) {
+    // Definizione esplicita del tipo
+    type QuoteResult = {
+      id: number;
+      title: string;
+      status: string | null;
+      createdAt: Date | null;
+    };
+    
     const quotesResult = await db
       .select({
         id: quotes.id,
@@ -176,13 +184,13 @@ export class SearchController {
              ${quotes.status} ILIKE ${searchTerm})`
       )
       .orderBy(desc(quotes.createdAt))
-      .limit(20);
+      .limit(20) as QuoteResult[];
     
     return quotesResult.map(quote => ({
       id: quote.id,
       type: 'preventivo' as const,
       title: quote.title,
-      subtitle: `Stato: ${quote.status}`,
+      subtitle: `Stato: ${quote.status || 'N/D'}`,
       path: `/quotes/detail/${quote.id}`,
       createdAt: quote.createdAt?.toISOString(),
     }));
@@ -192,6 +200,14 @@ export class SearchController {
    * Cerca tra i contratti
    */
   private static async searchContracts(searchTerm: string) {
+    // Definizione esplicita del tipo
+    type ContractResult = {
+      id: number;
+      title: string;
+      status: string | null;
+      createdAt: Date | null;
+    };
+    
     const contractsResult = await db
       .select({
         id: contracts.id,
@@ -205,13 +221,13 @@ export class SearchController {
              ${contracts.status} ILIKE ${searchTerm})`
       )
       .orderBy(desc(contracts.createdAt))
-      .limit(20);
+      .limit(20) as ContractResult[];
     
     return contractsResult.map(contract => ({
       id: contract.id,
       type: 'contratto' as const,
       title: contract.title,
-      subtitle: `Stato: ${contract.status}`,
+      subtitle: `Stato: ${contract.status || 'N/D'}`,
       path: `/contracts/${contract.id}`,
       createdAt: contract.createdAt?.toISOString(),
     }));
@@ -221,6 +237,14 @@ export class SearchController {
    * Cerca tra le gallerie
    */
   private static async searchGalleries(searchTerm: string) {
+    // Definizione esplicita del tipo
+    type GalleryResult = {
+      id: number;
+      name: string;
+      slug: string | null;
+      createdAt: Date | null;
+    };
+    
     const galleriesResult = await db
       .select({
         id: galleries.id,
@@ -235,13 +259,13 @@ export class SearchController {
              ${galleries.description} ILIKE ${searchTerm})`
       )
       .orderBy(desc(galleries.createdAt))
-      .limit(20);
+      .limit(20) as GalleryResult[];
     
     return galleriesResult.map(gallery => ({
       id: gallery.id,
       type: 'galleria' as const,
       title: gallery.name,
-      subtitle: gallery.slug,
+      subtitle: gallery.slug || '',
       path: `/galleries/${gallery.id}`,
       createdAt: gallery.createdAt?.toISOString(),
     }));

@@ -264,6 +264,109 @@ export function FinancialSummary({
     },
   });
 
+  // Funzione per gestire l'aggiornamento di un pagamento programmato
+  const handleUpdateScheduledPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Verifica che il preventivo sia firmato prima di permettere la modifica
+    if (!isQuoteSigned()) {
+      toast({
+        title: "Operazione non consentita",
+        description:
+          "Puoi modificare rate solo se il preventivo è stato firmato dal cliente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validazione dei campi richiesti
+    if (!scheduledData.amount || !scheduledData.dueDate) {
+      toast({
+        title: "Errore di validazione",
+        description: "Importo e data di scadenza sono campi obbligatori.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verifica che l'ID del pagamento programmato sia presente
+    if (!selectedPaymentId) {
+      toast({
+        title: "Errore",
+        description: "ID della rata non valido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prepara l'oggetto pagamento programmato da aggiornare
+    const updatedScheduledPayment = {
+      id: selectedPaymentId,
+      quoteId,
+      amount: parseFloat(scheduledData.amount),
+      dueDate: scheduledData.dueDate,
+      description:
+        scheduledData.description || `Rata per preventivo #${quoteId}`,
+      status: "pending",
+      paymentMethod: scheduledData.paymentMethod || null,
+      notes: scheduledData.notes || null,
+    };
+
+    // Invia la richiesta per aggiornare il pagamento programmato
+    updateScheduledPaymentMutation.mutate(updatedScheduledPayment);
+  };
+
+  // Mutation per aggiornare un pagamento programmato
+  const updateScheduledPaymentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest(
+        "PUT",
+        `/api/finance/scheduled-payments/${data.id}`,
+        data,
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsAddScheduledOpen(false);
+      setIsEditingPayment(false);
+      setScheduledData({
+        amount: "",
+        dueDate: format(
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          "yyyy-MM-dd",
+        ),
+        description: "",
+        paymentMethod: "",
+        notes: "",
+      });
+      setSelectedPaymentId(null);
+
+      // Invalida le query per aggiornare i dati
+      queryClient.invalidateQueries({
+        queryKey: ['quoteScheduledPayments', quoteId],
+      });
+
+      // Forza il refetch immediato dei dati
+      refetchScheduled();
+
+      // Invalida anche altre queries che potrebbero dipendere da questi dati
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+
+      toast({
+        title: "Rata aggiornata",
+        description: "La rata di pagamento è stata aggiornata con successo.",
+      });
+    },
+    onError: (error: any) => {
+      console.error("Errore nell'aggiornamento della rata:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare la rata. Riprova più tardi.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutation per eliminare un pagamento programmato
   const deleteScheduledPaymentMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -580,6 +683,20 @@ export function FinancialSummary({
     if (id) {
       deleteTransactionMutation.mutate(id);
     }
+  };
+  
+  // Funzione per gestire la modifica di un pagamento programmato
+  const handleEditScheduledPayment = (payment: any) => {
+    setSelectedPaymentId(payment.id);
+    setScheduledData({
+      amount: payment.amount.toString(),
+      dueDate: format(new Date(payment.dueDate), "yyyy-MM-dd"),
+      description: payment.description || "",
+      paymentMethod: payment.paymentMethod || "",
+      notes: payment.notes || "",
+    });
+    setIsEditingPayment(true);
+    setIsAddScheduledOpen(true);
   };
 
   // Funzione per gestire la modifica di una transazione
@@ -1279,16 +1396,25 @@ export function FinancialSummary({
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Programma un pagamento</DialogTitle>
+                    <DialogTitle>
+                      {isEditingPayment
+                        ? "Modifica rata programmata"
+                        : "Programma un pagamento"}
+                    </DialogTitle>
                     <DialogDescription>
-                      Inserisci i dettagli della rata da programmare per{" "}
-                      {clientName ? clientName : "il cliente"}.
+                      {isEditingPayment
+                        ? `Modifica i dettagli della rata per ${
+                            clientName ? clientName : "il cliente"
+                          }.`
+                        : `Inserisci i dettagli della rata da programmare per ${
+                            clientName ? clientName : "il cliente"
+                          }.`}
                     </DialogDescription>
                   </DialogHeader>
 
                   <form
                     ref={scheduledFormRef}
-                    onSubmit={handleScheduledSubmit}
+                    onSubmit={isEditingPayment ? handleUpdateScheduledPayment : handleScheduledSubmit}
                     className="space-y-4 py-4"
                   >
                     <div className="space-y-2">

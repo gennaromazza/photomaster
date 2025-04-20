@@ -55,7 +55,7 @@ export function GallerySettings({
   const [passwordProtected, setPasswordProtected] = useState(!!gallery.password);
   const [password, setPassword] = useState(gallery.password || "");
   const [eventId, setEventId] = useState<number | null>(gallery.eventId);
-  const [galleryUrl, setGalleryUrl] = useState(`${window.location.origin}/public/galleries/${gallery.slug}`);
+  const [galleryUrl, setGalleryUrl] = useState(`${window.location.origin}/galleries/${gallery.slug}`);
   const [isSaving, setIsSaving] = useState(false);
   const [resetPasswordDialog, setResetPasswordDialog] = useState(false);
   const [selectionEnabled, setSelectionEnabled] = useState(gallery.selectionEnabled !== false);

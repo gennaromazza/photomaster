@@ -8,6 +8,7 @@ import ModuleManager from "@/components/quotes/modules/module-manager";
 import { SecondClientForm } from "@/components/quotes/second-client-form";
 import { EventDetailsForm } from "@/components/quotes/event-details-form";
 import { FinancialSummaryWrapper } from "@/components/quotes/financial-summary-wrapper";
+import { ShareInfoSigned } from "@/components/quotes/share-info-signed";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,7 @@ import {
 } from "lucide-react";
 import { format, formatDistance, formatDistanceToNow, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatFullName } from "@/lib/utils";
 
 // Helper per formattare le date
 function formatDate(date: Date): string {
@@ -1105,25 +1106,41 @@ export default function QuoteDetailPage() {
               </CardContent>
               <CardFooter>
                 <div className="w-full flex flex-col gap-2">
-                  <Button 
-                    className="w-full" 
-                    onClick={() => {
-                      setIsShareDialogOpen(true);
-                      generateShareLinkMutation.mutate();
-                    }}
-                  >
-                    <Share className="mr-2 h-4 w-4" />
-                    Condividi con Cliente
-                  </Button>
+                  {/* Mostro il pannello ShareInfoSigned per i preventivi firmati */}
+                  {quote?.status === "approved" || quote?.status === "confermato" ? (
+                    <ShareInfoSigned 
+                      quoteId={Number(id)}
+                      shareToken={quote.shareToken || ""}
+                      clientName={client?.firstName ? formatFullName(client?.firstName, client?.lastName) : ""}
+                      clientEmail={client?.email || ""}
+                      secondClientName={secondClient?.firstName ? formatFullName(secondClient?.firstName, secondClient?.lastName) : ""}
+                      secondClientEmail={secondClient?.email || ""}
+                      signatureDate={quote.updatedAt ? new Date(quote.updatedAt) : undefined}
+                      title={quote.title || ""}
+                    />
+                  ) : (
+                    <>
+                      <Button 
+                        className="w-full" 
+                        onClick={() => {
+                          setIsShareDialogOpen(true);
+                          generateShareLinkMutation.mutate();
+                        }}
+                      >
+                        <Share className="mr-2 h-4 w-4" />
+                        Condividi con Cliente
+                      </Button>
 
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => setLocation(`/quotes/contract/${id}`)}
-                  >
-                    <FileSignature className="mr-2 h-4 w-4" />
-                    Genera Contratto
-                  </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setLocation(`/quotes/contract/${id}`)}
+                      >
+                        <FileSignature className="mr-2 h-4 w-4" />
+                        Genera Contratto
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardFooter>
             </Card>

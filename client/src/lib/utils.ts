@@ -43,6 +43,23 @@ export function formatDate(date: Date | string, formatStr: string = 'dd/MM/yyyy'
 }
 
 /**
+ * Formatta una data in formato lungo italiano
+ * @param date - Data da formattare
+ * @returns Stringa di data formattata in modo esteso
+ */
+export function formatDateLong(date: Date | string): string {
+  if (!date) return '';
+  
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    return format(dateObj, 'd MMMM yyyy', { locale: it });
+  } catch (error) {
+    console.error('Errore formattazione data estesa:', error);
+    return '';
+  }
+}
+
+/**
  * Verifica se un valore è definito e non vuoto
  * @param value - Valore da verificare
  * @returns true se il valore è definito e non vuoto

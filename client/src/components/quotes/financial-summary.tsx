@@ -806,7 +806,7 @@ export function FinancialSummary({
                           </div>
                         </TableCell>
                         <TableCell className="text-right font-medium text-green-600">
-                          {formatCurrency(parseFloat(transaction.amount) * 100)}
+                          {formatCurrency(parseFloat(transaction.amount))}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1063,7 +1063,7 @@ export function FinancialSummary({
                         </TableCell>
                         <TableCell>{getStatusBadge(payment.status)}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(parseFloat(payment.amount) * 100)}
+                          {formatCurrency(parseFloat(payment.amount))}
                         </TableCell>
                         {!readOnly && (
                           <TableCell>
@@ -1366,7 +1366,7 @@ export function FinancialSummary({
                           </div>
                         </TableCell>
                         <TableCell className="text-right font-medium text-green-600">
-                          {formatCurrency(parseFloat(transaction.amount) * 100)}
+                          {formatCurrency(parseFloat(transaction.amount))}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1526,7 +1526,7 @@ export function FinancialSummary({
                         </TableCell>
                         <TableCell>{getStatusBadge(payment.status)}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {formatCurrency(parseFloat(payment.amount) * 100)}
+                          {formatCurrency(parseFloat(payment.amount))}
                         </TableCell>
                       </TableRow>
                     );

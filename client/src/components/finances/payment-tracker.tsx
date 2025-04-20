@@ -562,7 +562,7 @@ export function PaymentTracker({
                         : "text-red-600 font-medium"
                     }
                   >
-                    {formatCurrency(parseFloat(transaction.amount) * 100)}
+                    {formatCurrency(parseFloat(transaction.amount))}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

@@ -428,7 +428,7 @@ export default function ScheduledPaymentsPage() {
                             {getStatusBadge(payment.status)}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            {formatCurrency(parseFloat(payment.amount) * 100)}
+                            {formatCurrency(parseFloat(payment.amount))}
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>

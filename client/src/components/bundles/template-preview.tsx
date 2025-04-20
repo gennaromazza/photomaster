@@ -32,8 +32,8 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({
   name,
   description = 'Descrizione del pacchetto fotografico che mostra i dettagli e i vantaggi inclusi.',
   imagePath,
-  totalPrice = 150000, // 1500€ in centesimi come valore predefinito
-  discountedPrice = 120000, // 1200€ in centesimi come valore predefinito
+  totalPrice = 1500, // 1500€ come valore predefinito
+  discountedPrice = 1200, // 1200€ come valore predefinito
   style
 }) => {
   const placeholderImage = 'https://images.unsplash.com/photo-1529634597503-139d3726fed9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1769&q=80';

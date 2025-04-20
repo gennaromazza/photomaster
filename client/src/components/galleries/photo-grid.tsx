@@ -40,6 +40,7 @@ interface PhotoGridProps {
   selectable?: boolean;
   editable?: boolean;
   onPhotoEdit?: (photoId: number) => void;
+  onPhotoClick?: (index: number) => void;
   galleryId?: number;
   chapterId?: number | null;
 }
@@ -51,6 +52,7 @@ export function PhotoGrid({
   selectable = false,
   editable = false,
   onPhotoEdit,
+  onPhotoClick,
   galleryId,
   chapterId,
 }: PhotoGridProps) {
@@ -137,10 +139,11 @@ export function PhotoGrid({
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {photos.map((photo) => (
+        {photos.map((photo, index) => (
           <Card 
             key={photo.id} 
-            className="overflow-hidden group relative"
+            className="overflow-hidden group relative cursor-pointer transform transition-transform duration-300 hover:translate-y-[-3px] hover:shadow-lg"
+            onClick={() => onPhotoClick && onPhotoClick(index)}
           >
             <div className="aspect-square overflow-hidden relative">
               <img
@@ -162,10 +165,15 @@ export function PhotoGrid({
                   {selectable && (
                     <Checkbox
                       checked={selectedPhotos.includes(photo.id)}
-                      onCheckedChange={(checked) => 
-                        handleCheckboxChange(photo.id, checked === true)
-                      }
+                      onCheckedChange={(checked) => {
+                        handleCheckboxChange(photo.id, checked === true);
+                        // Previeni la propagazione per evitare l'attivazione del click sulla Card
+                        if (typeof event !== 'undefined' && event.stopPropagation) {
+                          event.stopPropagation();
+                        }
+                      }}
                       className="h-5 w-5 border-white data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                      onClick={(e) => e.stopPropagation()}
                     />
                   )}
                   
@@ -176,24 +184,34 @@ export function PhotoGrid({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-white hover:bg-white/20"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         {onPhotoEdit && (
-                          <DropdownMenuItem onClick={() => onPhotoEdit(photo.id)}>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            onPhotoEdit(photo.id);
+                          }}>
                             <Edit className="mr-2 h-4 w-4" />
                             Modifica info
                           </DropdownMenuItem>
                         )}
                         
-                        <DropdownMenuItem onClick={() => toggleFeatured(photo)}>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFeatured(photo);
+                        }}>
                           <Star className={`mr-2 h-4 w-4 ${photo.isFeatured ? 'fill-amber-500' : ''}`} />
                           {photo.isFeatured ? "Rimuovi da In Evidenza" : "Aggiungi a In Evidenza"}
                         </DropdownMenuItem>
                         
-                        <DropdownMenuItem onClick={() => window.open(photo.url, "_blank")}>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(photo.url, "_blank");
+                        }}>
                           <Download className="mr-2 h-4 w-4" />
                           Visualizza originale
                         </DropdownMenuItem>
@@ -201,7 +219,8 @@ export function PhotoGrid({
                         <DropdownMenuSeparator />
                         
                         <DropdownMenuItem 
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setPhotoToDelete(photo);
                             setDeleteDialogOpen(true);
                           }}
@@ -216,21 +235,39 @@ export function PhotoGrid({
                 </div>
                 
                 <div className="text-white">
-                  {photo.title && <p className="font-medium line-clamp-2">{photo.title}</p>}
+                  {photo.title && (
+                    <p className="font-medium line-clamp-2">{photo.title}</p>
+                  )}
                   
-                  <div className="flex mt-2 gap-3 text-sm">
-                    {photo.likeCount > 0 && (
-                      <div className="flex items-center">
-                        <Heart className="h-4 w-4 mr-1" />
-                        {photo.likeCount}
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex gap-3 text-sm">
+                      {photo.likeCount > 0 && (
+                        <div className="flex items-center">
+                          <Heart className="h-4 w-4 mr-1" />
+                          {photo.likeCount}
+                        </div>
+                      )}
+                      
+                      {photo.commentCount > 0 && (
+                        <div className="flex items-center">
+                          <MessageCircle className="h-4 w-4 mr-1" />
+                          {photo.commentCount}
+                        </div>
+                      )}
+                    </div>
                     
-                    {photo.commentCount > 0 && (
-                      <div className="flex items-center">
-                        <MessageCircle className="h-4 w-4 mr-1" />
-                        {photo.commentCount}
-                      </div>
+                    {onPhotoClick && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/40 text-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPhotoClick(index);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                     )}
                   </div>
                 </div>

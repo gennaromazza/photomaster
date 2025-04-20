@@ -706,11 +706,22 @@ export const trackSocialShare = async (req: Request, res: Response) => {
 export const togglePhotoSelection = async (req: Request, res: Response) => {
   try {
     const { photoId } = req.params;
-    const { galleryId, selectionType, notes } = req.body;
+    const { galleryId, selectionType, notes, clientEmail, clientName } = req.body;
 
     // Ottieni informazioni sulla sessione / utente
     const sessionId = req.sessionID || uuidv4();
+    
+    // Controlla se è fornito un ID cliente tramite body
     const clientId = req.user?.id || (req.body.clientId ? Number(req.body.clientId) : null);
+    
+    // Raccoglie dati di contatto del cliente se forniti
+    let contactInfo = {};
+    if (clientEmail || clientName) {
+      contactInfo = {
+        clientEmail: clientEmail || null,
+        clientName: clientName || null
+      };
+    }
 
     // Controlla se esiste già una selezione
     const existingSelection = await db
@@ -737,7 +748,8 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
           .update(photoSelections)
           .set({
             selectionType,
-            notes: notes || null
+            notes: notes || null,
+            ...contactInfo
           })
           .where(eq(photoSelections.id, existingSelection[0].id))
           .returning();
@@ -755,6 +767,7 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
           sessionId: clientId ? null : sessionId,
           selectionType,
           notes: notes || null,
+          ...contactInfo,
           createdAt: new Date()
         })
         .returning();

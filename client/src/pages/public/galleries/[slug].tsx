@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
+import { PhotoSelectionManager } from "@/components/galleries/photo-selection-manager";
 import { Loader2, Heart, MessageCircle, Download, Share2, Lock } from "lucide-react";
 import { Photo, GalleryChapter } from "@/types/gallery";
 import { apiRequest } from "@/lib/queryClient";
@@ -235,27 +236,13 @@ export default function PublicGalleryPage() {
           </div>
         )}
 
-        {/* Foto selezionate (se presenti) */}
-        {selectedPhotos.length > 0 && (
-          <div className="mb-6 p-4 bg-muted rounded-lg">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-medium">Foto selezionate: {selectedPhotos.length}</h3>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setSelectedPhotos([])}
-                >
-                  Cancella selezione
-                </Button>
-                {gallery.selectionEnabled && (
-                  <Button size="sm">
-                    Salva selezione
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* Manager delle selezioni */}
+        {gallery.selectionEnabled && selectedPhotos.length > 0 && (
+          <PhotoSelectionManager
+            galleryId={gallery.id}
+            selectedPhotos={selectedPhotos}
+            onClearSelection={() => setSelectedPhotos([])}
+          />
         )}
 
         {/* Griglia di foto */}

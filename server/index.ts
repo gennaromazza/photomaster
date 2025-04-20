@@ -1,3 +1,6 @@
+// Carichiamo dotenv prima di tutto per assicurarci che le variabili d'ambiente siano disponibili
+import 'dotenv/config';
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";

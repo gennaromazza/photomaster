@@ -383,7 +383,7 @@ export function FinancialSummary({
     // Prepara l'oggetto pagamento programmato
     const newScheduledPayment = {
       quoteId,
-      amount: parseFloat(scheduledData.amount) * 100,
+      amount: parseFloat(scheduledData.amount),
       dueDate: scheduledData.dueDate, // Inviamo la data come stringa, verrà formattata dal server
       description:
         scheduledData.description || `Rata per preventivo #${quoteId}`,
@@ -420,7 +420,7 @@ export function FinancialSummary({
 
     const transactionData = {
       type: "income",
-      amount: parseFloat(payment.amount) * 100,
+      amount: parseFloat(payment.amount),
       date: format(new Date(), "yyyy-MM-dd"), // Inviamo la data come stringa formattata
       description:
         payment.description || `Pagamento per preventivo #${quoteId}`,

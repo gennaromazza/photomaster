@@ -1078,29 +1078,17 @@ export default function QuoteDetailPage() {
 
           {/* Colonna laterale - 4/12 */}
           <div className="lg:col-span-4 space-y-4 sm:space-y-6">
-            {/* Riepilogo finanziario */}
+            {/* Scheda di condivisione/firma */}
             <Card className="mb-4">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Riepilogo Preventivo</CardTitle>
+                <CardTitle className="text-lg">
+                  {quote?.status === "approved" || quote?.status === "confermato" 
+                    ? "Contratto firmato" 
+                    : "Opzioni preventivo"}
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotale</span>
-                  <span>{formatCurrency(finData?.summary.subtotal ?? 0)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Totale Preventivo</span>
-                  <span>{formatCurrency(finData?.summary.quoteTotal ?? 0)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Saldo residuo</span>
-                  <span>
-                    {formatCurrency(
-                      (finData?.summary.quoteTotal ?? 0) - (finData?.summary.totalPaid ?? 0)
-                    )}
-                  </span>
-                </div>
-                <div className="text-sm text-muted-foreground mt-2">
+              <CardContent>
+                <div className="text-sm text-muted-foreground mb-4">
                   Preventivo {quote.status === "draft" ? "in bozza" : quote.status}
                 </div>
               </CardContent>

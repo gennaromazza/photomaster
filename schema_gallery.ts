@@ -262,6 +262,8 @@ export const photoSelections = pgTable("photo_selections", {
   photoId: integer("photo_id").notNull().references(() => photos.id, { onDelete: "cascade" }),
   clientId: integer("client_id").references(() => clients.id), // Opzionale, solo per clienti registrati
   sessionId: text("session_id"), // Per clienti non registrati
+  clientEmail: text("client_email"), // Email del cliente (per utenti non registrati)
+  clientName: text("client_name"), // Nome del cliente (per utenti non registrati)
   selectionType: text("selection_type").default("favorite").notNull(), // favorite, selected, rejected
   notes: text("notes"), // Note opzionali sulla selezione
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -272,6 +274,8 @@ export const insertPhotoSelectionSchema = createInsertSchema(photoSelections).pi
   photoId: true,
   clientId: true,
   sessionId: true,
+  clientEmail: true,
+  clientName: true,
   selectionType: true,
   notes: true,
 });

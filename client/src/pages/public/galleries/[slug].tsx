@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
 import { PhotoSelectionManager } from "@/components/galleries/photo-selection-manager";
+import { VisitorInfoForm } from "@/components/galleries/visitor-info-form";
 import { Loader2, Heart, MessageCircle, Download, Share2, Lock } from "lucide-react";
 import { Photo, GalleryChapter } from "@/types/gallery";
 import { apiRequest } from "@/lib/queryClient";

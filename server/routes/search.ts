@@ -1,8 +1,8 @@
-import express from "express";
+import { Router } from "express";
 import { SearchController } from "../controllers/search-controller";
 import { isAuthenticated } from "../auth";
 
-const router = express.Router();
+const router = Router();
 
 /**
  * @route GET /api/search

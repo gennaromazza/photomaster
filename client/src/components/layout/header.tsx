@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "@/components/ui/custom-link";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Menu, Search, MessageSquare, CalendarDays } from "lucide-react";
+import { Bell, Menu, MessageSquare, CalendarDays, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
+import { GlobalSearchBar } from "@/components/global-search";
 
 export interface HeaderProps {
   onOpenSidebar: () => void;
@@ -50,13 +51,8 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
         </div>
         
         <div className="hidden md:flex md:items-center md:gap-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Cerca..."
-              className="rounded-md border border-input bg-background pl-8 pr-3 py-2 text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
+          <div className="w-64">
+            <GlobalSearchBar />
           </div>
           
           <Button variant="ghost" size="icon" className="relative">

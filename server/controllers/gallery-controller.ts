@@ -600,7 +600,7 @@ export const generateGalleryQRCode = async (req: Request, res: Response) => {
     }
 
     // URL della galleria
-    const galleryUrl = `${req.protocol}://${req.get('host')}/galleries/${gallery.slug}`;
+    const galleryUrl = `${req.protocol}://${req.get('host')}/public/galleries/${gallery.slug}`;
 
     // Nome del file QR
     const qrFilename = `gallery-${gallery.id}-qr.png`;

@@ -17,6 +17,8 @@ interface PhotoSelectionManagerProps {
   clientId?: number;
   clientEmail?: string;
   clientName?: string;
+  visitorInfo?: { name: string; email: string } | null;
+  onSaveSelections?: () => Promise<any>;
 }
 
 export function PhotoSelectionManager({
@@ -26,6 +28,8 @@ export function PhotoSelectionManager({
   clientId,
   clientEmail,
   clientName,
+  visitorInfo,
+  onSaveSelections,
 }: PhotoSelectionManagerProps) {
   const { toast } = useToast();
   const [selectionType, setSelectionType] = useState<string>("favorite");
@@ -57,6 +61,25 @@ export function PhotoSelectionManager({
     setIsSaving(true);
     
     try {
+      // Se è stata passata una funzione personalizzata per il salvataggio (usata con il form visitatore)
+      if (onSaveSelections) {
+        await onSaveSelections();
+        
+        toast({
+          title: "Selezione salvata",
+          description: `${selectedPhotos.length} foto salvate con successo.`,
+        });
+        
+        // Pulisci la selezione
+        onClearSelection();
+        setNotes("");
+        return;
+      }
+      
+      // Recupera i dati del cliente dal visitorInfo se disponibile
+      const actualClientEmail = clientEmail || (visitorInfo?.email);
+      const actualClientName = clientName || (visitorInfo?.name);
+      
       // Per ogni foto selezionata, invia una richiesta di selezione
       for (const photoId of selectedPhotos) {
         await apiRequest("POST", `/api/gallery/photos/${photoId}/select`, {
@@ -64,8 +87,8 @@ export function PhotoSelectionManager({
           selectionType,
           notes,
           clientId,
-          clientEmail,
-          clientName
+          clientEmail: actualClientEmail,
+          clientName: actualClientName
         });
       }
       

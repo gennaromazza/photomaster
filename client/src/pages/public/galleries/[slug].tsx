@@ -19,6 +19,8 @@ export default function PublicGalleryPage() {
   const [password, setPassword] = useState("");
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
+  const [visitorInfo, setVisitorInfo] = useState<{ name: string; email: string } | null>(null);
+  const [showVisitorForm, setShowVisitorForm] = useState(false);
 
   // Query per ottenere i dettagli della galleria
   const { data: gallery, isLoading: isGalleryLoading, error: galleryError } = useQuery({
@@ -93,6 +95,47 @@ export default function PublicGalleryPage() {
         ? [...prev, photoId] 
         : prev.filter(id => id !== photoId)
     );
+    
+    if (selected && selectedPhotos.length === 0 && !visitorInfo) {
+      setShowVisitorForm(true);
+    }
+  };
+  
+  // Gestione del form visitatore
+  const handleVisitorInfoSubmit = (data: { name: string; email: string }) => {
+    setVisitorInfo(data);
+    setShowVisitorForm(false);
+    return Promise.resolve();
+  };
+  
+  // Salvataggio delle selezioni
+  const handleSaveSelections = async () => {
+    if (!gallery?.id || selectedPhotos.length === 0) return;
+    
+    if (!visitorInfo) {
+      setShowVisitorForm(true);
+      return;
+    }
+    
+    try {
+      const response = await apiRequest("POST", `/api/gallery/galleries/${gallery.id}/selections`, {
+        photoIds: selectedPhotos,
+        clientName: visitorInfo.name,
+        clientEmail: visitorInfo.email,
+        sessionId: Math.random().toString(36).substring(2) // Semplice ID di sessione per demo
+      });
+      
+      if (response.ok) {
+        // Resetta le selezioni dopo il salvataggio
+        setSelectedPhotos([]);
+        return await response.json();
+      } else {
+        throw new Error("Errore nel salvataggio delle selezioni");
+      }
+    } catch (error) {
+      console.error("Errore nel salvataggio delle selezioni:", error);
+      throw error;
+    }
   };
 
   // Se la galleria richiede una password e l'utente non è autorizzato
@@ -237,12 +280,25 @@ export default function PublicGalleryPage() {
           </div>
         )}
 
+        {/* Form raccolta dati visitatore */}
+        {showVisitorForm && (
+          <div className="mb-8">
+            <VisitorInfoForm 
+              onSubmit={handleVisitorInfoSubmit}
+              title="I tuoi dati"
+              description="Per salvare le tue selezioni, abbiamo bisogno di alcune informazioni."
+            />
+          </div>
+        )}
+        
         {/* Manager delle selezioni */}
         {gallery.selectionEnabled && selectedPhotos.length > 0 && (
           <PhotoSelectionManager
             galleryId={gallery.id}
             selectedPhotos={selectedPhotos}
             onClearSelection={() => setSelectedPhotos([])}
+            visitorInfo={visitorInfo}
+            onSaveSelections={handleSaveSelections}
           />
         )}
 

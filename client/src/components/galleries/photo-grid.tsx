@@ -7,7 +7,8 @@ import {
   Edit, 
   Trash2,
   Check,
-  Star 
+  Star,
+  Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";

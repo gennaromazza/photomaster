@@ -55,7 +55,7 @@ export function GallerySettings({
   const [passwordProtected, setPasswordProtected] = useState(!!gallery.password);
   const [password, setPassword] = useState(gallery.password || "");
   const [eventId, setEventId] = useState<number | null>(gallery.eventId);
-  const [galleryUrl, setGalleryUrl] = useState(`${window.location.origin}/galleries/${gallery.slug}`);
+  const [galleryUrl, setGalleryUrl] = useState(`${window.location.origin}/public/galleries/${gallery.slug}`);
   const [isSaving, setIsSaving] = useState(false);
   const [resetPasswordDialog, setResetPasswordDialog] = useState(false);
 
@@ -257,14 +257,14 @@ export function GallerySettings({
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                 <Select
-                  value={eventId?.toString() || ""}
-                  onValueChange={(value) => setEventId(value ? parseInt(value) : null)}
+                  value={eventId?.toString() || "null"}
+                  onValueChange={(value) => setEventId(value && value !== "null" ? parseInt(value) : null)}
                 >
                   <SelectTrigger id="eventSelect" className="flex-1">
                     <SelectValue placeholder="Seleziona un evento" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nessun evento</SelectItem>
+                    <SelectItem value="null">Nessun evento</SelectItem>
                     {events.map((event) => (
                       <SelectItem key={event.id} value={event.id.toString()}>
                         {event.title}

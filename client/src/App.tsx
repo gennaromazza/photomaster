@@ -104,7 +104,7 @@ function Router() {
       <Route path="/reset-password/:token" component={ResetPasswordPage} />
       <Route path="/quotes/public/:token" component={QuotePublicPage} />
       <Route path="/quotes/sign-success" component={SignSuccessPage} />
-      <Route path="/galleries/:slug" component={PublicGalleryPage} />
+      <Route path="/public/galleries/:slug" component={PublicGalleryPage} />
       <Route component={NotFound} />
     </Switch>
   );

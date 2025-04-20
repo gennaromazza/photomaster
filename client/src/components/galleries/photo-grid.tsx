@@ -144,7 +144,7 @@ export function PhotoGrid({
           >
             <div className="aspect-square overflow-hidden relative">
               <img
-                src={photo.url}
+                src={photo.thumbnailUrl}
                 alt={photo.title || "Foto"}
                 className="object-cover h-full w-full transition-all duration-300 group-hover:scale-105"
               />

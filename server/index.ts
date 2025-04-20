@@ -6,6 +6,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
 import { serveStaticFixed } from "./static-server";
 import helmet from "helmet";
+import path from "path";
 
 const app = express();
 
@@ -30,6 +31,10 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Configurazione static files
+app.use(express.static(path.join(process.cwd(), "dist", "public")));
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use((req, res, next) => {
   const start = Date.now();

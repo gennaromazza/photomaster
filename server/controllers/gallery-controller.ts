@@ -386,8 +386,16 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
       .from(photos)
       .where(eq(photos.galleryId, Number(galleryId)));
 
+    // Aggiungi gli URL per le immagini
+    const basePath = "/uploads";
+    const photosWithUrls = photoList.map(p => ({
+      ...p,
+      url: `${basePath}/galleries/medium-${p.filename}`,
+      thumbnailUrl: `${basePath}/galleries/thumbnails/thumb-${p.filename}`,
+    }));
+
     res.json({
-      photos: photoList,
+      photos: photosWithUrls,
       pagination: {
         total: Number(count),
         page: Number(page),

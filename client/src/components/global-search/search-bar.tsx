@@ -165,6 +165,10 @@ export function GlobalSearchBar({ isMobile = false }: { isMobile?: boolean }) {
             <div className="p-4 text-center text-muted-foreground">
               Si è verificato un errore. Riprova più tardi.
             </div>
+          ) : !results || !Array.isArray(results) ? (
+            <div className="p-4 text-center text-muted-foreground">
+              Errore di connessione al server. Riprova tra poco.
+            </div>
           ) : results.length > 0 ? (
             <div>
               <div className="border-b py-2 px-4">

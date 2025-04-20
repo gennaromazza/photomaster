@@ -41,14 +41,32 @@ export function useGlobalSearch(initialQuery = '') {
         return { results: [], totalCount: 0 };
       }
       
-      const response = await apiRequest('GET', `/api/search?q=${encodeURIComponent(debouncedQuery)}`);
-      return await response.json();
+      try {
+        const response = await apiRequest('GET', `/api/search?q=${encodeURIComponent(debouncedQuery)}`);
+        const data = await response.json();
+        
+        // Verifica che i dati siano nel formato atteso
+        if (!data || !data.results) {
+          console.error('Formato dati ricerca non valido:', data);
+          return { results: [], totalCount: 0 };
+        }
+        
+        return {
+          results: data.results || [],
+          totalCount: data.totalCount || 0
+        };
+      } catch (error) {
+        console.error('Errore durante la ricerca:', error);
+        return { results: [], totalCount: 0 };
+      }
     },
     // Non eseguire se la query è vuota o troppo corta
     enabled: debouncedQuery.length >= 2,
     // Imposta un tempo di stale più breve per i risultati di ricerca
     staleTime: 30000, // 30 secondi,
     placeholderData: (prevData) => prevData, // Equivalente a keepPreviousData in v5
+    // Ritenta 1 volta in caso di errore
+    retry: 1
   });
 
   // Reset della ricerca

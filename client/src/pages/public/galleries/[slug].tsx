@@ -118,11 +118,13 @@ export default function PublicGalleryPage() {
     }
     
     try {
-      const response = await apiRequest("POST", `/api/gallery/galleries/${gallery.id}/selections`, {
+      const response = await apiRequest("POST", `/api/gallery/galleries/selections/batch`, {
+        galleryId: gallery.id,
         photoIds: selectedPhotos,
         clientName: visitorInfo.name,
         clientEmail: visitorInfo.email,
-        sessionId: Math.random().toString(36).substring(2) // Semplice ID di sessione per demo
+        sessionId: Math.random().toString(36).substring(2), // Semplice ID di sessione per demo
+        selectionType: "favorite"
       });
       
       if (response.ok) {

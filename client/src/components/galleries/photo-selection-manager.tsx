@@ -80,17 +80,16 @@ export function PhotoSelectionManager({
       const actualClientEmail = clientEmail || (visitorInfo?.email);
       const actualClientName = clientName || (visitorInfo?.name);
       
-      // Per ogni foto selezionata, invia una richiesta di selezione
-      for (const photoId of selectedPhotos) {
-        await apiRequest("POST", `/api/gallery/photos/${photoId}/select`, {
-          galleryId,
-          selectionType,
-          notes,
-          clientId,
-          clientEmail: actualClientEmail,
-          clientName: actualClientName
-        });
-      }
+      // Invia tutte le selezioni con una singola richiesta batch
+      await apiRequest("POST", `/api/gallery/galleries/selections/batch`, {
+        galleryId,
+        photoIds: selectedPhotos,
+        selectionType,
+        notes,
+        clientId,
+        clientEmail: actualClientEmail,
+        clientName: actualClientName
+      });
       
       // Invalida la cache per ricaricare le selezioni
       queryClient.invalidateQueries({ 

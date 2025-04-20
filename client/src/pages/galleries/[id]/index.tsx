@@ -132,7 +132,7 @@ export default function GalleryPage() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => window.open(`/gallery/${gallery.slug}`, "_blank")}
+              onClick={() => window.open(`/public/galleries/${gallery.slug}`, "_blank")}
             >
               <Share className="h-4 w-4 mr-2" />
               Condividi

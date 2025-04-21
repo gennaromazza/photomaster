@@ -433,6 +433,24 @@ export default function PublicGalleryPage() {
               {slideshow ? <Pause className="h-4 w-4 md:h-5 md:w-5" /> : <Play className="h-4 w-4 md:h-5 md:w-5" />}
             </Button>
 
+            {gallery?.downloadEnabled && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-white hover:bg-white/20 h-8 w-8 md:h-10 md:w-10"
+                      onClick={() => window.open(`/api/gallery/photos/${photo.id}/download`, '_blank')}
+                    >
+                      <Download className="h-4 w-4 md:h-5 md:w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Scarica foto</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
             {gallery?.selectionEnabled && (
               <Button
                 variant="ghost"
@@ -848,6 +866,25 @@ export default function PublicGalleryPage() {
                         <TooltipContent>Scarica tutte le foto</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                    
+                    {activeChapter && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="flex items-center gap-2"
+                              onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?chapter=${activeChapter}`, '_blank')}
+                            >
+                              <Download className="h-4 w-4" />
+                              <span className="hidden md:inline">Scarica capitolo</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Scarica solo foto di questo capitolo</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                 )}
               </div>

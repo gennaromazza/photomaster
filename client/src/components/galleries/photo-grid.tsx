@@ -229,8 +229,16 @@ export function PhotoGrid({
                           e.stopPropagation();
                           window.open(photo.url, "_blank");
                         }}>
-                          <Download className="mr-2 h-4 w-4" />
+                          <Eye className="mr-2 h-4 w-4" />
                           Visualizza originale
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/api/gallery/photos/${photo.id}/download`, "_blank");
+                        }}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Scarica
                         </DropdownMenuItem>
 
                         <DropdownMenuSeparator />

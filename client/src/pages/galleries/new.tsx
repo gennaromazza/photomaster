@@ -84,9 +84,21 @@ export default function NewGalleryPage() {
       console.log("Status risposta:", response.status, response.statusText);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Dettagli errore:", errorText);
-        throw new Error(`Errore durante la creazione della galleria: ${response.status} ${response.statusText}`);
+        let errorMessage = `Errore durante la creazione della galleria (${response.status})`;
+        
+        try {
+          const errorData = await response.json();
+          console.error("Dettagli errore:", errorData);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          // Se la risposta non è JSON, utilizziamo il testo grezzo
+          const errorText = await response.text();
+          console.error("Dettagli errore:", errorText);
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const gallery = await response.json();
@@ -101,7 +113,9 @@ export default function NewGalleryPage() {
       console.error("Errore nella creazione della galleria:", error);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante la creazione della galleria",
+        description: error instanceof Error 
+          ? error.message 
+          : "Si è verificato un errore durante la creazione della galleria",
         variant: "destructive",
       });
     } finally {

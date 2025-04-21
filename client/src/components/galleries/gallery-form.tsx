@@ -26,9 +26,21 @@ const galleryFormSchema = z.object({
   name: z.string().min(3, { message: "Il nome deve contenere almeno 3 caratteri" }),
   description: z.string().optional(),
   eventId: z.number().optional().nullable(),
-  password: z.string().optional(),
   isPublic: z.boolean().default(true),
-  isPasswordProtected: z.boolean().default(false)
+  isPasswordProtected: z.boolean().default(false),
+  password: z.string().optional()
+    .refine(
+      (password, { isPasswordProtected }) => !isPasswordProtected || (isPasswordProtected && password && password.length >= 6), 
+      { message: "La password è obbligatoria e deve essere di almeno 6 caratteri" }
+    ),
+  coverImage: z.any()
+    .refine(val => val !== null, {
+      message: "L'immagine di copertina è obbligatoria"
+    })
+})
+.refine(data => !data.isPasswordProtected || (data.isPasswordProtected && data.password), {
+  message: "È necessario impostare una password quando la protezione è attiva",
+  path: ["password"]
 });
 
 interface GalleryFormProps {
@@ -167,34 +179,44 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
           )}
         />
 
-        <FormItem>
-          <FormLabel>Immagine di Copertina</FormLabel>
-          <div className="flex flex-col space-y-2">
-            <div className="grid w-full max-w-sm items-center gap-1.5">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleCoverImageChange}
-                className="cursor-pointer"
-                id="coverImage"
-              />
-            </div>
-            {coverImagePreview && (
-              <div className="mt-2">
-                <div className="relative w-full max-w-sm h-40 overflow-hidden rounded-md">
-                  <img 
-                    src={coverImagePreview} 
-                    alt="Anteprima copertina" 
-                    className="w-full h-full object-cover" 
-                  />
+        <FormField
+          control={form.control}
+          name="coverImage"
+          render={({ field: { onChange, value, ...rest } }) => (
+            <FormItem>
+              <FormLabel>Immagine di Copertina <span className="text-red-500">*</span></FormLabel>
+              <div className="flex flex-col space-y-2">
+                <div className="grid w-full max-w-sm items-center gap-1.5">
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleCoverImageChange}
+                      className="cursor-pointer"
+                      id="coverImage"
+                      {...rest}
+                    />
+                  </FormControl>
                 </div>
+                {coverImagePreview && (
+                  <div className="mt-2">
+                    <div className="relative w-full max-w-sm h-40 overflow-hidden rounded-md">
+                      <img 
+                        src={coverImagePreview} 
+                        alt="Anteprima copertina" 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <FormDescription>
-            Carica un'immagine di copertina per la galleria (consigliato)
-          </FormDescription>
-        </FormItem>
+              <FormDescription>
+                Carica un'immagine di copertina per la galleria (obbligatorio)
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <Separator className="my-4" />
 
@@ -249,12 +271,16 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Password <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
-                    <Input type="text" placeholder="Inserisci una password" {...field} />
+                    <Input 
+                      type="text" 
+                      placeholder="Inserisci una password (min. 6 caratteri)" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormDescription>
-                    La password sarà richiesta per accedere alla galleria
+                    La password sarà richiesta per accedere alla galleria (minimo 6 caratteri)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

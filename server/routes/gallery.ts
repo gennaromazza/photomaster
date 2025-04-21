@@ -43,7 +43,10 @@ const upload = multer({
     fileSize: 20 * 1024 * 1024, // limite 20MB
   },
   fileFilter: (_req, file, cb) => {
-    // Accetta solo immagini
+    // Accetta solo immagini con estensioni specifiche
+    if (!file.originalname.match(/\.(jpg|jpeg|png|webp)$/i)) {
+      return cb(new Error("Formato immagine non valido. Solo JPG, PNG, WEBP."), false);
+    }
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
@@ -282,5 +285,40 @@ router.get("/galleries/:id/download-all", downloadAllPhotos);
 
 // Pulizia completa gallerie (solo per amministratori)
 router.delete("/cleanup", isAuthenticated, cleanupGalleries);
+
+// Duplica una galleria (richiede autenticazione)
+router.post("/galleries/:id/duplicate", isAuthenticated, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [original] = await db.select().from(galleries).where(eq(galleries.id, Number(id)));
+    
+    if (!original) {
+      return res.status(404).json({ error: "Galleria non trovata" });
+    }
+    
+    // Genera un nuovo slug univoco
+    const newSlug = `${original.slug}-${Date.now()}`;
+    
+    // Duplica la galleria con un nuovo ID
+    const duplicatedGallery = {
+      ...original,
+      id: undefined,  // Assicura che venga generato un nuovo ID
+      slug: newSlug,
+      name: `${original.name} (copia)`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    // Salva la nuova galleria
+    const [newGallery] = await db.insert(galleries)
+      .values(duplicatedGallery)
+      .returning();
+      
+    res.status(201).json(newGallery);
+  } catch (error) {
+    console.error("Errore durante la duplicazione della galleria:", error);
+    res.status(500).json({ error: "Errore durante la duplicazione della galleria" });
+  }
+});
 
 export default router;

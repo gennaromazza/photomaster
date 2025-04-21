@@ -531,6 +531,9 @@ export const uploadPhoto = async (req: Request, res: Response) => {
 
     const { galleryId, chapterId, title, caption, isFeatured } = req.body;
 
+    // Forza chapterId a number o null
+    const formattedChapterId = chapterId ? Number(chapterId) : null;
+
     // Genera un nome file unico senza estensione duplicata (alcuni browser inviano .jpg.jpg)
     const cleanOriginalName = req.file.originalname.replace(/\.+/g, '.').toLowerCase();
     const extension = path.extname(cleanOriginalName);
@@ -730,7 +733,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
     // Salva nel database
     const [photo] = await db.insert(photos).values({
       galleryId: Number(galleryId),
-      chapterId: chapterId ? Number(chapterId) : null,
+      chapterId: formattedChapterId,
       filename: uniqueFilename,
       originalFilename: req.file.originalname,
       path: filePath,

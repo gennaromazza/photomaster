@@ -419,7 +419,10 @@ export const galleryChaptersRelations = relations(galleryChapters, ({ one, many 
     fields: [galleryChapters.galleryId],
     references: [galleries.id],
   }),
-  photos: many(photos),
+  photos: many(photos, {
+    fields: [galleryChapters.id],
+    references: [photos.chapterId]
+  }),
 }));
 
 export const photosRelations = relations(photos, ({ one, many }) => ({

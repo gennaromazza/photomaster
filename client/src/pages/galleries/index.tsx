@@ -223,10 +223,20 @@ export default function GalleriesPage() {
     <div className="container py-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Gallerie</h1>
-        <Button onClick={() => setLocation("/galleries/new")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuova Galleria
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation("/galleries/admin")}
+            className="flex items-center"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Amministrazione
+          </Button>
+          <Button onClick={() => setLocation("/galleries/new")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuova Galleria
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-8">

@@ -39,7 +39,10 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
 export default function PublicGalleryPage() {
+  console.log("[Gallery] Componente rendering iniziato");
   const { slug } = useParams();
+  const { toast } = useToast();
+  
   // Stati per la pagina
   const [activeChapter, setActiveChapter] = useState<number | null>(null);
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
@@ -56,17 +59,22 @@ export default function PublicGalleryPage() {
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeEmail, setSubscribeEmail] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
-  const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Query per ottenere i dettagli della galleria
-  const { data: gallery, isLoading: isGalleryLoading, error: galleryError } = useQuery({
+  const { 
+    data: gallery, 
+    isLoading: isGalleryLoading, 
+    error: galleryError 
+  } = useQuery({
     queryKey: [`/api/gallery/public/galleries/${slug}`],
     queryFn: async () => {
+      console.log("[Gallery] Fetching gallery data for slug:", slug);
       try {
         const res = await fetch(`/api/gallery/public/galleries/${slug}`);
         
         if (res.status === 401) {
+          console.log("[Gallery] Gallery richiede password");
           setIsPasswordProtected(true);
           return null;
         }
@@ -75,9 +83,11 @@ export default function PublicGalleryPage() {
           throw new Error("Errore nel caricamento della galleria");
         }
         
-        return await res.json();
+        const data = await res.json();
+        console.log("[Gallery] Gallery data loaded:", data ? data.id : null);
+        return data;
       } catch (error) {
-        console.error("Errore nel caricamento della galleria:", error);
+        console.error("[Gallery] Errore nel caricamento della galleria:", error);
         throw error;
       }
     },
@@ -86,186 +96,81 @@ export default function PublicGalleryPage() {
   });
 
   // Query per ottenere i capitoli della galleria
-  const { data: chapters = [], isLoading: isChaptersLoading } = useQuery({
+  const { 
+    data: chapters = [], 
+    isLoading: isChaptersLoading 
+  } = useQuery({
     queryKey: [`/api/gallery/galleries/${gallery?.id}/chapters`],
+    queryFn: async () => {
+      console.log("[Gallery] Fetching chapters for gallery:", gallery?.id);
+      const data = await fetch(`/api/gallery/galleries/${gallery?.id}/chapters`).then(res => res.json());
+      console.log("[Gallery] Chapters loaded:", data?.length);
+      return data;
+    },
     enabled: !!gallery?.id && isAuthorized,
   });
 
   // Query per ottenere le foto della galleria
-  const { data: photosData, isLoading: isPhotosLoading } = useQuery({
+  const { 
+    data: photosData, 
+    isLoading: isPhotosLoading 
+  } = useQuery({
     queryKey: [`/api/gallery/galleries/${gallery?.id}/photos`, { chapter: activeChapter }],
+    queryFn: async () => {
+      console.log("[Gallery] Fetching photos for gallery:", gallery?.id, "chapter:", activeChapter);
+      const url = activeChapter 
+        ? `/api/gallery/galleries/${gallery?.id}/photos?chapter=${activeChapter}` 
+        : `/api/gallery/galleries/${gallery?.id}/photos`;
+      
+      const data = await fetch(url).then(res => res.json());
+      console.log("[Gallery] Photos loaded:", data?.photos?.length);
+      return data;
+    },
     enabled: !!gallery?.id && isAuthorized,
   });
   
   const photos: Photo[] = photosData?.photos || [];
   const pagination = photosData?.pagination || { total: 0, page: 1, limit: 50, pages: 0 };
 
-  // Se non ci sono capitoli attivi ma esistono capitoli, imposta il primo come attivo
+  // useEffect per i capitoli: imposta il primo capitolo come attivo se non c'è nessun capitolo attivo
   useEffect(() => {
+    console.log("[Gallery] useEffect [chapters, activeChapter]", {chapters: chapters.length, activeChapter});
     if (chapters.length > 0 && activeChapter === null) {
+      console.log("[Gallery] Setting first chapter as active:", chapters[0].id);
       setActiveChapter(chapters[0].id);
     }
   }, [chapters, activeChapter]);
 
-  // Gestione dell'autenticazione con password
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      const res = await apiRequest("POST", `/api/gallery/public/galleries/${slug}/authenticate`, { password });
-      
-      if (res.ok) {
-        setIsAuthorized(true);
-      } else {
-        alert("Password non valida");
-      }
-    } catch (error) {
-      console.error("Errore nell'autenticazione:", error);
-      alert("Si è verificato un errore durante l'autenticazione");
-    }
-  };
-
-  // Gestione della selezione delle foto
-  const handlePhotoSelect = (photoId: number, selected: boolean) => {
-    setSelectedPhotos(prev => 
-      selected 
-        ? [...prev, photoId] 
-        : prev.filter(id => id !== photoId)
-    );
-    
-    if (selected && selectedPhotos.length === 0 && !visitorInfo) {
-      setShowVisitorForm(true);
-    }
-  };
-  
-  // Gestione del form visitatore
-  const handleVisitorInfoSubmit = (data: { name: string; email: string }) => {
-    setVisitorInfo(data);
-    setShowVisitorForm(false);
-    return Promise.resolve();
-  };
-  
-  // Salvataggio delle selezioni
-  const handleSaveSelections = async () => {
-    if (!gallery?.id || selectedPhotos.length === 0) return;
-    
-    if (!visitorInfo) {
-      setShowVisitorForm(true);
-      return;
-    }
-    
-    try {
-      const response = await apiRequest("POST", `/api/gallery/galleries/selections/batch`, {
-        galleryId: gallery.id,
-        photoIds: selectedPhotos,
-        clientName: visitorInfo.name,
-        clientEmail: visitorInfo.email,
-        sessionId: Math.random().toString(36).substring(2), // Semplice ID di sessione per demo
-        selectionType: "favorite"
-      });
-      
-      if (response.ok) {
-        // Resetta le selezioni dopo il salvataggio
-        setSelectedPhotos([]);
-        return await response.json();
-      } else {
-        throw new Error("Errore nel salvataggio delle selezioni");
-      }
-    } catch (error) {
-      console.error("Errore nel salvataggio delle selezioni:", error);
-      throw error;
-    }
-  };
-
-  // Se la galleria richiede una password e l'utente non è autorizzato
-  if (isPasswordProtected && !isAuthorized) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-muted/20">
-        <Card className="w-[350px]">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Lock className="mr-2 h-5 w-5" />
-              Galleria protetta
-            </CardTitle>
-            <CardDescription>
-              Questa galleria è protetta da password. Inserisci la password per accedere.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Accedi
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex justify-between text-xs text-muted-foreground">
-            <p>© ImageStudio</p>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  // Stato di caricamento
-  if (isGalleryLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="mt-4">Caricamento galleria...</p>
-      </div>
-    );
-  }
-
-  // Stato di errore
-  if (galleryError || !gallery) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="max-w-md text-center">
-          <h1 className="text-2xl font-bold mb-4">Galleria non trovata</h1>
-          <p className="mb-6">
-            La galleria che stai cercando non esiste o non è più disponibile.
-          </p>
-          <Button onClick={() => window.history.back()}>
-            Torna indietro
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Monitoraggio dello scroll per mostrare/nascondere il pulsante "Torna su"
+  // useEffect per lo scroll: monitoraggio dello scroll per mostrare/nascondere il pulsante "Torna su"
   useEffect(() => {
+    console.log("[Gallery] useEffect [] - scroll setup");
     const handleScroll = () => {
       if (contentRef.current) {
-        setShowBackToTop(contentRef.current.scrollTop > 300);
+        const shouldShow = contentRef.current.scrollTop > 300;
+        setShowBackToTop(shouldShow);
       }
     };
 
     const contentElement = contentRef.current;
     if (contentElement) {
+      console.log("[Gallery] Adding scroll listener");
       contentElement.addEventListener('scroll', handleScroll);
-      return () => contentElement.removeEventListener('scroll', handleScroll);
+      return () => {
+        console.log("[Gallery] Removing scroll listener");
+        contentElement.removeEventListener('scroll', handleScroll);
+      };
     }
+    return undefined;
   }, []);
 
-  // Gestione del slideshow
+  // useEffect per slideshow: gestione del slideshow
   useEffect(() => {
+    console.log("[Gallery] useEffect [slideshow, fullscreenView, photos.length]", 
+      {slideshow, fullscreenView, photosLength: photos.length});
     let interval: NodeJS.Timeout;
     
-    if (slideshow && fullscreenView) {
+    if (slideshow && fullscreenView && photos.length > 0) {
+      console.log("[Gallery] Starting slideshow interval");
       interval = setInterval(() => {
         setCurrentPhotoIndex(prevIndex => 
           prevIndex === photos.length - 1 ? 0 : prevIndex + 1
@@ -273,13 +178,23 @@ export default function PublicGalleryPage() {
       }, 5000);
     }
     
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) {
+        console.log("[Gallery] Clearing slideshow interval");
+        clearInterval(interval);
+      }
+    };
   }, [slideshow, fullscreenView, photos.length]);
 
-  // Gestione della navigazione con tastiera in modalità fullscreen
+  // useEffect per tastiera: gestione della navigazione con tastiera in modalità fullscreen
   useEffect(() => {
+    console.log("[Gallery] useEffect [fullscreenView, photos.length] - keyboard", 
+      {fullscreenView, photosLength: photos.length});
+    
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!fullscreenView) return;
+      
+      console.log("[Gallery] Keyboard event in fullscreen:", e.key);
       
       if (e.key === 'Escape') {
         setFullscreenView(false);
@@ -298,14 +213,110 @@ export default function PublicGalleryPage() {
       }
     };
     
+    console.log("[Gallery] Adding keyboard listener");
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      console.log("[Gallery] Removing keyboard listener");
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [fullscreenView, photos.length]);
+
+  // Gestione dell'autenticazione con password
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("[Gallery] Attempting password auth for gallery:", slug);
+    
+    try {
+      const res = await apiRequest("POST", `/api/gallery/public/galleries/${slug}/authenticate`, { password });
+      
+      if (res.ok) {
+        console.log("[Gallery] Password auth successful");
+        setIsAuthorized(true);
+      } else {
+        console.log("[Gallery] Password auth failed");
+        alert("Password non valida");
+      }
+    } catch (error) {
+      console.error("[Gallery] Errore nell'autenticazione:", error);
+      alert("Si è verificato un errore durante l'autenticazione");
+    }
+  };
+
+  // Gestione della selezione delle foto
+  const handlePhotoSelect = (photoId: number, selected: boolean) => {
+    console.log("[Gallery] Photo selection toggle:", {photoId, selected});
+    setSelectedPhotos(prev => 
+      selected 
+        ? [...prev, photoId] 
+        : prev.filter(id => id !== photoId)
+    );
+    
+    if (selected && selectedPhotos.length === 0 && !visitorInfo) {
+      console.log("[Gallery] First selection, showing visitor form");
+      setShowVisitorForm(true);
+    }
+  };
+  
+  // Gestione del form visitatore
+  const handleVisitorInfoSubmit = (data: { name: string; email: string }) => {
+    console.log("[Gallery] Visitor info submitted:", data);
+    setVisitorInfo(data);
+    setShowVisitorForm(false);
+    return Promise.resolve();
+  };
+  
+  // Salvataggio delle selezioni
+  const handleSaveSelections = async () => {
+    if (!gallery?.id || selectedPhotos.length === 0) {
+      console.log("[Gallery] Cannot save selections: no gallery or no selections");
+      return;
+    }
+    
+    if (!visitorInfo) {
+      console.log("[Gallery] No visitor info, showing form");
+      setShowVisitorForm(true);
+      return;
+    }
+    
+    console.log("[Gallery] Saving selections:", {
+      galleryId: gallery.id,
+      photoCount: selectedPhotos.length,
+      visitorInfo
+    });
+    
+    try {
+      const response = await apiRequest("POST", `/api/gallery/galleries/selections/batch`, {
+        galleryId: gallery.id,
+        photoIds: selectedPhotos,
+        clientName: visitorInfo.name,
+        clientEmail: visitorInfo.email,
+        sessionId: Math.random().toString(36).substring(2), // Semplice ID di sessione per demo
+        selectionType: "favorite"
+      });
+      
+      if (response.ok) {
+        console.log("[Gallery] Selections saved successfully");
+        // Resetta le selezioni dopo il salvataggio
+        setSelectedPhotos([]);
+        return await response.json();
+      } else {
+        console.log("[Gallery] Error saving selections, response not OK");
+        throw new Error("Errore nel salvataggio delle selezioni");
+      }
+    } catch (error) {
+      console.error("[Gallery] Errore nel salvataggio delle selezioni:", error);
+      throw error;
+    }
+  };
 
   // Funzione per condividere la galleria
   const handleShare = async (platform: string) => {
-    if (!gallery) return;
+    if (!gallery) {
+      console.log("[Gallery] Cannot share: no gallery data");
+      return;
+    }
     
+    console.log("[Gallery] Sharing gallery on platform:", platform);
     const url = window.location.href;
     const title = gallery.name;
     
@@ -323,13 +334,14 @@ export default function PublicGalleryPage() {
       }
       
       // Traccia la condivisione
+      console.log("[Gallery] Tracking share event");
       await apiRequest("POST", `/api/gallery/share`, {
         galleryId: gallery.id,
         platform,
         tagged: false
       });
     } catch (error) {
-      console.error("Errore nella condivisione:", error);
+      console.error("[Gallery] Errore nella condivisione:", error);
     }
   };
 
@@ -337,7 +349,15 @@ export default function PublicGalleryPage() {
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!gallery || !subscribeEmail) return;
+    if (!gallery || !subscribeEmail) {
+      console.log("[Gallery] Cannot subscribe: missing gallery or email");
+      return;
+    }
+    
+    console.log("[Gallery] Subscribing to gallery updates:", {
+      galleryId: gallery.id,
+      email: subscribeEmail
+    });
     
     setSubscribing(true);
     
@@ -349,6 +369,7 @@ export default function PublicGalleryPage() {
       });
       
       if (res.ok) {
+        console.log("[Gallery] Subscription successful");
         toast({
           title: "Iscrizione completata",
           description: "Riceverai notifiche quando verranno aggiunte nuove foto"
@@ -356,9 +377,11 @@ export default function PublicGalleryPage() {
         setSubscribeEmail("");
       } else {
         const error = await res.json();
+        console.log("[Gallery] Subscription failed:", error);
         throw new Error(error.error || "Errore durante l'iscrizione");
       }
     } catch (error) {
+      console.error("[Gallery] Errore nell'iscrizione:", error);
       toast({
         title: "Errore",
         description: error instanceof Error ? error.message : "Si è verificato un errore",
@@ -374,6 +397,7 @@ export default function PublicGalleryPage() {
     if (!fullscreenView || photos.length === 0) return null;
     
     const photo = photos[currentPhotoIndex];
+    console.log("[Gallery] Rendering fullscreen view for photo:", photo.id);
     
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col">
@@ -401,7 +425,7 @@ export default function PublicGalleryPage() {
               {slideshow ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </Button>
             
-            {gallery.selectionEnabled && (
+            {gallery?.selectionEnabled && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -457,11 +481,86 @@ export default function PublicGalleryPage() {
 
   // Funzione per tornare in cima alla pagina
   const scrollToTop = () => {
+    console.log("[Gallery] Scrolling to top");
     if (contentRef.current) {
       contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
+  // Se la galleria richiede una password e l'utente non è autorizzato
+  if (isPasswordProtected && !isAuthorized) {
+    console.log("[Gallery] Rendering password protected view");
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-muted/20">
+        <Card className="w-[350px]">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Lock className="mr-2 h-5 w-5" />
+              Galleria protetta
+            </CardTitle>
+            <CardDescription>
+              Questa galleria è protetta da password. Inserisci la password per accedere.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md"
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Accedi
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="flex justify-between text-xs text-muted-foreground">
+            <p>© ImageStudio</p>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  // Stato di caricamento
+  if (isGalleryLoading) {
+    console.log("[Gallery] Rendering loading state");
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="mt-4">Caricamento galleria...</p>
+      </div>
+    );
+  }
+
+  // Stato di errore
+  if (galleryError || !gallery) {
+    console.log("[Gallery] Rendering error state:", galleryError);
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="max-w-md text-center">
+          <h1 className="text-2xl font-bold mb-4">Galleria non trovata</h1>
+          <p className="mb-6">
+            La galleria che stai cercando non esiste o non è più disponibile.
+          </p>
+          <Button onClick={() => window.history.back()}>
+            Torna indietro
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Rendering principale della galleria
+  console.log("[Gallery] Rendering main gallery view");
   return (
     <div className="min-h-screen bg-background">
       {/* Visualizzazione a schermo intero */}
@@ -565,292 +664,147 @@ export default function PublicGalleryPage() {
         </div>
         
         {/* Contenuto scrollabile */}
-        <ScrollArea className="flex-1" ref={contentRef}>
-          <div className="max-w-screen-xl mx-auto px-4 py-8">
-            {/* Capitoli della galleria (se presenti) */}
+        <ScrollArea 
+          className="flex-1 overflow-auto"
+          ref={contentRef}
+        >
+          <div className="max-w-screen-xl mx-auto w-full p-4 md:p-8">
+            {/* Capitoli / Sezioni */}
             {chapters.length > 0 && (
               <div className="mb-8">
-                <div className="flex items-center mb-6">
-                  <h2 className="text-2xl font-bold font-serif">La storia in capitoli</h2>
-                  <div className="ml-4 flex-1 h-px bg-muted"></div>
-                </div>
-                
-                <Tabs 
-                  value={activeChapter?.toString() || "all"} 
-                  onValueChange={(value) => {
-                    if (value === "all") {
-                      setActiveChapter(null);
-                    } else {
-                      setActiveChapter(Number(value));
-                    }
-                  }}
-                  className="w-full"
-                >
-                  <div className="mb-6 overflow-x-auto">
-                    <TabsList className="mb-4 inline-flex h-auto p-1 w-auto">
-                      <TabsTrigger 
-                        value="all" 
-                        className="px-4 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                      >
-                        Tutte le foto
-                      </TabsTrigger>
+                <Tabs defaultValue={String(activeChapter || chapters[0]?.id)}>
+                  <div className="border-b mb-4">
+                    <TabsList className="mb-0">
                       {chapters.map((chapter: GalleryChapter) => (
                         <TabsTrigger 
                           key={chapter.id} 
-                          value={chapter.id.toString()}
-                          className="px-4 py-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                          value={String(chapter.id)}
+                          onClick={() => setActiveChapter(chapter.id)}
                         >
                           {chapter.title}
                         </TabsTrigger>
                       ))}
                     </TabsList>
                   </div>
-
-                  <TabsContent value="all">
-                    <div className="mb-6 p-4 bg-muted/30 rounded-lg border border-muted">
-                      <p className="text-muted-foreground italic">
-                        Visualizzazione di tutte le foto della galleria
-                      </p>
-                    </div>
-                  </TabsContent>
-
+                  
                   {chapters.map((chapter: GalleryChapter) => (
-                    <TabsContent key={chapter.id} value={chapter.id.toString()}>
+                    <TabsContent key={chapter.id} value={String(chapter.id)}>
                       {chapter.description && (
-                        <div className="mb-6 p-4 bg-muted/30 rounded-lg border border-muted">
-                          <h3 className="font-medium mb-2">{chapter.title}</h3>
-                          <p className="text-muted-foreground">
-                            {chapter.description}
-                          </p>
-                        </div>
+                        <p className="text-muted-foreground mb-6">
+                          {chapter.description}
+                        </p>
                       )}
                     </TabsContent>
                   ))}
                 </Tabs>
-                <Separator className="my-6" />
-              </div>
-            )}
-
-            {/* Form raccolta dati visitatore */}
-            {showVisitorForm && (
-              <div className="mb-8">
-                <VisitorInfoForm 
-                  onSubmit={handleVisitorInfoSubmit}
-                  title="I tuoi dati"
-                  description="Per salvare le tue selezioni, abbiamo bisogno di alcune informazioni."
-                />
               </div>
             )}
             
-            {/* Manager delle selezioni */}
-            {gallery.selectionEnabled && selectedPhotos.length > 0 && (
-              <div className="mb-8 sticky top-0 z-10">
-                <PhotoSelectionManager
-                  galleryId={gallery.id}
+            {/* Caricamento foto */}
+            {isPhotosLoading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="mt-4">Caricamento foto...</p>
+              </div>
+            ) : photos.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Nessuna foto in questa galleria.</p>
+              </div>
+            ) : (
+              <>
+                {/* Griglia foto */}
+                <PhotoGrid 
+                  photos={photos} 
+                  onPhotoClick={(photo, index) => {
+                    setCurrentPhotoIndex(index);
+                    setFullscreenView(true);
+                  }}
+                  onPhotoSelect={gallery.selectionEnabled ? handlePhotoSelect : undefined}
                   selectedPhotos={selectedPhotos}
-                  onClearSelection={() => setSelectedPhotos([])}
-                  visitorInfo={visitorInfo}
-                  onSaveSelections={handleSaveSelections}
                 />
-              </div>
-            )}
-
-            {/* Griglia di foto */}
-            <div className="mb-12">
-              <div className="flex items-center mb-6">
-                <h2 className="text-2xl font-bold font-serif">Galleria fotografica</h2>
-                <div className="ml-4 flex-1 h-px bg-muted"></div>
-              </div>
-              
-              {isPhotosLoading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-                  <p>Caricamento foto in corso...</p>
-                </div>
-              ) : photos.length > 0 ? (
-                <div className="space-y-6">
-                  {/* Controlli galleria */}
-                  <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-                    <div className="text-sm text-muted-foreground">
-                      {pagination.total} foto{activeChapter ? " in questo capitolo" : ""}
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      {gallery.selectionEnabled && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="flex items-center"
-                          onClick={() => {
-                            if (selectedPhotos.length > 0) {
-                              setSelectedPhotos([]);
-                            } else if (!visitorInfo) {
-                              setShowVisitorForm(true);
-                            }
-                          }}
-                        >
-                          <Heart className={`h-4 w-4 mr-2 ${selectedPhotos.length > 0 ? 'fill-red-500 text-red-500' : ''}`} />
-                          {selectedPhotos.length > 0 
-                            ? `${selectedPhotos.length} selezionate` 
-                            : "Seleziona preferite"}
-                        </Button>
-                      )}
-                      
-                      {photos.length > 0 && (
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          onClick={() => {
-                            setCurrentPhotoIndex(0);
-                            setFullscreenView(true);
-                          }}
-                        >
-                          <Play className="h-4 w-4 mr-2" />
-                          Slideshow
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Rendering griglia foto */}
-                  <PhotoGrid 
-                    photos={photos} 
-                    selectable={gallery.selectionEnabled} 
-                    onPhotoSelect={handlePhotoSelect}
-                    selectedPhotos={selectedPhotos}
-                    onPhotoClick={(index) => {
-                      setCurrentPhotoIndex(index);
-                      setFullscreenView(true);
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="text-center py-16 border border-dashed rounded-lg">
-                  <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
-                    Nessuna foto disponibile in questa galleria.
-                  </p>
-                </div>
-              )}
-
-              {/* Paginazione (se necessario) */}
-              {pagination && pagination.pages > 1 && (
-                <div className="flex justify-center mt-8">
-                  <div className="flex gap-1">
-                    {Array.from({ length: pagination.pages }, (_, i) => (
-                      <Button 
-                        key={i} 
-                        variant={pagination.page === i + 1 ? "default" : "outline"}
+                
+                {/* Paginazione */}
+                {pagination.pages > 1 && (
+                  <div className="flex justify-center items-center mt-8 space-x-1">
+                    {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(page => (
+                      <Button
+                        key={page}
+                        variant={page === pagination.page ? "default" : "outline"}
                         size="sm"
-                        className="w-8 h-8 p-0"
-                        disabled={pagination.page === i + 1}
+                        className="w-10 h-10"
+                        // onClick={() => setPage(page)}
                       >
-                        {i + 1}
+                        {page}
                       </Button>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </>
+            )}
             
-            {/* Sezione iscrizione */}
-            <div className="mb-12">
-              <div className="flex items-center mb-6">
-                <h2 className="text-2xl font-bold font-serif">Resta aggiornato</h2>
-                <div className="ml-4 flex-1 h-px bg-muted"></div>
-              </div>
-              
-              <Card className="border border-primary/20 bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Mail className="h-5 w-5 mr-2" />
-                    Ricevi aggiornamenti
-                  </CardTitle>
-                  <CardDescription>
-                    Iscriviti per ricevere notifiche quando vengono aggiunte nuove foto a questa galleria
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
+            {/* Sezione sottoscrizione */}
+            {gallery.notificationsEnabled && (
+              <div className="mt-16 border-t pt-12">
+                <div className="max-w-xl mx-auto text-center">
+                  <h3 className="text-xl font-bold mb-4">Ricevi aggiornamenti</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Inserisci la tua email per ricevere una notifica quando vengono aggiunte nuove foto a questa galleria.
+                  </p>
+                  
+                  <form onSubmit={handleSubscribe} className="flex gap-2">
                     <input
                       type="email"
-                      placeholder="La tua email"
                       value={subscribeEmail}
                       onChange={(e) => setSubscribeEmail(e.target.value)}
+                      placeholder="La tua email"
+                      className="flex-1 px-4 py-2 border rounded-md"
                       required
-                      className="flex-1 px-3 py-2 border rounded-md"
                     />
                     <Button type="submit" disabled={subscribing}>
-                      {subscribing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                      Iscriviti
+                      {subscribing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Iscriviti"}
                     </Button>
                   </form>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </div>
+            )}
             
             {/* Footer */}
-            <footer className="mt-12 border-t pt-6 pb-12">
-              <div className="flex flex-col md:flex-row justify-between items-center">
-                <div className="mb-6 md:mb-0">
-                  <h3 className="text-lg font-bold mb-1">ImageStudio</h3>
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    Fotografia di matrimoni ed eventi speciali. Catturiamo i momenti più preziosi con uno stile unico e raffinato.
-                  </p>
-                </div>
-                
-                <div className="flex gap-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Facebook className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Seguici su Facebook</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Instagram className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Seguici su Instagram</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Mail className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Contattaci</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-              
-              <div className="text-center text-sm text-muted-foreground mt-8">
-                &copy; {new Date().getFullYear()} ImageStudio. Tutti i diritti riservati.
-              </div>
+            <footer className="mt-20 mb-8 border-t pt-8 text-center text-muted-foreground text-sm">
+              <p className="mb-1">© {new Date().getFullYear()} {gallery.studio || "ImageStudio"}</p>
+              <p>Tutte le immagini sono protette da copyright e non possono essere utilizzate senza permesso.</p>
             </footer>
           </div>
-          
-          {/* Pulsante torna su */}
-          {showBackToTop && (
-            <Button
-              className="fixed bottom-6 right-6 h-10 w-10 rounded-full shadow-lg"
-              onClick={scrollToTop}
-            >
-              <ArrowUp className="h-5 w-5" />
-            </Button>
-          )}
         </ScrollArea>
+        
+        {/* Pulsante torna su */}
+        {showBackToTop && (
+          <Button
+            size="icon"
+            variant="outline"
+            className="fixed right-4 bottom-4 z-40 bg-background/50 backdrop-blur-sm hover:bg-background/80"
+            onClick={scrollToTop}
+          >
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+        )}
+        
+        {/* Gestione selezioni foto */}
+        {gallery.selectionEnabled && selectedPhotos.length > 0 && (
+          <PhotoSelectionManager 
+            count={selectedPhotos.length}
+            onSave={handleSaveSelections}
+          />
+        )}
+        
+        {/* Form informazioni visitatore */}
+        {showVisitorForm && (
+          <VisitorInfoForm 
+            open={showVisitorForm}
+            onOpenChange={setShowVisitorForm}
+            onSubmit={handleVisitorInfoSubmit}
+            defaultValues={visitorInfo || undefined}
+          />
+        )}
       </div>
     </div>
   );

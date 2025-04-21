@@ -50,16 +50,26 @@ export function PhotoUploader({
         return;
       }
 
-      const filesToAdd = acceptedFiles.map((file) =>
-        Object.assign(file, {
+      const existingNames = files.map(f => f.name);
+      const newFiles = acceptedFiles
+        .filter(file => !existingNames.includes(file.name))
+        .map((file) => ({
+          ...file,
+          id: crypto.randomUUID(),
           preview: URL.createObjectURL(file),
-          id: `${file.name}-${Date.now()}`,
           status: "idle" as const,
           progress: 0,
-        })
-      );
+        }));
 
-      setFiles((prev) => [...prev, ...filesToAdd]);
+      if (acceptedFiles.length > newFiles.length) {
+        toast({
+          title: "File duplicati",
+          description: "Alcuni file sono stati ignorati perché hanno lo stesso nome di file già aggiunti",
+          variant: "warning"
+        });
+      }
+
+      setFiles((prev) => [...prev, ...newFiles]);
     },
     [files.length, maxFiles, toast]
   );
@@ -98,9 +108,9 @@ export function PhotoUploader({
 
       const formData = new FormData();
       formData.append("photo", file);
-      formData.append("galleryId", galleryId.toString());
-      if (chapterId) {
-        formData.append("chapterId", chapterId.toString());
+      formData.append("galleryId", String(galleryId));
+      if (chapterId !== null) {
+        formData.append("chapterId", String(chapterId));
       }
 
       try {
@@ -127,6 +137,11 @@ export function PhotoUploader({
               resolve();
             } else {
               reject(new Error(`HTTP Error: ${xhr.status}`));
+              toast({
+                title: "Errore",
+                description: "Caricamento fallito. Controlla il file e riprova.",
+                variant: "destructive"
+              });
             }
           });
 

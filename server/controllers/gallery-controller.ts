@@ -127,6 +127,7 @@ export const getGalleryBySlug = async (req: Request, res: Response) => {
 
     res.json({
       ...gallery,
+      requiresPassword: false,
       chapters,
       featuredPhotos
     });
@@ -230,7 +231,7 @@ export const createGallery = async (req: Request, res: Response) => {
 export const updateGallery = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     // Ottieni i campi aggiornabili dalla richiesta
     const galleryData = {
       ...req.body,
@@ -244,14 +245,14 @@ export const updateGallery = async (req: Request, res: Response) => {
     // Elimina campi che potrebbero causare problemi
     delete galleryData.id;
     delete galleryData.createdAt;
-    
+
     // Verifica che la galleria esista prima dell'aggiornamento
     const existingGallery = await db
       .select()
       .from(galleries)
       .where(eq(galleries.id, Number(id)))
       .limit(1);
-      
+
     if (existingGallery.length === 0) {
       return res.status(404).json({ error: "Galleria non trovata" });
     }
@@ -410,13 +411,13 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
 
     // Percorso base per tutti gli URL
     const baseWebPath = "/uploads/galleries";
-    
+
     // Aggiungi gli URL per le immagini, normalizzando tutti i percorsi
     const photosWithUrls = photoList.map((p: typeof photos.$inferSelect) => {
       // Estrai solo il nome del file da ogni percorso
       const filename = p.filename;
       const webpFilename = p.webpPath ? path.basename(p.webpPath) : null;
-      
+
       // Crea URL coerenti con la struttura delle directory
       return {
         ...p,
@@ -459,7 +460,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
     const timestamp = Date.now();
     const uuid = uuidv4();
     const uniqueFilename = `${timestamp}-${uuid}${extension}`;
-    
+
     // Definisci i percorsi assoluti per il filesystem
     const filePath = path.join(UPLOAD_DIR, uniqueFilename);
     const thumbnailPath = path.join(THUMBNAILS_DIR, uniqueFilename);

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -84,6 +84,7 @@ export default function PublicGalleryPage() {
         }
 
         const data = await res.json();
+        setIsAuthorized(true);
         console.log("[Gallery] Gallery data loaded:", data ? data.id : null);
         return data;
       } catch (error) {
@@ -107,7 +108,7 @@ export default function PublicGalleryPage() {
       console.log("[Gallery] Chapters loaded:", data?.length);
       return data;
     },
-    enabled: !!gallery?.id && isAuthorized,
+    enabled: !!gallery?.id && (!isPasswordProtected || isAuthorized),
   });
 
   // Query per ottenere le foto della galleria
@@ -126,7 +127,7 @@ export default function PublicGalleryPage() {
       console.log("[Gallery] Photos loaded:", data?.photos?.length);
       return data;
     },
-    enabled: !!gallery?.id && isAuthorized,
+    enabled: !!gallery?.id && (!isPasswordProtected || isAuthorized),
   });
 
   console.log("[Gallery] Photos data:", photosData);

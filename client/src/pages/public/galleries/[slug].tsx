@@ -796,11 +796,23 @@ export default function PublicGalleryPage() {
 
                   {chapters.map((chapter: GalleryChapter) => (
                     <TabsContent key={chapter.id} value={String(chapter.id)}>
-                      {chapter.description && (
-                        <p className="text-muted-foreground mb-6">
-                          {chapter.description}
-                        </p>
-                      )}
+                      <div className="mb-6 bg-muted/30 rounded-lg p-6 border border-muted">
+                        <h3 className="text-xl font-semibold mb-2">{chapter.title}</h3>
+                        {chapter.description && (
+                          <p className="text-muted-foreground">
+                            {chapter.description}
+                          </p>
+                        )}
+                        {chapter.coverImage && (
+                          <div className="mt-4 rounded-md overflow-hidden shadow-md">
+                            <img 
+                              src={chapter.coverImage}
+                              alt={`Copertina: ${chapter.title}`}
+                              className="w-full h-40 object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </TabsContent>
                   ))}
                 </Tabs>

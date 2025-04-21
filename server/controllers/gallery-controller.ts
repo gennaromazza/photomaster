@@ -90,8 +90,8 @@ export const getGalleryBySlug = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Galleria non trovata" });
     }
 
-    // Se la galleria richiede password e non è stato fornito il token
-    if (gallery.password && !req.query.token) {
+    // Se la galleria richiede password e l'utente non è autorizzato
+    if (gallery.password && !req.query.token && !req.session?.galleryAccess?.[gallery.id]) {
       // Restituisci solo informazioni di base senza contenuti
       return res.json({
         id: gallery.id,
@@ -882,7 +882,7 @@ export const createPhotoSelections = async (req: Request, res: Response) => {
       .values(insertData)
       .returning();
 
-    res.status(21).json({ 
+    res.status21).json({ 
       success: true, 
       message: `${insertedSelections.length} selezioni salvate con successo`,
       selections: insertedSelections 

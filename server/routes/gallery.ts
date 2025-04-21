@@ -72,7 +72,7 @@ router.get("/galleries", async (req, res) => {
 router.get("/galleries/:id", getGalleryById);
 
 // Ottieni una galleria tramite slug (pubblico)
-const rateLimit = require('express-rate-limit');
+import rateLimit from 'express-rate-limit';
 
 const publicLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minuti

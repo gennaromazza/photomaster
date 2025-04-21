@@ -875,6 +875,7 @@ export function checkGalleryAccess(req: Request, res: Response, next: NextFuncti
   } catch (error) {
     console.error("Errore nel controllo dell'accesso alla galleria:", error);
     res.status(500).json({ error: "Errore nel controllo dell'accesso alla galleria" });
+  } galleria" });
   }
 }
 

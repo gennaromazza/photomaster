@@ -46,7 +46,6 @@ export default function PublicGalleryPage() {
 
   // Stati per la pagina
   const [activeChapter, setActiveChapter] = useState<number | null>(null);
-  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [password, setPassword] = useState("");
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
@@ -76,7 +75,6 @@ export default function PublicGalleryPage() {
 
         if (res.status === 401) {
           console.log("[Gallery] Gallery richiede password");
-          setIsPasswordProtected(true);
           return null;
         }
 
@@ -94,7 +92,7 @@ export default function PublicGalleryPage() {
       }
     },
     retry: false,
-    enabled: !isPasswordProtected || isAuthorized
+    enabled: true
   });
 
   // Query per ottenere i capitoli della galleria
@@ -142,6 +140,9 @@ export default function PublicGalleryPage() {
   console.log("[Gallery] Photos data:", photosData);
   const photos = photosData?.photos ?? [];
   const pagination = photosData?.pagination || { total: 0, page: 1, limit: 50, pages: 0 };
+  
+  // Variabile derivata per la protezione con password
+  const isPasswordProtected = !!gallery?.password;
 
   // useEffect per i capitoli: imposta il primo capitolo come attivo se non c'è nessun capitolo attivo
   useEffect(() => {
@@ -582,7 +583,7 @@ export default function PublicGalleryPage() {
   };
 
   // Se la galleria richiede una password e l'utente non è autorizzato
-  if (isPasswordProtected && !isAuthorized) {
+  if (gallery?.password && !isAuthorized) {
     console.log("[Gallery] Rendering password protected view");
     return (
       <div className="flex items-center justify-center min-h-screen bg-muted/20">

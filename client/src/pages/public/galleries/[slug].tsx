@@ -14,22 +14,44 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Heart, MessageCircle, Download, Share2, Lock, Mail, Camera, Calendar, Eye, Facebook, Instagram, Play, Pause, ChevronLeft, ChevronRight, X, ArrowUp, Music, Star } from "lucide-react";
+import { 
+  Loader2, Heart, MessageCircle, Download, Share2, 
+  Lock, Mail, Camera, Calendar, Eye, Facebook, 
+  Instagram, Play, Pause, ChevronLeft, ChevronRight, 
+  X, ArrowUp, Music, Star 
+} from "lucide-react";
 import { Photo, GalleryChapter } from "@/types/gallery";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
+// Costanti per paginazione
 const ITEMS_PER_PAGE = 20;
 
+/**
+ * Pagina galleria pubblica
+ * 
+ * Rifattorizzata per:
+ * - Utilizzare queryKey coerenti in React Query
+ * - Separare i side-effect dalle funzioni di query
+ * - Gestire correttamente la paginazione
+ * - Migliorare la gestione dell'autenticazione
+ * - Ottimizzare l'aggiornamento delle cache
+ */
 export default function PublicGalleryPage() {
   const { slug } = useParams();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Stati principali
   const [page, setPage] = useState(1);
   const [password, setPassword] = useState("");
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [activeChapter, setActiveChapter] = useState<number | null>(null);
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
+  
+  // Stati UI
   const [visitorInfo, setVisitorInfo] = useState<{ name: string; email: string } | null>(null);
   const [showVisitorForm, setShowVisitorForm] = useState(false);
   const [fullscreenView, setFullscreenView] = useState(false);
@@ -38,33 +60,49 @@ export default function PublicGalleryPage() {
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeEmail, setSubscribeEmail] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
 
-
+  // Query per ottenere dati galleria
   const {
     data: gallery,
     isLoading: galleryLoading,
-    error: galleryError
+    error: galleryError,
   } = useQuery({
     queryKey: [`/api/gallery/public/galleries/${slug}`],
-    queryFn: () => apiRequest("GET", `/api/gallery/public/galleries/${slug}`),
-    enabled: !!slug
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/gallery/public/galleries/${slug}`);
+      if (!res.ok) {
+        throw new Error("Errore nel caricamento della galleria");
+      }
+      return await res.json();
+    },
+    enabled: !!slug,
   });
 
+  // Query per ottenere foto
   const {
     data: photosData,
     isLoading: photosLoading,
     error: photosError,
-    refetch: refetchPhotos
   } = useQuery({
+    // Formato coerente per query key
     queryKey: [`/api/gallery/galleries/${gallery?.id}/photos`, { page, chapter: activeChapter }],
-    queryFn: () => apiRequest("GET", `/api/gallery/galleries/${gallery?.id}/photos?page=${page}&chapter=${activeChapter ?? ''}`),
-    enabled: !!gallery?.id && isAuthorized
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET", 
+        `/api/gallery/galleries/${gallery?.id}/photos?page=${page}&limit=${ITEMS_PER_PAGE}${activeChapter ? `&chapter=${activeChapter}` : ''}`
+      );
+      if (!res.ok) {
+        throw new Error("Errore nel caricamento delle foto");
+      }
+      return await res.json();
+    },
+    enabled: !!gallery?.id && isAuthorized, // Abilitato solo se autorizzato
   });
 
+  // Query per ottenere capitoli
   const {
     data: chapters = [],
-    isLoading: isChaptersLoading
+    isLoading: isChaptersLoading,
   } = useQuery({
     queryKey: [`/api/gallery/galleries/${gallery?.id}/chapters`],
     queryFn: async () => {
@@ -72,25 +110,39 @@ export default function PublicGalleryPage() {
       if (!res.ok) {
         throw new Error("Errore nel caricamento dei capitoli");
       }
-      const data = await res.json();
-      return data;
+      return await res.json();
     },
-    enabled: !!gallery?.id && (!gallery?.password || isAuthorized),
+    enabled: !!gallery?.id && isAuthorized, // Abilitato solo se autorizzato
   });
 
+  // Autenticazione con password
   const authenticateGallery = async () => {
     try {
-      await apiRequest("POST", `/api/gallery/public/galleries/${slug}/auth`, {
+      const response = await apiRequest("POST", `/api/gallery/public/galleries/${slug}/auth`, {
         password
       });
+      
+      if (!response.ok) {
+        throw new Error("Password non valida");
+      }
 
+      // Imposta stato autorizzato e mostra feedback
       setIsAuthorized(true);
-      queryClient.invalidateQueries([`/api/gallery/galleries/${gallery?.id}/photos`]);
-
       toast({
         title: "Accesso effettuato",
         description: "Benvenuto nella galleria",
       });
+
+      // Invalida tutte le query pertinenti
+      if (gallery?.id) {
+        queryClient.invalidateQueries({
+          queryKey: [`/api/gallery/galleries/${gallery.id}/photos`]
+        });
+        
+        queryClient.invalidateQueries({
+          queryKey: [`/api/gallery/galleries/${gallery.id}/chapters`]
+        });
+      }
     } catch (error) {
       toast({
         title: "Errore",

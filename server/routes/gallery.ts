@@ -12,7 +12,9 @@ import {
   updateGallery,
   deleteGallery,
   getGalleryChapters,
+  getChapterById,
   createChapter,
+  updateChapter,
   deleteChapter,
   getGalleryPhotos,
   uploadPhoto,
@@ -23,7 +25,8 @@ import {
   trackSocialShare,
   togglePhotoSelection,
   getClientSelections,
-  createPhotoSelections
+  createPhotoSelections,
+  recompressGalleryImages
 } from "../controllers/gallery-controller";
 import { cleanupGalleries } from "../controllers/gallery-cleanup-controller";
 
@@ -157,8 +160,14 @@ router.delete("/galleries/:id", isAuthenticated, deleteGallery);
 // Ottieni tutti i capitoli di una galleria
 router.get("/galleries/:galleryId/chapters", getGalleryChapters);
 
+// Ottieni un capitolo specifico
+router.get("/chapters/:id", getChapterById);
+
 // Crea un nuovo capitolo (richiede autenticazione)
 router.post("/chapters", isAuthenticated, createChapter);
+
+// Aggiorna un capitolo esistente (richiede autenticazione)
+router.put("/chapters/:id", isAuthenticated, updateChapter);
 
 // Elimina un capitolo (richiede autenticazione)
 router.delete("/chapters/:id", isAuthenticated, deleteChapter);
@@ -179,6 +188,11 @@ router.delete("/photos/:id", isAuthenticated, deletePhoto);
 
 // Genera QR code per una galleria
 router.get("/galleries/:id/qr", generateGalleryQRCode);
+
+// ROUTES PER COMPRESSIONE IMMAGINI
+
+// Ricomprimi le immagini di una galleria
+router.post("/galleries/:galleryId/recompress", isAuthenticated, recompressGalleryImages);
 
 // ROUTES PER SOTTOSCRIZIONI
 

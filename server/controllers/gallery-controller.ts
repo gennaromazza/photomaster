@@ -33,6 +33,19 @@ const THUMBNAIL_SIZE = 250;
 const MEDIUM_SIZE = 800;
 const LARGE_SIZE = 1600;
 
+// Configurazioni di compressione
+const COMPRESSION_QUALITY = {
+  jpeg: 85,    // Qualità JPEG (0-100)
+  webp: 80,    // Qualità WebP (0-100)
+  png: 9       // Livello di compressione PNG (0-9)
+};
+
+// Impostazioni per dimensioni massime
+const MAX_IMAGE_DIMENSIONS = {
+  width: 2500,
+  height: 2500
+};
+
 // GESTIONE GALLERIE
 
 // Ottieni tutte le gallerie
@@ -355,6 +368,60 @@ export const createChapter = async (req: Request, res: Response) => {
   }
 };
 
+// Ottieni un capitolo per ID
+export const getChapterById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const [chapter] = await db
+      .select()
+      .from(galleryChapters)
+      .where(eq(galleryChapters.id, Number(id)));
+    
+    if (!chapter) {
+      return res.status(404).json({ error: "Capitolo non trovato" });
+    }
+    
+    res.json(chapter);
+  } catch (error) {
+    console.error("Errore nel recupero del capitolo:", error);
+    res.status(500).json({ error: "Errore nel recupero del capitolo" });
+  }
+};
+
+// Aggiorna un capitolo
+export const updateChapter = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const chapterData = req.body;
+    
+    // Verifica che il capitolo esista
+    const [existingChapter] = await db
+      .select()
+      .from(galleryChapters)
+      .where(eq(galleryChapters.id, Number(id)));
+    
+    if (!existingChapter) {
+      return res.status(404).json({ error: "Capitolo non trovato" });
+    }
+    
+    // Aggiorna il capitolo
+    const [updatedChapter] = await db
+      .update(galleryChapters)
+      .set({
+        ...chapterData,
+        updatedAt: new Date(),
+      })
+      .where(eq(galleryChapters.id, Number(id)))
+      .returning();
+    
+    res.json(updatedChapter);
+  } catch (error) {
+    console.error("Errore nell'aggiornamento del capitolo:", error);
+    res.status(500).json({ error: "Errore nell'aggiornamento del capitolo" });
+  }
+};
+
 // Elimina un capitolo
 export const deleteChapter = async (req: Request, res: Response) => {
   try {
@@ -507,41 +574,131 @@ export const uploadPhoto = async (req: Request, res: Response) => {
     }
 
     try {
-      // Crea thumbnail
-      await sharp(req.file.buffer)
+      // Limita le dimensioni massime se necessario
+      let imageBuffer = req.file.buffer;
+      
+      // Ottieni le dimensioni dell'immagine
+      const metadata = await sharp(imageBuffer).metadata();
+      
+      // Se l'immagine è più grande delle dimensioni massime consentite, ridimensionala prima di elaborarla
+      if (metadata.width && metadata.height && 
+          (metadata.width > MAX_IMAGE_DIMENSIONS.width || metadata.height > MAX_IMAGE_DIMENSIONS.height)) {
+        imageBuffer = await sharp(imageBuffer)
+          .resize({
+            width: MAX_IMAGE_DIMENSIONS.width,
+            height: MAX_IMAGE_DIMENSIONS.height,
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .toBuffer();
+      }
+      
+      // Determina il formato di output in base al formato di input
+      const isJpg = metadata.format === 'jpeg' || metadata.format === 'jpg';
+      const isPng = metadata.format === 'png';
+      
+      // Ottimizza l'immagine in base al formato
+      
+      // Crea thumbnail (sempre ottimizzata)
+      await sharp(imageBuffer)
         .resize({
           width: THUMBNAIL_SIZE,
           height: THUMBNAIL_SIZE,
           fit: 'inside'
         })
+        .jpeg({ 
+          quality: COMPRESSION_QUALITY.jpeg, 
+          mozjpeg: true,     // Usa mozjpeg per una migliore compressione
+          progressive: true  // JPEG progressivo carica meglio sul web
+        })
         .toFile(thumbnailPath);
 
       // Crea versione media
-      await sharp(req.file.buffer)
+      if (isJpg) {
+        await sharp(imageBuffer)
+          .resize({
+            width: MEDIUM_SIZE,
+            height: MEDIUM_SIZE,
+            fit: 'inside'
+          })
+          .jpeg({ 
+            quality: COMPRESSION_QUALITY.jpeg, 
+            mozjpeg: true,
+            progressive: true
+          })
+          .toFile(mediumPath);
+      } else if (isPng) {
+        await sharp(imageBuffer)
+          .resize({
+            width: MEDIUM_SIZE,
+            height: MEDIUM_SIZE,
+            fit: 'inside'
+          })
+          .png({ 
+            compressionLevel: COMPRESSION_QUALITY.png,
+            adaptiveFiltering: true  // Filtraggio adattivo per una migliore compressione
+          })
+          .toFile(mediumPath);
+      } else {
+        // Per altri formati, usa la compressione predefinita
+        await sharp(imageBuffer)
+          .resize({
+            width: MEDIUM_SIZE,
+            height: MEDIUM_SIZE,
+            fit: 'inside'
+          })
+          .toFile(mediumPath);
+      }
+
+      // Crea versione grande con le stesse ottimizzazioni
+      if (isJpg) {
+        await sharp(imageBuffer)
+          .resize({
+            width: LARGE_SIZE,
+            height: LARGE_SIZE,
+            fit: 'inside'
+          })
+          .jpeg({ 
+            quality: COMPRESSION_QUALITY.jpeg, 
+            mozjpeg: true,
+            progressive: true
+          })
+          .toFile(largePath);
+      } else if (isPng) {
+        await sharp(imageBuffer)
+          .resize({
+            width: LARGE_SIZE,
+            height: LARGE_SIZE,
+            fit: 'inside'
+          })
+          .png({ 
+            compressionLevel: COMPRESSION_QUALITY.png,
+            adaptiveFiltering: true
+          })
+          .toFile(largePath);
+      } else {
+        await sharp(imageBuffer)
+          .resize({
+            width: LARGE_SIZE,
+            height: LARGE_SIZE,
+            fit: 'inside'
+          })
+          .toFile(largePath);
+      }
+
+      // Crea versione WebP per browser moderni (sempre ottimizzata)
+      await sharp(imageBuffer)
         .resize({
           width: MEDIUM_SIZE,
           height: MEDIUM_SIZE,
           fit: 'inside'
         })
-        .toFile(mediumPath);
-
-      // Crea versione grande
-      await sharp(req.file.buffer)
-        .resize({
-          width: LARGE_SIZE,
-          height: LARGE_SIZE,
-          fit: 'inside'
+        .webp({ 
+          quality: COMPRESSION_QUALITY.webp,
+          lossless: false,  // La modalità con perdita è più efficiente per le foto
+          nearLossless: false,
+          smartSubsample: true  // Migliora la compressione delle aree colorate
         })
-        .toFile(largePath);
-
-      // Crea versione WebP per browser moderni
-      await sharp(req.file.buffer)
-        .resize({
-          width: MEDIUM_SIZE,
-          height: MEDIUM_SIZE,
-          fit: 'inside'
-        })
-        .webp({ quality: 80 })
         .toFile(webpPath);
     } catch (err) {
       console.error("Errore nell'elaborazione dell'immagine con sharp:", err);
@@ -747,6 +904,208 @@ export const subscribeToGallery = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Errore nella creazione della sottoscrizione:", error);
     res.status(500).json({ error: "Errore nella creazione della sottoscrizione" });
+  }
+};
+
+// GESTIONE DELLA COMPRESSIONE IMMAGINI
+
+// Ricomprimi le immagini esistenti
+export const recompressGalleryImages = async (req: Request, res: Response) => {
+  try {
+    const { galleryId } = req.params;
+    const { quality, mode = 'all' } = req.body;
+
+    // Verifica permessi utente
+    if (!req.user?.id) {
+      return res.status(401).json({ error: "Non autorizzato" });
+    }
+
+    // Ottieni le foto della galleria
+    const photoList = await db
+      .select()
+      .from(photos)
+      .where(eq(photos.galleryId, Number(galleryId)));
+
+    if (photoList.length === 0) {
+      return res.status(404).json({ error: "Nessuna foto trovata" });
+    }
+
+    // Configura la qualità della compressione
+    const compressionSettings = {
+      jpeg: quality && Number(quality) >= 0 && Number(quality) <= 100 ? Number(quality) : COMPRESSION_QUALITY.jpeg,
+      webp: quality && Number(quality) >= 0 && Number(quality) <= 100 ? Number(quality) : COMPRESSION_QUALITY.webp,
+      png: quality && Number(quality) >= 0 && Number(quality) <= 9 ? Number(quality) : COMPRESSION_QUALITY.png
+    };
+
+    // Stati elaborazione
+    const stats = {
+      total: photoList.length,
+      processed: 0,
+      success: 0,
+      errors: 0,
+      details: []
+    };
+
+    // Ricomprime ogni immagine
+    for (const photo of photoList) {
+      try {
+        stats.processed++;
+
+        if (!photo.path || !fs.existsSync(photo.path)) {
+          stats.errors++;
+          stats.details.push({ id: photo.id, error: "File originale non trovato" });
+          continue;
+        }
+
+        // Leggi il file originale
+        const imageBuffer = fs.readFileSync(photo.path);
+        
+        // Ottieni metadati
+        const metadata = await sharp(imageBuffer).metadata();
+        const isJpg = metadata.format === 'jpeg' || metadata.format === 'jpg';
+        const isPng = metadata.format === 'png';
+
+        // Processa in base alla modalità selezionata
+        if (mode === 'all' || mode === 'thumbnails') {
+          // Ricomprimi thumbnail
+          await sharp(imageBuffer)
+            .resize({
+              width: THUMBNAIL_SIZE,
+              height: THUMBNAIL_SIZE,
+              fit: 'inside'
+            })
+            .jpeg({ 
+              quality: compressionSettings.jpeg, 
+              mozjpeg: true,
+              progressive: true
+            })
+            .toFile(photo.thumbnailPath);
+        }
+
+        if (mode === 'all' || mode === 'medium') {
+          // Ricomprimi versione media
+          if (isJpg) {
+            await sharp(imageBuffer)
+              .resize({
+                width: MEDIUM_SIZE,
+                height: MEDIUM_SIZE,
+                fit: 'inside'
+              })
+              .jpeg({ 
+                quality: compressionSettings.jpeg, 
+                mozjpeg: true,
+                progressive: true
+              })
+              .toFile(photo.mediumPath);
+          } else if (isPng) {
+            await sharp(imageBuffer)
+              .resize({
+                width: MEDIUM_SIZE,
+                height: MEDIUM_SIZE,
+                fit: 'inside'
+              })
+              .png({ 
+                compressionLevel: compressionSettings.png,
+                adaptiveFiltering: true
+              })
+              .toFile(photo.mediumPath);
+          } else {
+            await sharp(imageBuffer)
+              .resize({
+                width: MEDIUM_SIZE,
+                height: MEDIUM_SIZE,
+                fit: 'inside'
+              })
+              .toFile(photo.mediumPath);
+          }
+        }
+
+        if (mode === 'all' || mode === 'large') {
+          // Ricomprimi versione grande
+          if (isJpg) {
+            await sharp(imageBuffer)
+              .resize({
+                width: LARGE_SIZE,
+                height: LARGE_SIZE,
+                fit: 'inside'
+              })
+              .jpeg({ 
+                quality: compressionSettings.jpeg, 
+                mozjpeg: true,
+                progressive: true
+              })
+              .toFile(photo.largePath);
+          } else if (isPng) {
+            await sharp(imageBuffer)
+              .resize({
+                width: LARGE_SIZE,
+                height: LARGE_SIZE,
+                fit: 'inside'
+              })
+              .png({ 
+                compressionLevel: compressionSettings.png,
+                adaptiveFiltering: true
+              })
+              .toFile(photo.largePath);
+          } else {
+            await sharp(imageBuffer)
+              .resize({
+                width: LARGE_SIZE,
+                height: LARGE_SIZE,
+                fit: 'inside'
+              })
+              .toFile(photo.largePath);
+          }
+        }
+
+        if (mode === 'all' || mode === 'webp') {
+          // Genera o aggiorna la versione WebP
+          const webpFilename = path.basename(photo.path, path.extname(photo.path)) + ".webp";
+          const webpPath = path.join(WEBP_DIR, webpFilename);
+          
+          await sharp(imageBuffer)
+            .resize({
+              width: MEDIUM_SIZE,
+              height: MEDIUM_SIZE,
+              fit: 'inside'
+            })
+            .webp({ 
+              quality: compressionSettings.webp,
+              lossless: false,
+              nearLossless: false,
+              smartSubsample: true
+            })
+            .toFile(webpPath);
+            
+          // Aggiorna il percorso WebP nel database se necessario
+          if (!photo.webpPath || photo.webpPath !== webpPath) {
+            await db.update(photos)
+              .set({ webpPath })
+              .where(eq(photos.id, photo.id));
+          }
+        }
+
+        stats.success++;
+      } catch (error) {
+        console.error(`Errore nella ricompressione della foto ${photo.id}:`, error);
+        stats.errors++;
+        stats.details.push({ 
+          id: photo.id, 
+          error: error instanceof Error ? error.message : "Errore sconosciuto" 
+        });
+      }
+    }
+
+    res.json({
+      message: `Elaborazione completata. ${stats.success} immagini ricompresse su ${stats.total}.`,
+      stats
+    });
+  } catch (error) {
+    console.error("Errore nella ricompressione delle immagini:", error);
+    res.status(500).json({ 
+      error: "Errore nella ricompressione delle immagini", 
+      details: error instanceof Error ? error.message : "Errore sconosciuto" 
+    });
   }
 };
 

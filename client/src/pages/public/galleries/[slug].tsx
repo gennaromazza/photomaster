@@ -326,7 +326,7 @@ export default function PublicGalleryPage() {
                             activeChapter === chapter.id ? 'bg-primary/20 font-medium' : ''
                           }`}
                         >
-                          {chapter.title}
+                          {chapter.title || `Capitolo ${chapter.id}`}
                         </TabsTrigger>
                       ))}
                     </TabsList>

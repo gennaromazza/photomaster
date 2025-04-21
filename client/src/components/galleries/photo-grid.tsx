@@ -48,6 +48,9 @@ export const PhotoGrid = ({
   onPhotoSelect,
   onPhotoEdit,
 }: PhotoGridProps) => {
+  if (!photos?.length) {
+    return null;
+  }
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState<number | null>(null);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);

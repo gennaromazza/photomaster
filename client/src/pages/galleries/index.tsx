@@ -55,9 +55,14 @@ function GalleryGrid({ galleries = [] }: { galleries: GalleryItem[] }) {
           <div className="overflow-hidden rounded-lg aspect-[4/3] bg-muted mb-3 relative">
             {gallery.coverImage ? (
               <img
-                src={gallery.coverImage}
+                src={`/uploads/galleries/${gallery.coverImage}`}
                 alt={gallery.name}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/assets/image-placeholder.svg";
+                  target.onerror = null;
+                }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -101,9 +106,14 @@ function GalleryList({ galleries = [] }: { galleries: GalleryItem[] }) {
           <div className="overflow-hidden rounded-md w-16 h-16 bg-muted flex-shrink-0">
             {gallery.coverImage ? (
               <img
-                src={gallery.coverImage}
+                src={`/uploads/galleries/${gallery.coverImage}`}
                 alt={gallery.name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/assets/image-placeholder.svg";
+                  target.onerror = null;
+                }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">

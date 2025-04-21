@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Settings, 
   Lock, 
@@ -7,13 +7,15 @@ import {
   Calendar, 
   Building,
   QrCode, 
-  Check
+  Check,
+  Image
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { GalleryItem } from "@/types/gallery";
+import { GalleryItem, Photo } from "@/types/gallery";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +61,18 @@ export function GallerySettings({
   const [isSaving, setIsSaving] = useState(false);
   const [resetPasswordDialog, setResetPasswordDialog] = useState(false);
   const [selectionEnabled, setSelectionEnabled] = useState(gallery.selectionEnabled !== false);
+  const [selectedCoverImage, setSelectedCoverImage] = useState<string | null>(gallery.coverImage || null);
+  
+  // Carica le foto della galleria per la selezione della copertina
+  const { data: photosData } = useQuery({
+    queryKey: [`/api/gallery/galleries/${gallery.id}/photos`],
+    queryFn: async () => {
+      const response = await fetch(`/api/gallery/galleries/${gallery.id}/photos`);
+      if (!response.ok) throw new Error("Errore nel caricamento delle foto");
+      return response.json();
+    },
+    enabled: !!gallery.id
+  });
 
   const handleCopyLink = async () => {
     try {
@@ -89,6 +103,7 @@ export function GallerySettings({
         password: passwordProtected ? password : null,
         eventId,
         selectionEnabled,
+        coverImage: selectedCoverImage,
       });
 
       queryClient.invalidateQueries({ 
@@ -278,6 +293,52 @@ export function GallerySettings({
               <p className="text-sm text-muted-foreground">
                 Collega questa galleria a un evento esistente
               </p>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Immagine di Copertina</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="coverImageSelect">Immagine di Copertina</Label>
+              <div className="flex items-center">
+                <Image className="h-4 w-4 mr-2 text-muted-foreground" />
+                <Select
+                  value={selectedCoverImage || ""}
+                  onValueChange={(value) => setSelectedCoverImage(value)}
+                >
+                  <SelectTrigger id="coverImageSelect" className="flex-1">
+                    <SelectValue placeholder="Seleziona un'immagine di copertina" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nessuna immagine</SelectItem>
+                    {photosData?.photos?.map((photo: Photo) => (
+                      <SelectItem key={photo.id} value={photo.filename}>
+                        {photo.title || `Foto ${photo.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                L'immagine di copertina verrà mostrata in alto nella galleria pubblica e come anteprima nella dashboard
+              </p>
+              
+              {selectedCoverImage && (
+                <div className="mt-4 border rounded-lg overflow-hidden">
+                  <img 
+                    src={`/uploads/galleries/${selectedCoverImage}`}
+                    alt="Anteprima immagine di copertina"
+                    className="w-full h-auto"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/assets/image-placeholder.svg";
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
           

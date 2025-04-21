@@ -651,7 +651,7 @@ export default function PublicGalleryPage() {
                 <div className="flex items-center text-white/90">
                   <Calendar className="h-4 w-4 mr-2" />
                   <span className="text-sm">
-                    {format(new Date(gallery.createdAt), "d MMMM yyyy", { locale: it })}
+                    {gallery.createdAt && format(new Date(gallery.createdAt), "d MMMM yyyy", { locale: it })}
                   </span>
                 </div>
 

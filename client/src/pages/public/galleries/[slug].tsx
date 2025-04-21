@@ -1011,16 +1011,79 @@ export default function PublicGalleryPage() {
               ) : (
                 <div className="bg-background rounded-xl p-1">
                   <div className="bg-muted/20 rounded-lg border p-4 md:p-6">
-                    {/* Griglia foto */}
-                    <PhotoGrid 
-                      photos={photos} 
-                      onPhotoClick={(photo, index) => {
-                        setCurrentPhotoIndex(index);
-                        setFullscreenView(true);
-                      }}
-                      onPhotoSelect={gallery.selectionEnabled ? handlePhotoSelect : undefined}
-                      selectedPhotos={selectedPhotos}
-                    />
+                    {/* Raggruppa le foto per capitolo */}
+                    {(() => {
+                      // Funzione per raggruppare le foto per capitolo
+                      const groupPhotosByChapter = () => {
+                        // Creiamo un Map per mantenere l'ordinamento
+                        const grouped = new Map<string, Photo[]>();
+                        
+                        // Aggiungiamo una chiave speciale per le foto senza capitolo
+                        grouped.set("Senza capitolo", []);
+                        
+                        // Aggiungiamo una entry per ogni capitolo
+                        chapters.forEach(chapter => {
+                          grouped.set(chapter.title, []);
+                        });
+                        
+                        // Distribuiamo le foto nei relativi capitoli
+                        photos.forEach(photo => {
+                          if (photo.chapterId) {
+                            // Troviamo il titolo del capitolo corrispondente
+                            const chapter = chapters.find(c => c.id === photo.chapterId);
+                            if (chapter) {
+                              const photos = grouped.get(chapter.title) || [];
+                              photos.push(photo);
+                              grouped.set(chapter.title, photos);
+                            } else {
+                              // Se il capitolo non esiste più, mettiamo la foto tra quelle senza capitolo
+                              const uncategorized = grouped.get("Senza capitolo") || [];
+                              uncategorized.push(photo);
+                              grouped.set("Senza capitolo", uncategorized);
+                            }
+                          } else {
+                            // Foto senza capitolo
+                            const uncategorized = grouped.get("Senza capitolo") || [];
+                            uncategorized.push(photo);
+                            grouped.set("Senza capitolo", uncategorized);
+                          }
+                        });
+                        
+                        // Rimuoviamo i capitoli senza foto
+                        Array.from(grouped.keys()).forEach(key => {
+                          if (grouped.get(key)?.length === 0) {
+                            grouped.delete(key);
+                          }
+                        });
+                        
+                        return Array.from(grouped.entries());
+                      };
+                      
+                      const groupedPhotos = groupPhotosByChapter();
+                      
+                      return (
+                        <>
+                          {groupedPhotos.map(([chapterTitle, chapterPhotos]) => (
+                            <div key={chapterTitle} className="mb-10">
+                              <h3 className="text-xl font-semibold mb-4 py-2 px-4 bg-muted/50 rounded-lg">
+                                {chapterTitle}
+                              </h3>
+                              <PhotoGrid 
+                                photos={chapterPhotos} 
+                                onPhotoClick={(photo, index) => {
+                                  // Troviamo l'indice globale della foto nell'array completo
+                                  const globalIndex = photos.findIndex(p => p.id === photo.id);
+                                  setCurrentPhotoIndex(globalIndex !== -1 ? globalIndex : index);
+                                  setFullscreenView(true);
+                                }}
+                                onPhotoSelect={gallery.selectionEnabled ? handlePhotoSelect : undefined}
+                                selectedPhotos={selectedPhotos}
+                              />
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })()}
 
                     {/* Paginazione */}
                     {pagination.pages > 1 && (

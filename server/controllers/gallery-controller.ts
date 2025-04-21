@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db, type DB } from "../db";
 import { 
-  galleries, insertGallerySchema, partialGallerySchema, galleryChapters, insertGalleryChapterSchema,
+  galleries, insertGallerySchema, galleryChapters, insertGalleryChapterSchema,
   photos, insertPhotoSchema, photoSelections, gallerySubscriptions, insertGallerySubscriptionSchema,
   socialShares, insertSocialShareSchema
 } from "../../schema_gallery";
@@ -226,25 +226,42 @@ export const createGallery = async (req: Request, res: Response) => {
   }
 };
 
-// Aggiorna una galleria
+// Aggiorna una galleria - senza validazione Zod per permettere aggiornamenti parziali
 export const updateGallery = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    // Utilizziamo partialGallerySchema per permettere aggiornamenti parziali dei campi
-    const galleryData = partialGallerySchema.parse(req.body);
+    
+    // Ottieni i campi aggiornabili dalla richiesta
+    const galleryData = {
+      ...req.body,
+      // Se c'è una data di scadenza in formato stringa, convertiamola in Date
+      ...(req.body.expiryDate && typeof req.body.expiryDate === 'string' 
+        ? { expiryDate: new Date(req.body.expiryDate) } 
+        : {}),
+      updatedAt: new Date()
+    };
 
-    const [updatedGallery] = await db
-      .update(galleries)
-      .set({
-        ...galleryData,
-        updatedAt: new Date(),
-      })
+    // Elimina campi che potrebbero causare problemi
+    delete galleryData.id;
+    delete galleryData.createdAt;
+    
+    // Verifica che la galleria esista prima dell'aggiornamento
+    const existingGallery = await db
+      .select()
+      .from(galleries)
       .where(eq(galleries.id, Number(id)))
-      .returning();
-
-    if (!updatedGallery) {
+      .limit(1);
+      
+    if (existingGallery.length === 0) {
       return res.status(404).json({ error: "Galleria non trovata" });
     }
+
+    // Aggiorna la galleria
+    const [updatedGallery] = await db
+      .update(galleries)
+      .set(galleryData)
+      .where(eq(galleries.id, Number(id)))
+      .returning();
 
     res.json(updatedGallery);
   } catch (error) {
@@ -391,22 +408,24 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
       .from(photos)
       .where(eq(photos.galleryId, Number(galleryId)));
 
-    // Aggiungi gli URL per le immagini
-    const basePath = "/uploads";
+    // Percorso base per tutti gli URL
+    const baseWebPath = "/uploads/galleries";
+    
+    // Aggiungi gli URL per le immagini, normalizzando tutti i percorsi
     const photosWithUrls = photoList.map((p: typeof photos.$inferSelect) => {
-      // Standardizza i percorsi file, estraendo sempre solo il nome del file (niente prefissi)
-      const mediumFilename = p.mediumPath ? path.basename(p.mediumPath) : p.filename;
-      const thumbnailFilename = p.thumbnailPath ? path.basename(p.thumbnailPath) : p.filename;
+      // Estrai solo il nome del file da ogni percorso
+      const filename = p.filename;
+      const webpFilename = p.webpPath ? path.basename(p.webpPath) : null;
       
       // Crea URL coerenti con la struttura delle directory
       return {
         ...p,
-        url: `${basePath}/galleries/medium/${mediumFilename}`,
-        thumbnailUrl: `${basePath}/galleries/thumbnails/${thumbnailFilename}`,
-        // Aggiungi anche gli altri percorsi per convenienza
-        largeUrl: p.largePath ? `${basePath}/galleries/large/${path.basename(p.largePath)}` : null,
-        webpUrl: p.webpPath ? `${basePath}/galleries/webp/${path.basename(p.webpPath)}` : null,
-        originalUrl: p.path ? `${basePath}/galleries/${path.basename(p.path)}` : null,
+        // URLs per il frontend
+        url: `${baseWebPath}/medium/${filename}`,
+        thumbnailUrl: `${baseWebPath}/thumbnails/${filename}`,
+        largeUrl: `${baseWebPath}/large/${filename}`,
+        webpUrl: webpFilename ? `${baseWebPath}/webp/${webpFilename}` : null,
+        originalUrl: `${baseWebPath}/${filename}`,
       };
     });
 
@@ -434,29 +453,44 @@ export const uploadPhoto = async (req: Request, res: Response) => {
 
     const { galleryId, chapterId, title, caption, isFeatured } = req.body;
 
-    // Genera un nome file unico
-    const uniqueFilename = `${Date.now()}-${uuidv4()}${path.extname(req.file.originalname)}`;
+    // Genera un nome file unico senza estensione duplicata (alcuni browser inviano .jpg.jpg)
+    const cleanOriginalName = req.file.originalname.replace(/\.+/g, '.').toLowerCase();
+    const extension = path.extname(cleanOriginalName);
+    const timestamp = Date.now();
+    const uuid = uuidv4();
+    const uniqueFilename = `${timestamp}-${uuid}${extension}`;
+    
+    // Definisci i percorsi assoluti per il filesystem
     const filePath = path.join(UPLOAD_DIR, uniqueFilename);
+    const thumbnailPath = path.join(THUMBNAILS_DIR, uniqueFilename);
+    const mediumPath = path.join(MEDIUM_DIR, uniqueFilename);
+    const largePath = path.join(LARGE_DIR, uniqueFilename);
+    const webpFilename = `${timestamp}-${uuid}.webp`;
+    const webpPath = path.join(WEBP_DIR, webpFilename);
 
     // Validazione formato
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
     if (!allowedMimes.includes(req.file.mimetype)) {
-      throw new Error('Formato file non supportato');
+      throw new Error('Formato file non supportato. Sono consentiti solo JPEG, JPG, PNG e WebP.');
     }
+
+    console.log("Caricamento foto con percorsi:", {
+      filePath,
+      thumbnailPath,
+      mediumPath,
+      largePath,
+      webpPath
+    });
+
+    // Assicurati che le directory esistano
+    [UPLOAD_DIR, THUMBNAILS_DIR, MEDIUM_DIR, LARGE_DIR, WEBP_DIR].forEach(dir => {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    });
 
     // Salva il file originale in modo sicuro
     await fs.promises.writeFile(filePath, req.file.buffer);
-
-    // Cleanup file temporanei
-    try {
-      const tempFiles = await fs.promises.readdir(path.join(UPLOAD_DIR, 'temp'));
-      await Promise.all(
-        tempFiles.map(f => fs.promises.unlink(path.join(UPLOAD_DIR, 'temp', f)))
-      );
-    } catch (err) {
-      console.error('Errore pulizia file temporanei:', err);
-    }
-
 
     // Elabora l'immagine con sharp
     const metadata = await sharp(req.file.buffer).metadata();
@@ -471,50 +505,59 @@ export const uploadPhoto = async (req: Request, res: Response) => {
       }
     }
 
-    // Crea thumbnail
-    const thumbnailFilename = uniqueFilename;
-    const thumbnailPath = path.join(THUMBNAILS_DIR, thumbnailFilename);
-    await sharp(req.file.buffer)
-      .resize({
-        width: THUMBNAIL_SIZE,
-        height: THUMBNAIL_SIZE,
-        fit: 'inside'
-      })
-      .toFile(thumbnailPath);
+    try {
+      // Crea thumbnail
+      await sharp(req.file.buffer)
+        .resize({
+          width: THUMBNAIL_SIZE,
+          height: THUMBNAIL_SIZE,
+          fit: 'inside'
+        })
+        .toFile(thumbnailPath);
 
-    // Crea versione media
-    const mediumFilename = uniqueFilename;
-    const mediumPath = path.join(MEDIUM_DIR, mediumFilename);
-    await sharp(req.file.buffer)
-      .resize({
-        width: MEDIUM_SIZE,
-        height: MEDIUM_SIZE,
-        fit: 'inside'
-      })
-      .toFile(mediumPath);
+      // Crea versione media
+      await sharp(req.file.buffer)
+        .resize({
+          width: MEDIUM_SIZE,
+          height: MEDIUM_SIZE,
+          fit: 'inside'
+        })
+        .toFile(mediumPath);
 
-    // Crea versione grande
-    const largeFilename = uniqueFilename;
-    const largePath = path.join(LARGE_DIR, largeFilename);
-    await sharp(req.file.buffer)
-      .resize({
-        width: LARGE_SIZE,
-        height: LARGE_SIZE,
-        fit: 'inside'
-      })
-      .toFile(largePath);
+      // Crea versione grande
+      await sharp(req.file.buffer)
+        .resize({
+          width: LARGE_SIZE,
+          height: LARGE_SIZE,
+          fit: 'inside'
+        })
+        .toFile(largePath);
 
-    // Crea versione WebP per browser moderni
-    const webpFilename = `${path.parse(uniqueFilename).name}.webp`;
-    const webpPath = path.join(WEBP_DIR, webpFilename);
-    await sharp(req.file.buffer)
-      .resize({
-        width: MEDIUM_SIZE,
-        height: MEDIUM_SIZE,
-        fit: 'inside'
-      })
-      .webp({ quality: 80 })
-      .toFile(webpPath);
+      // Crea versione WebP per browser moderni
+      await sharp(req.file.buffer)
+        .resize({
+          width: MEDIUM_SIZE,
+          height: MEDIUM_SIZE,
+          fit: 'inside'
+        })
+        .webp({ quality: 80 })
+        .toFile(webpPath);
+    } catch (err) {
+      console.error("Errore nell'elaborazione dell'immagine con sharp:", err);
+      throw new Error(`Errore nell'elaborazione dell'immagine: ${err instanceof Error ? err.message : 'sconosciuto'}`);
+    }
+
+    // Crea URL relativi per il frontend
+    const baseWebPath = "/uploads/galleries";
+    const relativeURLs = {
+      original: `${baseWebPath}/${uniqueFilename}`,
+      thumbnail: `${baseWebPath}/thumbnails/${uniqueFilename}`,
+      medium: `${baseWebPath}/medium/${uniqueFilename}`,
+      large: `${baseWebPath}/large/${uniqueFilename}`,
+      webp: `${baseWebPath}/webp/${webpFilename}`
+    };
+
+    console.log("URL relativi creati:", relativeURLs);
 
     // Salva nel database
     const [photo] = await db.insert(photos).values({
@@ -539,7 +582,17 @@ export const uploadPhoto = async (req: Request, res: Response) => {
       orientation
     }).returning();
 
-    res.status(201).json(photo);
+    // Aggiungi gli URL per facilitare il rendering nel frontend
+    const photoWithUrls = {
+      ...photo,
+      url: relativeURLs.medium,
+      thumbnailUrl: relativeURLs.thumbnail,
+      largeUrl: relativeURLs.large,
+      webpUrl: relativeURLs.webp,
+      originalUrl: relativeURLs.original
+    };
+
+    res.status(201).json(photoWithUrls);
   } catch (error) {
     console.error("Errore nel caricamento della foto:", error);
     res.status(500).json({ 

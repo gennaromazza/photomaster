@@ -448,10 +448,16 @@ export default function PublicGalleryPage() {
             alt={photo.title || "Foto"} 
             className="max-h-full max-w-full object-contain select-none transition-transform duration-500 ease-in-out"
             onError={(e) => {
-              console.error("Errore caricamento immagine a schermo intero:", e);
-              // Fallback alla versione medium se la versione large non è disponibile
               const target = e.target as HTMLImageElement;
-              if (photo.filename) {
+              // Preveniamo loop infiniti controllando se abbiamo già provato il fallback
+              if (!photo.filename || target.src.includes(`/uploads/galleries/medium/${photo.filename}`)) {
+                // Fallback a un'immagine placeholder per evitare loop di errori
+                console.log("Utilizzato placeholder per immagine fullscreen");
+                target.src = "/assets/image-placeholder.svg";
+                target.onerror = null; // Disabilita ulteriori eventi di errore
+              } else if (photo.filename) {
+                // Prima volta che proviamo il fallback a medium
+                console.log("Tentativo fallback medium per fullscreen:", photo.filename);
                 target.src = `/uploads/galleries/medium/${photo.filename}`;
               }
             }}

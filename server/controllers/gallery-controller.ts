@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { db, type DB } from "../db";
+import { db } from "../db";
 import { 
   galleries, insertGallerySchema, galleryChapters, insertGalleryChapterSchema,
   photos, insertPhotoSchema, photoSelections, gallerySubscriptions, insertGallerySubscriptionSchema,

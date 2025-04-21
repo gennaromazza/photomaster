@@ -1,0 +1,56 @@
+**Prompt per Claude**  
+
+Devi applicare queste modifiche al progetto **StudioMaster** per far sì che le gallerie pubbliche carichino correttamente foto e capitoli.
+
+1. **Server – `getGalleryBySlug`**  
+   - **File**: `server/controllers/gallery-controller.ts`  
+   - **Funzione**: `export const getGalleryBySlug = async (…)`  
+   - **Cosa fare**:  
+     - Nella risposta JSON che restituisci quando la galleria **NON** è protetta da password (cioè subito prima di `res.json({...gallery, chapters, featuredPhotos})`), aggiungi la proprietà  
+       ```ts
+       requiresPassword: false,
+       ```  
+     - Il blocco completo diventerà qualcosa come:  
+       ```ts
+       // …dopo aver raccolto chapters e featuredPhotos
+       res.json({
+         ...gallery,
+         requiresPassword: false,
+         chapters,
+         featuredPhotos
+       });
+       ```
+
+2. **Client pubblico – abilitare il fetch**  
+   - **File**: `client/src/pages/public/galleries/[slug].tsx`  
+   - **Sezione fetch gallery**: nel primo `useQuery` dove chiami  
+     ```ts
+     const res = await fetch(`/api/gallery/public/galleries/${slug}`);
+     if (res.status === 401) { … }
+     ```
+   - **Cosa fare**:  
+     - Subito dopo `const data = await res.json();` e prima di `return data;`, inserisci:  
+       ```ts
+       setIsAuthorized(true);
+       ```  
+     - In questo modo, quando la galleria è pubblica, lo stato `isAuthorized` diventa `true` e abilita i fetch successivi.
+
+3. **Client pubblico – abilitazione condizionale in `useQuery` capitoli e foto**  
+   - **File**: stesso di sopra, `client/src/pages/public/galleries/[slug].tsx`  
+   - **Hooks da modificare**:  
+     ```ts
+     useQuery({ queryKey: [...chapters], enabled: !!gallery?.id && isAuthorized })
+     useQuery({ queryKey: [...photos],   enabled: !!gallery?.id && isAuthorized })
+     ```  
+   - **Cosa fare**:  
+     - Cambia `enabled:` in  
+       ```ts
+       enabled: !!gallery?.id && (!isPasswordProtected || isAuthorized)
+       ```  
+     - In questo modo, se `isPasswordProtected` è `false` (galleria non protetta), i fetch partono comunque, senza dover aspettare `isAuthorized`.
+
+Verifica, dopo le modifiche, che:
+- In `server/controllers/gallery-controller.ts` la risposta JSON pubblica includa sempre `requiresPassword: false`.
+- In `client/src/pages/public/galleries/[slug].tsx`:
+  - `setIsAuthorized(true)` venga chiamato per gallerie non protette.
+  - Gli `enabled` dei due `useQuery` riflettano la nuova condizione `(!isPasswordProtected || isAuthorized)`.

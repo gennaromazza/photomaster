@@ -97,7 +97,7 @@ export default function PublicGalleryPage() {
 
   // Query per ottenere i capitoli della galleria
   const { 
-    data: chapters = [], 
+    data: chaptersData = [], 
     isLoading: isChaptersLoading 
   } = useQuery({
     queryKey: [`/api/gallery/galleries/${gallery?.id}/chapters`],
@@ -113,6 +113,9 @@ export default function PublicGalleryPage() {
     },
     enabled: !!gallery?.id && (!gallery?.password || isAuthorized),
   });
+  
+  // Ordina i capitoli per sortOrder
+  const chapters = chaptersData ? [...chaptersData].sort((a, b) => a.sortOrder - b.sortOrder) : [];
 
   // Query per ottenere le foto della galleria
   const { 

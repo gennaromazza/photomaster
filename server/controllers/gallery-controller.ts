@@ -786,7 +786,7 @@ export const updatePhoto = async (req: Request, res: Response) => {
         caption,
         isFeatured: isFeatured === true || isFeatured === 'true',
         isHidden: isHidden === true || isHidden === 'true',
-        chapterId: chapterId ? Number(chapterId) : null,
+        ...(chapterId !== undefined ? { chapterId: Number(chapterId) } : {}),
         sortOrder: sortOrder ? Number(sortOrder) : undefined,
         tags: tags ? JSON.parse(tags) : undefined
       })

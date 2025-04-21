@@ -51,6 +51,17 @@ export function PhotoUploader({
       }
 
       const existingNames = files.map(f => f.name);
+      const duplicateFiles = acceptedFiles.filter(file => existingNames.includes(file.name));
+      
+      // Notifica all'utente se sono stati rilevati file duplicati
+      if (duplicateFiles.length > 0) {
+        toast({
+          title: "File duplicati rilevati",
+          description: `${duplicateFiles.length} file sono stati ignorati perché già presenti: ${duplicateFiles.map(f => f.name).join(', ')}`,
+          variant: "destructive"
+        });
+      }
+      
       const newFiles = acceptedFiles
         .filter(file => !existingNames.includes(file.name))
         .map((file) => ({
@@ -61,13 +72,7 @@ export function PhotoUploader({
           progress: 0,
         }));
 
-      if (acceptedFiles.length > newFiles.length) {
-        toast({
-          title: "File duplicati",
-          description: "Alcuni file sono stati ignorati perché hanno lo stesso nome di file già aggiunti",
-          variant: "destructive"
-        });
-      }
+      // Nota: la notifica per i file duplicati è già gestita sopra
 
       setFiles((prev) => [...prev, ...newFiles]);
     },

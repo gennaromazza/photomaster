@@ -255,10 +255,21 @@ export default function PublicGalleryPage() {
           variant: "default"
         });
         setIsAuthorized(true);
-        // Ricarica i dati della galleria dopo l'autenticazione
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
+        
+        // Invalida e ricarica i dati della galleria dopo l'autenticazione
+        // invece di ricaricare la pagina intera
+        queryClient.invalidateQueries({
+          queryKey: [`/api/gallery/public/galleries/${slug}`]
+        });
+        
+        // Dopo che l'utente è autenticato, possiamo abilitare le query per capitoli e foto
+        queryClient.invalidateQueries({
+          queryKey: [`/api/gallery/galleries/${gallery?.id}/chapters`]
+        });
+        
+        queryClient.invalidateQueries({
+          queryKey: [`/api/gallery/galleries/${gallery?.id}/photos`]
+        });
       } else {
         console.log("[Gallery] Password auth failed");
         toast({

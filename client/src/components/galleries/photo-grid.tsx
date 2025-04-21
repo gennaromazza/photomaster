@@ -41,7 +41,7 @@ interface PhotoGridProps {
   selectable?: boolean;
   editable?: boolean;
   onPhotoEdit?: (photoId: number) => void;
-  onPhotoClick?: (index: number) => void;
+  onPhotoClick?: (photo: Photo, index: number) => void;
   galleryId?: number;
   chapterId?: number | null;
 }
@@ -139,18 +139,19 @@ export function PhotoGrid({
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 lg:gap-6">
         {photos.map((photo, index) => (
           <Card 
             key={photo.id} 
-            className="overflow-hidden group relative cursor-pointer rounded-xl transition-all duration-300 hover:translate-y-[-2px] hover:shadow-xl bg-white dark:bg-gray-800/50"
-            onClick={() => onPhotoClick && onPhotoClick(index)}
+            className="overflow-hidden group relative cursor-pointer rounded-lg md:rounded-xl transition-all duration-300 hover:translate-y-[-2px] hover:shadow-xl bg-white dark:bg-gray-800/50"
+            onClick={() => onPhotoClick && onPhotoClick(photo, index)}
           >
             <div className="aspect-square overflow-hidden relative">
               <img
                 src={photo.thumbnailUrl || `/uploads/galleries/thumbnails/${photo.filename}`}
                 alt={photo.title || "Foto"}
                 className="object-cover h-full w-full transition-all duration-300 group-hover:scale-105"
+                loading="lazy"
                 onError={(e) => {
                   // Preveniamo loop infiniti controllando se abbiamo già provato il fallback
                   const target = e.target as HTMLImageElement;

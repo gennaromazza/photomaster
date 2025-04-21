@@ -395,7 +395,7 @@ export default function PublicGalleryPage() {
     }
   };
 
-  // Rendering della visualizzazione a schermo intero
+  // Rendering della lightbox a schermo intero
   const renderFullscreenView = () => {
     if (!fullscreenView || photos.length === 0) return null;
 
@@ -410,7 +410,7 @@ export default function PublicGalleryPage() {
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col">
         {/* Barra superiore */}
-        <div className="p-4 flex justify-between items-center text-white bg-black/80">
+        <div className="p-2 md:p-4 flex justify-between items-center text-white bg-black/80">
           <div className="flex items-center">
             <Button 
               variant="ghost" 
@@ -420,28 +420,28 @@ export default function PublicGalleryPage() {
             >
               <X className="h-5 w-5" />
             </Button>
-            <span className="ml-4">{currentPhotoIndex + 1} / {photos.length}</span>
+            <span className="ml-2 md:ml-4 text-sm md:text-base">{currentPhotoIndex + 1} / {photos.length}</span>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 md:space-x-2">
             <Button 
               variant="ghost" 
               size="icon"
               onClick={() => setSlideshow(!slideshow)}
-              className="text-white hover:bg-white/20"
+              className="text-white hover:bg-white/20 h-8 w-8 md:h-10 md:w-10"
             >
-              {slideshow ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              {slideshow ? <Pause className="h-4 w-4 md:h-5 md:w-5" /> : <Play className="h-4 w-4 md:h-5 md:w-5" />}
             </Button>
 
             {gallery?.selectionEnabled && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 h-8 w-8 md:h-10 md:w-10"
                 onClick={() => handlePhotoSelect(photo.id, !selectedPhotos.includes(photo.id))}
               >
                 <Heart 
-                  className={`h-5 w-5 ${selectedPhotos.includes(photo.id) ? 'fill-red-500' : ''}`}
+                  className={`h-4 w-4 md:h-5 md:w-5 ${selectedPhotos.includes(photo.id) ? 'fill-red-500' : ''}`}
                 />
               </Button>
             )}
@@ -474,29 +474,52 @@ export default function PublicGalleryPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black/30 hover:bg-black/50 h-12 w-12 rounded-full"
+            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 text-white bg-black/30 hover:bg-black/50 h-8 w-8 md:h-12 md:w-12 rounded-full"
             onClick={() => setCurrentPhotoIndex(prevIndex => prevIndex === 0 ? photos.length - 1 : prevIndex - 1)}
           >
-            <ChevronLeft className="h-8 w-8" />
+            <ChevronLeft className="h-5 w-5 md:h-8 md:w-8" />
           </Button>
 
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black/30 hover:bg-black/50 h-12 w-12 rounded-full"
+            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 text-white bg-black/30 hover:bg-black/50 h-8 w-8 md:h-12 md:w-12 rounded-full"
             onClick={() => setCurrentPhotoIndex(prevIndex => prevIndex === photos.length - 1 ? 0 : prevIndex + 1)}
           >
-            <ChevronRight className="h-8 w-8" />
+            <ChevronRight className="h-5 w-5 md:h-8 md:w-8" />
           </Button>
         </div>
 
         {/* Info foto */}
-        {photo.title || photo.caption ? (
-          <div className="p-4 bg-black/80 text-white">
-            {photo.title && <h3 className="text-lg font-semibold">{photo.title}</h3>}
-            {photo.caption && <p className="text-white/80">{photo.caption}</p>}
+        {photo.title || photo.description ? (
+          <div className="p-2 md:p-4 bg-black/80 text-white">
+            {photo.title && <h3 className="text-base md:text-lg font-semibold">{photo.title}</h3>}
+            {photo.description && <p className="text-sm md:text-base text-white/80">{photo.description}</p>}
           </div>
         ) : null}
+
+        {/* Miniature delle foto in basso */}
+        <div className="hidden md:flex overflow-x-auto bg-black/90 h-16 p-2 gap-2">
+          {photos.map((p, idx) => (
+            <div 
+              key={p.id} 
+              className={`h-full aspect-square flex-shrink-0 cursor-pointer border-2 transition-all 
+                ${idx === currentPhotoIndex ? 'border-primary' : 'border-transparent hover:border-white/50'}`}
+              onClick={() => setCurrentPhotoIndex(idx)}
+            >
+              <img 
+                src={p.thumbnailUrl || `/uploads/galleries/thumbnails/${p.filename}`} 
+                alt="" 
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/assets/image-placeholder.svg";
+                  target.onerror = null;
+                }}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -691,17 +714,67 @@ export default function PublicGalleryPage() {
           ref={contentRef}
         >
           <div className="max-w-screen-xl mx-auto w-full p-4 md:p-8">
+            {/* Immagine di copertina o prima foto in evidenza */}
+            {photos.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold mb-4">In evidenza</h2>
+                <div className="relative rounded-xl overflow-hidden shadow-lg">
+                  {/* Prendiamo la prima foto con isFeatured=true oppure la prima foto se non ce ne sono in evidenza */}
+                  {(() => {
+                    const featuredPhoto = photos.find(p => p.isFeatured) || photos[0];
+                    return (
+                      <div 
+                        key={featuredPhoto.id} 
+                        className="aspect-[16/9] md:aspect-[2.5/1] overflow-hidden rounded-xl cursor-pointer" 
+                        onClick={() => {
+                          const photoIndex = photos.findIndex(p => p.id === featuredPhoto.id);
+                          if (photoIndex !== -1) {
+                            setCurrentPhotoIndex(photoIndex);
+                            setFullscreenView(true);
+                          }
+                        }}
+                      >
+                        <img 
+                          src={featuredPhoto.largeUrl || featuredPhoto.url || `/uploads/galleries/large/${featuredPhoto.filename}`} 
+                          alt={featuredPhoto.title || "Foto in evidenza"} 
+                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/assets/image-placeholder.svg";
+                            target.onerror = null;
+                          }}
+                        />
+
+                        {(featuredPhoto.title || featuredPhoto.description) && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
+                            {featuredPhoto.title && (
+                              <h3 className="text-lg md:text-xl font-semibold">{featuredPhoto.title}</h3>
+                            )}
+                            {featuredPhoto.description && (
+                              <p className="text-sm md:text-base text-white/80 mt-1">{featuredPhoto.description}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+            
             {/* Capitoli / Sezioni */}
             {chapters.length > 0 && (
               <div className="mb-8">
+                <h2 className="text-2xl font-bold mb-4">Capitoli</h2>
                 <Tabs defaultValue={String(activeChapter || chapters[0]?.id)}>
-                  <div className="border-b mb-4">
-                    <TabsList className="mb-0">
+                  <div className="border-b mb-4 overflow-x-auto">
+                    <TabsList className="mb-0 flex-nowrap">
                       {chapters.map((chapter: GalleryChapter) => (
                         <TabsTrigger 
                           key={chapter.id} 
                           value={String(chapter.id)}
                           onClick={() => setActiveChapter(chapter.id)}
+                          className="whitespace-nowrap"
                         >
                           {chapter.title}
                         </TabsTrigger>

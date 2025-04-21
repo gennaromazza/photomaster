@@ -392,7 +392,7 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
       // Estrai il percorso e il nome del file dalle proprietà del database
       const mediumFile = p.mediumPath ? path.basename(p.mediumPath) : `medium-${p.filename}`;
       const thumbFile = p.thumbnailPath ? path.basename(p.thumbnailPath) : `thumb-${p.filename}`;
-      
+
       return {
         ...p,
         url: `${basePath}/galleries/medium/${mediumFile}`,
@@ -428,8 +428,25 @@ export const uploadPhoto = async (req: Request, res: Response) => {
     const uniqueFilename = `${Date.now()}-${uuidv4()}${path.extname(req.file.originalname)}`;
     const filePath = path.join(UPLOAD_DIR, uniqueFilename);
 
-    // Salva il file originale
-    fs.writeFileSync(filePath, req.file.buffer);
+    // Validazione formato
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimes.includes(req.file.mimetype)) {
+      throw new Error('Formato file non supportato');
+    }
+
+    // Salva il file originale in modo sicuro
+    await fs.promises.writeFile(filePath, req.file.buffer);
+
+    // Cleanup file temporanei
+    try {
+      const tempFiles = await fs.promises.readdir(path.join(UPLOAD_DIR, 'temp'));
+      await Promise.all(
+        tempFiles.map(f => fs.promises.unlink(path.join(UPLOAD_DIR, 'temp', f)))
+      );
+    } catch (err) {
+      console.error('Errore pulizia file temporanei:', err);
+    }
+
 
     // Elabora l'immagine con sharp
     const metadata = await sharp(req.file.buffer).metadata();
@@ -716,10 +733,10 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
 
     // Ottieni informazioni sulla sessione / utente
     const sessionId = req.sessionID || uuidv4();
-    
+
     // Controlla se è fornito un ID cliente tramite body
     const clientId = req.user?.id || (req.body.clientId ? Number(req.body.clientId) : null);
-    
+
     // Raccoglie dati di contatto del cliente se forniti
     let contactInfo = {};
     if (clientEmail || clientName) {
@@ -823,21 +840,21 @@ export const getClientSelections = async (req: Request, res: Response) => {
 export const createPhotoSelections = async (req: Request, res: Response) => {
   try {
     const { galleryId, photoIds, clientName, clientEmail, sessionId, selectionType = "favorite", notes } = req.body;
-    
+
     if (!photoIds || !Array.isArray(photoIds) || photoIds.length === 0) {
       return res.status(400).json({ error: "Nessuna foto selezionata" });
     }
-    
+
     if (!galleryId) {
       return res.status(400).json({ error: "ID galleria mancante" });
     }
-    
+
     // Ottieni informazioni sulla sessione / utente
     const actualSessionId = sessionId || req.sessionID || uuidv4();
-    
+
     // Controlla se è fornito un ID cliente tramite body o tramite l'utente loggato
     const clientId = req.user?.id || (req.body.clientId ? Number(req.body.clientId) : null);
-    
+
     // Preparare i dati per l'inserimento
     const insertData = photoIds.map(photoId => ({
       photoId: Number(photoId),
@@ -850,7 +867,7 @@ export const createPhotoSelections = async (req: Request, res: Response) => {
       notes: notes || null,
       createdAt: new Date()
     }));
-    
+
     // Elimina eventuali selezioni esistenti
     await db
       .delete(photoSelections)
@@ -858,14 +875,14 @@ export const createPhotoSelections = async (req: Request, res: Response) => {
         eq(photoSelections.galleryId, Number(galleryId)),
         clientId ? eq(photoSelections.clientId, clientId) : eq(photoSelections.sessionId, actualSessionId)
       ));
-    
+
     // Inserisci le nuove selezioni
     const insertedSelections = await db
       .insert(photoSelections)
       .values(insertData)
       .returning();
-    
-    res.status(201).json({ 
+
+    res.status(21).json({ 
       success: true, 
       message: `${insertedSelections.length} selezioni salvate con successo`,
       selections: insertedSelections 

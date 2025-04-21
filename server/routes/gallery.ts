@@ -72,7 +72,19 @@ router.get("/galleries", async (req, res) => {
 router.get("/galleries/:id", getGalleryById);
 
 // Ottieni una galleria tramite slug (pubblico)
-router.get("/public/galleries/:slug", checkGalleryAccess, getGalleryBySlug);
+const rateLimit = require('express-rate-limit');
+
+const publicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minuti
+  max: 100 // limite richieste
+});
+
+router.get("/public/galleries/:slug", 
+  publicLimiter,
+  sanitizeParams(['slug']),
+  checkGalleryAccess, 
+  getGalleryBySlug
+);
 
 // Autentica per una galleria protetta da password
 router.post("/public/galleries/:slug/authenticate", async (req, res) => {

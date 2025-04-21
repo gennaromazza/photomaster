@@ -59,6 +59,10 @@ CREATE TABLE IF NOT EXISTS "gallery_chapters" (
 );
 
 -- Creazione tabella photos
+-- Aggiungi indici per performance
+CREATE INDEX IF NOT EXISTS photos_gallery_id_idx ON photos(gallery_id);
+CREATE INDEX IF NOT EXISTS photos_chapter_id_idx ON photos(chapter_id);
+
 CREATE TABLE IF NOT EXISTS "photos" (
   "id" SERIAL PRIMARY KEY,
   "gallery_id" INTEGER NOT NULL REFERENCES "galleries"("id") ON DELETE CASCADE,

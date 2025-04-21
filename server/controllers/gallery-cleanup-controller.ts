@@ -22,16 +22,22 @@ export const cleanupGalleries = async (req: Request, res: Response) => {
     console.log("Avvio pulizia gallerie, eliminazione file fisici:", deleteFiles);
     
     // Conta le entità prima dell'eliminazione
-    const photoCount = await db.select({ 
-      count: db.fn.count<number>('*').as('count')
-    }).from(photos);
+    const photoCount = await db
+      .select({
+        count: db.fn.count().mapWith(Number)
+      })
+      .from(photos)
+      .then(result => result[0]?.count || 0);
     
-    const galleryCount = await db.select({ 
-      count: db.fn.count<number>('*').as('count')
-    }).from(galleries);
+    const galleryCount = await db
+      .select({
+        count: db.fn.count().mapWith(Number)
+      })
+      .from(galleries)
+      .then(result => result[0]?.count || 0);
     
-    const totalPhotos = Number(photoCount[0]?.count) || 0;
-    const totalGalleries = Number(galleryCount[0]?.count) || 0;
+    const totalPhotos = photoCount;
+    const totalGalleries = galleryCount;
     
     console.log(`Trovate ${totalPhotos} foto e ${totalGalleries} gallerie da eliminare`);
     

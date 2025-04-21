@@ -83,6 +83,7 @@ export default function PublicGalleryPage() {
     data: photosData,
     isLoading: photosLoading,
     error: photosError,
+    refetch: refetchPhotos,
   } = useQuery({
     // Formato coerente per query key
     queryKey: [`/api/gallery/galleries/${gallery?.id}/photos`, { page, chapter: activeChapter }],

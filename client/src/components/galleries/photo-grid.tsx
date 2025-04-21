@@ -152,10 +152,17 @@ export function PhotoGrid({
                 alt={photo.title || "Foto"}
                 className="object-cover h-full w-full transition-all duration-300 group-hover:scale-105"
                 onError={(e) => {
-                  console.error("Errore caricamento thumbnail:", e);
-                  // Fallback all'URL di base se thumbnailUrl non è valido
+                  // Preveniamo loop infiniti controllando se abbiamo già provato il fallback
                   const target = e.target as HTMLImageElement;
-                  if (photo.filename) {
+                  // Se l'URL corrente è già il fallback o non abbiamo un filename, mostra un placeholder
+                  if (!photo.filename || target.src.includes(`/uploads/galleries/thumbnails/${photo.filename}`)) {
+                    // Fallback a un'immagine placeholder per evitare loop di errori
+                    target.src = "/assets/image-placeholder.svg";
+                    target.onerror = null; // Disabilita ulteriori eventi di errore
+                    console.log("Utilizzato placeholder per immagine mancante");
+                  } else if (photo.filename) {
+                    // Prima volta che proviamo il fallback
+                    console.log("Tentativo fallback thumbnail:", photo.filename);
                     target.src = `/uploads/galleries/thumbnails/${photo.filename}`;
                   }
                 }}
@@ -301,9 +308,17 @@ export function PhotoGrid({
                 alt="Foto da eliminare" 
                 className="max-h-48 object-contain rounded-md"
                 onError={(e) => {
-                  // Fallback all'URL di base se url non è valido
+                  // Preveniamo loop infiniti
                   const target = e.target as HTMLImageElement;
-                  if (photoToDelete.filename) {
+                  // Se l'URL corrente è già il fallback o non abbiamo un filename, mostra un placeholder
+                  if (!photoToDelete.filename || target.src.includes(`/uploads/galleries/medium/${photoToDelete.filename}`)) {
+                    // Fallback a un'immagine placeholder
+                    target.src = "/assets/image-placeholder.svg";
+                    target.onerror = null; // Disabilita ulteriori eventi di errore
+                    console.log("Utilizzato placeholder per immagine mancante in dialogo");
+                  } else if (photoToDelete.filename) {
+                    // Prima volta che proviamo il fallback
+                    console.log("Tentativo fallback medium:", photoToDelete.filename);
                     target.src = `/uploads/galleries/medium/${photoToDelete.filename}`;
                   }
                 }}

@@ -117,15 +117,18 @@ export default function PublicGalleryPage() {
   // Query per ottenere le foto della galleria
   const { 
     data: photosData, 
-    isLoading: isLoadingPhotos 
+    isLoading: isLoadingPhotos,
+    refetch: refetchPhotos
   } = useQuery({
     queryKey: [`/api/gallery/galleries/${gallery?.id}/photos`, { chapter: activeChapter }],
     queryFn: async () => {
       console.log("[Gallery] Fetching photos for gallery:", gallery?.id, "chapter:", activeChapter);
-      const url = activeChapter 
+      // Crea l'URL per la richiesta, usando il parametro chapter solo se è impostato un capitolo attivo
+      const url = activeChapter !== null
         ? `/api/gallery/galleries/${gallery?.id}/photos?chapter=${activeChapter}` 
         : `/api/gallery/galleries/${gallery?.id}/photos`;
 
+      console.log("[Gallery] Request URL:", url);
       const res = await apiRequest("GET", url);
       if (!res.ok) {
         throw new Error("Errore nel caricamento delle foto");
@@ -152,6 +155,14 @@ export default function PublicGalleryPage() {
       setActiveChapter(chapters[0].id);
     }
   }, [chapters, activeChapter]);
+  
+  // useEffect per ricaricare le foto quando cambia il capitolo attivo
+  useEffect(() => {
+    if (activeChapter !== null && gallery) {
+      console.log("[Gallery] Chapter changed, refetching photos for chapter:", activeChapter);
+      refetchPhotos();
+    }
+  }, [activeChapter, gallery, refetchPhotos]);
 
   // useEffect per lo scroll: monitoraggio dello scroll per mostrare/nascondere il pulsante "Torna su"
   useEffect(() => {
@@ -254,22 +265,30 @@ export default function PublicGalleryPage() {
           description: "Benvenuto nella galleria protetta",
           variant: "default"
         });
+        
+        // Impostiamo lo stato di autenticazione prima di ricaricare i dati
         setIsAuthorized(true);
         
-        // Invalida e ricarica i dati della galleria dopo l'autenticazione
-        // invece di ricaricare la pagina intera
-        queryClient.invalidateQueries({
-          queryKey: [`/api/gallery/public/galleries/${slug}`]
-        });
-        
-        // Dopo che l'utente è autenticato, possiamo abilitare le query per capitoli e foto
-        queryClient.invalidateQueries({
-          queryKey: [`/api/gallery/galleries/${gallery?.id}/chapters`]
-        });
-        
-        queryClient.invalidateQueries({
-          queryKey: [`/api/gallery/galleries/${gallery?.id}/photos`]
-        });
+        // Aggiungiamo un piccolo timeout per assicurarci che lo stato si sia aggiornato
+        // prima di ricaricare i dati
+        setTimeout(() => {
+          // Invalida e ricarica i dati della galleria dopo l'autenticazione
+          // invece di ricaricare la pagina intera
+          queryClient.invalidateQueries({
+            queryKey: [`/api/gallery/public/galleries/${slug}`]
+          });
+          
+          // Dopo che l'utente è autenticato, possiamo abilitare le query per capitoli e foto
+          if (gallery?.id) {
+            queryClient.invalidateQueries({
+              queryKey: [`/api/gallery/galleries/${gallery.id}/chapters`]
+            });
+            
+            queryClient.invalidateQueries({
+              queryKey: [`/api/gallery/galleries/${gallery.id}/photos`]
+            });
+          }
+        }, 300);
       } else {
         console.log("[Gallery] Password auth failed");
         toast({
@@ -853,7 +872,9 @@ export default function PublicGalleryPage() {
                         <TabsTrigger 
                           key={chapter.id} 
                           value={String(chapter.id)}
-                          className="whitespace-nowrap"
+                          className={`whitespace-nowrap ${
+                            activeChapter === chapter.id ? 'bg-primary/20 font-medium' : ''
+                          }`}
                         >
                           {chapter.title}
                         </TabsTrigger>

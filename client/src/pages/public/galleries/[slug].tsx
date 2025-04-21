@@ -38,6 +38,9 @@ export default function PublicGalleryPage() {
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeEmail, setSubscribeEmail] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [fullscreenView, setFullscreenView] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [slideshow, setSlideshow] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
 

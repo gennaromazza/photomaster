@@ -819,14 +819,20 @@ export default function PublicGalleryPage() {
             {chapters.length > 0 && (
               <div className="mb-8">
                 <h2 className="text-2xl font-bold mb-4">Capitoli</h2>
-                <Tabs defaultValue={String(activeChapter || chapters[0]?.id)}>
+                <Tabs 
+                  defaultValue={String(activeChapter || chapters[0]?.id)}
+                  value={String(activeChapter || chapters[0]?.id)}
+                  onValueChange={(value) => {
+                    console.log("[Gallery] Tab value changed to:", value);
+                    setActiveChapter(Number(value));
+                  }}
+                >
                   <div className="border-b mb-4 overflow-x-auto">
                     <TabsList className="mb-0 flex-nowrap">
                       {chapters.map((chapter: GalleryChapter) => (
                         <TabsTrigger 
                           key={chapter.id} 
                           value={String(chapter.id)}
-                          onClick={() => setActiveChapter(chapter.id)}
                           className="whitespace-nowrap"
                         >
                           {chapter.title}
@@ -932,10 +938,30 @@ export default function PublicGalleryPage() {
                 <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl">
                   <div className="flex flex-col items-center justify-center p-8">
                     <Camera className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                    <span className="block text-lg font-medium">Nessuna foto in questa galleria</span>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Le foto verranno aggiunte presto, torna a controllare più tardi.
-                    </p>
+                    {activeChapter ? (
+                      <>
+                        <span className="block text-lg font-medium">
+                          Nessuna foto in {chapters.find(c => c.id === activeChapter)?.title || 'questo capitolo'}
+                        </span>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Questo capitolo non contiene ancora fotografie.
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          className="mt-4"
+                          onClick={() => setActiveChapter(null)}
+                        >
+                          Visualizza tutte le foto
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="block text-lg font-medium">Nessuna foto in questa galleria</span>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Le foto verranno aggiunte presto, torna a controllare più tardi.
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               ) : (

@@ -618,7 +618,7 @@ export default function PublicGalleryPage() {
           className="h-[50vh] lg:h-[70vh] bg-cover bg-center relative border-b border-muted"
           style={{ 
             backgroundImage: gallery.coverImage 
-              ? `url(${gallery.coverImage})` 
+              ? `url(/uploads/galleries/${gallery.coverImage})` 
               : "linear-gradient(to right, hsl(var(--primary)/70%), hsl(var(--primary-foreground)/40%))"
           }}
         >
@@ -737,17 +737,19 @@ export default function PublicGalleryPage() {
             
             {/* Foto in evidenza dalla galleria */}
             {photos.length > 0 && photos.some(p => p.isFeatured) && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">Foto in evidenza</h2>
-                <div className="relative rounded-xl overflow-hidden shadow-lg">
-                  {(() => {
-                    const featuredPhoto = photos.find(p => p.isFeatured);
-                    if (!featuredPhoto) return null;
-                    
-                    return (
+              <div className="mb-12">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-primary/10 text-primary rounded-full p-2">
+                    <Star className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-2xl font-bold">Foto in evidenza</h2>
+                </div>
+                <div className="bg-muted/30 p-6 rounded-2xl border border-muted">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {photos.filter(p => p.isFeatured).map((featuredPhoto) => (
                       <div 
-                        key={featuredPhoto.id} 
-                        className="aspect-[16/9] md:aspect-[2.5/1] overflow-hidden rounded-xl cursor-pointer" 
+                        key={featuredPhoto.id}
+                        className="relative group overflow-hidden rounded-xl shadow-lg cursor-pointer transition-all duration-300 hover:shadow-xl hover:translate-y-[-2px]"
                         onClick={() => {
                           const photoIndex = photos.findIndex(p => p.id === featuredPhoto.id);
                           if (photoIndex !== -1) {
@@ -756,30 +758,37 @@ export default function PublicGalleryPage() {
                           }
                         }}
                       >
-                        <img 
-                          src={featuredPhoto.largeUrl || featuredPhoto.url || `/uploads/galleries/large/${featuredPhoto.filename}`} 
-                          alt={featuredPhoto.title || "Foto in evidenza"} 
-                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = "/assets/image-placeholder.svg";
-                            target.onerror = null;
-                          }}
-                        />
-
-                        {(featuredPhoto.title || featuredPhoto.description) && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
+                        <div className="relative aspect-square">
+                          <img 
+                            src={featuredPhoto.largeUrl || featuredPhoto.url || `/uploads/galleries/large/${featuredPhoto.filename}`} 
+                            alt={featuredPhoto.title || "Foto in evidenza"} 
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/assets/image-placeholder.svg";
+                              target.onerror = null;
+                            }}
+                          />
+                          
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                            <Star className="absolute top-4 right-4 h-5 w-5 text-yellow-400 drop-shadow-md" />
+                            
                             {featuredPhoto.title && (
-                              <h3 className="text-lg md:text-xl font-semibold">{featuredPhoto.title}</h3>
+                              <h3 className="text-lg font-bold text-white">{featuredPhoto.title}</h3>
                             )}
                             {featuredPhoto.description && (
-                              <p className="text-sm md:text-base text-white/80 mt-1">{featuredPhoto.description}</p>
+                              <p className="text-sm text-white/90 mt-1 line-clamp-2">{featuredPhoto.description}</p>
                             )}
                           </div>
-                        )}
+                        </div>
+                        
+                        <div className="absolute top-3 left-3 bg-yellow-500/90 text-white rounded-full px-3 py-1 text-xs font-medium shadow-md flex items-center">
+                          <Star className="h-3 w-3 mr-1" />
+                          In evidenza
+                        </div>
                       </div>
-                    );
-                  })()}
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

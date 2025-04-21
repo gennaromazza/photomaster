@@ -148,9 +148,17 @@ export function PhotoGrid({
           >
             <div className="aspect-square overflow-hidden relative">
               <img
-                src={photo.thumbnailUrl}
+                src={photo.thumbnailUrl || `/uploads/galleries/thumbnails/${photo.filename}`}
                 alt={photo.title || "Foto"}
                 className="object-cover h-full w-full transition-all duration-300 group-hover:scale-105"
+                onError={(e) => {
+                  console.error("Errore caricamento thumbnail:", e);
+                  // Fallback all'URL di base se thumbnailUrl non è valido
+                  const target = e.target as HTMLImageElement;
+                  if (photo.filename) {
+                    target.src = `/uploads/galleries/thumbnails/${photo.filename}`;
+                  }
+                }}
               />
 
               {photo.isFeatured && (
@@ -289,9 +297,16 @@ export function PhotoGrid({
           <div className="my-4 flex justify-center">
             {photoToDelete && (
               <img 
-                src={photoToDelete.url} 
+                src={photoToDelete.url || `/uploads/galleries/medium/${photoToDelete.filename}`} 
                 alt="Foto da eliminare" 
                 className="max-h-48 object-contain rounded-md"
+                onError={(e) => {
+                  // Fallback all'URL di base se url non è valido
+                  const target = e.target as HTMLImageElement;
+                  if (photoToDelete.filename) {
+                    target.src = `/uploads/galleries/medium/${photoToDelete.filename}`;
+                  }
+                }}
               />
             )}
           </div>

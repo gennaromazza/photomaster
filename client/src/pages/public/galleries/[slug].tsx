@@ -444,9 +444,17 @@ export default function PublicGalleryPage() {
         {/* Contenuto foto */}
         <div className="flex-1 flex items-center justify-center relative overflow-hidden">
           <img 
-            src={photo.url} 
+            src={photo.largeUrl || photo.url || `/uploads/galleries/large/${photo.filename}`} 
             alt={photo.title || "Foto"} 
             className="max-h-full max-w-full object-contain select-none transition-transform duration-500 ease-in-out"
+            onError={(e) => {
+              console.error("Errore caricamento immagine a schermo intero:", e);
+              // Fallback alla versione medium se la versione large non è disponibile
+              const target = e.target as HTMLImageElement;
+              if (photo.filename) {
+                target.src = `/uploads/galleries/medium/${photo.filename}`;
+              }
+            }}
           />
 
           {/* Navigazione */}

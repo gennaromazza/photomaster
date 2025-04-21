@@ -44,17 +44,23 @@ export interface Photo {
   description: string | null;
   url: string;
   thumbnailUrl: string;
+  largeUrl?: string;
+  webpUrl?: string;
+  originalUrl?: string;
+  filename: string;
   originalFilename: string;
   width: number;
   height: number;
   size: number;
   mimeType: string;
   isFeatured: boolean;
+  isHidden?: boolean;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
   likeCount: number;
   commentCount: number;
+  orientation?: 'landscape' | 'portrait' | 'square';
 }
 
 export interface PhotoLike {

@@ -1322,12 +1322,21 @@ export async function downloadPhoto(req: Request, res: Response) {
   const photoId = Number(req.params.id);
   
   try {
+    // Ottieni la foto con la relativa galleria per controllare i permessi
     const photo = await db.query.photos.findFirst({
-      where: eq(photos.id, photoId)
+      where: eq(photos.id, photoId),
+      with: {
+        gallery: true
+      }
     });
     
     if (!photo) {
       return res.status(404).json({ error: "Foto non trovata" });
+    }
+    
+    // Verifica che il download sia abilitato per questa galleria
+    if (!photo.gallery.downloadEnabled) {
+      return res.status(403).json({ error: "Download non consentito per questa galleria" });
     }
 
     // Trova il percorso completo del file originale
@@ -1363,6 +1372,11 @@ export async function downloadAllPhotos(req: Request, res: Response) {
     
     if (!gallery) {
       return res.status(404).json({ error: "Galleria non trovata" });
+    }
+    
+    // Verifica che il download sia abilitato per questa galleria
+    if (!gallery.downloadEnabled) {
+      return res.status(403).json({ error: "Download non consentito per questa galleria" });
     }
 
     // Query per ottenere le foto

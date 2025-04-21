@@ -258,14 +258,15 @@ export function PhotoGrid({
 
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex gap-3 text-sm">
-                      {photo.likeCount > 0 && (
+                      {/* Utilizziamo l'operatore di coalescenza nullish (??) per fornire un valore predefinito di 0 */}
+                      {(photo.likeCount ?? 0) > 0 && (
                         <div className="flex items-center">
                           <Heart className="h-4 w-4 mr-1" />
                           {photo.likeCount}
                         </div>
                       )}
 
-                      {photo.commentCount > 0 && (
+                      {(photo.commentCount ?? 0) > 0 && (
                         <div className="flex items-center">
                           <MessageCircle className="h-4 w-4 mr-1" />
                           {photo.commentCount}

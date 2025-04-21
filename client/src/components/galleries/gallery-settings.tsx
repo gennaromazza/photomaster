@@ -306,16 +306,16 @@ export function GallerySettings({
               <div className="flex items-center">
                 <Image className="h-4 w-4 mr-2 text-muted-foreground" />
                 <Select
-                  value={selectedCoverImage || ""}
-                  onValueChange={(value) => setSelectedCoverImage(value)}
+                  value={selectedCoverImage || "null"}
+                  onValueChange={(value) => setSelectedCoverImage(value === "null" ? null : value)}
                 >
                   <SelectTrigger id="coverImageSelect" className="flex-1">
                     <SelectValue placeholder="Seleziona un'immagine di copertina" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nessuna immagine</SelectItem>
+                    <SelectItem value="null">Nessuna immagine</SelectItem>
                     {photosData?.photos?.map((photo: Photo) => (
-                      <SelectItem key={photo.id} value={photo.filename}>
+                      <SelectItem key={photo.id} value={photo.filename || `photo-${photo.id}`}>
                         {photo.title || `Foto ${photo.id}`}
                       </SelectItem>
                     ))}

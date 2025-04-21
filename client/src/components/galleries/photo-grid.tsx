@@ -1,21 +1,23 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Photo } from "@/types/gallery";
-import { ImageWithFallback } from "@/components/ui/image-with-fallback";
-import { Eye, Star, DownloadCloud } from "lucide-react";
+import { 
+  Heart, 
+  MessageCircle, 
+  MoreHorizontal, 
+  Download, 
+  Edit, 
+  Trash2,
+  Check,
+  Star,
+  Eye
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Photo } from "@/types/gallery";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MoreHorizontal, Trash2, Edit } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,110 +26,48 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-// Tipo che rappresenta una foto normalizzata con tutte le URL opzionali popolate
-type NormalizedPhoto = Photo & {
-  url: string;
-  thumbnailUrl: string;
-  mediumUrl: string;
-  largeUrl: string;
-  webpUrl: string;
-};
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface PhotoGridProps {
   photos: Photo[];
-  galleryId: number;
-  chapterId?: number | null;
-  onPhotoClick?: (photo: NormalizedPhoto, index: number) => void;
-  selectable?: boolean;
-  selectedPhotos?: number[];
   onPhotoSelect?: (photoId: number, selected: boolean) => void;
-  onPhotoEdit?: (photoId: number) => void;
+  selectedPhotos?: number[];
+  selectable?: boolean;
   editable?: boolean;
+  onPhotoEdit?: (photoId: number) => void;
+  onPhotoClick?: (photo: Photo, index: number) => void;
+  galleryId?: number;
+  chapterId?: number | null;
 }
 
-/**
- * Componente che mostra una griglia di foto con varie funzionalità:
- * - Visualizzazione a griglia responsive
- * - Selezione di foto (per gallerie pubbliche)
- * - Modifica/eliminazione di foto (per amministratori)
- * - Gestione "in evidenza"
- * 
- * Rifattorizzato per:
- * - Normalizzare le URL delle immagini
- * - Usare ImageWithFallback per il caricamento affidabile
- * - Uniformare le query key per React Query
- * - Correggere problemi di propagazione eventi
- * - Migliorare le tipizzazioni
- */
 export function PhotoGrid({
   photos,
+  onPhotoSelect,
+  selectedPhotos = [],
+  selectable = false,
+  editable = false,
+  onPhotoEdit,
+  onPhotoClick,
   galleryId,
   chapterId,
-  onPhotoClick,
-  selectable = false,
-  selectedPhotos = [],
-  onPhotoSelect,
-  onPhotoEdit,
-  editable = false,
 }: PhotoGridProps) {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState<number | null>(null);
-  const [photoToDelete, setPhotoToDelete] = useState<NormalizedPhoto | null>(null);
+  const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
-  // Normalizza le URL delle foto
-  const normalizedPhotos: NormalizedPhoto[] = photos.map((photo) => ({
-    ...photo,
-    url: photo.path || "",
-    thumbnailUrl: photo.thumbnailPath || "",
-    mediumUrl: photo.mediumPath || "",
-    largeUrl: photo.largePath || "",
-    webpUrl: photo.webpPath || "",
-  }));
-
-  // Cambia lo stato "in evidenza" di una foto
-  const toggleFeatured = async (photo: NormalizedPhoto, e: React.MouseEvent) => {
-    e.stopPropagation(); // Evita la propagazione al container
-    
-    try {
-      setLoading(photo.id);
-      await apiRequest("PUT", `/api/gallery/photos/${photo.id}`, {
-        isFeatured: !photo.isFeatured,
-      });
-
-      // Invalida solo le query rilevanti con formato chiave coerente
-      await queryClient.invalidateQueries({
-        queryKey: [`/api/gallery/galleries/${galleryId}/photos`, { chapter: chapterId }],
-      });
-
-      toast({
-        title: photo.isFeatured ? "Rimossa dai preferiti" : "Aggiunta ai preferiti",
-        variant: "default",
-      });
-    } catch (error) {
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare lo stato preferito",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  // Gestisce la selezione di una foto
-  const handlePhotoSelect = (photoId: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Previene la propagazione al container Card
-    
+  const handleCheckboxChange = (photoId: number, checked: boolean) => {
     if (onPhotoSelect) {
-      onPhotoSelect(photoId, !selectedPhotos.includes(photoId));
+      onPhotoSelect(photoId, checked);
     }
   };
 
-  // Gestisce l'eliminazione di una foto
   const handleDeletePhoto = async () => {
     if (!photoToDelete || !galleryId) return;
 
@@ -136,9 +76,12 @@ export function PhotoGrid({
     try {
       await apiRequest("DELETE", `/api/gallery/photos/${photoToDelete.id}`);
 
-      // Invalida la cache con formato query key coerente
-      queryClient.invalidateQueries({
-        queryKey: [`/api/gallery/galleries/${galleryId}/photos`, { chapter: chapterId }],
+      // Invalida la cache per ricaricare le foto
+      queryClient.invalidateQueries({ 
+        queryKey: [
+          `/api/gallery/galleries/${galleryId}/photos`, 
+          { chapter: chapterId }
+        ] 
       });
 
       toast({
@@ -148,6 +91,8 @@ export function PhotoGrid({
 
       setDeleteDialogOpen(false);
     } catch (error) {
+      console.error("Errore durante l'eliminazione della foto:", error);
+
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'eliminazione della foto",
@@ -159,144 +104,205 @@ export function PhotoGrid({
     }
   };
 
+  const toggleFeatured = async (photo: Photo) => {
+    if (!galleryId) return;
+
+    try {
+      await apiRequest("PUT", `/api/gallery/galleries/${galleryId}/photos/${photo.id}`, {
+        isFeatured: !photo.isFeatured
+      });
+
+      // Invalida la cache per ricaricare le foto
+      queryClient.invalidateQueries({ 
+        queryKey: [
+          `/api/gallery/galleries/${galleryId}/photos`, 
+          { chapter: chapterId }
+        ] 
+      });
+
+      toast({
+        title: photo.isFeatured ? "Foto rimossa dai preferiti" : "Foto aggiunta ai preferiti",
+        description: photo.isFeatured 
+          ? "La foto non sarà più mostrata nella selezione preferiti" 
+          : "La foto verrà ora mostrata nella selezione preferiti",
+      });
+    } catch (error) {
+      console.error("Errore durante l'aggiornamento della foto:", error);
+
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'aggiornamento della foto",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {normalizedPhotos.map((photo, index) => (
-          <Card key={photo.id} className="overflow-hidden group relative">
-            <CardContent className="p-0">
-              <div className="relative aspect-square">
-                {/* Immagine con fallback a più livelli */}
-                <ImageWithFallback
-                  src={photo.thumbnailUrl}
-                  mediumSrc={photo.mediumUrl}
-                  fallbackSrc="/assets/image-placeholder.svg"
-                  alt={photo.title || "Foto"}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 lg:gap-6">
+        {photos.map((photo, index) => (
+          <Card 
+            key={photo.id} 
+            className="overflow-hidden group relative cursor-pointer rounded-lg md:rounded-xl transition-all duration-300 hover:translate-y-[-2px] hover:shadow-xl bg-white dark:bg-gray-800/50"
+            onClick={() => onPhotoClick && onPhotoClick(photo, index)}
+          >
+            <div className="aspect-square overflow-hidden relative">
+              <img
+                src={photo.thumbnailUrl || `/uploads/galleries/thumbnails/${photo.filename}`}
+                alt={photo.title || "Foto"}
+                className="object-cover h-full w-full transition-all duration-300 group-hover:scale-105"
+                loading="lazy"
+                onError={(e) => {
+                  // Preveniamo loop infiniti controllando se abbiamo già provato il fallback
+                  const target = e.target as HTMLImageElement;
+                  // Se l'URL corrente è già il fallback o non abbiamo un filename, mostra un placeholder
+                  if (!photo.filename || target.src.includes(`/uploads/galleries/thumbnails/${photo.filename}`)) {
+                    // Fallback a un'immagine placeholder per evitare loop di errori
+                    target.src = "/assets/image-placeholder.svg";
+                    target.onerror = null; // Disabilita ulteriori eventi di errore
+                    console.log("Utilizzato placeholder per immagine mancante");
+                  } else if (photo.filename) {
+                    // Prima volta che proviamo il fallback
+                    console.log("Tentativo fallback thumbnail:", photo.filename);
+                    target.src = `/uploads/galleries/thumbnails/${photo.filename}`;
+                  }
+                }}
+              />
 
-                {/* Badge per foto in evidenza */}
-                {photo.isFeatured && (
-                  <div className="absolute top-2 left-2 bg-amber-500/90 text-white rounded-full px-2 py-0.5 text-xs font-medium shadow-md flex items-center">
-                    <Star className="h-3 w-3 mr-1 fill-white" />
-                    In Evidenza
-                  </div>
-                )}
+              {photo.isFeatured && (
+                <Badge className="absolute top-2 left-2 bg-amber-500 hover:bg-amber-600">
+                  <Star className="h-3 w-3 mr-1 fill-white" />
+                  In Evidenza
+                </Badge>
+              )}
 
-                {/* Interfaccia con azioni su hover */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center gap-2 p-2">
-                  {/* Titolo della foto (se presente) */}
-                  {photo.title && (
-                    <p className="text-white font-medium text-sm text-center mb-2 line-clamp-2">
-                      {photo.title}
-                    </p>
+              {/* Layer scuro con opzioni durante l'hover */}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3">
+                <div className="flex justify-between items-start">
+                  {selectable && (
+                    <Checkbox
+                      checked={selectedPhotos.includes(photo.id)}
+                      onCheckedChange={(checked) => {
+                        handleCheckboxChange(photo.id, checked === true);
+                        // Previeni la propagazione per evitare l'attivazione del click sulla Card
+                        if (typeof event !== 'undefined' && event.stopPropagation) {
+                          event.stopPropagation();
+                        }
+                      }}
+                      className="h-5 w-5 border-white data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   )}
-                  
-                  {/* Pulsanti di azione */}
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {/* Pulsante visualizza */}
+
+                  {editable && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-white hover:bg-white/20"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        {onPhotoEdit && (
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            onPhotoEdit(photo.id);
+                          }}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Modifica info
+                          </DropdownMenuItem>
+                        )}
+
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFeatured(photo);
+                        }}>
+                          <Star className={`mr-2 h-4 w-4 ${photo.isFeatured ? 'fill-amber-500' : ''}`} />
+                          {photo.isFeatured ? "Rimuovi da In Evidenza" : "Aggiungi a In Evidenza"}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(photo.url, "_blank");
+                        }}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Visualizza originale
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/api/gallery/photos/${photo.id}/download`, "_blank");
+                        }}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Scarica
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPhotoToDelete(photo);
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Elimina
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+
+                <div className="text-white">
+                  {photo.title && (
+                    <p className="font-medium line-clamp-2">{photo.title}</p>
+                  )}
+
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex gap-3 text-sm">
+                      {/* Utilizziamo l'operatore di coalescenza nullish (??) per fornire un valore predefinito di 0 */}
+                      {(photo.likeCount ?? 0) > 0 && (
+                        <div className="flex items-center">
+                          <Heart className="h-4 w-4 mr-1" />
+                          {photo.likeCount}
+                        </div>
+                      )}
+
+                      {(photo.commentCount ?? 0) > 0 && (
+                        <div className="flex items-center">
+                          <MessageCircle className="h-4 w-4 mr-1" />
+                          {photo.commentCount}
+                        </div>
+                      )}
+                    </div>
+
                     {onPhotoClick && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/40 text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           onPhotoClick(photo, index);
                         }}
                       >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Visualizza
+                        <Eye className="h-4 w-4" />
                       </Button>
-                    )}
-
-                    {/* Pulsante preferiti */}
-                    {editable && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={(e) => toggleFeatured(photo, e)}
-                        disabled={loading === photo.id}
-                      >
-                        <Star className={`w-4 h-4 ${photo.isFeatured ? "fill-yellow-400" : ""}`} />
-                        {photo.isFeatured ? "Rimuovi" : "In evidenza"}
-                      </Button>
-                    )}
-                    
-                    {/* Checkbox selezione per visitatori */}
-                    {selectable && (
-                      <Button 
-                        variant="secondary" 
-                        size="sm" 
-                        onClick={(e) => handlePhotoSelect(photo.id, e)}
-                        className="flex items-center gap-1"
-                      >
-                        <Checkbox 
-                          checked={selectedPhotos.includes(photo.id)} 
-                          onCheckedChange={(checked) => {
-                            if (onPhotoSelect) {
-                              onPhotoSelect(photo.id, checked === true);
-                            }
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        Seleziona
-                      </Button>
-                    )}
-                    
-                    {/* Menu avanzato per amministratori */}
-                    {editable && onPhotoEdit && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 text-white hover:bg-white/20"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            if (onPhotoEdit) onPhotoEdit(photo.id);
-                          }}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Modifica info
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(`/api/gallery/photos/${photo.id}/download`, "_blank");
-                          }}>
-                            <DownloadCloud className="mr-2 h-4 w-4" />
-                            Scarica
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPhotoToDelete(photo);
-                              setDeleteDialogOpen(true);
-                            }}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Elimina
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     )}
                   </div>
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
         ))}
       </div>
 
-      {/* Dialog di conferma eliminazione */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -307,12 +313,25 @@ export function PhotoGrid({
           </DialogHeader>
           <div className="my-4 flex justify-center">
             {photoToDelete && (
-              <ImageWithFallback
-                src={photoToDelete.mediumUrl}
-                mediumSrc={photoToDelete.thumbnailUrl}
-                fallbackSrc="/assets/image-placeholder.svg"
-                alt="Foto da eliminare"
+              <img 
+                src={photoToDelete.url || `/uploads/galleries/medium/${photoToDelete.filename}`} 
+                alt="Foto da eliminare" 
                 className="max-h-48 object-contain rounded-md"
+                onError={(e) => {
+                  // Preveniamo loop infiniti
+                  const target = e.target as HTMLImageElement;
+                  // Se l'URL corrente è già il fallback o non abbiamo un filename, mostra un placeholder
+                  if (!photoToDelete.filename || target.src.includes(`/uploads/galleries/medium/${photoToDelete.filename}`)) {
+                    // Fallback a un'immagine placeholder
+                    target.src = "/assets/image-placeholder.svg";
+                    target.onerror = null; // Disabilita ulteriori eventi di errore
+                    console.log("Utilizzato placeholder per immagine mancante in dialogo");
+                  } else if (photoToDelete.filename) {
+                    // Prima volta che proviamo il fallback
+                    console.log("Tentativo fallback medium:", photoToDelete.filename);
+                    target.src = `/uploads/galleries/medium/${photoToDelete.filename}`;
+                  }
+                }}
               />
             )}
           </div>
@@ -320,8 +339,8 @@ export function PhotoGrid({
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Annulla
             </Button>
-            <Button
-              variant="destructive"
+            <Button 
+              variant="destructive" 
               onClick={handleDeletePhoto}
               disabled={isDeleting}
             >

@@ -280,7 +280,7 @@ export function PhotoGrid({
                         className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/40 text-white"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onPhotoClick(index);
+                          onPhotoClick(photo, index);
                         }}
                       >
                         <Eye className="h-4 w-4" />

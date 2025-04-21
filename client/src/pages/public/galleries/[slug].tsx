@@ -714,26 +714,7 @@ export default function PublicGalleryPage() {
           ref={contentRef}
         >
           <div className="max-w-screen-xl mx-auto w-full p-4 md:p-8">
-            {/* Immagine di copertina impostata nelle impostazioni della galleria */}
-            {gallery.coverImage && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">Copertina</h2>
-                <div className="relative rounded-xl overflow-hidden shadow-lg">
-                  <div className="aspect-[16/9] md:aspect-[2.5/1] overflow-hidden rounded-xl">
-                    <img 
-                      src={`/uploads/galleries/${gallery.coverImage}`} 
-                      alt="Immagine di copertina" 
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/assets/image-placeholder.svg";
-                        target.onerror = null;
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* La copertina è stata rimossa poiché già presente nell'header */}
             
             {/* Foto in evidenza dalla galleria */}
             {photos.length > 0 && photos.some(p => p.isFeatured) && (
@@ -826,48 +807,89 @@ export default function PublicGalleryPage() {
               </div>
             )}
 
-            {/* Caricamento foto */}
-            {isLoadingPhotos ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {[...Array(8)].map((_, i) => (
-                  <Skeleton key={i} className="aspect-square rounded-xl" />
-                ))}
-              </div>
-            ) : photos.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <span className="block">Nessuna foto in questa galleria</span>
-              </div>
-            ) : (
-              <>
-                {/* Griglia foto */}
-                <PhotoGrid 
-                  photos={photos} 
-                  onPhotoClick={(photo, index) => {
-                    setCurrentPhotoIndex(index);
-                    setFullscreenView(true);
-                  }}
-                  onPhotoSelect={gallery.selectionEnabled ? handlePhotoSelect : undefined}
-                  selectedPhotos={selectedPhotos}
-                />
-
-                {/* Paginazione */}
-                {pagination.pages > 1 && (
-                  <div className="flex justify-center items-center mt-8 space-x-1">
-                    {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(page => (
-                      <Button
-                        key={page}
-                        variant={page === pagination.page ? "default" : "outline"}
-                        size="sm"
-                        className="w-10 h-10"
-                        // onClick={() => setPage(page)}
-                      >
-                        {page}
-                      </Button>
-                    ))}
+            {/* Sezione foto */}
+            <div className="mb-16">
+              <div className="flex items-center justify-between gap-3 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="bg-primary/10 text-primary rounded-full p-2">
+                    <Camera className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-2xl font-bold">Galleria Fotografica</h2>
+                </div>
+                
+                {/* Pulsanti per scaricare le foto */}
+                {gallery.downloadEnabled && photos.length > 0 && (
+                  <div className="flex gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex items-center gap-2"
+                            onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all`, '_blank')}
+                          >
+                            <Download className="h-4 w-4" />
+                            <span className="hidden md:inline">Scarica tutte</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Scarica tutte le foto</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 )}
-              </>
-            )}
+              </div>
+              
+              {isLoadingPhotos ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {[...Array(8)].map((_, i) => (
+                    <Skeleton key={i} className="aspect-square rounded-xl" />
+                  ))}
+                </div>
+              ) : photos.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl">
+                  <div className="flex flex-col items-center justify-center p-8">
+                    <Camera className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                    <span className="block text-lg font-medium">Nessuna foto in questa galleria</span>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Le foto verranno aggiunte presto, torna a controllare più tardi.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-background rounded-xl p-1">
+                  <div className="bg-muted/20 rounded-lg border p-4 md:p-6">
+                    {/* Griglia foto */}
+                    <PhotoGrid 
+                      photos={photos} 
+                      onPhotoClick={(photo, index) => {
+                        setCurrentPhotoIndex(index);
+                        setFullscreenView(true);
+                      }}
+                      onPhotoSelect={gallery.selectionEnabled ? handlePhotoSelect : undefined}
+                      selectedPhotos={selectedPhotos}
+                    />
+
+                    {/* Paginazione */}
+                    {pagination.pages > 1 && (
+                      <div className="flex justify-center items-center mt-8 space-x-1">
+                        {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(page => (
+                          <Button
+                            key={page}
+                            variant={page === pagination.page ? "default" : "outline"}
+                            size="sm"
+                            className="w-10 h-10"
+                            // onClick={() => setPage(page)}
+                          >
+                            {page}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Sezione sottoscrizione */}
             {gallery.notificationsEnabled && (

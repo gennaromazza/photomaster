@@ -532,8 +532,8 @@ export const uploadPhoto = async (req: Request, res: Response) => {
 
     const { galleryId, chapterId, title, caption, isFeatured } = req.body;
 
-    // Forza chapterId a number o null
-    const formattedChapterId = chapterId ? Number(chapterId) : null;
+    // Forza chapterId a number o null con validazione
+    const formattedChapterId = chapterId && !isNaN(Number(chapterId)) ? Number(chapterId) : null;
 
     // Genera un nome file unico senza estensione duplicata (alcuni browser inviano .jpg.jpg)
     const cleanOriginalName = req.file.originalname.replace(/\.+/g, '.').toLowerCase();
@@ -553,7 +553,19 @@ export const uploadPhoto = async (req: Request, res: Response) => {
     // Validazione formato
     const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
     if (!allowedMimes.includes(req.file.mimetype)) {
-      throw new Error('Formato file non supportato. Sono consentiti solo JPEG, JPG, PNG e WebP.');
+      return res.status(400).json({ 
+        error: "Formato non supportato",
+        message: 'Formato file non supportato. Sono consentiti solo JPEG, JPG, PNG e WebP.'
+      });
+    }
+    
+    // Validazione dimensione (max 25MB)
+    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+    if (req.file.size > MAX_FILE_SIZE) {
+      return res.status(400).json({ 
+        error: "File troppo grande",
+        message: 'La dimensione del file supera il limite massimo di 25MB.'
+      });
     }
 
     console.log("Caricamento foto con percorsi:", {

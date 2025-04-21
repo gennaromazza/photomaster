@@ -65,7 +65,7 @@ export function PhotoUploader({
         toast({
           title: "File duplicati",
           description: "Alcuni file sono stati ignorati perché hanno lo stesso nome di file già aggiunti",
-          variant: "warning"
+          variant: "destructive"
         });
       }
 

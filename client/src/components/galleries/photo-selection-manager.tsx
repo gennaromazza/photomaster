@@ -51,7 +51,7 @@ export function PhotoSelectionManager({
   const handleSaveSelection = async () => {
     if (selectedPhotos.length === 0) {
       toast({
-        title: "Nessuna foto selezionata",
+        title: "Selezione vuota",
         description: "Seleziona almeno una foto prima di salvare.",
         variant: "destructive",
       });

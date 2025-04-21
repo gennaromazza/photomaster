@@ -1,0 +1,90 @@
+hook.js:608 Errore caricamento thumbnail: 
+SyntheticBaseEvent
+
+hook.js:608 Errore caricamento thumbnail: 
+SyntheticBaseEvent
+hook.js:608 Errore caricamento thumbnail: 
+SyntheticBaseEvent
+hook.js:608 Errore caricamento thumbnail: 
+SyntheticBaseEvent
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+photo-grid.tsx:155 Errore caricamento thumbnail: 
+SyntheticBaseEvent {_reactName: 'onError', _targetInst: null, type: 'error', nativeEvent: Event, target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, …}
+bubbles
+: 
+false
+cancelable
+: 
+false
+currentTarget
+: 
+null
+defaultPrevented
+: 
+false
+eventPhase
+: 
+2
+isDefaultPrevented
+: 
+ƒ functionThatReturnsFalse()
+isPropagationStopped
+: 
+ƒ functionThatReturnsFalse()
+isTrusted
+: 
+true
+nativeEvent
+: 
+Event {isTrusted: true, type: 'error', target: img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105, currentTarget: null, eventPhase: 0, …}
+target
+: 
+img.object-cover.h-full.w-full.transition-all.duration-300.group-hover:scale-105
+timeStamp
+: 
+29847.5
+type
+: 
+"error"
+_reactName
+: 
+"onError"
+_targetInst
+: 
+null
+[[Prototype]]
+: 
+Object

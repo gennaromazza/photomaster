@@ -1,5 +1,35 @@
 import { useState, useEffect } from "react";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { DragDropContext, Droppable as DroppableBase, Draggable } from "react-beautiful-dnd";
+import type { DroppableProps } from "react-beautiful-dnd";
+
+// Creiamo un wrapper per Droppable che eviti il warning di defaultProps
+// Questa soluzione si basa su parametri di default di JavaScript invece di usare defaultProps
+const Droppable = ({ 
+  children, 
+  droppableId, 
+  type, 
+  direction = "vertical", 
+  ignoreContainerClipping = false,
+  isDropDisabled = false,
+  isCombineEnabled = false,
+  mode = "standard",
+  ...props 
+}: DroppableProps) => {
+  return (
+    <DroppableBase
+      droppableId={droppableId}
+      type={type}
+      direction={direction}
+      ignoreContainerClipping={ignoreContainerClipping}
+      isDropDisabled={isDropDisabled}
+      isCombineEnabled={isCombineEnabled}
+      mode={mode}
+      {...props}
+    >
+      {children}
+    </DroppableBase>
+  );
+};
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CameraIcon, Folder, MoveIcon, SaveIcon } from "lucide-react";
 

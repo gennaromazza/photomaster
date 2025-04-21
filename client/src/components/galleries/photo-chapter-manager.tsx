@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CameraIcon, Folder, MoveIcon, SaveIcon } from "lucide-react";
+import { Camera, Folder, Move, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,13 +42,18 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
 
   // Aggiorna capitolo di una foto
   const updatePhotoMutation = useMutation({
-    mutationFn: async (data: { photoId: number, chapterId: number | null }) => {
+    mutationFn: async (data: { 
+      photoId: number, 
+      chapterId?: number | null,
+      sortOrder?: number 
+    }) => {
       return await apiRequest("PUT", `/api/gallery/photos/${data.photoId}`, {
-        chapterId: data.chapterId
+        ...(data.chapterId !== undefined && { chapterId: data.chapterId }),
+        ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder })
       });
     },
     onError: (error: any) => {
-      console.error("Errore nell'aggiornamento del capitolo della foto:", error);
+      console.error("Errore nell'aggiornamento della foto:", error);
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'aggiornamento della foto",
@@ -135,40 +140,67 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
       if (chapterIndex !== -1) {
         const newPhotosByChapter = [...photosByChapter];
         const [movedPhoto] = newPhotosByChapter[chapterIndex].photos.splice(source.index, 1);
-        newPhotosByChapter[chapterIndex].photos.splice(destination.index, 0, movedPhoto);
+        
+        // Salviamo l'indice originale come proprietà per poter salvare il riordino
+        const updatedPhoto = { 
+          ...movedPhoto, 
+          originalSortOrder: movedPhoto.sortOrder,
+          sortOrder: destination.index 
+        };
+        
+        newPhotosByChapter[chapterIndex].photos.splice(destination.index, 0, updatedPhoto);
         
         setPhotosByChapter(newPhotosByChapter);
-        // Per ora non segniamo come "necessita salvataggio" per il riordino interno
-        // Ma qui potremmo aggiungere la logica per salvare anche l'ordine
+        // Abilita il salvataggio anche per il riordino interno
+        setNeedsSaving(true);
       }
     }
   };
 
-  // Salva le modifiche ai capitoli delle foto
+  // Salva le modifiche ai capitoli e all'ordinamento delle foto
   const saveChanges = async () => {
     setIsSaving(true);
     
     try {
       const promises = [];
-      let modificheEffettuate = 0;
+      let spostamentiCapitolo = 0;
+      let riordiniInterni = 0;
       
-      // Per ogni capitolo, verifica le foto che hanno cambiato capitolo
+      // Per ogni capitolo, verifica le foto che sono state modificate
       for (const chapter of photosByChapter) {
-        for (const photo of chapter.photos) {
-          // Se il capitolo è cambiato
+        // Verifica le foto con sortOrder che devono essere aggiornate
+        chapter.photos.forEach((photo, currentIndex) => {
+          // Diverse casistiche da gestire:
+          
+          // 1. Foto che ha cambiato capitolo
           if (photo.chapterId !== chapter.id) {
             console.log(`Aggiornamento foto ${photo.id}: da capitolo ${photo.chapterId} a capitolo ${chapter.id}`);
             
             promises.push(
               updatePhotoMutation.mutateAsync({
                 photoId: photo.id,
-                chapterId: chapter.id
+                chapterId: chapter.id,
+                sortOrder: currentIndex
               }).then(() => {
-                modificheEffettuate++;
+                spostamentiCapitolo++;
+              })
+            );
+          } 
+          // 2. Foto che è stata riordinata all'interno dello stesso capitolo
+          else if ('originalSortOrder' in photo && photo.originalSortOrder !== undefined && 
+                  photo.sortOrder !== photo.originalSortOrder) {
+            console.log(`Riordinamento foto ${photo.id}: da posizione ${photo.originalSortOrder} a posizione ${currentIndex}`);
+            
+            promises.push(
+              updatePhotoMutation.mutateAsync({
+                photoId: photo.id,
+                sortOrder: currentIndex
+              }).then(() => {
+                riordiniInterni++;
               })
             );
           }
-        }
+        });
       }
       
       // Aspetta che tutte le operazioni siano completate
@@ -179,16 +211,22 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
         queryKey: [`/api/gallery/galleries/${galleryId}/photos`] 
       });
       
-      // Forza il rifetch dei dati dopo un breve ritardo
-      setTimeout(() => {
-        queryClient.refetchQueries({ 
-          queryKey: [`/api/gallery/galleries/${galleryId}/photos`] 
-        });
-      }, 300);
+      // Non è necessario forzare un refetch dopo invalidateQueries, poiché React Query lo fa automaticamente
+      
+      let messaggio = "";
+      if (spostamentiCapitolo > 0 && riordiniInterni > 0) {
+        messaggio = `${spostamentiCapitolo} foto ${spostamentiCapitolo === 1 ? 'spostata' : 'spostate'} tra capitoli e ${riordiniInterni} foto ${riordiniInterni === 1 ? 'riordinata' : 'riordinate'}`;
+      } else if (spostamentiCapitolo > 0) {
+        messaggio = `${spostamentiCapitolo} foto ${spostamentiCapitolo === 1 ? 'spostata' : 'spostate'} tra capitoli`;
+      } else if (riordiniInterni > 0) {
+        messaggio = `${riordiniInterni} foto ${riordiniInterni === 1 ? 'riordinata' : 'riordinate'} con successo`;
+      } else {
+        messaggio = "Nessuna modifica effettuata";
+      }
       
       toast({
         title: "Modifiche salvate",
-        description: `${modificheEffettuate} foto ${modificheEffettuate === 1 ? 'è stata spostata' : 'sono state spostate'} con successo`,
+        description: messaggio,
       });
       
       setNeedsSaving(false);
@@ -227,7 +265,7 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="flex items-center gap-2">
-            <MoveIcon className="h-5 w-5" />
+            <Move className="h-5 w-5" />
             Organizza foto nei capitoli
           </CardTitle>
           <Button 
@@ -235,7 +273,7 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
             disabled={!needsSaving || isSaving}
             className={`${needsSaving ? 'animate-pulse bg-primary' : ''}`}
           >
-            <SaveIcon className="h-4 w-4 mr-2" />
+            <Save className="h-4 w-4 mr-2" />
             {isSaving ? "Salvataggio..." : "Salva modifiche"}
           </Button>
         </div>
@@ -244,9 +282,21 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="bg-muted/30 p-2 mb-4 border rounded-sm text-xs text-muted-foreground flex items-center">
-          <span className="mr-2">💡</span>
-          <p>Consiglio: Trascina le foto tra i vari capitoli per organizzarle. Le miniature con sfondo colorato sono state spostate e devono essere salvate.</p>
+        <div className="bg-muted/30 p-2 mb-4 border rounded-sm text-xs text-muted-foreground">
+          <div className="flex items-center mb-1">
+            <span className="mr-2">💡</span>
+            <p><strong>Trascina le foto</strong> per organizzarle tra i capitoli o riordinarle all'interno dello stesso capitolo.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 pl-6">
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-amber-500 mr-1"></div>
+              <span>Sfondo ambra: foto spostata in un altro capitolo</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-blue-500 mr-1"></div>
+              <span>Sfondo blu: foto riordinata nello stesso capitolo</span>
+            </div>
+          </div>
         </div>
         
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -276,7 +326,7 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
                     >
                       {chapter.photos.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-24 text-muted-foreground text-sm border border-dashed rounded-md">
-                          <CameraIcon className="h-5 w-5 mb-1" />
+                          <Camera className="h-5 w-5 mb-1" />
                           Trascina qui le foto per aggiungerle a questo capitolo
                         </div>
                       ) : (
@@ -312,7 +362,7 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
                                         className="object-cover w-full h-full"
                                         loading="lazy"
                                       />
-                                      {photo.chapterId !== chapter.id && (
+                                      {photo.chapterId !== chapter.id ? (
                                         <div className="absolute inset-0 bg-amber-500/20 flex items-center justify-center backdrop-blur-[1px]">
                                           <div className="relative">
                                             <span className="text-[10px] text-white font-medium bg-amber-600 px-1.5 py-0.5 rounded-sm shadow-sm">
@@ -321,7 +371,17 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
                                             <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-amber-600"></div>
                                           </div>
                                         </div>
-                                      )}
+                                      ) : 'originalSortOrder' in photo && photo.originalSortOrder !== undefined && 
+                                          photo.sortOrder !== photo.originalSortOrder ? (
+                                        <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center backdrop-blur-[1px]">
+                                          <div className="relative">
+                                            <span className="text-[10px] text-white font-medium bg-blue-600 px-1.5 py-0.5 rounded-sm shadow-sm">
+                                              Riordinata
+                                            </span>
+                                            <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-blue-600"></div>
+                                          </div>
+                                        </div>
+                                      ) : null}
                                     </div>
                                   )}
                                 </Draggable>

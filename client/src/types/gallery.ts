@@ -54,6 +54,7 @@ export interface GalleryFormValues {
   isPasswordProtected: boolean;
   password?: string;
   coverImage?: File | null;
+  chapterId?: number | null;
 }
 
 export interface GalleryChapter {

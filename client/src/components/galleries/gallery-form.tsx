@@ -51,6 +51,7 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
       isPublic: true,
       isPasswordProtected: false,
       coverImage: null,
+      chapterId: null, // Nuovo campo per associare foto al capitolo
       ...defaultValues
     },
   });

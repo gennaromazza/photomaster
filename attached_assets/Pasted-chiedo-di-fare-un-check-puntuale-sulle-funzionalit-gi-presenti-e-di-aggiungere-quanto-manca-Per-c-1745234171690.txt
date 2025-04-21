@@ -1,0 +1,93 @@
+chiedo di fare un check puntuale sulle funzionalità già presenti e di aggiungere quanto manca. Per ciascun punto:
+
+Verificare in codice (schema, API, controller, UI) se la feature è già implementata e completa.
+
+Se manca del tutto o manca qualche dettaglio (campo, endpoint, UI), aggiungerla.
+
+Short description (shortDescription)
+
+✅ Verificare che lo schema, l’insertGallerySchema e i form espongano questo campo.
+
+🔲 Se assente o non salvato, aggiungere sia in back‑end che in gallery-form.tsx/gallery-settings.tsx.
+
+Header image (headerImage)
+
+✅ Controllare schema e DB.
+
+🔲 Se non gestito da controller/UI, implementare upload, salvataggio e form per modificarlo.
+
+Expiry date (expiryDate)
+
+✅ Controllare se viene salvata e resa disponibile nei GET.
+
+🔲 Se manca la logica di “disabilita galleria scaduta” o il campo non è modificabile, aggiungere.
+
+Aggiornamento capitoli
+
+✅ Verificare updateChapter nel controller e relativo form.
+
+🔲 Se l’endpoint o il pulsante “modifica capitolo” non esistono, implementarli.
+
+Upload multiplo foto
+
+✅ Controllare se si può inviare più file in un’unica chiamata.
+
+🔲 Se manca, abilitare drag‑and‑drop o multi‑select in uploadPhoto + UI.
+
+Campi foto avanzati
+
+isFeatured, isHidden, sortOrder:
+
+✅ Verificare schema + API.
+
+🔲 Se non esposti in UI (toggle, input ordine), aggiungere nei componenti foto.
+
+Like & commenti foto
+
+✅ Controllare presenza di tabelle e endpoint (photo_likes, photo_comments).
+
+🔲 Se non ci sono pulsanti in UI o endpoint, implementarli.
+
+Download abilitabile & watermark
+
+✅ Verificare downloadEnabled e watermarkEnabled in schema.
+
+🔲 Se non presenti in settings o non applicati sulle immagini, implementarli.
+
+Meta‑tag OpenGraph & pulsanti share
+
+✅ Controllare se vengono generati og:title, og:description, og:image.
+
+🔲 Se mancano meta‑tag o bottoni di share attivi, aggiungerli nel <head> e in GalleryCard.
+
+Prompt social (follow/tag)
+
+✅ Verificare schema (showFollowPrompt, testi).
+
+🔲 Se non sono renderizzati, implementarli in UI.
+
+Notifiche email su new upload
+
+✅ Controllare gallery_subscriptions e template configurabile.
+
+🔲 Se non invia mail all’upload, aggiungere job o trigger per l’invio automatico.
+
+Layout & tema
+
+✅ Verificare schema (layout, theme).
+
+🔲 Se non ci sono dropdown in settings o logica di rendering, aggiungerli.
+
+Ruoli/permessi avanzati
+
+✅ Controllare req.user check e protezione password.
+
+🔲 Se servono più ruoli (staff, cliente), estendere middleware e UI.
+
+Statistiche & export
+
+✅ Controllare contatori (viewCount, share log).
+
+🔲 Se non ci sono endpoint/report CSV o grafici, implementarli.
+
+Per favore, procedete punto per punto, confermate cosa c’è già e completate il resto. Grazie!

@@ -12,7 +12,8 @@ import {
   Edit,
   Loader2,
   Share,
-  QrCode
+  QrCode,
+  MoveVertical
 } from "lucide-react";
 
 import {
@@ -31,6 +32,7 @@ import { GallerySettings } from "@/components/galleries/gallery-settings";
 import { PhotoUploader } from "@/components/galleries/photo-uploader";
 import { ChapterList } from "@/components/galleries/chapter-list";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
+import { PhotoChapterManager } from "@/components/galleries/photo-chapter-manager";
 
 export default function GalleryPage() {
   const [, params] = useRoute("/galleries/:id");
@@ -172,7 +174,7 @@ export default function GalleryPage() {
           {/* Colonna destra: Contenuto principale */}
           <div className="md:col-span-9">
             <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-              <TabsList className="grid grid-cols-3 mb-4">
+              <TabsList className="grid grid-cols-4 mb-4">
                 <TabsTrigger value="photos">
                   <LayoutGrid className="h-4 w-4 mr-2" />
                   Foto
@@ -180,6 +182,10 @@ export default function GalleryPage() {
                 <TabsTrigger value="upload">
                   <Upload className="h-4 w-4 mr-2" />
                   Carica
+                </TabsTrigger>
+                <TabsTrigger value="organize">
+                  <MoveVertical className="h-4 w-4 mr-2" />
+                  Organizza
                 </TabsTrigger>
                 <TabsTrigger value="settings">
                   <SettingsIcon className="h-4 w-4 mr-2" />
@@ -261,6 +267,12 @@ export default function GalleryPage() {
                     />
                   </CardContent>
                 </Card>
+              </TabsContent>
+              
+              <TabsContent value="organize" className="mt-0">
+                <PhotoChapterManager
+                  galleryId={gallery.id}
+                />
               </TabsContent>
               
               <TabsContent value="settings" className="mt-0">

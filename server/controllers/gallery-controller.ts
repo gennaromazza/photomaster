@@ -882,7 +882,7 @@ export const createPhotoSelections = async (req: Request, res: Response) => {
       .values(insertData)
       .returning();
 
-    res.status21).json({ 
+    res.status(201).json({ 
       success: true, 
       message: `${insertedSelections.length} selezioni salvate con successo`,
       selections: insertedSelections 

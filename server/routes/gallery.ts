@@ -81,7 +81,6 @@ const publicLimiter = rateLimit({
 
 router.get("/public/galleries/:slug", 
   publicLimiter,
-  sanitizeParams(['slug']),
   checkGalleryAccess, 
   getGalleryBySlug
 );

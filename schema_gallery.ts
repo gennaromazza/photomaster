@@ -203,6 +203,9 @@ export const insertGalleryChapterSchema = createInsertSchema(galleryChapters).pi
   slug: true,
   isPublic: true,
   metaData: true,
+}).extend({
+  title: z.string().min(1, "Il titolo è obbligatorio"),
+  sortOrder: z.number().min(0, "L'ordine deve essere un numero positivo").default(0)
 });
 
 export type InsertGalleryChapter = z.infer<typeof insertGalleryChapterSchema>;

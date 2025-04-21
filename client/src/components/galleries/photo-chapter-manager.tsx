@@ -150,16 +150,21 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
     
     try {
       const promises = [];
+      let modificheEffettuate = 0;
       
       // Per ogni capitolo, verifica le foto che hanno cambiato capitolo
       for (const chapter of photosByChapter) {
         for (const photo of chapter.photos) {
           // Se il capitolo è cambiato
           if (photo.chapterId !== chapter.id) {
+            console.log(`Aggiornamento foto ${photo.id}: da capitolo ${photo.chapterId} a capitolo ${chapter.id}`);
+            
             promises.push(
               updatePhotoMutation.mutateAsync({
                 photoId: photo.id,
                 chapterId: chapter.id
+              }).then(() => {
+                modificheEffettuate++;
               })
             );
           }
@@ -170,13 +175,20 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
       await Promise.all(promises);
       
       // Invalida le query per aggiornare i dati
-      queryClient.invalidateQueries({ 
+      await queryClient.invalidateQueries({ 
         queryKey: [`/api/gallery/galleries/${galleryId}/photos`] 
       });
       
+      // Forza il rifetch dei dati dopo un breve ritardo
+      setTimeout(() => {
+        queryClient.refetchQueries({ 
+          queryKey: [`/api/gallery/galleries/${galleryId}/photos`] 
+        });
+      }, 300);
+      
       toast({
         title: "Modifiche salvate",
-        description: "Le foto sono state spostate con successo nei nuovi capitoli",
+        description: `${modificheEffettuate} foto ${modificheEffettuate === 1 ? 'è stata spostata' : 'sono state spostate'} con successo`,
       });
       
       setNeedsSaving(false);
@@ -213,7 +225,7 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="flex items-center gap-2">
             <MoveIcon className="h-5 w-5" />
             Organizza foto nei capitoli
@@ -221,27 +233,39 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
           <Button 
             onClick={saveChanges} 
             disabled={!needsSaving || isSaving}
+            className={`${needsSaving ? 'animate-pulse bg-primary' : ''}`}
           >
             <SaveIcon className="h-4 w-4 mr-2" />
             {isSaving ? "Salvataggio..." : "Salva modifiche"}
           </Button>
         </div>
+        <div className="text-sm text-muted-foreground mt-2">
+          Trascina le foto per spostarle tra i vari capitoli. Le modifiche saranno effettive dopo aver cliccato su "Salva modifiche".
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="text-sm text-muted-foreground mb-4">
-          Trascina le foto per spostarle tra i vari capitoli. Le modifiche saranno effettive dopo aver cliccato su "Salva modifiche".
+        <div className="bg-muted/30 p-2 mb-4 border rounded-sm text-xs text-muted-foreground flex items-center">
+          <span className="mr-2">💡</span>
+          <p>Consiglio: Trascina le foto tra i vari capitoli per organizzarle. Le miniature con sfondo colorato sono state spostate e devono essere salvate.</p>
         </div>
         
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="space-y-4">
             {photosByChapter.map((chapter) => (
-              <div key={chapter.id === null ? 'no-chapter' : chapter.id} className="border rounded-md overflow-hidden">
-                <div className="bg-muted p-3 font-medium flex items-center gap-2">
-                  <Folder className="h-4 w-4" />
-                  {chapter.title}
-                  <Badge variant="outline" className="ml-2">
-                    {chapter.photos.length} foto
-                  </Badge>
+              <div key={chapter.id === null ? 'no-chapter' : chapter.id} className="border rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-muted p-3 font-medium flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Folder className="h-4 w-4" />
+                    {chapter.title}
+                    <Badge variant="outline" className="ml-1">
+                      {chapter.photos.length} foto
+                    </Badge>
+                  </div>
+                  {chapter.photos.some(photo => photo.chapterId !== chapter.id) && (
+                    <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
+                      Modifiche non salvate
+                    </Badge>
+                  )}
                 </div>
                 <Droppable droppableId={chapter.id === null ? "null" : String(chapter.id)} direction="horizontal">
                   {(provided) => (
@@ -256,44 +280,55 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
                           Trascina qui le foto per aggiungerle a questo capitolo
                         </div>
                       ) : (
-                        <ScrollArea className="h-full max-h-[220px]">
-                          <div className="flex flex-wrap gap-2">
-                            {chapter.photos.map((photo, index) => (
-                              <Draggable
-                                key={photo.id}
-                                draggableId={String(photo.id)}
-                                index={index}
-                              >
-                                {(provided, snapshot) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    className={`relative w-24 h-24 border rounded-md overflow-hidden ${
-                                      snapshot.isDragging ? "ring-2 ring-primary" : ""
-                                    }`}
-                                    style={{
-                                      ...provided.draggableProps.style,
-                                    }}
-                                  >
-                                    <img
-                                      src={photo.thumbnailUrl}
-                                      alt={photo.title || `Foto ${index + 1}`}
-                                      className="object-cover w-full h-full"
-                                    />
-                                    {photo.chapterId !== chapter.id && (
-                                      <div className="absolute inset-0 bg-primary/30 flex items-center justify-center">
-                                        <span className="text-xs text-white font-medium bg-primary/80 px-1 py-0.5 rounded">
-                                          Spostata
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
+                        <div className="relative">
+                          <div className="flex justify-between items-center py-1 px-2 text-xs text-muted-foreground">
+                            <span>{chapter.photos.length} foto in questo capitolo</span>
+                            <span className="text-xs italic">Scorri per vedere tutte le foto</span>
                           </div>
-                        </ScrollArea>
+                          <ScrollArea className="h-full max-h-[200px]">
+                            <div className="flex flex-wrap gap-1 p-1">
+                              {chapter.photos.map((photo, index) => (
+                                <Draggable
+                                  key={photo.id}
+                                  draggableId={String(photo.id)}
+                                  index={index}
+                                >
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className={`relative w-16 h-16 md:w-20 md:h-20 border rounded-md overflow-hidden ${
+                                        snapshot.isDragging ? "ring-2 ring-primary" : ""
+                                      } transition-all hover:scale-105 hover:shadow-md`}
+                                      style={{
+                                        ...provided.draggableProps.style,
+                                      }}
+                                      title={photo.title || `Foto ${index + 1}`}
+                                    >
+                                      <img
+                                        src={photo.thumbnailUrl}
+                                        alt={photo.title || `Foto ${index + 1}`}
+                                        className="object-cover w-full h-full"
+                                        loading="lazy"
+                                      />
+                                      {photo.chapterId !== chapter.id && (
+                                        <div className="absolute inset-0 bg-amber-500/20 flex items-center justify-center backdrop-blur-[1px]">
+                                          <div className="relative">
+                                            <span className="text-[10px] text-white font-medium bg-amber-600 px-1.5 py-0.5 rounded-sm shadow-sm">
+                                              Spostata
+                                            </span>
+                                            <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-amber-600"></div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </div>
                       )}
                       {provided.placeholder}
                     </div>

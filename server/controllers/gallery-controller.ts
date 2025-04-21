@@ -182,7 +182,12 @@ export const createGallery = async (req: Request, res: Response) => {
       userId: req.user.id, // Assicuriamoci che l'userId sia incluso
     };
 
-    // Se c'è un file caricato, aggiungiamo il percorso all'oggetto dati
+    // Verifica che l'immagine di copertina sia presente
+    if (!req.file) {
+      return res.status(400).json({ error: "Immagine di copertina mancante" });
+    }
+    
+    // Elaborazione dell'immagine di copertina
     if (req.file) {
       try {
         // Definisci le directory per i file
@@ -216,17 +221,13 @@ export const createGallery = async (req: Request, res: Response) => {
     console.log("Dati della galleria elaborati:", galleryData);
 
     // Genera uno slug unico basato sul nome
-    let slug = slugify(galleryData.name, { lower: true, strict: true });
-
-    // Controlla se lo slug esiste già
-    const existingSlug = await db
-      .select()
-      .from(galleries)
-      .where(eq(galleries.slug, slug));
-
-    if (existingSlug.length > 0) {
-      // Aggiungi un UUID breve allo slug per renderlo unico
-      slug = `${slug}-${uuidv4().substring(0, 8)}`;
+    let baseSlug = slugify(galleryData.name, { lower: true, strict: true });
+    let slug = baseSlug;
+    let counter = 1;
+    
+    // Verifica l'unicità dello slug in modo iterativo
+    while ((await db.select().from(galleries).where(eq(galleries.slug, slug))).length > 0) {
+      slug = `${baseSlug}-${counter++}`;
     }
 
     const [newGallery] = await db

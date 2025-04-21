@@ -72,7 +72,7 @@ export default function PublicGalleryPage() {
     queryFn: async () => {
       console.log("[Gallery] Fetching gallery data for slug:", slug);
       try {
-        const res = await fetch(`/api/gallery/public/galleries/${slug}`);
+        const res = await apiRequest("GET", `/api/gallery/public/galleries/${slug}`);
 
         if (res.status === 401) {
           console.log("[Gallery] Gallery richiede password");
@@ -105,7 +105,11 @@ export default function PublicGalleryPage() {
     queryKey: [`/api/gallery/galleries/${gallery?.id}/chapters`],
     queryFn: async () => {
       console.log("[Gallery] Fetching chapters for gallery:", gallery?.id);
-      const data = await fetch(`/api/gallery/galleries/${gallery?.id}/chapters`).then(res => res.json());
+      const res = await apiRequest("GET", `/api/gallery/galleries/${gallery?.id}/chapters`);
+      if (!res.ok) {
+        throw new Error("Errore nel caricamento dei capitoli");
+      }
+      const data = await res.json();
       console.log("[Gallery] Chapters loaded:", data?.length);
       return data;
     },
@@ -124,7 +128,11 @@ export default function PublicGalleryPage() {
         ? `/api/gallery/galleries/${gallery?.id}/photos?chapter=${activeChapter}` 
         : `/api/gallery/galleries/${gallery?.id}/photos`;
 
-      const data = await fetch(url).then(res => res.json());
+      const res = await apiRequest("GET", url);
+      if (!res.ok) {
+        throw new Error("Errore nel caricamento delle foto");
+      }
+      const data = await res.json();
       console.log("[Gallery] Photos loaded:", data?.photos?.length);
       return data;
     },

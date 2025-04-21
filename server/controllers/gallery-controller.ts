@@ -905,7 +905,7 @@ export const createPhotoSelections = async (req: Request, res: Response) => {
     const { galleryId, photoIds, clientName, clientEmail, sessionId, selectionType = "favorite", notes } = req.body;
 
     if (!photoIds || !Array.isArray(photoIds) || photoIds.length === 0) {
-      return res.status(400).json({ error: "Nessuna foto selezionata" });
+      return res.status(400).json({ error: "Nessuna foto selezionata", message: "È necessario selezionare almeno una foto" });
     }
 
     if (!galleryId) {

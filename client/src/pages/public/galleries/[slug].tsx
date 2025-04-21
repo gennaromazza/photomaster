@@ -718,7 +718,7 @@ export default function PublicGalleryPage() {
               </div>
             ) : photos.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <p>Nessuna foto in questa galleria.</p>
+                <span className="block">Nessuna foto in questa galleria</span>
               </div>
             ) : (
               <>

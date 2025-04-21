@@ -170,13 +170,31 @@ export const createGallery = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Utente non autorizzato" });
     }
 
+    // Prepariamo i dati per la galleria
+    let password = null;
+    
+    // Se la galleria è protetta da password, prepariamo il valore della password (con hash se fornita)
+    if (req.body.isPasswordProtected === 'true' || req.body.isPasswordProtected === true) {
+      if (req.body.password) {
+        try {
+          // Hashiamo la password
+          const bcrypt = require('bcrypt');
+          password = await bcrypt.hash(req.body.password, 12);
+          console.log("Password hashata con successo");
+        } catch (hashError) {
+          console.error("Errore durante l'hash della password:", hashError);
+          // Fallback alla password in chiaro in caso di errore
+          password = req.body.password;
+        }
+      }
+    }
+    
     // Creiamo un oggetto con i dati del form
     const galleryData: any = {
       name: req.body.name,
       description: req.body.description || null,
       isPublic: req.body.isPublic === 'true' || req.body.isPublic === true,
-      password: req.body.isPasswordProtected === 'true' || req.body.isPasswordProtected === true ? 
-                req.body.password || null : null,
+      password: password,
       eventId: req.body.eventId && req.body.eventId !== "0" ? parseInt(req.body.eventId, 10) : null,
       viewCount: 0,
       userId: req.user.id, // Assicuriamoci che l'userId sia incluso
@@ -256,9 +274,37 @@ export const updateGallery = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    // Gestione della password con hash se necessario
+    let passwordField = {};
+    if (req.body.password !== undefined) {
+      // Se la password è una stringa vuota, la salviamo come null
+      if (!req.body.password) {
+        passwordField = { password: null };
+      } 
+      // Altrimenti hashiamo la password se necessario
+      else {
+        try {
+          const bcrypt = require('bcrypt');
+          // Controlla se la password è già hashata (inizia con $2b$)
+          if (!req.body.password.startsWith('$2b$')) {
+            const hashedPassword = await bcrypt.hash(req.body.password, 12);
+            passwordField = { password: hashedPassword };
+          } else {
+            // La password è già hashata, la manteniamo così com'è
+            passwordField = { password: req.body.password };
+          }
+        } catch (hashError) {
+          console.error("Errore durante l'hash della password:", hashError);
+          // Fallback alla password in chiaro
+          passwordField = { password: req.body.password };
+        }
+      }
+    }
+
     // Ottieni i campi aggiornabili dalla richiesta
     const galleryData = {
       ...req.body,
+      ...passwordField, // Aggiungiamo il campo password elaborato
       // Se c'è una data di scadenza in formato stringa, convertiamola in Date
       ...(req.body.expiryDate && typeof req.body.expiryDate === 'string' 
         ? { expiryDate: new Date(req.body.expiryDate) } 

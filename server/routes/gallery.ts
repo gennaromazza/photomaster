@@ -3,6 +3,7 @@ import multer from "multer";
 import { isAuthenticated, checkGalleryAccess } from "../auth";
 import { db } from "../db";
 import { galleries } from "../../schema_gallery";
+import bcrypt from "bcrypt";
 import { desc, eq } from "drizzle-orm";
 import {
   getAllGalleries,
@@ -121,7 +122,34 @@ router.post("/public/galleries/:slug/authenticate", async (req, res) => {
     }
     
     // Verifica la password
-    if (gallery.password !== password) {
+    let passwordMatches = false;
+    
+    // Controlliamo se è una password hashata (inizia con $2b$)
+    if (gallery.password.startsWith('$2b$')) {
+      // Utilizziamo bcrypt per confrontare
+      passwordMatches = await bcrypt.compare(password, gallery.password);
+      console.log(`DEBUG - Confronto password bcrypt: ${passwordMatches ? 'valida' : 'non valida'}`);
+    } else {
+      // Compatibilità con vecchie password non hashate
+      passwordMatches = gallery.password === password;
+      console.log(`DEBUG - Confronto password in chiaro: ${passwordMatches ? 'valida' : 'non valida'}`);
+      
+      // Se corrisponde, aggiorniamo con la versione hashata per le prossime volte
+      if (passwordMatches) {
+        try {
+          const hashedPassword = await bcrypt.hash(password, 12);
+          await db.update(galleries)
+            .set({ password: hashedPassword })
+            .where(eq(galleries.id, gallery.id));
+          console.log(`DEBUG - Password aggiornata con hash per galleria ID: ${gallery.id}`);
+        } catch (hashError) {
+          console.error(`DEBUG - Errore nell'aggiornamento hash password: ${hashError}`);
+          // Continuiamo comunque, non è un errore critico
+        }
+      }
+    }
+    
+    if (!passwordMatches) {
       console.log(`DEBUG - Autenticazione fallita: password non valida`);
       return res.status(401).json({ error: "Password non valida" });
     }

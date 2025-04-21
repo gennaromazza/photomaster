@@ -534,6 +534,21 @@ export const uploadPhoto = async (req: Request, res: Response) => {
 
     // Forza chapterId a number o null con validazione
     const formattedChapterId = chapterId && !isNaN(Number(chapterId)) ? Number(chapterId) : null;
+    
+    // Verifica se esiste già un file con lo stesso nome nella galleria
+    const existingPhoto = await db
+      .select()
+      .from(photos)
+      .where(eq(photos.galleryId, Number(galleryId)))
+      .where(eq(photos.originalFilename, req.file.originalname))
+      .limit(1);
+      
+    if (existingPhoto.length > 0) {
+      return res.status(409).json({
+        error: "File duplicato",
+        message: `Un'immagine con il nome "${req.file.originalname}" è già presente in questa galleria.`
+      });
+    }
 
     // Genera un nome file unico senza estensione duplicata (alcuni browser inviano .jpg.jpg)
     const cleanOriginalName = req.file.originalname.replace(/\.+/g, '.').toLowerCase();

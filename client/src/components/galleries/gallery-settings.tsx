@@ -8,7 +8,8 @@ import {
   Building,
   QrCode, 
   Check,
-  Image
+  Image,
+  Download
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { GalleryItem, Photo } from "@/types/gallery";
@@ -61,6 +62,7 @@ export function GallerySettings({
   const [isSaving, setIsSaving] = useState(false);
   const [resetPasswordDialog, setResetPasswordDialog] = useState(false);
   const [selectionEnabled, setSelectionEnabled] = useState(gallery.selectionEnabled !== false);
+  const [downloadEnabled, setDownloadEnabled] = useState(gallery.downloadEnabled !== false);
   const [selectedCoverImage, setSelectedCoverImage] = useState<string | null>(gallery.coverImage || null);
   
   // Carica le foto della galleria per la selezione della copertina
@@ -103,6 +105,7 @@ export function GallerySettings({
         password: passwordProtected ? password : null,
         eventId,
         selectionEnabled,
+        downloadEnabled,
         coverImage: selectedCoverImage,
       });
 
@@ -360,6 +363,22 @@ export function GallerySettings({
               <Switch
                 checked={selectionEnabled}
                 onCheckedChange={setSelectionEnabled}
+              />
+            </div>
+            
+            <div className="flex flex-row items-center justify-between space-x-2 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center">
+                  <Download className="h-4 w-4 mr-2" />
+                  <Label className="text-base">Download Foto</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Consenti ai visitatori di scaricare le foto della galleria
+                </p>
+              </div>
+              <Switch
+                checked={downloadEnabled}
+                onCheckedChange={setDownloadEnabled}
               />
             </div>
           </div>

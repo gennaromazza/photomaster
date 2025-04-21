@@ -138,6 +138,7 @@ router.post("/public/galleries/:slug/authenticate", async (req, res) => {
     req.session.save((err) => {
       if (err) {
         console.error(`DEBUG - Errore nel salvare la sessione: ${err.message}`);
+        return res.status(500).json({ error: "Errore nel salvare la sessione" });
       } else {
         console.log(`DEBUG - Sessione salvata con successo`);
       }

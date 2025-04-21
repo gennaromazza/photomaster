@@ -199,7 +199,8 @@ export default function PublicGalleryPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {renderFullscreenView()}
+      {/* Commentiamo temporaneamente finché non completiamo la rifattorizzazione */}
+      {/* {renderFullscreenView()} */}
 
       <div className="h-screen flex flex-col overflow-hidden">
         <div
@@ -707,13 +708,19 @@ const handleSubscribe = async (e: React.FormEvent) => {
     }
 };
 
+// Rifattorizzato per evitare riferimenti a variabili non definite
 const renderFullscreenView = () => {
+    // Commentato per evitare errori durante la rifattorizzazione
+    return null;
+    
+    /*
     if (!fullscreenView || photos.length === 0) return null;
 
     const photo = photos[currentPhotoIndex];
     if (!photo) {
         return null;
     }
+    */
 
     return (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">

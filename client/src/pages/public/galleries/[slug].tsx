@@ -714,14 +714,36 @@ export default function PublicGalleryPage() {
           ref={contentRef}
         >
           <div className="max-w-screen-xl mx-auto w-full p-4 md:p-8">
-            {/* Immagine di copertina o prima foto in evidenza */}
-            {photos.length > 0 && (
+            {/* Immagine di copertina impostata nelle impostazioni della galleria */}
+            {gallery.coverImage && (
               <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">In evidenza</h2>
+                <h2 className="text-2xl font-bold mb-4">Copertina</h2>
                 <div className="relative rounded-xl overflow-hidden shadow-lg">
-                  {/* Prendiamo la prima foto con isFeatured=true oppure la prima foto se non ce ne sono in evidenza */}
+                  <div className="aspect-[16/9] md:aspect-[2.5/1] overflow-hidden rounded-xl">
+                    <img 
+                      src={`/uploads/galleries/${gallery.coverImage}`} 
+                      alt="Immagine di copertina" 
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "/assets/image-placeholder.svg";
+                        target.onerror = null;
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Foto in evidenza dalla galleria */}
+            {photos.length > 0 && photos.some(p => p.isFeatured) && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold mb-4">Foto in evidenza</h2>
+                <div className="relative rounded-xl overflow-hidden shadow-lg">
                   {(() => {
-                    const featuredPhoto = photos.find(p => p.isFeatured) || photos[0];
+                    const featuredPhoto = photos.find(p => p.isFeatured);
+                    if (!featuredPhoto) return null;
+                    
                     return (
                       <div 
                         key={featuredPhoto.id} 

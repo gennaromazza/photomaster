@@ -49,10 +49,13 @@ export default function GalleryPage() {
   });
   
   // Query per ottenere i capitoli della galleria
-  const { data: chapters, isLoading: isLoadingChapters } = useQuery({
+  const { data: chaptersData, isLoading: isLoadingChapters } = useQuery({
     queryKey: [`/api/gallery/galleries/${galleryId}/chapters`],
     enabled: !!galleryId,
   });
+  
+  // Ordina i capitoli per sortOrder
+  const chapters = chaptersData ? [...chaptersData].sort((a, b) => a.sortOrder - b.sortOrder) : [];
   
   // Query per ottenere le foto della galleria, filtrate per capitolo se necessario
   const { data: photosData, isLoading: isLoadingPhotos, refetch: refetchPhotos } = useQuery({

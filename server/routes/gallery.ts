@@ -192,6 +192,9 @@ router.post("/chapters", isAuthenticated, createChapter);
 // Aggiorna un capitolo esistente (richiede autenticazione)
 router.put("/chapters/:id", isAuthenticated, updateChapter);
 
+// Aggiorna parzialmente un capitolo (richiede autenticazione)
+router.patch("/chapters/:id", isAuthenticated, updateChapter);
+
 // Elimina un capitolo (richiede autenticazione)
 router.delete("/chapters/:id", isAuthenticated, deleteChapter);
 

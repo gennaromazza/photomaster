@@ -26,7 +26,9 @@ import {
   togglePhotoSelection,
   getClientSelections,
   createPhotoSelections,
-  recompressGalleryImages
+  recompressGalleryImages,
+  downloadPhoto,
+  downloadAllPhotos
 } from "../controllers/gallery-controller";
 import { cleanupGalleries } from "../controllers/gallery-cleanup-controller";
 
@@ -214,6 +216,14 @@ router.get("/galleries/:galleryId/selections", getClientSelections);
 
 // Salva tutte le selezioni in batch
 router.post("/galleries/selections/batch", createPhotoSelections);
+
+// ROUTES PER DOWNLOAD
+
+// Download di una singola foto
+router.get("/photos/:id/download", downloadPhoto);
+
+// Download di tutte le foto di una galleria
+router.get("/galleries/:id/download-all", downloadAllPhotos);
 
 // ROUTE PER AMMINISTRAZIONE
 

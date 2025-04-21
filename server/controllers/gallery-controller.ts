@@ -8,6 +8,7 @@ import {
 import { eq, and, desc, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
+import archiver from "archiver";
 import { v4 as uuidv4 } from "uuid";
 import sharp from "sharp";
 import slugify from "slugify";
@@ -1313,5 +1314,133 @@ export const createPhotoSelections = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Errore nel salvataggio delle selezioni:", error);
     res.status(500).json({ error: "Errore nel salvataggio delle selezioni" });
+  }
+};
+
+// Download di una singola foto
+export async function downloadPhoto(req: Request, res: Response) {
+  const photoId = Number(req.params.id);
+  
+  try {
+    const photo = await db.query.photos.findFirst({
+      where: eq(photos.id, photoId)
+    });
+    
+    if (!photo) {
+      return res.status(404).json({ error: "Foto non trovata" });
+    }
+
+    // Trova il percorso completo del file originale
+    const filePath = path.join(process.cwd(), 'uploads', photo.path);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "File non trovato" });
+    }
+    
+    // Imposta gli header per il download
+    res.setHeader('Content-Disposition', `attachment; filename="${photo.originalFilename}"`);
+    res.setHeader('Content-Type', photo.mimeType);
+    
+    // Invia il file
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error('Errore nel download della foto:', error);
+    res.status(500).json({ error: "Errore durante il download" });
+  }
+}
+
+// Download di tutte le foto di una galleria o di un capitolo
+export async function downloadAllPhotos(req: Request, res: Response) {
+  const galleryId = Number(req.params.id);
+  const chapterId = req.query.chapter ? Number(req.query.chapter) : undefined;
+  
+  try {
+    // Verifica che la galleria esista
+    const gallery = await db.query.galleries.findFirst({
+      where: eq(galleries.id, galleryId)
+    });
+    
+    if (!gallery) {
+      return res.status(404).json({ error: "Galleria non trovata" });
+    }
+
+    // Query per ottenere le foto
+    let photosQuery: any = { where: eq(photos.galleryId, galleryId) };
+    
+    if (chapterId) {
+      photosQuery = { 
+        where: and(
+          eq(photos.galleryId, galleryId),
+          eq(photos.chapterId, chapterId)
+        ) 
+      };
+    }
+    
+    const photosToDownload = await db.query.photos.findMany(photosQuery);
+    
+    if (photosToDownload.length === 0) {
+      return res.status(404).json({ error: "Nessuna foto trovata" });
+    }
+
+    // Crea un nome per l'archivio
+    const archiveName = `${gallery.name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.zip`;
+    const zipPath = path.join(process.cwd(), 'uploads', 'temp', archiveName);
+    
+    // Assicurati che la directory temp esista
+    const tempDir = path.join(process.cwd(), 'uploads', 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    // Crea lo stream ZIP
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', {
+      zlib: { level: 5 } // Livello di compressione
+    });
+    
+    // Gestione degli errori
+    archive.on('error', (err) => {
+      console.error('Errore nella creazione dello ZIP:', err);
+      res.status(500).json({ error: "Errore nella creazione dell'archivio" });
+    });
+    
+    // Finalizzazione
+    output.on('close', () => {
+      console.log(`Archivio creato: ${archive.pointer()} bytes`);
+      
+      // Imposta gli header per il download
+      res.setHeader('Content-Disposition', `attachment; filename="${archiveName}"`);
+      res.setHeader('Content-Type', 'application/zip');
+      
+      // Invia il file ZIP
+      const zipStream = fs.createReadStream(zipPath);
+      zipStream.pipe(res);
+      
+      // Elimina il file ZIP dopo l'invio
+      zipStream.on('end', () => {
+        fs.unlinkSync(zipPath);
+      });
+    });
+    
+    // Pipe archive data to the output file
+    archive.pipe(output);
+    
+    // Aggiungi ogni foto all'archivio
+    for (const photo of photosToDownload) {
+      const filePath = path.join(process.cwd(), 'uploads', photo.path);
+      
+      if (fs.existsSync(filePath)) {
+        // Usa il nome originale del file se disponibile
+        const fileName = photo.originalFilename || path.basename(photo.path);
+        archive.file(filePath, { name: fileName });
+      }
+    }
+    
+    // Finalizza l'archivio
+    await archive.finalize();
+  } catch (error) {
+    console.error('Errore nel download di tutte le foto:', error);
+    res.status(500).json({ error: "Errore durante il download" });
   }
 };

@@ -80,6 +80,11 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
       return;
     }
     
+    // Se la galleria non è protetta da password, azzera il campo password
+    if (!data.isPasswordProtected) {
+      data.password = "";
+    }
+    
     // Forza eventId a number o null prima dell'invio
     onSubmit({ 
       ...data, 

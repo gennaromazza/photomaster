@@ -230,7 +230,8 @@ export const createGallery = async (req: Request, res: Response) => {
 export const updateGallery = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const galleryData = insertGallerySchema.parse(req.body);
+    // Utilizziamo .partial() per permettere aggiornamenti parziali dei campi
+    const galleryData = insertGallerySchema.partial().parse(req.body);
 
     const [updatedGallery] = await db
       .update(galleries)
@@ -248,7 +249,11 @@ export const updateGallery = async (req: Request, res: Response) => {
     res.json(updatedGallery);
   } catch (error) {
     console.error("Errore nell'aggiornamento della galleria:", error);
-    res.status(500).json({ error: "Errore nell'aggiornamento della galleria" });
+    if (error instanceof Error) {
+      res.status(500).json({ error: `Errore nell'aggiornamento della galleria: ${error.message}` });
+    } else {
+      res.status(500).json({ error: "Errore nell'aggiornamento della galleria" });
+    }
   }
 };
 

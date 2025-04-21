@@ -62,6 +62,8 @@ import NewGalleryPage from "@/pages/galleries/new";
 import GalleryDetailPage from "@/pages/galleries/[id]";
 import GalleryAdminPage from "@/pages/galleries/admin";
 import PublicGalleryPage from "@/pages/public/galleries/[slug]";
+import NewChapterPage from "@/pages/galleries/[id]/chapters/new";
+import EditChapterPage from "@/pages/galleries/[id]/chapters/[chapterId]";
 
 
 function Router() {
@@ -98,6 +100,8 @@ function Router() {
       <ProtectedRoute path="/galleries" component={GalleriesPage} />
       <ProtectedRoute path="/galleries/new" component={NewGalleryPage} />
       <ProtectedRoute path="/galleries/admin" component={GalleryAdminPage} />
+      <ProtectedRoute path="/galleries/:id/chapters/new" component={NewChapterPage} />
+      <ProtectedRoute path="/galleries/:id/chapters/:chapterId" component={EditChapterPage} />
       <ProtectedRoute path="/galleries/:id" component={GalleryDetailPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/callback" component={AuthCallback} />

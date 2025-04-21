@@ -400,6 +400,11 @@ export default function PublicGalleryPage() {
     if (!fullscreenView || photos.length === 0) return null;
 
     const photo = photos[currentPhotoIndex];
+    if (!photo) {
+      console.log("[Gallery] No photo found for index:", currentPhotoIndex);
+      return null;
+    }
+    
     console.log("[Gallery] Rendering fullscreen view for photo:", photo.id);
 
     return (

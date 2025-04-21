@@ -70,12 +70,12 @@ export function PhotoGrid({
 
   const handleDeletePhoto = async () => {
     if (!photoToDelete || !galleryId) return;
-    
+
     setIsDeleting(true);
-    
+
     try {
       await apiRequest("DELETE", `/api/gallery/photos/${photoToDelete.id}`);
-      
+
       // Invalida la cache per ricaricare le foto
       queryClient.invalidateQueries({ 
         queryKey: [
@@ -83,16 +83,16 @@ export function PhotoGrid({
           { chapter: chapterId }
         ] 
       });
-      
+
       toast({
         title: "Foto eliminata",
         description: "La foto è stata eliminata con successo",
       });
-      
+
       setDeleteDialogOpen(false);
     } catch (error) {
       console.error("Errore durante l'eliminazione della foto:", error);
-      
+
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'eliminazione della foto",
@@ -106,12 +106,12 @@ export function PhotoGrid({
 
   const toggleFeatured = async (photo: Photo) => {
     if (!galleryId) return;
-    
+
     try {
       await apiRequest("PUT", `/api/gallery/galleries/${galleryId}/photos/${photo.id}`, {
         isFeatured: !photo.isFeatured
       });
-      
+
       // Invalida la cache per ricaricare le foto
       queryClient.invalidateQueries({ 
         queryKey: [
@@ -119,7 +119,7 @@ export function PhotoGrid({
           { chapter: chapterId }
         ] 
       });
-      
+
       toast({
         title: photo.isFeatured ? "Foto rimossa dai preferiti" : "Foto aggiunta ai preferiti",
         description: photo.isFeatured 
@@ -128,7 +128,7 @@ export function PhotoGrid({
       });
     } catch (error) {
       console.error("Errore durante l'aggiornamento della foto:", error);
-      
+
       toast({
         title: "Errore",
         description: "Si è verificato un errore durante l'aggiornamento della foto",
@@ -139,11 +139,11 @@ export function PhotoGrid({
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {photos.map((photo, index) => (
           <Card 
             key={photo.id} 
-            className="overflow-hidden group relative cursor-pointer transform transition-transform duration-300 hover:translate-y-[-3px] hover:shadow-lg"
+            className="overflow-hidden group relative cursor-pointer rounded-xl transition-all duration-300 hover:translate-y-[-2px] hover:shadow-xl bg-white dark:bg-gray-800/50"
             onClick={() => onPhotoClick && onPhotoClick(index)}
           >
             <div className="aspect-square overflow-hidden relative">
@@ -152,14 +152,14 @@ export function PhotoGrid({
                 alt={photo.title || "Foto"}
                 className="object-cover h-full w-full transition-all duration-300 group-hover:scale-105"
               />
-              
+
               {photo.isFeatured && (
                 <Badge className="absolute top-2 left-2 bg-amber-500 hover:bg-amber-600">
                   <Star className="h-3 w-3 mr-1 fill-white" />
                   In Evidenza
                 </Badge>
               )}
-              
+
               {/* Layer scuro con opzioni durante l'hover */}
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3">
                 <div className="flex justify-between items-start">
@@ -177,7 +177,7 @@ export function PhotoGrid({
                       onClick={(e) => e.stopPropagation()}
                     />
                   )}
-                  
+
                   {editable && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -200,7 +200,7 @@ export function PhotoGrid({
                             Modifica info
                           </DropdownMenuItem>
                         )}
-                        
+
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
                           toggleFeatured(photo);
@@ -208,7 +208,7 @@ export function PhotoGrid({
                           <Star className={`mr-2 h-4 w-4 ${photo.isFeatured ? 'fill-amber-500' : ''}`} />
                           {photo.isFeatured ? "Rimuovi da In Evidenza" : "Aggiungi a In Evidenza"}
                         </DropdownMenuItem>
-                        
+
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
                           window.open(photo.url, "_blank");
@@ -216,9 +216,9 @@ export function PhotoGrid({
                           <Download className="mr-2 h-4 w-4" />
                           Visualizza originale
                         </DropdownMenuItem>
-                        
+
                         <DropdownMenuSeparator />
-                        
+
                         <DropdownMenuItem 
                           onClick={(e) => {
                             e.stopPropagation();
@@ -234,12 +234,12 @@ export function PhotoGrid({
                     </DropdownMenu>
                   )}
                 </div>
-                
+
                 <div className="text-white">
                   {photo.title && (
                     <p className="font-medium line-clamp-2">{photo.title}</p>
                   )}
-                  
+
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex gap-3 text-sm">
                       {photo.likeCount > 0 && (
@@ -248,7 +248,7 @@ export function PhotoGrid({
                           {photo.likeCount}
                         </div>
                       )}
-                      
+
                       {photo.commentCount > 0 && (
                         <div className="flex items-center">
                           <MessageCircle className="h-4 w-4 mr-1" />
@@ -256,7 +256,7 @@ export function PhotoGrid({
                         </div>
                       )}
                     </div>
-                    
+
                     {onPhotoClick && (
                       <Button 
                         variant="ghost" 
@@ -277,7 +277,7 @@ export function PhotoGrid({
           </Card>
         ))}
       </div>
-      
+
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>

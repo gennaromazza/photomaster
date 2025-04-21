@@ -42,7 +42,7 @@ export default function PublicGalleryPage() {
   console.log("[Gallery] Componente rendering iniziato");
   const { slug } = useParams();
   const { toast } = useToast();
-  
+
   // Stati per la pagina
   const [activeChapter, setActiveChapter] = useState<number | null>(null);
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
@@ -51,7 +51,7 @@ export default function PublicGalleryPage() {
   const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
   const [visitorInfo, setVisitorInfo] = useState<{ name: string; email: string } | null>(null);
   const [showVisitorForm, setShowVisitorForm] = useState(false);
-  
+
   // Stati per la visualizzazione a schermo intero
   const [fullscreenView, setFullscreenView] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -72,17 +72,17 @@ export default function PublicGalleryPage() {
       console.log("[Gallery] Fetching gallery data for slug:", slug);
       try {
         const res = await fetch(`/api/gallery/public/galleries/${slug}`);
-        
+
         if (res.status === 401) {
           console.log("[Gallery] Gallery richiede password");
           setIsPasswordProtected(true);
           return null;
         }
-        
+
         if (!res.ok) {
           throw new Error("Errore nel caricamento della galleria");
         }
-        
+
         const data = await res.json();
         console.log("[Gallery] Gallery data loaded:", data ? data.id : null);
         return data;
@@ -113,7 +113,7 @@ export default function PublicGalleryPage() {
   // Query per ottenere le foto della galleria
   const { 
     data: photosData, 
-    isLoading: isPhotosLoading 
+    isLoading: isLoadingPhotos 
   } = useQuery({
     queryKey: [`/api/gallery/galleries/${gallery?.id}/photos`, { chapter: activeChapter }],
     queryFn: async () => {
@@ -121,15 +121,15 @@ export default function PublicGalleryPage() {
       const url = activeChapter 
         ? `/api/gallery/galleries/${gallery?.id}/photos?chapter=${activeChapter}` 
         : `/api/gallery/galleries/${gallery?.id}/photos`;
-      
+
       const data = await fetch(url).then(res => res.json());
       console.log("[Gallery] Photos loaded:", data?.photos?.length);
       return data;
     },
     enabled: !!gallery?.id && isAuthorized,
   });
-  
-  const photos: Photo[] = photosData?.photos || [];
+
+  const photos = photosData?.photos ?? [];
   const pagination = photosData?.pagination || { total: 0, page: 1, limit: 50, pages: 0 };
 
   // useEffect per i capitoli: imposta il primo capitolo come attivo se non c'è nessun capitolo attivo
@@ -168,7 +168,7 @@ export default function PublicGalleryPage() {
     console.log("[Gallery] useEffect [slideshow, fullscreenView, photos.length]", 
       {slideshow, fullscreenView, photosLength: photos.length});
     let interval: NodeJS.Timeout;
-    
+
     if (slideshow && fullscreenView && photos.length > 0) {
       console.log("[Gallery] Starting slideshow interval");
       interval = setInterval(() => {
@@ -177,7 +177,7 @@ export default function PublicGalleryPage() {
         );
       }, 5000);
     }
-    
+
     return () => {
       if (interval) {
         console.log("[Gallery] Clearing slideshow interval");
@@ -190,12 +190,12 @@ export default function PublicGalleryPage() {
   useEffect(() => {
     console.log("[Gallery] useEffect [fullscreenView, photos.length] - keyboard", 
       {fullscreenView, photosLength: photos.length});
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!fullscreenView) return;
-      
+
       console.log("[Gallery] Keyboard event in fullscreen:", e.key);
-      
+
       if (e.key === 'Escape') {
         setFullscreenView(false);
         setSlideshow(false);
@@ -212,7 +212,7 @@ export default function PublicGalleryPage() {
         setSlideshow(prev => !prev);
       }
     };
-    
+
     console.log("[Gallery] Adding keyboard listener");
     window.addEventListener('keydown', handleKeyDown);
     return () => {
@@ -225,10 +225,10 @@ export default function PublicGalleryPage() {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("[Gallery] Attempting password auth for gallery:", slug);
-    
+
     try {
       const res = await apiRequest("POST", `/api/gallery/public/galleries/${slug}/authenticate`, { password });
-      
+
       if (res.ok) {
         console.log("[Gallery] Password auth successful");
         setIsAuthorized(true);
@@ -250,13 +250,13 @@ export default function PublicGalleryPage() {
         ? [...prev, photoId] 
         : prev.filter(id => id !== photoId)
     );
-    
+
     if (selected && selectedPhotos.length === 0 && !visitorInfo) {
       console.log("[Gallery] First selection, showing visitor form");
       setShowVisitorForm(true);
     }
   };
-  
+
   // Gestione del form visitatore
   const handleVisitorInfoSubmit = (data: { name: string; email: string }) => {
     console.log("[Gallery] Visitor info submitted:", data);
@@ -264,26 +264,26 @@ export default function PublicGalleryPage() {
     setShowVisitorForm(false);
     return Promise.resolve();
   };
-  
+
   // Salvataggio delle selezioni
   const handleSaveSelections = async () => {
     if (!gallery?.id || selectedPhotos.length === 0) {
       console.log("[Gallery] Cannot save selections: no gallery or no selections");
       return;
     }
-    
+
     if (!visitorInfo) {
       console.log("[Gallery] No visitor info, showing form");
       setShowVisitorForm(true);
       return;
     }
-    
+
     console.log("[Gallery] Saving selections:", {
       galleryId: gallery.id,
       photoCount: selectedPhotos.length,
       visitorInfo
     });
-    
+
     try {
       const response = await apiRequest("POST", `/api/gallery/galleries/selections/batch`, {
         galleryId: gallery.id,
@@ -293,7 +293,7 @@ export default function PublicGalleryPage() {
         sessionId: Math.random().toString(36).substring(2), // Semplice ID di sessione per demo
         selectionType: "favorite"
       });
-      
+
       if (response.ok) {
         console.log("[Gallery] Selections saved successfully");
         // Resetta le selezioni dopo il salvataggio
@@ -315,11 +315,11 @@ export default function PublicGalleryPage() {
       console.log("[Gallery] Cannot share: no gallery data");
       return;
     }
-    
+
     console.log("[Gallery] Sharing gallery on platform:", platform);
     const url = window.location.href;
     const title = gallery.name;
-    
+
     try {
       if (platform === 'facebook') {
         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
@@ -332,7 +332,7 @@ export default function PublicGalleryPage() {
           description: "Il link alla galleria è stato copiato negli appunti"
         });
       }
-      
+
       // Traccia la condivisione
       console.log("[Gallery] Tracking share event");
       await apiRequest("POST", `/api/gallery/share`, {
@@ -348,26 +348,26 @@ export default function PublicGalleryPage() {
   // Funzione per iscriversi agli aggiornamenti
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!gallery || !subscribeEmail) {
       console.log("[Gallery] Cannot subscribe: missing gallery or email");
       return;
     }
-    
+
     console.log("[Gallery] Subscribing to gallery updates:", {
       galleryId: gallery.id,
       email: subscribeEmail
     });
-    
+
     setSubscribing(true);
-    
+
     try {
       const res = await apiRequest("POST", `/api/gallery/subscribe`, {
         galleryId: gallery.id,
         email: subscribeEmail,
         name: visitorInfo?.name || ""
       });
-      
+
       if (res.ok) {
         console.log("[Gallery] Subscription successful");
         toast({
@@ -395,10 +395,10 @@ export default function PublicGalleryPage() {
   // Rendering della visualizzazione a schermo intero
   const renderFullscreenView = () => {
     if (!fullscreenView || photos.length === 0) return null;
-    
+
     const photo = photos[currentPhotoIndex];
     console.log("[Gallery] Rendering fullscreen view for photo:", photo.id);
-    
+
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col">
         {/* Barra superiore */}
@@ -414,7 +414,7 @@ export default function PublicGalleryPage() {
             </Button>
             <span className="ml-4">{currentPhotoIndex + 1} / {photos.length}</span>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <Button 
               variant="ghost" 
@@ -424,7 +424,7 @@ export default function PublicGalleryPage() {
             >
               {slideshow ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </Button>
-            
+
             {gallery?.selectionEnabled && (
               <Button
                 variant="ghost"
@@ -439,7 +439,7 @@ export default function PublicGalleryPage() {
             )}
           </div>
         </div>
-        
+
         {/* Contenuto foto */}
         <div className="flex-1 flex items-center justify-center relative overflow-hidden">
           <img 
@@ -447,7 +447,7 @@ export default function PublicGalleryPage() {
             alt={photo.title || "Foto"} 
             className="max-h-full max-w-full object-contain select-none transition-transform duration-500 ease-in-out"
           />
-          
+
           {/* Navigazione */}
           <Button
             variant="ghost"
@@ -457,7 +457,7 @@ export default function PublicGalleryPage() {
           >
             <ChevronLeft className="h-8 w-8" />
           </Button>
-          
+
           <Button
             variant="ghost"
             size="icon"
@@ -467,7 +467,7 @@ export default function PublicGalleryPage() {
             <ChevronRight className="h-8 w-8" />
           </Button>
         </div>
-        
+
         {/* Info foto */}
         {photo.title || photo.caption ? (
           <div className="p-4 bg-black/80 text-white">
@@ -565,7 +565,7 @@ export default function PublicGalleryPage() {
     <div className="min-h-screen bg-background">
       {/* Visualizzazione a schermo intero */}
       {renderFullscreenView()}
-      
+
       {/* Contenuto principale */}
       <div className="h-screen flex flex-col overflow-hidden">
         {/* Header della galleria */}
@@ -583,7 +583,7 @@ export default function PublicGalleryPage() {
               {gallery.description && (
                 <p className="text-white/90 max-w-2xl mb-5 leading-relaxed">{gallery.description}</p>
               )}
-              
+
               <div className="flex flex-wrap items-center gap-5 mb-6">
                 <div className="flex items-center text-white/90">
                   <Calendar className="h-4 w-4 mr-2" />
@@ -591,14 +591,14 @@ export default function PublicGalleryPage() {
                     {format(new Date(gallery.createdAt), "d MMMM yyyy", { locale: it })}
                   </span>
                 </div>
-                
+
                 {gallery.viewCount > 0 && (
                   <div className="flex items-center text-white/90">
                     <Eye className="h-4 w-4 mr-2" />
                     <span className="text-sm">{gallery.viewCount} visualizzazioni</span>
                   </div>
                 )}
-                
+
                 {gallery.event && (
                   <Badge variant="outline" className="text-white border-white/30 bg-white/10">
                     <Camera className="h-3 w-3 mr-1" />
@@ -606,7 +606,7 @@ export default function PublicGalleryPage() {
                   </Badge>
                 )}
               </div>
-              
+
               <div className="flex flex-wrap gap-2">
                 <TooltipProvider>
                   <Tooltip>
@@ -624,7 +624,7 @@ export default function PublicGalleryPage() {
                     <TooltipContent>Condividi su Facebook</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                
+
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -641,7 +641,7 @@ export default function PublicGalleryPage() {
                     <TooltipContent>Invia per email</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                
+
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -662,7 +662,7 @@ export default function PublicGalleryPage() {
             </div>
           </div>
         </div>
-        
+
         {/* Contenuto scrollabile */}
         <ScrollArea 
           className="flex-1 overflow-auto"
@@ -686,7 +686,7 @@ export default function PublicGalleryPage() {
                       ))}
                     </TabsList>
                   </div>
-                  
+
                   {chapters.map((chapter: GalleryChapter) => (
                     <TabsContent key={chapter.id} value={String(chapter.id)}>
                       {chapter.description && (
@@ -699,12 +699,13 @@ export default function PublicGalleryPage() {
                 </Tabs>
               </div>
             )}
-            
+
             {/* Caricamento foto */}
-            {isPhotosLoading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="mt-4">Caricamento foto...</p>
+            {isLoadingPhotos ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {[...Array(8)].map((_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded-xl" />
+                ))}
               </div>
             ) : photos.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
@@ -722,7 +723,7 @@ export default function PublicGalleryPage() {
                   onPhotoSelect={gallery.selectionEnabled ? handlePhotoSelect : undefined}
                   selectedPhotos={selectedPhotos}
                 />
-                
+
                 {/* Paginazione */}
                 {pagination.pages > 1 && (
                   <div className="flex justify-center items-center mt-8 space-x-1">
@@ -741,7 +742,7 @@ export default function PublicGalleryPage() {
                 )}
               </>
             )}
-            
+
             {/* Sezione sottoscrizione */}
             {gallery.notificationsEnabled && (
               <div className="mt-16 border-t pt-12">
@@ -750,7 +751,7 @@ export default function PublicGalleryPage() {
                   <p className="text-muted-foreground mb-6">
                     Inserisci la tua email per ricevere una notifica quando vengono aggiunte nuove foto a questa galleria.
                   </p>
-                  
+
                   <form onSubmit={handleSubscribe} className="flex gap-2">
                     <input
                       type="email"
@@ -767,7 +768,7 @@ export default function PublicGalleryPage() {
                 </div>
               </div>
             )}
-            
+
             {/* Footer */}
             <footer className="mt-20 mb-8 border-t pt-8 text-center text-muted-foreground text-sm">
               <p className="mb-1">© {new Date().getFullYear()} {gallery.studio || "ImageStudio"}</p>
@@ -775,7 +776,7 @@ export default function PublicGalleryPage() {
             </footer>
           </div>
         </ScrollArea>
-        
+
         {/* Pulsante torna su */}
         {showBackToTop && (
           <Button
@@ -787,7 +788,7 @@ export default function PublicGalleryPage() {
             <ArrowUp className="h-4 w-4" />
           </Button>
         )}
-        
+
         {/* Gestione selezioni foto */}
         {gallery.selectionEnabled && selectedPhotos.length > 0 && (
           <PhotoSelectionManager 
@@ -795,7 +796,7 @@ export default function PublicGalleryPage() {
             onSave={handleSaveSelections}
           />
         )}
-        
+
         {/* Form informazioni visitatore */}
         {showVisitorForm && (
           <VisitorInfoForm 

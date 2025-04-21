@@ -14,13 +14,13 @@ export function serveStaticFixed(app: Express) {
     // Log più dettagliato per il debugging
     console.error(`Directory di build non trovata: ${distPath}`);
     console.error(`Directory corrente: ${process.cwd()}`);
-    
+
     try {
       console.error(`Contenuto directory corrente:`, fs.readdirSync(process.cwd()));
     } catch (e) {
       console.error(`Impossibile leggere la directory corrente:`, e);
     }
-    
+
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );

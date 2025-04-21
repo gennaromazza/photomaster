@@ -16,11 +16,11 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.ckeditor.com"],
+        defaultSrc: ["'self'", "https:", "blob:"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.ckeditor.com", "https://replit.com"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.ckeditor.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:", "blob:", "https://cdn.ckeditor.com", "https://*.googleusercontent.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://cdn.ckeditor.com", "https://*.googleusercontent.com", "https:"],
         connectSrc: ["'self'", "https://www.googleapis.com"],
         frameSrc: ["'self'", "https://accounts.google.com"],
       },

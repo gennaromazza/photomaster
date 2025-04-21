@@ -863,13 +863,19 @@ export function checkGalleryAccess(req: Request, res: Response, next: NextFuncti
     console.log("DEBUG - Controllo accesso galleria pubblica");
     const { slug } = req.params;
     
-    // 1. Verifica se la galleria richiede accesso con password
-    // a. Se la galleria non richiede password, procedi
-    // b. Se la galleria richiede password, verifica se l'utente è autenticato 
-    //    o se la sessione ha accesso a questa galleria
+    // Il controllo dettagliato verrà eseguito nel controller getGalleryBySlug
+    // Questo middleware imposta alcune variabili iniziali e logging
     
-    // Il controllo reale della password viene fatto nella rotta /authenticate e nel controller
-    // Questo middleware serve solo come punto di controllo per il flusso di autenticazione
+    // Assicurati che le sessioni funzionino correttamente
+    if (!req.session.galleryAccess) {
+      req.session.galleryAccess = {};
+      console.log("DEBUG - Inizializzato galleryAccess nella sessione");
+    }
+    
+    // Log per debug
+    console.log(`DEBUG - Verifica accesso galleria: ${slug}`);
+    console.log(`DEBUG - ID sessione: ${req.session.id}`);
+    console.log(`DEBUG - Gallerie con accesso in sessione: ${Object.keys(req.session.galleryAccess).join(', ') || 'nessuna'}`);
     
     next();
   } catch (error) {

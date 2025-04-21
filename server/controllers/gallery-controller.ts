@@ -103,19 +103,28 @@ export const getGalleryBySlug = async (req: Request, res: Response) => {
     if (!gallery) {
       return res.status(404).json({ error: "Galleria non trovata" });
     }
-
+    
+    // Verifica sessione e accesso
+    console.log(`DEBUG getGalleryBySlug - Gallery ID: ${gallery.id}, Require password: ${!!gallery.password}`);
+    console.log(`DEBUG getGalleryBySlug - Session access: ${req.session?.galleryAccess?.[gallery.id] ? 'Sì' : 'No'}`);
+    
     // Se la galleria richiede password e l'utente non è autorizzato
     if (gallery.password && !req.query.token && !req.session?.galleryAccess?.[gallery.id]) {
+      console.log(`DEBUG getGalleryBySlug - Accesso limitato, password richiesta`);
       // Restituisci solo informazioni di base senza contenuti
       return res.json({
         id: gallery.id,
         name: gallery.name,
         slug: gallery.slug,
         requiresPassword: true,
-        coverImage: gallery.coverImage
+        coverImage: gallery.coverImage,
+        description: gallery.description,
+        passwordRequired: true  // Flag esplicito per il frontend
       });
     }
 
+    console.log(`DEBUG getGalleryBySlug - Accesso completo alla galleria`);
+    
     // Aggiorna il contatore visualizzazioni
     await db
       .update(galleries)

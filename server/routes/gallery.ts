@@ -97,6 +97,10 @@ router.post("/public/galleries/:slug/authenticate", async (req, res) => {
     const { slug } = req.params;
     const { password } = req.body;
     
+    console.log(`DEBUG - Tentativo di autenticazione per galleria slug: ${slug}`);
+    console.log(`DEBUG - Password fornita: ${password ? '✓' : '✗'}`);
+    console.log(`DEBUG - ID sessione: ${req.session.id}`);
+    
     // Verifica se la galleria esiste e se la password è corretta
     const [gallery] = await db
       .select()
@@ -104,16 +108,21 @@ router.post("/public/galleries/:slug/authenticate", async (req, res) => {
       .where(eq(galleries.slug, slug));
     
     if (!gallery) {
+      console.log(`DEBUG - Autenticazione fallita: galleria non trovata per slug ${slug}`);
       return res.status(404).json({ error: "Galleria non trovata" });
     }
     
+    console.log(`DEBUG - Galleria trovata ID: ${gallery.id}, richiede password: ${!!gallery.password}`);
+    
     // Se la galleria non ha password, non è necessaria l'autenticazione
     if (!gallery.password) {
+      console.log(`DEBUG - Autenticazione bypass: galleria non richiede password`);
       return res.status(200).json({ authenticated: true });
     }
     
     // Verifica la password
     if (gallery.password !== password) {
+      console.log(`DEBUG - Autenticazione fallita: password non valida`);
       return res.status(401).json({ error: "Password non valida" });
     }
     
@@ -122,7 +131,19 @@ router.post("/public/galleries/:slug/authenticate", async (req, res) => {
     req.session.galleryAccess = req.session.galleryAccess || {};
     req.session.galleryAccess[gallery.id] = true;
     
-    res.status(200).json({ authenticated: true });
+    console.log(`DEBUG - Autenticazione riuscita per galleria ID: ${gallery.id}`);
+    console.log(`DEBUG - Sessione aggiornata, gallerie con accesso: ${Object.keys(req.session.galleryAccess).join(', ')}`);
+    
+    // Assicuriamoci che la sessione venga salvata
+    req.session.save((err) => {
+      if (err) {
+        console.error(`DEBUG - Errore nel salvare la sessione: ${err.message}`);
+      } else {
+        console.log(`DEBUG - Sessione salvata con successo`);
+      }
+      
+      res.status(200).json({ authenticated: true });
+    });
   } catch (error) {
     console.error("Errore nell'autenticazione alla galleria:", error);
     res.status(500).json({ error: "Errore nell'autenticazione" });

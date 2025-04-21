@@ -230,18 +230,41 @@ export default function PublicGalleryPage() {
     console.log("[Gallery] Attempting password auth for gallery:", slug);
 
     try {
+      // Mostra messaggio di caricamento durante l'autenticazione
+      toast({
+        title: "Verifica password...",
+        description: "Attendere mentre controlliamo le credenziali"
+      });
+
       const res = await apiRequest("POST", `/api/gallery/public/galleries/${slug}/authenticate`, { password });
 
       if (res.ok) {
         console.log("[Gallery] Password auth successful");
+        toast({
+          title: "Accesso riuscito",
+          description: "Benvenuto nella galleria protetta",
+          variant: "default"
+        });
         setIsAuthorized(true);
+        // Ricarica i dati della galleria dopo l'autenticazione
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
         console.log("[Gallery] Password auth failed");
-        alert("Password non valida");
+        toast({
+          title: "Accesso negato",
+          description: "La password inserita non è corretta",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error("[Gallery] Errore nell'autenticazione:", error);
-      alert("Si è verificato un errore durante l'autenticazione");
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'autenticazione",
+        variant: "destructive"
+      });
     }
   };
 
@@ -844,7 +867,17 @@ export default function PublicGalleryPage() {
                   <div className="bg-primary/10 text-primary rounded-full p-2">
                     <Camera className="h-5 w-5" />
                   </div>
-                  <h2 className="text-2xl font-bold">Galleria Fotografica</h2>
+                  <h2 className="text-2xl font-bold">
+                    Galleria Fotografica
+                    {activeChapter && (
+                      <>
+                        <span className="mx-2 text-muted-foreground">›</span>
+                        <span className="text-primary">
+                          {chapters.find(c => c.id === activeChapter)?.title || 'Capitolo'}
+                        </span>
+                      </>
+                    )}
+                  </h2>
                 </div>
                 
                 {/* Pulsanti per scaricare le foto */}

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db, type DB } from "../db";
 import { 
-  galleries, insertGallerySchema, galleryChapters, insertGalleryChapterSchema,
+  galleries, insertGallerySchema, partialGallerySchema, galleryChapters, insertGalleryChapterSchema,
   photos, insertPhotoSchema, photoSelections, gallerySubscriptions, insertGallerySubscriptionSchema,
   socialShares, insertSocialShareSchema
 } from "../../schema_gallery";
@@ -230,8 +230,8 @@ export const createGallery = async (req: Request, res: Response) => {
 export const updateGallery = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    // Utilizziamo .partial() per permettere aggiornamenti parziali dei campi
-    const galleryData = insertGallerySchema.partial().parse(req.body);
+    // Utilizziamo partialGallerySchema per permettere aggiornamenti parziali dei campi
+    const galleryData = partialGallerySchema.parse(req.body);
 
     const [updatedGallery] = await db
       .update(galleries)
@@ -394,14 +394,19 @@ export const getGalleryPhotos = async (req: Request, res: Response) => {
     // Aggiungi gli URL per le immagini
     const basePath = "/uploads";
     const photosWithUrls = photoList.map((p: typeof photos.$inferSelect) => {
-      // Estrai il percorso e il nome del file dalle proprietà del database
-      const mediumFile = p.mediumPath ? path.basename(p.mediumPath) : `medium-${p.filename}`;
-      const thumbFile = p.thumbnailPath ? path.basename(p.thumbnailPath) : `thumb-${p.filename}`;
-
+      // Standardizza i percorsi file, estraendo sempre solo il nome del file (niente prefissi)
+      const mediumFilename = p.mediumPath ? path.basename(p.mediumPath) : p.filename;
+      const thumbnailFilename = p.thumbnailPath ? path.basename(p.thumbnailPath) : p.filename;
+      
+      // Crea URL coerenti con la struttura delle directory
       return {
         ...p,
-        url: `${basePath}/galleries/medium/${mediumFile}`,
-        thumbnailUrl: `${basePath}/galleries/thumbnails/${thumbFile}`,
+        url: `${basePath}/galleries/medium/${mediumFilename}`,
+        thumbnailUrl: `${basePath}/galleries/thumbnails/${thumbnailFilename}`,
+        // Aggiungi anche gli altri percorsi per convenienza
+        largeUrl: p.largePath ? `${basePath}/galleries/large/${path.basename(p.largePath)}` : null,
+        webpUrl: p.webpPath ? `${basePath}/galleries/webp/${path.basename(p.webpPath)}` : null,
+        originalUrl: p.path ? `${basePath}/galleries/${path.basename(p.path)}` : null,
       };
     });
 

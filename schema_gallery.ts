@@ -68,6 +68,7 @@ export const galleries = pgTable("galleries", {
   notificationEmailTemplate: text("notification_email_template"), // Template per le email di notifica
 });
 
+// Schema completo per l'inserimento delle gallerie
 export const insertGallerySchema = createInsertSchema(galleries).pick({
   name: true,
   description: true,
@@ -114,6 +115,60 @@ export const insertGallerySchema = createInsertSchema(galleries).pick({
   notificationsEnabled: true,
   notificationEmailSubject: true,
   notificationEmailTemplate: true,
+}).transform((gallery) => ({
+  ...gallery,
+  expiryDate: gallery.expiryDate && typeof gallery.expiryDate === 'string' 
+    ? new Date(gallery.expiryDate) 
+    : gallery.expiryDate,
+}));
+
+// Schema parziale per l'aggiornamento delle gallerie - permette campi opzionali
+export const partialGallerySchema = z.object({
+  name: z.string().optional(),
+  description: z.string().nullable().optional(),
+  shortDescription: z.string().nullable().optional(),
+  eventId: z.number().nullable().optional(),
+  slug: z.string().optional(),
+  isPublic: z.boolean().optional(),
+  password: z.string().nullable().optional(),
+  expiryDate: z.union([z.string(), z.date()]).nullable().optional(),
+  coverImage: z.string().nullable().optional(),
+  headerImage: z.string().nullable().optional(),
+  layout: z.string().nullable().optional(),
+  theme: z.string().nullable().optional(),
+  downloadEnabled: z.boolean().optional(),
+  selectionEnabled: z.boolean().optional(),
+  clientMessage: z.string().nullable().optional(),
+  showInClient: z.boolean().optional(),
+  metaData: z.any().optional(),
+  studio: z.string().nullable().optional(),
+  watermarkEnabled: z.boolean().optional(),
+  
+  // Social e SEO
+  ogTitle: z.string().nullable().optional(),
+  ogDescription: z.string().nullable().optional(),
+  ogImage: z.string().nullable().optional(),
+  seoKeywords: z.string().nullable().optional(),
+  allowSocialSharing: z.boolean().optional(),
+  
+  // Social Media dello Studio
+  instagramHandle: z.string().nullable().optional(),
+  facebookPage: z.string().nullable().optional(),
+  twitterHandle: z.string().nullable().optional(),
+  pinterestHandle: z.string().nullable().optional(),
+  tiktokHandle: z.string().nullable().optional(),
+  
+  // Opzioni per incentivare il tagging
+  showFollowPrompt: z.boolean().optional(),
+  showTaggingPrompt: z.boolean().optional(),
+  followPromptText: z.string().nullable().optional(),
+  taggingPromptText: z.string().nullable().optional(),
+  socialSharingImage: z.string().nullable().optional(),
+  
+  // Notifiche
+  notificationsEnabled: z.boolean().optional(),
+  notificationEmailSubject: z.string().nullable().optional(),
+  notificationEmailTemplate: z.string().nullable().optional(),
 }).transform((gallery) => ({
   ...gallery,
   expiryDate: gallery.expiryDate && typeof gallery.expiryDate === 'string' 

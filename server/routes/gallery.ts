@@ -25,6 +25,7 @@ import {
   getClientSelections,
   createPhotoSelections
 } from "../controllers/gallery-controller";
+import { cleanupGalleries } from "../controllers/gallery-cleanup-controller";
 
 const router = express.Router();
 
@@ -199,5 +200,10 @@ router.get("/galleries/:galleryId/selections", getClientSelections);
 
 // Salva tutte le selezioni in batch
 router.post("/galleries/selections/batch", createPhotoSelections);
+
+// ROUTE PER AMMINISTRAZIONE
+
+// Pulizia completa gallerie (solo per amministratori)
+router.delete("/cleanup", isAuthenticated, cleanupGalleries);
 
 export default router;

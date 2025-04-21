@@ -8,6 +8,7 @@ import {
   List,
   SlidersHorizontal,
   Image as ImageIcon,
+  Settings,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";

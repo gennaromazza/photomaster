@@ -111,7 +111,7 @@ export default function PublicGalleryPage() {
       console.log("[Gallery] Chapters loaded:", data?.length);
       return data;
     },
-    enabled: !!gallery?.id && (!isPasswordProtected || isAuthorized),
+    enabled: !!gallery?.id && (!gallery?.password || isAuthorized),
   });
 
   // Query per ottenere le foto della galleria
@@ -134,7 +134,7 @@ export default function PublicGalleryPage() {
       console.log("[Gallery] Photos loaded:", data?.photos?.length);
       return data;
     },
-    enabled: !!gallery?.id && (!isPasswordProtected || isAuthorized),
+    enabled: !!gallery?.id && (!gallery?.password || isAuthorized),
   });
 
   console.log("[Gallery] Photos data:", photosData);

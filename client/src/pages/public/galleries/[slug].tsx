@@ -129,6 +129,7 @@ export default function PublicGalleryPage() {
     enabled: !!gallery?.id && isAuthorized,
   });
 
+  console.log("[Gallery] Photos data:", photosData);
   const photos = photosData?.photos ?? [];
   const pagination = photosData?.pagination || { total: 0, page: 1, limit: 50, pages: 0 };
 

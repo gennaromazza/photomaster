@@ -74,13 +74,17 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
   const watchIsPasswordProtected = form.watch("isPasswordProtected");
 
   const handleSubmit = async (data: GalleryFormValues) => {
-    //Further validation and error handling is needed here to address all the bugs listed in the thinking section.
+    // Validation
     if (!data.name.trim()) {
-      //  This is a very basic example.  More robust error handling is needed.
-      alert("Il nome della galleria è obbligatorio"); // Replace with a proper toast notification system
+      alert("Il nome della galleria è obbligatorio"); // Idealmente usare un sistema di toast
       return;
     }
-    onSubmit(data);
+    
+    // Forza eventId a number o null prima dell'invio
+    onSubmit({ 
+      ...data, 
+      eventId: data.eventId ? Number(data.eventId) : null 
+    });
   };
 
 

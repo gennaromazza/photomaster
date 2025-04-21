@@ -33,8 +33,13 @@ export function GalleryCleanup() {
   // Mutation per eliminare tutte le gallerie
   const cleanupMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("DELETE", "/api/gallery/cleanup", { deleteFiles });
-      return await response.json();
+      try {
+        const response = await apiRequest("DELETE", "/api/gallery/cleanup", { deleteFiles });
+        return await response.json();
+      } catch (error) {
+        console.error("Errore durante la pulizia:", error);
+        throw error;
+      }
     },
     onMutate: () => {
       setIsLoading(true);

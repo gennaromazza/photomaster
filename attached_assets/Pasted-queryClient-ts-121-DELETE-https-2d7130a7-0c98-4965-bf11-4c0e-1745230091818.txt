@@ -1,0 +1,133 @@
+queryClient.ts:121 
+            
+            
+           DELETE https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/api/gallery/cleanup 500 (Internal Server Error)
+apiRequest @ queryClient.ts:121
+await in apiRequest
+mutationFn @ gallery-cleanup.tsx:36
+fn @ @tanstack_react-query.js?v=70e1cf54:1189
+run @ @tanstack_react-query.js?v=70e1cf54:494
+start @ @tanstack_react-query.js?v=70e1cf54:536
+execute @ @tanstack_react-query.js?v=70e1cf54:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=70e1cf54:2630
+(anonymous) @ @tanstack_react-query.js?v=70e1cf54:3295
+handleCleanup @ gallery-cleanup.tsx:65
+callCallback2 @ chunk-RPCDYKBN.js?v=70e1cf54:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=70e1cf54:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=70e1cf54:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=70e1cf54:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=70e1cf54:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=70e1cf54:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=70e1cf54:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=70e1cf54:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=70e1cf54:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=70e1cf54:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=70e1cf54:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=70e1cf54:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=70e1cf54:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=70e1cf54:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=70e1cf54:5449Understand this error
+queryClient.ts:148 Errore durante la richiesta DELETE a /api/gallery/cleanup: Error: 500: {"error":"Errore durante la pulizia delle gallerie: Cannot read properties of undefined (reading 'count')"}
+    at apiRequest (queryClient.ts:143:13)
+    at async Object.mutationFn (gallery-cleanup.tsx:36:24)
+overrideMethod @ hook.js:608
+apiRequest @ queryClient.ts:148
+await in apiRequest
+mutationFn @ gallery-cleanup.tsx:36
+fn @ @tanstack_react-query.js?v=70e1cf54:1189
+run @ @tanstack_react-query.js?v=70e1cf54:494
+start @ @tanstack_react-query.js?v=70e1cf54:536
+execute @ @tanstack_react-query.js?v=70e1cf54:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=70e1cf54:2630
+(anonymous) @ @tanstack_react-query.js?v=70e1cf54:3295
+handleCleanup @ gallery-cleanup.tsx:65
+callCallback2 @ chunk-RPCDYKBN.js?v=70e1cf54:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=70e1cf54:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=70e1cf54:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=70e1cf54:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=70e1cf54:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=70e1cf54:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=70e1cf54:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=70e1cf54:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=70e1cf54:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=70e1cf54:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=70e1cf54:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=70e1cf54:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=70e1cf54:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=70e1cf54:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=70e1cf54:5449Understand this error
+queryClient.ts:121 
+            
+            
+           DELETE https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/api/gallery/cleanup 500 (Internal Server Error)
+apiRequest @ queryClient.ts:121
+await in apiRequest
+mutationFn @ gallery-cleanup.tsx:36
+fn @ @tanstack_react-query.js?v=70e1cf54:1189
+run @ @tanstack_react-query.js?v=70e1cf54:494
+(anonymous) @ @tanstack_react-query.js?v=70e1cf54:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=70e1cf54:515
+Promise.catch
+run @ @tanstack_react-query.js?v=70e1cf54:498
+start @ @tanstack_react-query.js?v=70e1cf54:536
+execute @ @tanstack_react-query.js?v=70e1cf54:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=70e1cf54:2630
+(anonymous) @ @tanstack_react-query.js?v=70e1cf54:3295
+handleCleanup @ gallery-cleanup.tsx:65
+callCallback2 @ chunk-RPCDYKBN.js?v=70e1cf54:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=70e1cf54:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=70e1cf54:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=70e1cf54:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=70e1cf54:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=70e1cf54:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=70e1cf54:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=70e1cf54:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=70e1cf54:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=70e1cf54:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=70e1cf54:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=70e1cf54:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=70e1cf54:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=70e1cf54:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=70e1cf54:5449Understand this error
+queryClient.ts:148 Errore durante la richiesta DELETE a /api/gallery/cleanup: Error: 500: {"error":"Errore durante la pulizia delle gallerie: Cannot read properties of undefined (reading 'count')"}
+    at apiRequest (queryClient.ts:143:13)
+    at async Object.mutationFn (gallery-cleanup.tsx:36:24)
+overrideMethod @ hook.js:608
+apiRequest @ queryClient.ts:148
+await in apiRequest
+mutationFn @ gallery-cleanup.tsx:36
+fn @ @tanstack_react-query.js?v=70e1cf54:1189
+run @ @tanstack_react-query.js?v=70e1cf54:494
+(anonymous) @ @tanstack_react-query.js?v=70e1cf54:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=70e1cf54:515
+Promise.catch
+run @ @tanstack_react-query.js?v=70e1cf54:498
+start @ @tanstack_react-query.js?v=70e1cf54:536
+execute @ @tanstack_react-query.js?v=70e1cf54:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=70e1cf54:2630
+(anonymous) @ @tanstack_react-query.js?v=70e1cf54:3295
+handleCleanup @ gallery-cleanup.tsx:65
+callCallback2 @ chunk-RPCDYKBN.js?v=70e1cf54:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=70e1cf54:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=70e1cf54:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=70e1cf54:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=70e1cf54:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=70e1cf54:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=70e1cf54:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=70e1cf54:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=70e1cf54:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=70e1cf54:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=70e1cf54:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=70e1cf54:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=70e1cf54:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=70e1cf54:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=70e1cf54:5449Understand this error
+gallery-cleanup.tsx:60 Errore durante la pulizia: Error: 500: {"error":"Errore durante la pulizia delle gallerie: Cannot read properties of undefined (reading 'count')"}
+    at apiRequest (queryClient.ts:143:13)
+    at async Object.mutationF

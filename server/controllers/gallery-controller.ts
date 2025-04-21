@@ -574,12 +574,12 @@ export const uploadPhoto = async (req: Request, res: Response) => {
       });
     }
     
-    // Validazione dimensione (max 25MB)
-    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+    // Controllo dimensione massima del file (20MB)
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB in bytes
     if (req.file.size > MAX_FILE_SIZE) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "File troppo grande",
-        message: 'La dimensione del file supera il limite massimo di 25MB.'
+        message: `Il file supera la dimensione massima consentita di ${MAX_FILE_SIZE / (1024 * 1024)}MB.`
       });
     }
 

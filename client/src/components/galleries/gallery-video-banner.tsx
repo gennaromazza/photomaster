@@ -70,7 +70,7 @@ const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({
   return (
     <div className="relative w-full mb-8 overflow-hidden max-w-screen-xl mx-auto">
       {/* Banner con anteprima video in stile Netflix */}
-      <div className="relative aspect-video overflow-hidden rounded-lg shadow-xl border border-white/10">
+      <div className="relative aspect-video overflow-hidden rounded-lg shadow-xl border border-white/10 transition-all duration-500 hover:shadow-2xl transform hover:-translate-y-1">
         {/* Thumbnail del video con effetto hover */}
         <div className="group relative w-full h-full cursor-pointer"
             onClick={() => openVideoPlayer(featuredVideo)}>
@@ -85,6 +85,11 @@ const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({
               <Video className="h-16 w-16 text-slate-400" />
             </div>
           )}
+          
+          {/* Badge "Trailer" in alto a sinistra */}
+          <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-md font-semibold text-sm uppercase tracking-wider shadow-lg">
+            Trailer
+          </div>
           
           {/* Overlay scuro con info video */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end p-4 md:p-6 lg:p-8">
@@ -120,7 +125,8 @@ const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
                         bg-white/20 backdrop-blur-sm rounded-full p-4 md:p-8 
                         opacity-0 group-hover:opacity-100 transition-opacity duration-300 
-                        shadow-2xl border border-white/30">
+                        shadow-2xl border border-white/30
+                        animate-pulse-slow">
             <Play className="h-6 w-6 md:h-10 md:w-10 text-white fill-white" />
           </div>
         </div>

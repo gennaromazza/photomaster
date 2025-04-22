@@ -1950,3 +1950,4 @@ export async function downloadAllPhotos(req: Request, res: Response) {
     res.status(500).json({ error: "Errore durante il download" });
   }
 };
+

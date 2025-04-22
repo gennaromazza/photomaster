@@ -20,6 +20,7 @@ import { PhotoGrid } from "@/components/galleries/photo-grid";
 import { PhotoSelectionManager } from "@/components/galleries/photo-selection-manager";
 import { VisitorInfoForm } from "@/components/galleries/visitor-info-form";
 import { GalleryCardFooter } from "@/components/galleries/gallery-card-footer";
+import GalleryVideoBanner from "@/components/galleries/gallery-video-banner";
 import { 
   Loader2, 
   Heart, 
@@ -919,13 +920,78 @@ export default function PublicGalleryPage() {
           </div>
         </div>
 
+        {/* Video Banner in stile Netflix/Prime Video */}
+        {gallery && (
+          <GalleryVideoBanner 
+            galleryId={gallery.id}
+            galleryName={gallery.name}
+            description={gallery.description}
+          />
+        )}
+
         {/* Contenuto scrollabile */}
         <ScrollArea 
           className="flex-1 overflow-auto"
           ref={contentRef}
         >
           <div className="max-w-screen-xl mx-auto w-full p-4 md:p-8">
-            {/* La copertina è stata rimossa poiché già presente nell'header */}
+            {/* Capitoli della galleria (trattati come "Stagioni" di Netflix) */}
+            {chaptersQuery.isSuccess && chaptersQuery.data.length > 0 && (
+              <div className="mb-12">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold">Capitoli della storia</h2>
+                  
+                  {chaptersQuery.data.length > 5 && (
+                    <Button 
+                      variant="outline" 
+                      className="text-white border-white/30 bg-white/10 hover:bg-white/20"
+                      onClick={() => window.scrollTo({ 
+                        top: document.getElementById('chapters-list')?.offsetTop, 
+                        behavior: 'smooth' 
+                      })}
+                    >
+                      Vedi tutti
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {chaptersQuery.data.slice(0, 5).map((chapter) => (
+                    <div
+                      key={chapter.id}
+                      className="relative aspect-[2/3] overflow-hidden rounded-lg cursor-pointer group transform transition-all hover:scale-105"
+                      onClick={() => {
+                        const chapterPhotos = photos.filter(photo => photo.chapterId === chapter.id);
+                        if (chapterPhotos.length > 0) {
+                          setCurrentPhotoIndex(photos.findIndex(p => p.id === chapterPhotos[0].id));
+                          setFullscreenView(true);
+                        }
+                      }}
+                    >
+                      {/* Sfondo scuro gradiente */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10" />
+                      
+                      {/* Immagine del capitolo */}
+                      <img 
+                        src={chapter.coverImage || 
+                             (photos.find(p => p.chapterId === chapter.id)?.thumbnailPath || 
+                              photos.find(p => p.chapterId === chapter.id)?.path)}
+                        alt={chapter.title}
+                        className="w-full h-full object-cover"
+                      />
+                      
+                      {/* Titolo del capitolo */}
+                      <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
+                        <h3 className="text-white font-semibold">{chapter.title}</h3>
+                        <p className="text-xs text-white/80">
+                          {photos.filter(p => p.chapterId === chapter.id).length} foto
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Foto in evidenza dalla galleria */}
             {photos.length > 0 && photos.some(p => p.isFeatured) && (

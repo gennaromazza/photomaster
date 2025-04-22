@@ -362,4 +362,18 @@ router.post("/galleries/:id/duplicate", isAuthenticated, async (req, res) => {
   }
 });
 
+// ###### GESTIONE VIDEO ######
+
+// Ottieni il video di una galleria
+router.get('/galleries/:galleryId/video', isAuthenticated, getGalleryVideos);
+
+// Aggiungi/aggiorna un video a una galleria
+router.post('/galleries/:galleryId/video', isAuthenticated, addGalleryVideo);
+
+// Aggiorna il video di una galleria
+router.put('/galleries/:galleryId/video', isAuthenticated, updateGalleryVideo);
+
+// Elimina il video di una galleria
+router.delete('/galleries/:galleryId/video', isAuthenticated, deleteGalleryVideo);
+
 export default router;

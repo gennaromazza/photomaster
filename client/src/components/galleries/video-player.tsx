@@ -1,216 +1,173 @@
-import React, { useState, useRef, useEffect } from "react";
-import { GalleryVideo } from "@/types/gallery";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Volume2, VolumeX, Maximize, Minimize, X } from "lucide-react";
+import { GalleryVideo } from "@/types/gallery";
 
 interface VideoPlayerProps {
-  video: GalleryVideo | null;
+  video: GalleryVideo;
   isOpen: boolean;
   onClose: () => void;
-  onPrevious?: () => void;
-  onNext?: () => void;
-  hasNextVideo?: boolean;
-  hasPreviousVideo?: boolean;
 }
 
-// Funzione per creare il componente embed per i video YouTube
-const YouTubeEmbed = ({ videoId }: { videoId: string }) => {
-  return (
-    <iframe
-      className="absolute top-0 left-0 w-full h-full"
-      src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
-      title="YouTube video player"
-      frameBorder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowFullScreen
-    ></iframe>
-  );
-};
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose }) => {
+  const [isMuted, setIsMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const playerRef = useRef<HTMLDivElement>(null);
 
-// Funzione per creare il componente embed per i video Vimeo
-const VimeoEmbed = ({ videoId }: { videoId: string }) => {
-  return (
-    <iframe
-      className="absolute top-0 left-0 w-full h-full"
-      src={`https://player.vimeo.com/video/${videoId}?autoplay=1`}
-      title="Vimeo video player"
-      frameBorder="0"
-      allow="autoplay; fullscreen; picture-in-picture"
-      allowFullScreen
-    ></iframe>
-  );
-};
-
-// Funzione per creare il componente per i video con URL diretto
-const DirectVideoPlayer = ({ url }: { url: string }) => {
-  return (
-    <video
-      className="absolute top-0 left-0 w-full h-full"
-      controls
-      autoPlay
-      controlsList="nodownload"
-    >
-      <source src={url} type="video/mp4" />
-      Il tuo browser non supporta la riproduzione video.
-    </video>
-  );
-};
-
-// Componente per mostrare codice embed arbitrario
-const EmbedCodeRenderer = ({ embedCode }: { embedCode: string }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (containerRef.current && embedCode) {
-      containerRef.current.innerHTML = embedCode;
-    }
-
-    return () => {
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
+  // Gestione del fullscreen
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      // Attiva il fullscreen
+      if (playerRef.current?.requestFullscreen) {
+        playerRef.current.requestFullscreen()
+          .then(() => setIsFullscreen(true))
+          .catch(err => console.error(`Errore nel fullscreen: ${err.message}`));
       }
-    };
-  }, [embedCode]);
-
-  return (
-    <div 
-      ref={containerRef} 
-      className="absolute top-0 left-0 w-full h-full flex items-center justify-center"
-    />
-  );
-};
-
-const VideoPlayer: React.FC<VideoPlayerProps> = ({
-  video,
-  isOpen,
-  onClose,
-  onPrevious,
-  onNext,
-  hasNextVideo = false,
-  hasPreviousVideo = false,
-}) => {
-  // Gestisce il rendering del player in base al tipo di video
-  const renderVideoPlayer = () => {
-    if (!video) return null;
-
-    switch (video.videoType) {
-      case "youtube":
-        return video.videoId ? (
-          <YouTubeEmbed videoId={video.videoId} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full">
-            <p className="text-red-500">ID YouTube mancante</p>
-          </div>
-        );
-
-      case "vimeo":
-        return video.videoId ? (
-          <VimeoEmbed videoId={video.videoId} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full">
-            <p className="text-red-500">ID Vimeo mancante</p>
-          </div>
-        );
-
-      case "url":
-        return video.videoUrl ? (
-          <DirectVideoPlayer url={video.videoUrl} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full">
-            <p className="text-red-500">URL del video mancante</p>
-          </div>
-        );
-
-      case "embed":
-        return video.embedCode ? (
-          <EmbedCodeRenderer embedCode={video.embedCode} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full">
-            <p className="text-red-500">Codice di embed mancante</p>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="flex flex-col items-center justify-center h-full">
-            <p className="text-muted-foreground">Formato video non supportato</p>
-          </div>
-        );
+    } else {
+      // Disattiva il fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen()
+          .then(() => setIsFullscreen(false))
+          .catch(err => console.error(`Errore nella chiusura del fullscreen: ${err.message}`));
+      }
     }
   };
 
-  if (!video) return null;
+  // Ascolta i cambiamenti del fullscreen
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Funzione per generare l'embed del video di YouTube
+  const renderYouTubeEmbed = (videoId: string) => {
+    return (
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${isMuted ? '1' : '0'}&controls=1&modestbranding=1&rel=0`}
+        className="w-full h-full"
+        style={{ aspectRatio: "16/9" }}
+        frameBorder="0"
+        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      ></iframe>
+    );
+  };
+
+  // Funzione per generare l'embed del video di Vimeo
+  const renderVimeoEmbed = (videoId: string) => {
+    return (
+      <iframe
+        src={`https://player.vimeo.com/video/${videoId}?autoplay=1&muted=${isMuted ? '1' : '0'}&controls=1`}
+        className="w-full h-full"
+        style={{ aspectRatio: "16/9" }}
+        frameBorder="0"
+        allow="autoplay; fullscreen"
+        allowFullScreen
+      ></iframe>
+    );
+  };
+
+  // Funzione per generare il tag video per URL diretti
+  const renderVideo = (videoUrl: string | null) => {
+    if (!videoUrl) return null;
+    
+    return (
+      <video
+        src={videoUrl}
+        className="w-full h-full"
+        style={{ aspectRatio: "16/9" }}
+        autoPlay
+        controls
+        muted={isMuted}
+        playsInline
+      ></video>
+    );
+  };
+
+  // Funzione per generare l'embed HTML personalizzato
+  const renderCustomEmbed = (embedCode: string | null) => {
+    if (!embedCode) return null;
+    
+    return (
+      <div 
+        className="w-full h-full"
+        style={{ aspectRatio: "16/9" }}
+        dangerouslySetInnerHTML={{ __html: embedCode }}
+      />
+    );
+  };
+
+  // Render del video in base al tipo
+  const renderVideoPlayer = () => {
+    if (video.videoType === 'youtube' && video.videoId) {
+      return renderYouTubeEmbed(video.videoId);
+    } else if (video.videoType === 'vimeo' && video.videoId) {
+      return renderVimeoEmbed(video.videoId);
+    } else if (video.videoType === 'url' && video.videoUrl) {
+      return renderVideo(video.videoUrl);
+    } else if (video.videoType === 'embed' && video.embedCode) {
+      return renderCustomEmbed(video.embedCode);
+    }
+    
+    return <div className="p-4 text-center">Nessun video disponibile</div>;
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-5xl max-w-[95vw] p-0 bg-black/90 border-neutral-800 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 text-white">
-          <h2 className="text-lg font-semibold truncate max-w-[70%]">{video.title}</h2>
-          
-          <div className="flex items-center gap-2">
-            {video.videoType === "url" && video.videoUrl && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-white/10"
-                onClick={() => video.videoUrl && window.open(video.videoUrl, "_blank")}
-              >
-                <ExternalLink className="h-4 w-4 mr-1" />
-                Apri video
-              </Button>
-            )}
+      <DialogContent className="max-w-screen-lg p-0 overflow-hidden bg-black text-white">
+        <div className="relative" ref={playerRef}>
+          {/* Controlli video */}
+          <div className="absolute top-2 right-2 z-10 flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:bg-white/10 text-white"
+              onClick={() => setIsMuted(!isMuted)}
+            >
+              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </Button>
             
             <Button
               variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/10"
+              size="icon"
+              className="hover:bg-white/10 text-white"
+              onClick={toggleFullscreen}
+            >
+              {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:bg-white/10 text-white"
               onClick={onClose}
             >
               <X className="h-5 w-5" />
             </Button>
           </div>
+
+          {/* Player video */}
+          <div className="aspect-video">
+            {renderVideoPlayer()}
+          </div>
         </div>
         
-        {/* Video container */}
-        <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-          {renderVideoPlayer()}
-          
-          {/* Controlli di navigazione */}
-          {onPrevious && hasPreviousVideo && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 rounded-full h-10 w-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPrevious();
-              }}
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-          )}
-          
-          {onNext && hasNextVideo && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 rounded-full h-10 w-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onNext();
-              }}
-            >
-              <ChevronRight className="h-6 w-6" />
-            </Button>
-          )}
-        </div>
-        
-        {/* Footer con descrizione */}
-        {video.description && (
-          <div className="p-4 text-white/90 text-sm">
-            <p>{video.description}</p>
+        {/* Titolo e descrizione */}
+        {(video.title || video.description) && (
+          <div className="p-4">
+            {video.title && <DialogTitle className="text-xl">{video.title}</DialogTitle>}
+            {video.description && <DialogDescription className="text-gray-300">{video.description}</DialogDescription>}
           </div>
         )}
       </DialogContent>

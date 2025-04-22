@@ -42,8 +42,7 @@ const galleryFormSchema = z
       message: "La password è obbligatoria e deve essere di almeno 6 caratteri"
     });
   }
-});
-
+})
 .refine(data => !data.isPasswordProtected || (data.isPasswordProtected && data.password), {
   message: "È necessario impostare una password quando la protezione è attiva",
   path: ["password"]

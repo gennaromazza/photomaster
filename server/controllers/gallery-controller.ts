@@ -349,30 +349,85 @@ export const updateGallery = async (req: Request, res: Response) => {
 export const deleteGallery = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const galleryId = Number(id);
 
-    // Prima ottieni tutti i file associati per eliminarli
+    // Verifica che la galleria esista
+    const [gallery] = await db.select().from(galleries).where(eq(galleries.id, galleryId));
+    if (!gallery) {
+      return res.status(404).json({ error: "Galleria non trovata" });
+    }
+
+    // Recupera tutte le foto associate
     const allPhotos = await db
       .select()
       .from(photos)
-      .where(eq(photos.galleryId, Number(id)));
+      .where(eq(photos.galleryId, galleryId));
+
+    console.log(`Eliminazione galleria ${galleryId}: trovate ${allPhotos.length} foto da eliminare`);
 
     // Elimina i file dal filesystem
     for (const photo of allPhotos) {
       try {
         // Elimina tutti i formati dell'immagine
-        if (photo.path && fs.existsSync(photo.path)) fs.unlinkSync(photo.path);
-        if (photo.thumbnailPath && fs.existsSync(photo.thumbnailPath)) fs.unlinkSync(photo.thumbnailPath);
-        if (photo.mediumPath && fs.existsSync(photo.mediumPath)) fs.unlinkSync(photo.mediumPath);
-        if (photo.largePath && fs.existsSync(photo.largePath)) fs.unlinkSync(photo.largePath);
-        if (photo.webpPath && fs.existsSync(photo.webpPath)) fs.unlinkSync(photo.webpPath);
+        if (photo.path && fs.existsSync(photo.path)) {
+          fs.unlinkSync(photo.path);
+          console.log(`File eliminato: ${photo.path}`);
+        }
+        if (photo.thumbnailPath && fs.existsSync(photo.thumbnailPath)) {
+          fs.unlinkSync(photo.thumbnailPath);
+          console.log(`Thumbnail eliminata: ${photo.thumbnailPath}`);
+        }
+        if (photo.mediumPath && fs.existsSync(photo.mediumPath)) {
+          fs.unlinkSync(photo.mediumPath);
+          console.log(`Medium eliminata: ${photo.mediumPath}`);
+        }
+        if (photo.largePath && fs.existsSync(photo.largePath)) {
+          fs.unlinkSync(photo.largePath);
+          console.log(`Large eliminata: ${photo.largePath}`);
+        }
+        if (photo.webpPath && fs.existsSync(photo.webpPath)) {
+          fs.unlinkSync(photo.webpPath);
+          console.log(`WebP eliminata: ${photo.webpPath}`);
+        }
       } catch (err) {
         console.error(`Errore nell'eliminazione del file ${photo.filename}:`, err);
       }
     }
 
-    // Elimina tutti i dati correlati (l'eliminazione a cascata gestirà le relazioni)
-    await db.delete(galleries).where(eq(galleries.id, Number(id)));
+    // Elimina tutti i dati correlati (a cascata)
+    console.log(`Eliminazione dati dal database per galleria ${galleryId}`);
 
+    // Elimina selezioni di foto
+    await db.delete(photoSelections)
+      .where(eq(photoSelections.galleryId, galleryId));
+    
+    // Elimina like e commenti
+    for (const photo of allPhotos) {
+      await db.delete(photoLikes)
+        .where(eq(photoLikes.photoId, photo.id));
+      await db.delete(photoComments)
+        .where(eq(photoComments.photoId, photo.id));
+    }
+    
+    // Elimina iscrizioni e condivisioni
+    await db.delete(gallerySubscriptions)
+      .where(eq(gallerySubscriptions.galleryId, galleryId));
+    await db.delete(socialShares)
+      .where(eq(socialShares.galleryId, galleryId));
+    
+    // Elimina le foto
+    await db.delete(photos)
+      .where(eq(photos.galleryId, galleryId));
+    
+    // Elimina i capitoli
+    await db.delete(galleryChapters)
+      .where(eq(galleryChapters.galleryId, galleryId));
+    
+    // Infine elimina la galleria
+    await db.delete(galleries)
+      .where(eq(galleries.id, galleryId));
+
+    console.log(`Galleria ${galleryId} eliminata con successo`);
     res.json({ success: true, message: "Galleria eliminata con successo" });
   } catch (error) {
     console.error("Errore nell'eliminazione della galleria:", error);

@@ -78,24 +78,45 @@ export default function PublicGalleryPage() {
     queryFn: async () => {
       console.log("[Gallery] Fetching gallery data for slug:", slug);
       try {
-        const res = await apiRequest("GET", `/api/gallery/public/galleries/${slug}`);
+        // Utilizziamo fetch direttamente invece di apiRequest per gestire manualmente lo stato 401
+        const res = await fetch(`/api/gallery/public/galleries/${slug}`, {
+          headers: {
+            "Accept": "application/json"
+          },
+          credentials: "include"
+        });
 
+        // Se la galleria richiede password (status 401)
         if (res.status === 401) {
           console.log("[Gallery] Gallery richiede password");
-          const errorData = await res.json();
-          console.log("[Gallery] Dettagli richiesta password:", errorData);
+          // Proviamo a leggere il contenuto della risposta
+          const responseText = await res.text();
+          let errorData;
+          
+          try {
+            // Proviamo a parsare come JSON
+            errorData = JSON.parse(responseText);
+            console.log("[Gallery] Dettagli richiesta password:", errorData);
+          } catch (e) {
+            console.error("[Gallery] Errore nel parsing della risposta 401:", e);
+            errorData = { error: responseText, requiresPassword: true };
+          }
+          
           // Se richiede password, impostiamo isAuthorized a false
           setIsAuthorized(false);
-          // Restituiamo l'errore con le informazioni sulla richiesta di password
+          
+          // Restituiamo un oggetto con le informazioni sulla richiesta di password
+          // IMPORTANTE: includiamo requiresPassword=true per far renderizzare correttamente il form
           return {
             requiresPassword: true,
-            isPublic: errorData.isPublic,
-            error: errorData.error
+            isPublic: errorData.isPublic || true,
+            error: errorData.error || "Questa galleria richiede una password",
+            id: errorData.id // Se il server lo invia
           };
         }
 
         if (!res.ok) {
-          throw new Error("Errore nel caricamento della galleria");
+          throw new Error(`Errore nel caricamento della galleria: ${res.status}`);
         }
 
         const data = await res.json();
@@ -719,9 +740,25 @@ export default function PublicGalleryPage() {
   if (galleryError || !gallery) {
     console.log("[Gallery] Rendering error state:", galleryError);
     
+    // Estraiamo informazioni dall'errore
+    let errorData: any = { requiresPassword: false };
+    try {
+      if (galleryError instanceof Error) {
+        // Cerchiamo nel messaggio di errore se c'è un JSON
+        const match = galleryError.message.match(/401: (.+)/);
+        if (match && match[1]) {
+          const jsonStr = match[1];
+          errorData = JSON.parse(jsonStr);
+          console.log("[Gallery] Extracted from error:", errorData);
+        }
+      }
+    } catch (e) {
+      console.error("[Gallery] Errore nel parsing dell'errore:", e);
+    }
+    
     // Se abbiamo un oggetto gallery con requiresPassword = true
-    // significa che la galleria esiste ma richiede password
-    if (gallery?.requiresPassword) {
+    // o se l'errore indica che la galleria richiede password
+    if (gallery?.requiresPassword || errorData.requiresPassword) {
       console.log("[Gallery] Gallery requires password, showing password form");
       return (
         <div className="flex items-center justify-center min-h-screen bg-background/90 backdrop-blur-sm">

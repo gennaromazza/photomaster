@@ -729,7 +729,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
           .resize({
             width: MAX_IMAGE_DIMENSIONS.width,
             height: MAX_IMAGE_DIMENSIONS.height,
-            fit: 'inside', withoutEnlargement: true,
+            fit: 'inside',
             withoutEnlargement: true
           })
           .toBuffer();
@@ -746,7 +746,7 @@ export const uploadPhoto = async (req: Request, res: Response) => {
         .resize({
           width: THUMBNAIL_SIZE,
           height: THUMBNAIL_SIZE,
-          fit: 'inside', withoutEnlargement: true,
+          fit: 'inside',
           withoutEnlargement: true
         })
         .jpeg({ 
@@ -762,7 +762,8 @@ export const uploadPhoto = async (req: Request, res: Response) => {
           .resize({
             width: MEDIUM_SIZE,
             height: MEDIUM_SIZE,
-            fit: 'inside', withoutEnlargement: true
+            fit: 'inside',
+            withoutEnlargement: true
           })
           .jpeg({ 
             quality: COMPRESSION_QUALITY.jpeg, 

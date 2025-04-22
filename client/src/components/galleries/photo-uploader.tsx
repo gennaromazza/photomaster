@@ -129,6 +129,9 @@ export function PhotoUploader({
         // Otteniamo il token CSRF prima di iniziare il caricamento
         const csrfToken = await getCsrfToken();
         const token = localStorage.getItem("auth_token");
+        
+        console.log("Token CSRF:", csrfToken ? "Ottenuto" : "Non disponibile");
+        console.log("Token JWT:", token ? "Disponibile" : "Non disponibile");
 
         const xhr = new XMLHttpRequest();
 
@@ -146,12 +149,27 @@ export function PhotoUploader({
 
           xhr.addEventListener("load", () => {
             if (xhr.status >= 200 && xhr.status < 300) {
+              console.log("Risposta server upload:", xhr.responseText);
               resolve();
             } else {
-              reject(new Error(`HTTP Error: ${xhr.status}`));
+              let errorMsg = "Caricamento fallito. Controlla il file e riprova.";
+              try {
+                const errorResponse = JSON.parse(xhr.responseText);
+                if (errorResponse.error) {
+                  errorMsg = errorResponse.error;
+                  if (errorResponse.details) {
+                    errorMsg += `. Dettagli: ${errorResponse.details}`;
+                  }
+                  console.error("Errore server:", errorResponse);
+                }
+              } catch (e) {
+                console.error("Risposta server non è JSON valido:", xhr.responseText);
+              }
+              
+              reject(new Error(`HTTP Error: ${xhr.status} - ${errorMsg}`));
               toast({
                 title: "Errore",
-                description: "Caricamento fallito. Controlla il file e riprova.",
+                description: errorMsg,
                 variant: "destructive"
               });
             }

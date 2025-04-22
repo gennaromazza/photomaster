@@ -32,6 +32,7 @@ interface ChapterData {
 
 export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [isSaving, setIsSaving] = useState(false);
   const [photosByChapter, setPhotosByChapter] = useState<ChapterData[]>([]);
   const [needsSaving, setNeedsSaving] = useState(false);
@@ -394,8 +395,6 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
     );
   }
 
-  const [, setLocation] = useLocation();
-  
   return (
     <Card>
       <CardHeader>

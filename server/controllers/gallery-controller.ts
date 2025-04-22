@@ -1435,7 +1435,7 @@ export const getClientSelections = async (req: Request, res: Response) => {
 // Ottieni tutte le selezioni per una galleria (solo per amministratori)
 export const getAllGallerySelections = async (req: Request, res: Response) => {
   try {
-    if (!req.user || !req.user.isAdmin) {
+    if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ error: "Non autorizzato" });
     }
     
@@ -1460,7 +1460,7 @@ export const getAllGallerySelections = async (req: Request, res: Response) => {
 // Elimina tutte le selezioni di un cliente per una galleria
 export const deleteClientSelections = async (req: Request, res: Response) => {
   try {
-    if (!req.user || !req.user.isAdmin) {
+    if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ error: "Non autorizzato" });
     }
     
@@ -1485,7 +1485,7 @@ export const deleteClientSelections = async (req: Request, res: Response) => {
 // Genera report CSV delle selezioni
 export const generateSelectionsReport = async (req: Request, res: Response) => {
   try {
-    if (!req.user || !req.user.isAdmin) {
+    if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ error: "Non autorizzato" });
     }
     

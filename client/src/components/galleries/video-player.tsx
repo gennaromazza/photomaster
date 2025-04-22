@@ -79,7 +79,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose }) => 
         
         <div className="mt-4">
           {/* Player container con aspect ratio 16:9 */}
-          <div className="relative w-full pb-[56.25%]">
+          <div className="relative w-full pb-[56.25%] overflow-hidden rounded-lg border border-border shadow-lg">
             {isDirectVideo ? (
               <video 
                 className="absolute top-0 left-0 w-full h-full" 
@@ -97,14 +97,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose }) => 
                 allowFullScreen
               />
             )}
+            
+            {/* Suggerimento per la visualizzazione a schermo intero */}
+            <div className="absolute bottom-3 right-3 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm z-10 animate-pulse">
+              Premi F per lo schermo intero
+            </div>
           </div>
           
           {/* Descrizione del video */}
           {video.description && (
-            <div className="mt-4 text-sm text-muted-foreground">
-              <p>{video.description}</p>
+            <div className="mt-4 p-4 bg-muted/20 rounded-lg border border-border">
+              <p className="text-sm text-foreground/90">{video.description}</p>
             </div>
           )}
+          
+          {/* Suggerimento per la qualità visiva */}
+          <div className="mt-4 flex items-center justify-center text-sm text-muted-foreground">
+            <span className="px-3 py-1.5 bg-primary/10 rounded-full flex items-center space-x-2">
+              <span>Per una migliore esperienza visiva, utilizza la modalità a schermo intero</span>
+            </span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

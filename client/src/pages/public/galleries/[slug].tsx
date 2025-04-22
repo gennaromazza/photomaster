@@ -920,20 +920,19 @@ export default function PublicGalleryPage() {
           </div>
         </div>
 
-        {/* Video Banner in stile Netflix/Prime Video */}
-        {gallery && (
-          <GalleryVideoBanner 
-            galleryId={gallery.id}
-            galleryName={gallery.name}
-            description={gallery.description}
-          />
-        )}
-
         {/* Contenuto scrollabile */}
         <ScrollArea 
           className="flex-1 overflow-auto"
           ref={contentRef}
         >
+          {/* Video Banner in stile Netflix/Prime Video */}
+          {gallery && (
+            <GalleryVideoBanner 
+              galleryId={gallery.id}
+              galleryName={gallery.name}
+              description={gallery.description}
+            />
+          )}
           <div className="max-w-screen-xl mx-auto w-full p-4 md:p-8">
             {/* Capitoli della galleria (trattati come "Stagioni" di Netflix) */}
             {chapters.length > 0 && (

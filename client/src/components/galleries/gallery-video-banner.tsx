@@ -68,39 +68,61 @@ const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({
   };
   
   return (
-    <div className="relative w-full mb-8 overflow-hidden">
-      {/* Banner con anteprima video */}
-      <div className="relative aspect-video overflow-hidden rounded-lg shadow-md">
-        {/* Thumbnail del video */}
-        {getThumbnailUrl(featuredVideo) ? (
-          <img 
-            src={getThumbnailUrl(featuredVideo)} 
-            alt={featuredVideo.title} 
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-slate-200 flex items-center justify-center">
-            <Video className="h-16 w-16 text-slate-400" />
-          </div>
-        )}
-        
-        {/* Overlay scuro con info video */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-6">
-          <h3 className="text-white text-xl md:text-2xl font-semibold mb-2">{featuredVideo.title}</h3>
-          {featuredVideo.description && (
-            <p className="text-white/80 text-sm md:text-base line-clamp-2 mb-4">{featuredVideo.description}</p>
+    <div className="relative w-full mb-8 overflow-hidden max-w-screen-xl mx-auto">
+      {/* Banner con anteprima video in stile Netflix */}
+      <div className="relative aspect-video overflow-hidden rounded-lg shadow-xl border border-white/10">
+        {/* Thumbnail del video con effetto hover */}
+        <div className="group relative w-full h-full cursor-pointer"
+            onClick={() => openVideoPlayer(featuredVideo)}>
+          {getThumbnailUrl(featuredVideo) ? (
+            <img 
+              src={getThumbnailUrl(featuredVideo)} 
+              alt={featuredVideo.title} 
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+          ) : (
+            <div className="w-full h-full bg-slate-200 flex items-center justify-center">
+              <Video className="h-16 w-16 text-slate-400" />
+            </div>
           )}
           
-          {/* Pulsante per riprodurre il video */}
-          <Button 
-            variant="outline"
-            size="lg"
-            className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border-white/20 self-start flex items-center"
-            onClick={() => openVideoPlayer(featuredVideo)}
-          >
-            <Play className="h-5 w-5 mr-2 fill-current" />
-            Guarda il video
-          </Button>
+          {/* Overlay scuro con info video */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end p-4 md:p-6 lg:p-8">
+            {/* Titolo stile Netflix/Prime */}
+            <div className="mb-4">
+              <h3 className="text-white text-xl md:text-3xl lg:text-4xl font-bold mb-2 drop-shadow-lg">{featuredVideo.title}</h3>
+              {featuredVideo.description && (
+                <p className="text-white/90 text-sm md:text-base lg:text-lg line-clamp-2 mb-4 max-w-3xl drop-shadow-md">{featuredVideo.description}</p>
+              )}
+            </div>
+            
+            {/* Pulsante per riprodurre il video */}
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                variant="default"
+                size="lg"
+                className="bg-white text-black hover:bg-white/90 self-start flex items-center shadow-lg transition-transform duration-300 transform group-hover:scale-105"
+                onClick={() => openVideoPlayer(featuredVideo)}
+              >
+                <Play className="h-5 w-5 mr-2 fill-current" />
+                Riproduci
+              </Button>
+              
+              {/* Etichetta informativa che incoraggia a vedere a schermo intero */}
+              <div className="flex items-center text-white/80 text-sm md:text-base bg-black/40 px-3 py-2 rounded-md backdrop-blur-sm">
+                <span className="hidden md:inline mr-2">Consigliata visione</span>
+                <span className="font-semibold">a schermo intero</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Icona play centrale con animazione */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
+                        bg-white/20 backdrop-blur-sm rounded-full p-4 md:p-8 
+                        opacity-0 group-hover:opacity-100 transition-opacity duration-300 
+                        shadow-2xl border border-white/30">
+            <Play className="h-6 w-6 md:h-10 md:w-10 text-white fill-white" />
+          </div>
         </div>
       </div>
       

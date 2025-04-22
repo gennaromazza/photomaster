@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useParams } from "wouter";
+import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,7 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
-import { PhotoSelectionManager } from "@/components/galleries/photo-selection-manager";
+// Rimosso import del vecchio sistema di selezione
 import { VisitorInfoForm } from "@/components/galleries/visitor-info-form";
 import { GalleryCardFooter } from "@/components/galleries/gallery-card-footer";
 import GalleryVideoBanner from "@/components/galleries/gallery-video-banner";
@@ -1452,12 +1452,39 @@ export default function PublicGalleryPage() {
           </Button>
         )}
 
-        {/* Gestione selezioni foto */}
+        {/* Nuovo sistema di selezione foto */}
         {gallery.selectionEnabled && selectedPhotos.length > 0 && (
-          <PhotoSelectionManager 
-            count={selectedPhotos.length}
-            onSave={handleSaveSelections}
-          />
+          <Card className="mb-6 max-w-3xl mx-auto">
+            <CardHeader>
+              <CardTitle>Foto selezionate</CardTitle>
+              <CardDescription>
+                Hai selezionato {selectedPhotos.length} foto. Cosa vuoi fare?
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedPhotos([])}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Annulla selezione
+                </Button>
+                <Button 
+                  onClick={() => setShowVisitorForm(true)}
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Salva selezione
+                </Button>
+                <Link href={`/public/selection/${gallery.id}`} className="ml-2">
+                  <Button variant="secondary">
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Vai a Selezione Avanzata
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Form informazioni visitatore */}

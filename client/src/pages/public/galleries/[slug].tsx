@@ -662,7 +662,7 @@ export default function PublicGalleryPage() {
   };
 
   // Se la galleria richiede una password e l'utente non è autorizzato
-  if (gallery?.password && !isAuthorized) {
+  if ((gallery?.password || gallery?.requiresPassword) && !isAuthorized) {
     console.log("[Gallery] Rendering password protected view");
     return (
       <div className="flex items-center justify-center min-h-screen bg-muted/20">
@@ -718,6 +718,52 @@ export default function PublicGalleryPage() {
   // Stato di errore
   if (galleryError || !gallery) {
     console.log("[Gallery] Rendering error state:", galleryError);
+    
+    // Se abbiamo un oggetto gallery con requiresPassword = true
+    // significa che la galleria esiste ma richiede password
+    if (gallery?.requiresPassword) {
+      console.log("[Gallery] Gallery requires password, showing password form");
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-background/90 backdrop-blur-sm">
+          <Card className="w-[350px] shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Galleria protetta
+              </CardTitle>
+              <CardDescription>
+                Questa galleria è protetta da password. Inserisci la password per accedere.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Accedi
+                </Button>
+              </form>
+            </CardContent>
+            <CardFooter className="flex justify-between text-xs text-muted-foreground">
+              <p>© ImageStudio</p>
+            </CardFooter>
+          </Card>
+        </div>
+      );
+    }
+    
+    // Altrimenti mostra il messaggio di galleria non trovata
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <div className="max-w-md text-center">

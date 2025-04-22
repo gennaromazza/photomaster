@@ -24,6 +24,7 @@ interface FileWithPreview extends File {
   status: "idle" | "uploading" | "success" | "error";
   progress: number;
   error?: string;
+  rawFile?: File; // File originale non modificato
 }
 
 export function PhotoUploader({
@@ -70,6 +71,7 @@ export function PhotoUploader({
           preview: URL.createObjectURL(file),
           status: "idle" as const,
           progress: 0,
+          rawFile: file, // Salva il file originale
         }));
 
       // Nota: la notifica per i file duplicati è già gestita sopra
@@ -112,8 +114,12 @@ export function PhotoUploader({
       );
 
       const formData = new FormData();
+      
       // "photo" è il nome del campo che multer si aspetta sul server
-      formData.append("photo", file, file.name);
+      // Invece di usare il file esteso, prendiamo il file originale dalla proprietà `originalFile`
+      // che viene creata quando usiamo dropzone
+      const rawFile = file.rawFile || new File([file], file.name, { type: file.type });
+      formData.append("photo", rawFile);
       formData.append("galleryId", String(galleryId));
       if (chapterId !== null) {
         formData.append("chapterId", String(chapterId));

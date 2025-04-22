@@ -49,7 +49,7 @@ export function PhotoSelectionManager({
 
   // Invia le selezioni al server
   const handleSaveSelection = async () => {
-    if (selectedPhotos.length === 0) {
+    if (!selectedPhotos?.length) {
       toast({
         title: "Selezione vuota",
         description: "Seleziona almeno una foto prima di salvare.",
@@ -67,7 +67,7 @@ export function PhotoSelectionManager({
         
         toast({
           title: "Selezione salvata",
-          description: `${selectedPhotos.length} foto salvate con successo.`,
+          description: `${selectedPhotos?.length || 0} foto salvate con successo.`,
         });
         
         // Pulisci la selezione
@@ -98,7 +98,7 @@ export function PhotoSelectionManager({
       
       toast({
         title: "Selezione salvata",
-        description: `${selectedPhotos.length} foto salvate con successo.`,
+        description: `${selectedPhotos?.length || 0} foto salvate con successo.`,
       });
       
       // Pulisci la selezione
@@ -122,7 +122,7 @@ export function PhotoSelectionManager({
       <CardHeader>
         <CardTitle>Le tue selezioni</CardTitle>
         <CardDescription>
-          Hai selezionato {selectedPhotos.length} foto. Scegli come salvarle.
+          Hai selezionato {selectedPhotos?.length || 0} foto. Scegli come salvarle.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -184,7 +184,7 @@ export function PhotoSelectionManager({
             </Button>
             <Button
               onClick={handleSaveSelection}
-              disabled={isSaving || selectedPhotos.length === 0}
+              disabled={isSaving || !selectedPhotos?.length}
             >
               {isSaving ? (
                 "Salvataggio..."

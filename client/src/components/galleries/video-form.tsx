@@ -310,13 +310,15 @@ const VideoForm: React.FC<VideoFormProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" aria-describedby="video-form-description">
         <DialogHeader>
           <DialogTitle>{videoToEdit ? "Modifica video" : "Aggiungi video"}</DialogTitle>
           <DialogDescription>
-            {videoToEdit
-              ? "Modifica i dettagli del video esistente"
-              : "Aggiungi un nuovo video alla galleria"}
+            <span id="video-form-description">
+              {videoToEdit
+                ? "Modifica i dettagli del video esistente"
+                : "Aggiungi un nuovo video alla galleria"}
+            </span>
           </DialogDescription>
         </DialogHeader>
 

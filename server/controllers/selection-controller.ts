@@ -1180,7 +1180,7 @@ export const exportSelections = async (req: Request, res: Response) => {
     
     // Ottieni tutte le selezioni con i dettagli delle foto
     const selectionsResult = await pool.query(
-      `SELECT ps.id as selection_id, p.id as photo_id, p.filename, p.title, p.description, p.chapter_id,
+      `SELECT ps.id as selection_id, p.id as photo_id, p.filename, p.title, p.caption as description, p.chapter_id,
               g.name as gallery_name, g.description as gallery_description,
               gc.title as chapter_title
        FROM photo_selections ps

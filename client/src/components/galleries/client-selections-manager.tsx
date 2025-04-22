@@ -100,7 +100,9 @@ export function ClientSelectionsManager({ galleryId }: ClientSelectionsManagerPr
   const { data: selectionsData, isLoading, refetch } = useQuery({
     queryKey: [`/api/gallery/galleries/${galleryId}/selections/all`],
     queryFn: async () => {
-      const response = await fetch(`/api/gallery/galleries/${galleryId}/selections/all`);
+      const response = await fetch(`/api/gallery/galleries/${galleryId}/selections/all`, {
+        credentials: 'include' // Aggiungi le credenziali (cookie) alla richiesta
+      });
       if (!response.ok) throw new Error("Errore nel recupero delle selezioni");
       return response.json();
     },
@@ -166,12 +168,33 @@ export function ClientSelectionsManager({ galleryId }: ClientSelectionsManagerPr
   // Genera un report CSV delle selezioni
   const handleGenerateReport = async () => {
     try {
-      // Apre la URL in una nuova finestra invece di usare apiRequest con responseType
-      window.open(`/api/gallery/galleries/${galleryId}/selections/report`, "_blank");
+      // Utilizziamo fetch con credenziali per ottenere l'URL con l'autenticazione corretta
+      const response = await fetch(`/api/gallery/galleries/${galleryId}/selections/report`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Errore ${response.status}: ${response.statusText}`);
+      }
+      
+      // Crea un blob dall'oggetto response e crea un URL per il download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Crea un elemento <a> per avviare il download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `selezioni-galleria-${galleryId}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Pulisce l'elemento e l'URL
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
       
       toast({
         title: "Report generato",
-        description: "Il report delle selezioni è stato avviato. Controlla i download del browser.",
+        description: "Il report delle selezioni è stato scaricato.",
       });
     } catch (error) {
       console.error("Errore durante la generazione del report:", error);
@@ -188,10 +211,18 @@ export function ClientSelectionsManager({ galleryId }: ClientSelectionsManagerPr
     if (!clientEmail) return;
     
     try {
-      await apiRequest(
-        "DELETE", 
-        `/api/gallery/galleries/${galleryId}/selections/client/${encodeURIComponent(clientEmail)}`
+      // Utilizziamo fetch direttamente con credentials per assicurarci che i cookie vengano inviati
+      const response = await fetch(
+        `/api/gallery/galleries/${galleryId}/selections/client/${encodeURIComponent(clientEmail)}`,
+        {
+          method: 'DELETE',
+          credentials: 'include'
+        }
       );
+      
+      if (!response.ok) {
+        throw new Error(`Errore ${response.status}: ${response.statusText}`);
+      }
       
       refetch();
       

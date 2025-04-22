@@ -769,8 +769,7 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     console.log("DEBUG isAuthenticated - Nessun token Bearer nell'header");
     
-    // Per uso in sviluppo, lasciamo questo codice commentato,
-    // ma dovrebbe essere rimosso in produzione
+    // In ambiente di sviluppo, usa un utente mock
     if (process.env.NODE_ENV === 'development') {
       console.log("DEBUG isAuthenticated - Usando utente mock in ambiente di sviluppo");
       const mockUser = {
@@ -782,7 +781,14 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
         status: "active",
         profileImage: "",
       };
-      (req as any).user = mockUser;
+      
+      // Impostiamo l'utente mock su req.user
+      req.user = mockUser as Express.User;
+      
+      // Log per debug
+      console.log("DEBUG isAuthenticated - Utente mock impostato:", 
+        { id: req.user.id, role: req.user.role });
+      
       return next();
     }
     

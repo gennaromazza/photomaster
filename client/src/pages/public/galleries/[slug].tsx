@@ -1050,56 +1050,96 @@ export default function PublicGalleryPage() {
               </div>
             )}
             
-            {/* Capitoli / Sezioni */}
+            {/* Capitoli / Sezioni - Stile Netflix/Prime Video */}
             {chapters.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-4">Capitoli</h2>
-                <Tabs 
-                  defaultValue={String(activeChapter || chapters[0]?.id)}
-                  value={String(activeChapter || chapters[0]?.id)}
-                  onValueChange={(value) => {
-                    console.log("[Gallery] Tab value changed to:", value);
-                    setActiveChapter(Number(value));
-                  }}
-                >
-                  <div className="border-b mb-4 overflow-x-auto">
-                    <TabsList className="mb-0 flex-nowrap">
-                      {chapters.map((chapter: GalleryChapter) => (
-                        <TabsTrigger 
-                          key={chapter.id} 
-                          value={String(chapter.id)}
-                          className={`whitespace-nowrap ${
-                            activeChapter === chapter.id ? 'bg-primary/20 font-medium' : ''
-                          }`}
-                        >
-                          {chapter.title}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </div>
-
+              <div className="mb-12">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold flex items-center">
+                    <span className="bg-primary/10 text-primary rounded-full p-2 mr-3">
+                      <Calendar className="h-5 w-5" />
+                    </span>
+                    Capitoli della Storia
+                  </h2>
+                  
+                  {activeChapter && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setActiveChapter(null)}
+                      className="text-xs"
+                    >
+                      Visualizza tutti
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Visualizzazione orizzontale dei capitoli con immagini di copertina in stile Netflix */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
                   {chapters.map((chapter: GalleryChapter) => (
-                    <TabsContent key={chapter.id} value={String(chapter.id)}>
-                      <div className="mb-6 bg-muted/30 rounded-lg p-6 border border-muted">
-                        <h3 className="text-xl font-semibold mb-2">{chapter.title}</h3>
-                        {chapter.description && (
-                          <p className="text-muted-foreground">
-                            {chapter.description}
-                          </p>
-                        )}
-                        {chapter.coverImage && (
-                          <div className="mt-4 rounded-md overflow-hidden shadow-md">
-                            <img 
-                              src={chapter.coverImage}
-                              alt={`Copertina: ${chapter.title}`}
-                              className="w-full h-40 object-cover"
-                            />
+                    <div 
+                      key={chapter.id}
+                      onClick={() => setActiveChapter(chapter.id)}
+                      className={`
+                        relative cursor-pointer transition-all duration-300 
+                        rounded-lg overflow-hidden border-2
+                        ${activeChapter === chapter.id ? 'border-primary ring-2 ring-primary/30 shadow-lg scale-[1.02]' : 'border-transparent hover:border-muted-foreground/20 hover:shadow'}
+                      `}
+                    >
+                      <div className="aspect-video relative overflow-hidden">
+                        {/* Immagine di copertina del capitolo */}
+                        {chapter.coverImage ? (
+                          <img 
+                            src={chapter.coverImage}
+                            alt={`Copertina: ${chapter.title}`}
+                            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-muted/50 flex items-center justify-center">
+                            <Camera className="h-8 w-8 text-muted-foreground/40" />
                           </div>
                         )}
+                        
+                        {/* Overlay con gradiente per garantire leggibilità del testo */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                        
+                        {/* Badge per capitolo attivo */}
+                        {activeChapter === chapter.id && (
+                          <div className="absolute top-2 right-2 bg-primary text-white text-xs px-2 py-1 rounded-md font-medium">
+                            Attivo
+                          </div>
+                        )}
+                        
+                        {/* Titolo e descrizione */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                          <h3 className="font-semibold text-base mb-1 line-clamp-1">{chapter.title}</h3>
+                          {chapter.description && (
+                            <p className="text-white/80 text-xs line-clamp-2">
+                              {chapter.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </TabsContent>
+                    </div>
                   ))}
-                </Tabs>
+                </div>
+                
+                {/* Dettagli del capitolo selezionato */}
+                {activeChapter && chapters.find(c => c.id === activeChapter) && (
+                  <div className="mb-6 bg-muted/10 rounded-lg p-5 border border-muted/30 transition-all duration-500 animate-in fade-in">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-8 w-1 bg-primary rounded-full"></div>
+                      <h3 className="text-xl font-semibold">
+                        {chapters.find(c => c.id === activeChapter)?.title}
+                      </h3>
+                    </div>
+                    
+                    {chapters.find(c => c.id === activeChapter)?.description && (
+                      <p className="text-muted-foreground mb-4 pl-4 border-l-2 border-muted italic">
+                        {chapters.find(c => c.id === activeChapter)?.description}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1248,8 +1288,44 @@ export default function PublicGalleryPage() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-background rounded-xl p-1">
-                  <div className="bg-muted/20 rounded-lg border p-4 md:p-6">
+                <div className="mb-12">
+                  {/* Header sezione foto con info */}
+                  <div className="bg-muted/10 border rounded-lg p-4 md:p-5 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Camera className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium text-primary">Album fotografico</span>
+                      </div>
+                      <h3 className="text-lg font-medium">{photos.length} fotografie{activeChapter ? ` in "${chapters.find(c => c.id === activeChapter)?.title}"` : ""}</h3>
+                      <p className="text-muted-foreground text-sm mt-1">Clicca su una foto per visualizzarla a schermo intero</p>
+                    </div>
+                    
+                    {/* Info condivisione */}
+                    {gallery.socialShareEnabled && (
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-8 gap-2"
+                          onClick={() => handleShare('facebook')}
+                        >
+                          <Facebook className="h-3.5 w-3.5" />
+                          <span className="hidden md:inline">Condividi</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-8 gap-2"
+                          onClick={() => handleShare('instagram')}
+                        >
+                          <Instagram className="h-3.5 w-3.5" />
+                          <span className="hidden md:inline">Taggaci</span>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="bg-muted/5 rounded-lg border p-4 md:p-6">
                     {/* Raggruppa le foto per capitolo */}
                     {(() => {
                       // Funzione per raggruppare le foto per capitolo

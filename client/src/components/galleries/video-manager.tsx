@@ -12,7 +12,7 @@ import VideoList from "./video-list";
 import VideoForm from "./video-form";
 import VideoPlayer from "./video-player";
 import { GalleryVideo, GalleryChapter } from "@/types/gallery";
-import LoadingSpinner from "../ui/loading-spinner";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface VideoManagerProps {
   galleryId: number;
@@ -157,7 +157,9 @@ const VideoManager: React.FC<VideoManagerProps> = ({ galleryId }) => {
       <Separator />
 
       {isLoadingChapters ? (
-        <LoadingSpinner message="Caricamento capitoli..." />
+        <div className="flex justify-center py-8">
+          <LoadingSpinner size="md" />
+        </div>
       ) : chapters && chapters.length > 0 ? (
         <Tabs 
           defaultValue="all" 

@@ -68,9 +68,19 @@ const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({
   };
   
   return (
-    <div className="relative w-full mb-8 overflow-hidden max-w-screen-xl mx-auto">
+    <div className="relative w-full mb-12 overflow-hidden max-w-screen-xl mx-auto">
+      {/* Titolo sezione video */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold flex items-center">
+          <span className="bg-primary/10 text-primary rounded-full p-2 mr-3">
+            <Video className="h-5 w-5" />
+          </span>
+          Video dell'Evento
+        </h2>
+      </div>
+      
       {/* Banner con anteprima video in stile Netflix */}
-      <div className="relative aspect-video overflow-hidden rounded-lg shadow-xl border border-white/10 transition-all duration-500 hover:shadow-2xl transform hover:-translate-y-1">
+      <div className="relative aspect-video overflow-hidden rounded-lg shadow-xl border border-muted-foreground/10 transition-all duration-500 hover:shadow-2xl transform hover:-translate-y-1">
         {/* Thumbnail del video con effetto hover */}
         <div className="group relative w-full h-full cursor-pointer"
             onClick={() => openVideoPlayer(featuredVideo)}>
@@ -81,13 +91,13 @@ const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
-            <div className="w-full h-full bg-slate-200 flex items-center justify-center">
-              <Video className="h-16 w-16 text-slate-400" />
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+              <Video className="h-16 w-16 text-muted-foreground/40" />
             </div>
           )}
           
           {/* Badge "Trailer" in alto a sinistra */}
-          <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-md font-semibold text-sm uppercase tracking-wider shadow-lg">
+          <div className="absolute top-4 left-4 bg-primary text-primary-foreground px-3 py-1 rounded-md font-semibold text-sm uppercase tracking-wider shadow-lg">
             Trailer
           </div>
           

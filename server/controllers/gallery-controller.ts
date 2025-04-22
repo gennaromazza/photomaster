@@ -1497,17 +1497,23 @@ export async function downloadPhoto(req: Request, res: Response) {
     }
 
     // Trova il percorso completo del file originale
-    // Controlla se il percorso già inizia con "/uploads" per evitare duplicazioni
-    let relativePath = photo.path;
-    if (relativePath.startsWith('/uploads/')) {
-      relativePath = relativePath.substring('/uploads/'.length);
+    let filePath = photo.path;
+    
+    // Se il percorso è già assoluto (contiene workspace), usiamo direttamente quello
+    if (filePath.includes('/home/runner/workspace/')) {
+      // Usa direttamente il percorso assoluto
+      console.log(`Tentativo di download - Usando percorso assoluto: ${filePath}`);
+    } 
+    // Se il percorso inizia con /uploads, costruisci un percorso completo
+    else if (filePath.startsWith('/uploads/')) {
+      filePath = path.join(process.cwd(), filePath);
+      console.log(`Tentativo di download - Costruito percorso da relativo: ${filePath}`);
     }
-    
-    const filePath = path.join(process.cwd(), 'uploads', relativePath);
-    
-    console.log(`Tentativo di download - Percorso originale: ${photo.path}`);
-    console.log(`Percorso relativo elaborato: ${relativePath}`);
-    console.log(`Percorso completo del file: ${filePath}`);
+    // Altrimenti, assumiamo che sia un percorso relativo dentro uploads
+    else {
+      filePath = path.join(process.cwd(), 'uploads', filePath);
+      console.log(`Tentativo di download - Costruito percorso da relativo semplice: ${filePath}`);
+    }
     
     if (!fs.existsSync(filePath)) {
       console.error(`File non trovato: ${filePath}`);
@@ -1610,14 +1616,26 @@ export async function downloadAllPhotos(req: Request, res: Response) {
     
     // Aggiungi ogni foto all'archivio
     for (const photo of photosToDownload) {
-      // Controlla se il percorso già inizia con "/uploads" per evitare duplicazioni
-      let relativePath = photo.path;
-      if (relativePath.startsWith('/uploads/')) {
-        relativePath = relativePath.substring('/uploads/'.length);
+      // Determina il percorso corretto del file
+      let filePath = photo.path;
+      
+      // Se il percorso è già assoluto (contiene workspace), usiamo direttamente quello
+      if (filePath.includes('/home/runner/workspace/')) {
+        // Usa direttamente il percorso assoluto
+        console.log(`Tentativo di aggiungere allo ZIP - Usando percorso assoluto: ${filePath}`);
+      } 
+      // Se il percorso inizia con /uploads, costruisci un percorso completo
+      else if (filePath.startsWith('/uploads/')) {
+        filePath = path.join(process.cwd(), filePath);
+        console.log(`Tentativo di aggiungere allo ZIP - Costruito percorso da relativo: ${filePath}`);
+      }
+      // Altrimenti, assumiamo che sia un percorso relativo dentro uploads
+      else {
+        filePath = path.join(process.cwd(), 'uploads', filePath);
+        console.log(`Tentativo di aggiungere allo ZIP - Costruito percorso da relativo semplice: ${filePath}`);
       }
       
-      const filePath = path.join(process.cwd(), 'uploads', relativePath);
-      console.log(`Tentativo di aggiungere allo ZIP - File: ${photo.originalFilename}, Percorso: ${filePath}`);
+      console.log(`Tentativo di aggiungere allo ZIP - File: ${photo.originalFilename}, Percorso finale: ${filePath}`);
       
       if (fs.existsSync(filePath)) {
         // Usa il nome originale del file se disponibile

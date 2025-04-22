@@ -1,0 +1,30 @@
+react-dom.development.js:86 
+ Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `SlotClone`.
+    at DropdownMenu (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a9b69dfd:911:5)
+    at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…unner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=a9b69dfd:52:11
+    at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…unner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=a9b69dfd:33:11
+    at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…unner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=a9b69dfd:41:13
+    at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…unner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=a9b69dfd:52:11
+    at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…unner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=a9b69dfd:33:11
+    at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…unner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=a9b69dfd:41:13
+    at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…ner/workspace/node_modules/.vite/deps/chunk-2WZHSNBH.js?v=a9b69dfd:1982:13
+    at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…space/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=a9b69dfd:191:13
+    at Provider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…unner/workspace/node_modules/.vite/deps/chunk-7X6RRC7I.js?v=a9b69dfd:38:15)
+    at Provider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…ner/workspace/node_modules/.vite/deps/chunk-2WZHSNBH.js?v=a9b69dfd:1917:15)
+    at Popper (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…ner/workspace/node_modules/.vite/deps/chunk-2WZHSNBH.js?v=a9b69dfd:1974:11)
+    at Tooltip (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…kspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=a9b69dfd:109:5)
+    at Provider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…unner/workspace/node_modules/.vite/deps/chunk-7X6RRC7I.js?v=a9b69dfd:38:15)
+    at TooltipProvider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…rkspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=a9b69dfd:65:5)
+    at div
+    at div
+    at div
+    at div
+    at PublicGalleryPage (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/pages/public/galleries/[slug].tsx?t=1745330182880:63:20)
+    at Route (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=a9b69dfd:191:16)
+    at Switch (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=a9b69dfd:247:17)
+    at Router
+    at AuthProvider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/hooks/use-auth.tsx:26:32)
+    at QueryClientProvider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.d…rkspace/node_modules/.vite/deps/@tanstack_react-query.js?v=a9b69dfd:2805:3)
+    at App

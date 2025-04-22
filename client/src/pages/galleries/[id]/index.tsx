@@ -14,7 +14,8 @@ import {
   Share,
   QrCode,
   MoveVertical,
-  Download
+  Download,
+  Film
 } from "lucide-react";
 
 import {
@@ -40,6 +41,7 @@ import { PhotoUploader } from "@/components/galleries/photo-uploader";
 import { ChapterList } from "@/components/galleries/chapter-list";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
 import { PhotoChapterManager } from "@/components/galleries/photo-chapter-manager";
+import VideoManager from "@/components/galleries/video-manager";
 
 export default function GalleryPage() {
   const [, params] = useRoute("/galleries/:id");
@@ -173,7 +175,7 @@ export default function GalleryPage() {
           {/* Contenuto principale */}
           <div>
             <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-              <TabsList className="grid grid-cols-4 mb-4">
+              <TabsList className="grid grid-cols-5 mb-4">
                 <TabsTrigger value="photos">
                   <LayoutGrid className="h-4 w-4 mr-2" />
                   Foto
@@ -185,6 +187,10 @@ export default function GalleryPage() {
                 <TabsTrigger value="organize">
                   <MoveVertical className="h-4 w-4 mr-2" />
                   Organizza
+                </TabsTrigger>
+                <TabsTrigger value="video">
+                  <Film className="h-4 w-4 mr-2" />
+                  Video
                 </TabsTrigger>
                 <TabsTrigger value="settings">
                   <SettingsIcon className="h-4 w-4 mr-2" />

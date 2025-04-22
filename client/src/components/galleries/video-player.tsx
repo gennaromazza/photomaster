@@ -144,7 +144,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-5xl max-w-[95vw] p-0 bg-black/90 border-neutral-800 overflow-hidden" closeButtonProps={{ className: 'hidden' }}>
+      <DialogContent className="sm:max-w-5xl max-w-[95vw] p-0 bg-black/90 border-neutral-800 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 text-white">
           <h2 className="text-lg font-semibold truncate max-w-[70%]">{video.title}</h2>
@@ -155,7 +155,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 variant="ghost"
                 size="sm"
                 className="text-white hover:bg-white/10"
-                onClick={() => window.open(video.videoUrl, "_blank")}
+                onClick={() => video.videoUrl && window.open(video.videoUrl, "_blank")}
               >
                 <ExternalLink className="h-4 w-4 mr-1" />
                 Apri video

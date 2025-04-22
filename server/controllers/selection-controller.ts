@@ -318,41 +318,40 @@ export const getSessionsByGallery = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Galleria non trovata' });
     }
     
-    // Ottenere tutte le sessioni per questa galleria
-    const sessionsResult = await pool.query(
-      'SELECT * FROM selection_sessions WHERE gallery_id = $1 ORDER BY started_at',
-      [galleryId]
-    );
+    // Query ottimizzata che conta le selezioni e i commenti per ogni sessione in una sola query
+    const sessionsResult = await pool.query(`
+      SELECT 
+        s.*,
+        COUNT(DISTINCT ps.id) as selections_count,
+        COUNT(DISTINCT pc.id) as comments_count
+      FROM 
+        selection_sessions s
+        LEFT JOIN photo_selections ps ON s.id = ps.session_id
+        LEFT JOIN photo_comments pc ON s.id = pc.session_id
+      WHERE 
+        s.gallery_id = $1
+      GROUP BY 
+        s.id
+      ORDER BY 
+        s.started_at
+    `, [galleryId]);
     
-    // Per ogni sessione, contare le selezioni e i commenti
-    const sessionsWithCounts = await Promise.all(sessionsResult.rows.map(async (session) => {
-      const selectionsCountResult = await pool.query(
-        'SELECT COUNT(*) FROM photo_selections WHERE session_id = $1',
-        [session.id]
-      );
-      
-      const commentsCountResult = await pool.query(
-        'SELECT COUNT(*) FROM photo_comments WHERE session_id = $1',
-        [session.id]
-      );
-      
-      // Converti i nomi delle colonne da snake_case a camelCase
-      return {
-        id: session.id,
-        galleryId: session.gallery_id,
-        clientId: session.client_id,
-        clientName: session.client_name,
-        clientEmail: session.client_email,
-        sessionKey: session.session_key,
-        status: session.status,
-        startedAt: session.started_at,
-        completedAt: session.completed_at,
-        notes: session.notes,
-        _count: {
-          selections: parseInt(selectionsCountResult.rows[0].count),
-          comments: parseInt(commentsCountResult.rows[0].count)
-        }
-      };
+    // Converti i nomi delle colonne da snake_case a camelCase
+    const sessionsWithCounts = sessionsResult.rows.map(session => ({
+      id: session.id,
+      galleryId: session.gallery_id,
+      clientId: session.client_id,
+      clientName: session.client_name,
+      clientEmail: session.client_email,
+      sessionKey: session.session_key,
+      status: session.status,
+      startedAt: session.started_at,
+      completedAt: session.completed_at,
+      notes: session.notes,
+      _count: {
+        selections: parseInt(session.selections_count),
+        comments: parseInt(session.comments_count)
+      }
     }));
     
     res.status(200).json(sessionsWithCounts);
@@ -687,10 +686,22 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
         }
       }
       
+      // Ottieni gallery_id dalla foto
+      const photoInfoResult = await pool.query(
+        'SELECT gallery_id FROM photos WHERE id = $1',
+        [photoId]
+      );
+      
+      if (photoInfoResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Foto non trovata' });
+      }
+      
+      const galleryId = photoInfoResult.rows[0].gallery_id;
+      
       // Aggiungere la selezione
       await pool.query(
-        'INSERT INTO photo_selections (photo_id, session_id) VALUES ($1, $2)',
-        [photoId, sessionId]
+        'INSERT INTO photo_selections (photo_id, session_id, gallery_id) VALUES ($1, $2, $3)',
+        [photoId, sessionId, galleryId]
       );
       
       action = 'added';
@@ -728,7 +739,7 @@ export const getSessionSelections = async (req: Request, res: Response) => {
     
     // Ottieni tutte le selezioni con i dettagli delle foto
     const selectionsResult = await pool.query(
-      `SELECT ps.*, p.filename, p.title, p.description, p.chapter_id 
+      `SELECT ps.*, p.filename, p.title, p.caption, p.chapter_id 
        FROM photo_selections ps
        JOIN photos p ON ps.photo_id = p.id
        WHERE ps.session_id = $1
@@ -745,7 +756,7 @@ export const getSessionSelections = async (req: Request, res: Response) => {
       photo: {
         filename: row.filename,
         title: row.title,
-        description: row.description,
+        description: row.caption, // Usiamo il campo caption come description
         chapterId: row.chapter_id
       }
     }));
@@ -833,10 +844,10 @@ export const addComment = async (req: Request, res: Response) => {
     // Aggiungere il commento
     const commentResult = await pool.query(
       `INSERT INTO photo_comments 
-       (photo_id, session_id, content, user_id, client_name, is_read)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       (photo_id, session_id, content, user_id, client_name, is_read, name, email, comment)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [photoId, sessionId, content, userId, clientName, false]
+      [photoId, sessionId, content, userId, clientName, false, clientName || 'Guest', 'no-reply@example.com', content || '']
     );
     
     // Converti i nomi delle colonne da snake_case a camelCase
@@ -917,13 +928,35 @@ export const replyToComment = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Commento padre non trovato' });
     }
     
+    // Ottieni l'username o altre informazioni dell'utente se disponibili
+    let userInfo = null;
+    if (userId) {
+      const userResult = await pool.query(
+        'SELECT username, full_name FROM users WHERE id = $1',
+        [userId]
+      );
+      if (userResult.rows.length > 0) {
+        userInfo = userResult.rows[0];
+      }
+    }
+    
     // Aggiungere la risposta
     const commentResult = await pool.query(
       `INSERT INTO photo_comments 
-       (photo_id, session_id, content, user_id, parent_id, is_read)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       (photo_id, session_id, content, user_id, parent_id, is_read, name, email, comment)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [photoId, sessionId, content, userId, parentId, false]
+      [
+        photoId, 
+        sessionId, 
+        content, 
+        userId, 
+        parentId, 
+        false, 
+        userInfo ? userInfo.full_name || userInfo.username : 'Staff',
+        'staff@example.com',
+        content || ''
+      ]
     );
     
     // Converti i nomi delle colonne da snake_case a camelCase

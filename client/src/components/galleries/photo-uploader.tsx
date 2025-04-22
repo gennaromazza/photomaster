@@ -159,22 +159,53 @@ export function PhotoUploader({
               resolve();
             } else {
               let errorMsg = "Caricamento fallito. Controlla il file e riprova.";
+              let errorTitle = "Errore";
+              
               try {
                 const errorResponse = JSON.parse(xhr.responseText);
                 if (errorResponse.error) {
-                  errorMsg = errorResponse.error;
-                  if (errorResponse.details) {
-                    errorMsg += `. Dettagli: ${errorResponse.details}`;
+                  errorTitle = errorResponse.error;
+                  
+                  // Usa il messaggio dettagliato se disponibile
+                  if (errorResponse.message) {
+                    errorMsg = errorResponse.message;
+                  } else if (errorResponse.details) {
+                    errorMsg = errorResponse.details;
                   }
+                  
                   console.error("Errore server:", errorResponse);
                 }
               } catch (e) {
                 console.error("Risposta server non è JSON valido:", xhr.responseText);
               }
               
+              // Per alcuni errori specifici, possiamo personalizzare ulteriormente il messaggio
+              if (xhr.status === 409 && errorTitle === "File duplicato") {
+                // Per file duplicati, non è necessario interrompere l'intero processo di caricamento
+                // Aggiorniamo solo lo stato di questo file specifico
+                setFiles((prev) =>
+                  prev.map((f) =>
+                    f.id === file.id
+                      ? { ...f, status: "error", error: errorMsg }
+                      : f
+                  )
+                );
+                
+                toast({
+                  title: errorTitle,
+                  description: errorMsg,
+                  variant: "warning"
+                });
+                
+                // Risolviamo la promessa in modo che gli altri file possano continuare a essere caricati
+                resolve();
+                return;
+              }
+              
+              // Per altri errori, continuiamo con il comportamento esistente
               reject(new Error(`HTTP Error: ${xhr.status} - ${errorMsg}`));
               toast({
-                title: "Errore",
+                title: errorTitle,
                 description: errorMsg,
                 variant: "destructive"
               });

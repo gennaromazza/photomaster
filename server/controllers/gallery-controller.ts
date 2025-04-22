@@ -776,7 +776,8 @@ export const uploadPhoto = async (req: Request, res: Response) => {
           .resize({
             width: MEDIUM_SIZE,
             height: MEDIUM_SIZE,
-            fit: 'inside', withoutEnlargement: true
+            fit: 'inside',
+            withoutEnlargement: true
           })
           .png({ 
             compressionLevel: COMPRESSION_QUALITY.png,
@@ -789,7 +790,8 @@ export const uploadPhoto = async (req: Request, res: Response) => {
           .resize({
             width: MEDIUM_SIZE,
             height: MEDIUM_SIZE,
-            fit: 'inside', withoutEnlargement: true
+            fit: 'inside',
+            withoutEnlargement: true
           })
           .toFile(mediumPath);
       }
@@ -800,7 +802,8 @@ export const uploadPhoto = async (req: Request, res: Response) => {
           .resize({
             width: LARGE_SIZE,
             height: LARGE_SIZE,
-            fit: 'inside', withoutEnlargement: true
+            fit: 'inside',
+            withoutEnlargement: true
           })
           .jpeg({ 
             quality: COMPRESSION_QUALITY.jpeg, 
@@ -813,7 +816,8 @@ export const uploadPhoto = async (req: Request, res: Response) => {
           .resize({
             width: LARGE_SIZE,
             height: LARGE_SIZE,
-            fit: 'inside', withoutEnlargement: true
+            fit: 'inside',
+            withoutEnlargement: true
           })
           .png({ 
             compressionLevel: COMPRESSION_QUALITY.png,
@@ -825,7 +829,8 @@ export const uploadPhoto = async (req: Request, res: Response) => {
           .resize({
             width: LARGE_SIZE,
             height: LARGE_SIZE,
-            fit: 'inside', withoutEnlargement: true
+            fit: 'inside',
+            withoutEnlargement: true
           })
           .toFile(largePath);
       }
@@ -835,7 +840,8 @@ export const uploadPhoto = async (req: Request, res: Response) => {
         .resize({
           width: MEDIUM_SIZE,
           height: MEDIUM_SIZE,
-          fit: 'inside', withoutEnlargement: true
+          fit: 'inside',
+            withoutEnlargement: true
         })
         .webp({ 
           quality: COMPRESSION_QUALITY.webp,
@@ -1116,7 +1122,8 @@ export const recompressGalleryImages = async (req: Request, res: Response) => {
             .resize({
               width: THUMBNAIL_SIZE,
               height: THUMBNAIL_SIZE,
-              fit: 'inside', withoutEnlargement: true
+              fit: 'inside',
+            withoutEnlargement: true
             })
             .jpeg({ 
               quality: compressionSettings.jpeg, 
@@ -1133,7 +1140,8 @@ export const recompressGalleryImages = async (req: Request, res: Response) => {
               .resize({
                 width: MEDIUM_SIZE,
                 height: MEDIUM_SIZE,
-                fit: 'inside', withoutEnlargement: true
+                fit: 'inside',
+            withoutEnlargement: true
               })
               .jpeg({ 
                 quality: compressionSettings.jpeg, 
@@ -1146,7 +1154,8 @@ export const recompressGalleryImages = async (req: Request, res: Response) => {
               .resize({
                 width: MEDIUM_SIZE,
                 height: MEDIUM_SIZE,
-                fit: 'inside', withoutEnlargement: true
+                fit: 'inside',
+            withoutEnlargement: true
               })
               .png({ 
                 compressionLevel: compressionSettings.png,
@@ -1158,7 +1167,8 @@ export const recompressGalleryImages = async (req: Request, res: Response) => {
               .resize({
                 width: MEDIUM_SIZE,
                 height: MEDIUM_SIZE,
-                fit: 'inside', withoutEnlargement: true
+                fit: 'inside',
+            withoutEnlargement: true
               })
               .toFile(photo.mediumPath);
           }
@@ -1171,7 +1181,8 @@ export const recompressGalleryImages = async (req: Request, res: Response) => {
               .resize({
                 width: LARGE_SIZE,
                 height: LARGE_SIZE,
-                fit: 'inside', withoutEnlargement: true
+                fit: 'inside',
+            withoutEnlargement: true
               })
               .jpeg({ 
                 quality: compressionSettings.jpeg, 
@@ -1184,7 +1195,8 @@ export const recompressGalleryImages = async (req: Request, res: Response) => {
               .resize({
                 width: LARGE_SIZE,
                 height: LARGE_SIZE,
-                fit: 'inside', withoutEnlargement: true
+                fit: 'inside',
+            withoutEnlargement: true
               })
               .png({ 
                 compressionLevel: compressionSettings.png,
@@ -1196,7 +1208,8 @@ export const recompressGalleryImages = async (req: Request, res: Response) => {
               .resize({
                 width: LARGE_SIZE,
                 height: LARGE_SIZE,
-                fit: 'inside', withoutEnlargement: true
+                fit: 'inside',
+            withoutEnlargement: true
               })
               .toFile(photo.largePath);
           }
@@ -1211,7 +1224,8 @@ export const recompressGalleryImages = async (req: Request, res: Response) => {
             .resize({
               width: MEDIUM_SIZE,
               height: MEDIUM_SIZE,
-              fit: 'inside', withoutEnlargement: true
+              fit: 'inside',
+            withoutEnlargement: true
             })
             .webp({ 
               quality: compressionSettings.webp,

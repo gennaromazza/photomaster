@@ -502,6 +502,17 @@ export const getSessionByKey = async (req: Request, res: Response) => {
         id: gallery.id,
         name: gallery.name,
         slug: gallery.slug
+      } : null,
+      settings: settings ? {
+        id: settings.id,
+        galleryId: settings.gallery_id,
+        isEnabled: settings.is_enabled,
+        maxSelections: settings.max_selections,
+        allowComments: settings.allow_comments,
+        expiresAt: settings.expires_at,
+        customMessage: settings.custom_message,
+        createdAt: settings.created_at,
+        updatedAt: settings.updated_at
       } : null
     };
     
@@ -521,41 +532,22 @@ export const completeSession = async (req: Request, res: Response) => {
     }
     
     // Verifica se la sessione esiste
-    const sessionResult = await pool.query(
-      'SELECT * FROM selection_sessions WHERE id = $1',
-      [id]
-    );
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, id));
     
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
-    // Aggiorna la sessione come completata
-    const updatedSessionResult = await pool.query(
-      `UPDATE selection_sessions 
-       SET status = $1, completed_at = $2
-       WHERE id = $3
-       RETURNING *`,
-      ['completed', new Date(), id]
-    );
+    // Aggiorna lo stato della sessione
+    const [updatedSession] = await db.update(selectionSessions)
+      .set({
+        status: 'completed',
+        completedAt: new Date()
+      })
+      .where(eq(selectionSessions.id, id))
+      .returning();
     
-    const session = updatedSessionResult.rows[0];
-    
-    // Converti i nomi delle colonne da snake_case a camelCase
-    const result = {
-      id: session.id,
-      galleryId: session.gallery_id,
-      clientId: session.client_id,
-      clientName: session.client_name,
-      clientEmail: session.client_email,
-      sessionKey: session.session_key,
-      status: session.status,
-      startedAt: session.started_at,
-      completedAt: session.completed_at,
-      notes: session.notes
-    };
-    
-    res.status(200).json(result);
+    res.status(200).json(updatedSession);
   } catch (error: any) {
     console.error('Error in completeSession:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -571,33 +563,20 @@ export const deleteSession = async (req: Request, res: Response) => {
     }
     
     // Verifica se la sessione esiste
-    const sessionResult = await pool.query(
-      'SELECT * FROM selection_sessions WHERE id = $1',
-      [id]
-    );
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, id));
     
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
-    // Elimina tutte le selezioni e i commenti associati
-    await pool.query(
-      'DELETE FROM photo_selections WHERE session_id = $1',
-      [id]
-    );
-    
-    await pool.query(
-      'DELETE FROM photo_comments WHERE session_id = $1',
-      [id]
-    );
+    // Elimina prima tutte le selezioni e i commenti associati (cascade non è sempre affidabile)
+    await db.delete(photoSelections).where(eq(photoSelections.sessionId, id));
+    await db.delete(photoComments).where(eq(photoComments.sessionId, id));
     
     // Elimina la sessione
-    await pool.query(
-      'DELETE FROM selection_sessions WHERE id = $1',
-      [id]
-    );
+    await db.delete(selectionSessions).where(eq(selectionSessions.id, id));
     
-    res.status(200).json({ success: true, message: 'Sessione eliminata con successo' });
+    res.status(200).json({ success: true });
   } catch (error: any) {
     console.error('Error in deleteSession:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -606,102 +585,85 @@ export const deleteSession = async (req: Request, res: Response) => {
 
 export const togglePhotoSelection = async (req: Request, res: Response) => {
   try {
-    // Validare i dati in ingresso
-    const parseResult = insertPhotoSelectionSchema.safeParse(req.body);
+    const photoId = parseInt(req.params.photoId);
+    const { sessionId } = req.body;
     
-    if (!parseResult.success) {
-      return res.status(400).json({ 
-        error: 'Dati non validi',
-        details: parseResult.error.format()
-      });
+    if (isNaN(photoId) || !sessionId) {
+      return res.status(400).json({ error: 'Dati non validi' });
     }
     
-    const { photoId, sessionId } = parseResult.data;
+    // Verifica se la foto esiste
+    const [photo] = await db.select().from(photos).where(eq(photos.id, photoId));
     
-    // Verificare se la foto esiste
-    const photoResult = await pool.query(
-      'SELECT id FROM photos WHERE id = $1',
-      [photoId]
-    );
-    
-    if (photoResult.rows.length === 0) {
+    if (!photo) {
       return res.status(404).json({ error: 'Foto non trovata' });
     }
     
-    // Verificare se la sessione esiste e non è completata
-    const sessionResult = await pool.query(
-      'SELECT id, status, gallery_id FROM selection_sessions WHERE id = $1',
-      [sessionId]
-    );
+    // Verifica se la sessione esiste
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, sessionId));
     
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
-    const session = sessionResult.rows[0];
-    
+    // Verifica se la sessione è completata
     if (session.status === 'completed') {
-      return res.status(403).json({ error: 'La sessione è stata completata e non può essere modificata' });
+      return res.status(403).json({ error: 'La sessione è completata, non è possibile modificare le selezioni' });
     }
     
-    // Verificare se la foto è già selezionata
-    const existingSelectionResult = await pool.query(
-      'SELECT id FROM photo_selections WHERE photo_id = $1 AND session_id = $2',
-      [photoId, sessionId]
-    );
+    // Verifica se la galleria della foto corrisponde a quella della sessione
+    if (photo.galleryId !== session.galleryId) {
+      return res.status(403).json({ error: 'La foto non appartiene alla galleria della sessione' });
+    }
     
-    let action = '';
+    // Verifica se la selezione esiste già
+    const [existingSelection] = await db.select()
+      .from(photoSelections)
+      .where(and(
+        eq(photoSelections.photoId, photoId),
+        eq(photoSelections.sessionId, sessionId)
+      ));
     
-    if (existingSelectionResult.rows.length > 0) {
-      // Rimuovere la selezione
-      await pool.query(
-        'DELETE FROM photo_selections WHERE photo_id = $1 AND session_id = $2',
-        [photoId, sessionId]
-      );
-      
+    let action: 'added' | 'removed';
+    
+    if (existingSelection) {
+      // Rimuovi la selezione esistente
+      await db.delete(photoSelections)
+        .where(and(
+          eq(photoSelections.photoId, photoId),
+          eq(photoSelections.sessionId, sessionId)
+        ));
       action = 'removed';
     } else {
-      // Verificare eventuali limiti sulle selezioni
-      const settingsResult = await pool.query(
-        'SELECT max_selections FROM gallery_selection_settings WHERE gallery_id = $1',
-        [session.gallery_id]
-      );
+      // Aggiungi una nuova selezione
+      const [settings] = await db.select()
+        .from(gallerySelectionSettings)
+        .where(eq(gallerySelectionSettings.galleryId, session.galleryId));
       
-      const settings = settingsResult.rows.length > 0 ? settingsResult.rows[0] : null;
-      
-      if (settings && settings.max_selections > 0) {
-        // Contare le selezioni attuali
-        const selectionsCountResult = await pool.query(
-          'SELECT COUNT(*) FROM photo_selections WHERE session_id = $1',
-          [sessionId]
-        );
-        
-        const currentSelectionsCount = parseInt(selectionsCountResult.rows[0].count);
-        
-        if (currentSelectionsCount >= settings.max_selections) {
+      // Verifica limiti di selezione (se presenti)
+      if (settings && settings.maxSelections > 0) {
+        const [selectionsCount] = await db.select({
+          count: sql`count(*)`
+        }).from(photoSelections)
+          .where(eq(photoSelections.sessionId, sessionId));
+          
+        if (Number(selectionsCount?.count || 0) >= settings.maxSelections) {
           return res.status(403).json({ 
-            error: 'Numero massimo di selezioni raggiunto',
-            max: settings.max_selections,
-            current: currentSelectionsCount
+            error: `È stato raggiunto il limite massimo di ${settings.maxSelections} foto selezionate`
           });
         }
       }
       
-      // Aggiungere la selezione
-      await pool.query(
-        'INSERT INTO photo_selections (photo_id, session_id) VALUES ($1, $2)',
-        [photoId, sessionId]
-      );
-      
+      // Crea la nuova selezione
+      await db.insert(photoSelections)
+        .values({
+          photoId,
+          sessionId,
+        });
       action = 'added';
     }
     
-    res.status(200).json({ 
-      success: true, 
-      action,
-      photoId,
-      sessionId
-    });
+    res.status(200).json({ photoId, sessionId, action });
   } catch (error: any) {
     console.error('Error in togglePhotoSelection:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -716,41 +678,44 @@ export const getSessionSelections = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'ID sessione non valido' });
     }
     
-    // Verificare se la sessione esiste
-    const sessionResult = await pool.query(
-      'SELECT * FROM selection_sessions WHERE id = $1',
-      [sessionId]
-    );
+    // Verifica se la sessione esiste
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, sessionId));
     
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
-    // Ottieni tutte le selezioni con i dettagli delle foto
-    const selectionsResult = await pool.query(
-      `SELECT ps.*, p.filename, p.title, p.description, p.chapter_id 
-       FROM photo_selections ps
-       JOIN photos p ON ps.photo_id = p.id
-       WHERE ps.session_id = $1
-       ORDER BY ps.created_at DESC`,
-      [sessionId]
-    );
+    // Ottieni tutte le selezioni per questa sessione
+    const selections = await db.select({
+      id: photoSelections.id,
+      photoId: photoSelections.photoId,
+      sessionId: photoSelections.sessionId,
+      createdAt: photoSelections.createdAt,
+    })
+      .from(photoSelections)
+      .where(eq(photoSelections.sessionId, sessionId))
+      .orderBy(photoSelections.createdAt);
     
-    // Converti i nomi delle colonne da snake_case a camelCase
-    const selections = selectionsResult.rows.map(row => ({
-      id: row.id,
-      photoId: row.photo_id,
-      sessionId: row.session_id,
-      createdAt: row.created_at,
-      photo: {
-        filename: row.filename,
-        title: row.title,
-        description: row.description,
-        chapterId: row.chapter_id
-      }
-    }));
+    // Ottieni i dettagli delle foto selezionate
+    const photoDetails = await db.select({
+      id: photos.id,
+      filename: photos.filename,
+      title: photos.title,
+      chapterId: photos.chapterId
+    })
+      .from(photos)
+      .where(inArray(photos.id, selections.map(s => s.photoId)));
     
-    res.status(200).json(selections);
+    // Combina i risultati
+    const result = selections.map(selection => {
+      const photo = photoDetails.find(p => p.id === selection.photoId);
+      return {
+        ...selection,
+        photo
+      };
+    });
+    
+    res.status(200).json(result);
   } catch (error: any) {
     console.error('Error in getSessionSelections:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -759,19 +724,30 @@ export const getSessionSelections = async (req: Request, res: Response) => {
 
 export const getPhotoCommentsCount = async (req: Request, res: Response) => {
   try {
-    const photoId = parseInt(req.params.photoId);
+    const sessionId = parseInt(req.params.sessionId);
     
-    if (isNaN(photoId)) {
-      return res.status(400).json({ error: 'ID foto non valido' });
+    if (isNaN(sessionId)) {
+      return res.status(400).json({ error: 'ID sessione non valido' });
     }
     
-    // Conta i commenti per questa foto
-    const countResult = await pool.query(
-      'SELECT COUNT(*) FROM photo_comments WHERE photo_id = $1',
-      [photoId]
-    );
+    // Verifica se la sessione esiste
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, sessionId));
     
-    res.status(200).json({ count: parseInt(countResult.rows[0].count) });
+    if (!session) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+    
+    // Ottieni il conteggio dei commenti per ogni foto
+    const comments = await db.select({
+      photoId: photoComments.photoId,
+      count: sql`count(*)`,
+      unreadCount: sql`sum(case when is_read = false then 1 else 0 end)::int`
+    })
+      .from(photoComments)
+      .where(eq(photoComments.sessionId, sessionId))
+      .groupBy(photoComments.photoId);
+    
+    res.status(200).json(comments);
   } catch (error: any) {
     console.error('Error in getPhotoCommentsCount:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -780,7 +756,7 @@ export const getPhotoCommentsCount = async (req: Request, res: Response) => {
 
 export const addComment = async (req: Request, res: Response) => {
   try {
-    // Validare i dati in ingresso
+    // Valida i dati in ingresso
     const parseResult = insertPhotoCommentSchema.safeParse(req.body);
     
     if (!parseResult.success) {
@@ -790,69 +766,45 @@ export const addComment = async (req: Request, res: Response) => {
       });
     }
     
-    const { photoId, sessionId, content, userId, clientName } = parseResult.data;
+    const { photoId, sessionId, content, clientName } = parseResult.data;
     
-    // Verificare se la foto esiste
-    const photoResult = await pool.query(
-      'SELECT id FROM photos WHERE id = $1',
-      [photoId]
-    );
+    // Verifica se la foto esiste
+    const [photo] = await db.select().from(photos).where(eq(photos.id, photoId));
     
-    if (photoResult.rows.length === 0) {
+    if (!photo) {
       return res.status(404).json({ error: 'Foto non trovata' });
     }
     
-    // Verificare se la sessione esiste e non è completata
-    const sessionResult = await pool.query(
-      'SELECT id, status, gallery_id FROM selection_sessions WHERE id = $1',
-      [sessionId]
-    );
+    // Verifica se la sessione esiste
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, sessionId));
     
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
-    const session = sessionResult.rows[0];
-    
+    // Verifica se la sessione è completata
     if (session.status === 'completed') {
-      return res.status(403).json({ error: 'La sessione è stata completata e non può essere modificata' });
+      return res.status(403).json({ error: 'La sessione è completata, non è possibile aggiungere commenti' });
     }
     
-    // Verificare se i commenti sono abilitati per questa galleria
-    const settingsResult = await pool.query(
-      'SELECT allow_comments FROM gallery_selection_settings WHERE gallery_id = $1',
-      [session.gallery_id]
-    );
-    
-    const settings = settingsResult.rows.length > 0 ? settingsResult.rows[0] : null;
-    
-    if (settings && !settings.allow_comments) {
-      return res.status(403).json({ error: 'I commenti non sono abilitati per questa galleria' });
+    // Verifica se la galleria della foto corrisponde a quella della sessione
+    if (photo.galleryId !== session.galleryId) {
+      return res.status(403).json({ error: 'La foto non appartiene alla galleria della sessione' });
     }
     
-    // Aggiungere il commento
-    const commentResult = await pool.query(
-      `INSERT INTO photo_comments 
-       (photo_id, session_id, content, user_id, client_name, is_read)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [photoId, sessionId, content, userId, clientName, false]
-    );
+    // Crea il commento
+    const [comment] = await db.insert(photoComments)
+      .values({
+        photoId,
+        sessionId,
+        content,
+        userId: null, // Commento del cliente
+        clientName: clientName || session.clientName,
+        isRead: false
+      })
+      .returning();
     
-    // Converti i nomi delle colonne da snake_case a camelCase
-    const comment = commentResult.rows[0];
-    const result = {
-      id: comment.id,
-      photoId: comment.photo_id,
-      sessionId: comment.session_id,
-      content: comment.content,
-      userId: comment.user_id,
-      clientName: comment.client_name,
-      isRead: comment.is_read,
-      createdAt: comment.created_at
-    };
-    
-    res.status(201).json(result);
+    res.status(201).json(comment);
   } catch (error: any) {
     console.error('Error in addComment:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -861,85 +813,49 @@ export const addComment = async (req: Request, res: Response) => {
 
 export const replyToComment = async (req: Request, res: Response) => {
   try {
-    // Validare i dati in ingresso
-    const schema = z.object({
-      photoId: z.number(),
-      sessionId: z.number(),
-      content: z.string(),
-      parentId: z.number(),
-      userId: z.number().nullable().optional()
-    });
-    
-    const parseResult = schema.safeParse(req.body);
-    
-    if (!parseResult.success) {
-      return res.status(400).json({ 
-        error: 'Dati non validi',
-        details: parseResult.error.format()
-      });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non autorizzato' });
     }
     
-    const { photoId, sessionId, content, parentId, userId } = parseResult.data;
+    // Valida i dati in ingresso
+    const { photoId, sessionId, content } = req.body;
     
-    // Verificare se la foto esiste
-    const photoResult = await pool.query(
-      'SELECT id FROM photos WHERE id = $1',
-      [photoId]
-    );
+    if (!photoId || !sessionId || !content) {
+      return res.status(400).json({ error: 'Dati mancanti o non validi' });
+    }
     
-    if (photoResult.rows.length === 0) {
+    // Verifica se la foto esiste
+    const [photo] = await db.select().from(photos).where(eq(photos.id, photoId));
+    
+    if (!photo) {
       return res.status(404).json({ error: 'Foto non trovata' });
     }
     
-    // Verificare se la sessione esiste e non è completata
-    const sessionResult = await pool.query(
-      'SELECT id, status, gallery_id FROM selection_sessions WHERE id = $1',
-      [sessionId]
-    );
+    // Verifica se la sessione esiste
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, sessionId));
     
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
-    const session = sessionResult.rows[0];
+    // Crea il commento di risposta
+    const [comment] = await db.insert(photoComments)
+      .values({
+        photoId,
+        sessionId,
+        content,
+        userId: req.user.id,
+        clientName: null,
+        isRead: true // La risposta dell'utente è già letta
+      })
+      .returning();
     
-    if (session.status === 'completed') {
-      return res.status(403).json({ error: 'La sessione è stata completata e non può essere modificata' });
-    }
-    
-    // Verificare se il commento padre esiste
-    const parentCommentResult = await pool.query(
-      'SELECT id FROM photo_comments WHERE id = $1',
-      [parentId]
-    );
-    
-    if (parentCommentResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Commento padre non trovato' });
-    }
-    
-    // Aggiungere la risposta
-    const commentResult = await pool.query(
-      `INSERT INTO photo_comments 
-       (photo_id, session_id, content, user_id, parent_id, is_read)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [photoId, sessionId, content, userId, parentId, false]
-    );
-    
-    // Converti i nomi delle colonne da snake_case a camelCase
-    const comment = commentResult.rows[0];
-    const result = {
-      id: comment.id,
-      photoId: comment.photo_id,
-      sessionId: comment.session_id,
-      content: comment.content,
-      userId: comment.user_id,
-      parentId: comment.parent_id,
-      isRead: comment.is_read,
-      createdAt: comment.created_at
+    // Ottieni i dettagli dell'utente
+    comment.user = {
+      username: req.user.username,
     };
     
-    res.status(201).json(result);
+    res.status(201).json(comment);
   } catch (error: any) {
     console.error('Error in replyToComment:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -954,42 +870,57 @@ export const getSessionComments = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'ID sessione non valido' });
     }
     
-    // Verificare se la sessione esiste
-    const sessionResult = await pool.query(
-      'SELECT * FROM selection_sessions WHERE id = $1',
-      [sessionId]
-    );
+    // Verifica se la sessione esiste
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, sessionId));
     
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
     // Ottieni tutti i commenti per questa sessione
-    const commentsResult = await pool.query(
-      `SELECT pc.*, u.full_name as user_full_name, u.username as user_username
-       FROM photo_comments pc
-       LEFT JOIN users u ON pc.user_id = u.id
-       WHERE pc.session_id = $1
-       ORDER BY pc.created_at ASC`,
-      [sessionId]
-    );
+    const comments = await db.select({
+      id: photoComments.id,
+      photoId: photoComments.photoId,
+      sessionId: photoComments.sessionId,
+      content: photoComments.content,
+      userId: photoComments.userId,
+      clientName: photoComments.clientName,
+      isRead: photoComments.isRead,
+      createdAt: photoComments.createdAt
+    })
+      .from(photoComments)
+      .where(eq(photoComments.sessionId, sessionId))
+      .orderBy(photoComments.createdAt);
     
-    // Converti e organizza i commenti
-    const comments = commentsResult.rows.map(row => ({
-      id: row.id,
-      photoId: row.photo_id,
-      sessionId: row.session_id,
-      content: row.content,
-      userId: row.user_id,
-      clientName: row.client_name,
-      parentId: row.parent_id,
-      isRead: row.is_read,
-      createdAt: row.created_at,
-      user: row.user_id ? {
-        fullName: row.user_full_name,
-        username: row.user_username
-      } : null
-    }));
+    // Ottieni gli utenti associati ai commenti
+    const userIds = comments.filter(c => c.userId !== null).map(c => c.userId as number);
+    
+    if (userIds.length > 0) {
+      const users = await db.select({
+        id: users.id,
+        username: users.username
+      })
+        .from(users)
+        .where(inArray(users.id, userIds));
+      
+      // Aggiungi le informazioni degli utenti ai commenti
+      const commentsWithUsers = comments.map(comment => {
+        if (comment.userId) {
+          const user = users.find(u => u.id === comment.userId);
+          if (user) {
+            return {
+              ...comment,
+              user: {
+                username: user.username
+              }
+            };
+          }
+        }
+        return comment;
+      });
+      
+      return res.status(200).json(commentsWithUsers);
+    }
     
     res.status(200).json(comments);
   } catch (error: any) {
@@ -1001,74 +932,73 @@ export const getSessionComments = async (req: Request, res: Response) => {
 export const getPhotoComments = async (req: Request, res: Response) => {
   try {
     const photoId = parseInt(req.params.photoId);
+    const sessionId = parseInt(req.params.sessionId);
     
-    if (isNaN(photoId)) {
-      return res.status(400).json({ error: 'ID foto non valido' });
+    if (isNaN(photoId) || isNaN(sessionId)) {
+      return res.status(400).json({ error: 'ID foto o sessione non validi' });
     }
     
-    // Verificare se la foto esiste
-    const photoResult = await pool.query(
-      'SELECT id FROM photos WHERE id = $1',
-      [photoId]
-    );
+    // Verifica se la foto esiste
+    const [photo] = await db.select().from(photos).where(eq(photos.id, photoId));
     
-    if (photoResult.rows.length === 0) {
+    if (!photo) {
       return res.status(404).json({ error: 'Foto non trovata' });
     }
     
-    // Ottieni sessionId dai parametri query se disponibile
-    const sessionId = req.query.sessionId ? parseInt(req.query.sessionId as string) : null;
+    // Verifica se la sessione esiste
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, sessionId));
     
-    // Se sessionId è fornito, verificare se la sessione esiste
-    if (sessionId) {
-      const sessionResult = await pool.query(
-        'SELECT * FROM selection_sessions WHERE id = $1',
-        [sessionId]
-      );
+    if (!session) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+    
+    // Ottieni tutti i commenti per questa foto in questa sessione
+    const comments = await db.select({
+      id: photoComments.id,
+      photoId: photoComments.photoId,
+      sessionId: photoComments.sessionId,
+      content: photoComments.content,
+      userId: photoComments.userId,
+      clientName: photoComments.clientName,
+      isRead: photoComments.isRead,
+      createdAt: photoComments.createdAt
+    })
+      .from(photoComments)
+      .where(and(
+        eq(photoComments.photoId, photoId),
+        eq(photoComments.sessionId, sessionId)
+      ))
+      .orderBy(photoComments.createdAt);
+    
+    // Ottieni gli utenti associati ai commenti
+    const userIds = comments.filter(c => c.userId !== null).map(c => c.userId as number);
+    
+    if (userIds.length > 0) {
+      const users = await db.select({
+        id: users.id,
+        username: users.username
+      })
+        .from(users)
+        .where(inArray(users.id, userIds));
       
-      if (sessionResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Sessione non trovata' });
-      }
+      // Aggiungi le informazioni degli utenti ai commenti
+      const commentsWithUsers = comments.map(comment => {
+        if (comment.userId) {
+          const user = users.find(u => u.id === comment.userId);
+          if (user) {
+            return {
+              ...comment,
+              user: {
+                username: user.username
+              }
+            };
+          }
+        }
+        return comment;
+      });
+      
+      return res.status(200).json(commentsWithUsers);
     }
-    
-    // Costruire la query in base a se sessionId è fornito
-    let commentsResult;
-    if (sessionId) {
-      commentsResult = await pool.query(
-        `SELECT pc.*, u.full_name as user_full_name, u.username as user_username
-         FROM photo_comments pc
-         LEFT JOIN users u ON pc.user_id = u.id
-         WHERE pc.photo_id = $1 AND pc.session_id = $2
-         ORDER BY pc.created_at ASC`,
-        [photoId, sessionId]
-      );
-    } else {
-      commentsResult = await pool.query(
-        `SELECT pc.*, u.full_name as user_full_name, u.username as user_username
-         FROM photo_comments pc
-         LEFT JOIN users u ON pc.user_id = u.id
-         WHERE pc.photo_id = $1
-         ORDER BY pc.created_at ASC`,
-        [photoId]
-      );
-    }
-    
-    // Converti e organizza i commenti
-    const comments = commentsResult.rows.map(row => ({
-      id: row.id,
-      photoId: row.photo_id,
-      sessionId: row.session_id,
-      content: row.content,
-      userId: row.user_id,
-      clientName: row.client_name,
-      parentId: row.parent_id,
-      isRead: row.is_read,
-      createdAt: row.created_at,
-      user: row.user_id ? {
-        fullName: row.user_full_name,
-        username: row.user_username
-      } : null
-    }));
     
     res.status(200).json(comments);
   } catch (error: any) {
@@ -1085,40 +1015,20 @@ export const markCommentAsRead = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'ID commento non valido' });
     }
     
-    // Verificare se il commento esiste
-    const commentResult = await pool.query(
-      'SELECT * FROM photo_comments WHERE id = $1',
-      [id]
-    );
+    // Verifica se il commento esiste
+    const [comment] = await db.select().from(photoComments).where(eq(photoComments.id, id));
     
-    if (commentResult.rows.length === 0) {
+    if (!comment) {
       return res.status(404).json({ error: 'Commento non trovato' });
     }
     
-    // Aggiornare il commento
-    const updatedCommentResult = await pool.query(
-      `UPDATE photo_comments 
-       SET is_read = true
-       WHERE id = $1
-       RETURNING *`,
-      [id]
-    );
+    // Aggiorna lo stato del commento
+    const [updatedComment] = await db.update(photoComments)
+      .set({ isRead: true })
+      .where(eq(photoComments.id, id))
+      .returning();
     
-    // Converti i nomi delle colonne da snake_case a camelCase
-    const comment = updatedCommentResult.rows[0];
-    const result = {
-      id: comment.id,
-      photoId: comment.photo_id,
-      sessionId: comment.session_id,
-      content: comment.content,
-      userId: comment.user_id,
-      clientName: comment.client_name,
-      parentId: comment.parent_id,
-      isRead: comment.is_read,
-      createdAt: comment.created_at
-    };
-    
-    res.status(200).json(result);
+    res.status(200).json(updatedComment);
   } catch (error: any) {
     console.error('Error in markCommentAsRead:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
@@ -1133,76 +1043,109 @@ export const exportSelections = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'ID sessione non valido' });
     }
     
-    // Verificare se la sessione esiste
-    const sessionResult = await pool.query(
-      'SELECT * FROM selection_sessions WHERE id = $1',
-      [sessionId]
-    );
+    // Verifica se la sessione esiste
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, sessionId));
     
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
-    const session = sessionResult.rows[0];
+    // Ottieni tutte le selezioni per questa sessione
+    const selections = await db.select({
+      id: photoSelections.id,
+      photoId: photoSelections.photoId,
+      sessionId: photoSelections.sessionId,
+      createdAt: photoSelections.createdAt,
+    })
+      .from(photoSelections)
+      .where(eq(photoSelections.sessionId, sessionId))
+      .orderBy(photoSelections.createdAt);
     
-    // Ottieni tutte le selezioni con i dettagli delle foto
-    const selectionsResult = await pool.query(
-      `SELECT ps.id as selection_id, p.id as photo_id, p.filename, p.title, p.description, p.chapter_id,
-              g.name as gallery_name, g.description as gallery_description,
-              gc.title as chapter_title
-       FROM photo_selections ps
-       JOIN photos p ON ps.photo_id = p.id
-       JOIN galleries g ON p.gallery_id = g.id
-       LEFT JOIN gallery_chapters gc ON p.chapter_id = gc.id
-       WHERE ps.session_id = $1
-       ORDER BY gc.title, p.filename`,
-      [sessionId]
-    );
+    if (selections.length === 0) {
+      return res.status(404).json({ error: 'Nessuna selezione trovata per questa sessione' });
+    }
     
-    // Organizza i dati
-    const gallery = {
-      id: session.gallery_id,
-      name: selectionsResult.rows.length > 0 ? selectionsResult.rows[0].gallery_name : null,
-      description: selectionsResult.rows.length > 0 ? selectionsResult.rows[0].gallery_description : null
-    };
+    // Ottieni i dettagli delle foto selezionate
+    const photoDetails = await db.select({
+      id: photos.id,
+      filename: photos.filename,
+      title: photos.title,
+      description: photos.description,
+      chapterId: photos.chapterId,
+      galleryId: photos.galleryId,
+      uploadedAt: photos.uploadedAt
+    })
+      .from(photos)
+      .where(inArray(photos.id, selections.map(s => s.photoId)));
     
-    // Organizza le foto per capitolo
-    const selectionsByChapter = selectionsResult.rows.reduce((acc, row) => {
-      const chapterId = row.chapter_id;
-      const chapterTitle = row.chapter_title || 'Senza capitolo';
+    // Ottieni dettagli capitoli (se presenti)
+    const chapterIds = photoDetails
+      .filter(p => p.chapterId !== null)
+      .map(p => p.chapterId as number);
+    
+    let chapters: Record<number, string> = {};
+    
+    if (chapterIds.length > 0) {
+      const chapterDetails = await db.select({
+        id: galleryChapters.id,
+        title: galleryChapters.title
+      })
+        .from(galleryChapters)
+        .where(inArray(galleryChapters.id, chapterIds));
       
-      if (!acc[chapterTitle]) {
-        acc[chapterTitle] = [];
-      }
+      chapters = chapterDetails.reduce((acc, chapter) => {
+        acc[chapter.id] = chapter.title;
+        return acc;
+      }, {} as Record<number, string>);
+    }
+    
+    // Ottieni dettagli galleria
+    const [gallery] = await db.select({
+      id: galleries.id,
+      name: galleries.name,
+      slug: galleries.slug
+    })
+      .from(galleries)
+      .where(eq(galleries.id, photoDetails[0].galleryId));
       
-      acc[chapterTitle].push({
-        id: row.selection_id,
-        photoId: row.photo_id,
-        filename: row.filename,
-        title: row.title,
-        description: row.description
+    // Prepara i dati per l'esportazione in formato CSV
+    const csvData = photoDetails.map(photo => {
+      return {
+        ID: photo.id,
+        Filename: photo.filename,
+        Title: photo.title || '',
+        Description: photo.description || '',
+        Chapter: photo.chapterId ? chapters[photo.chapterId] || '' : '',
+        UploadedAt: photo.uploadedAt ? new Date(photo.uploadedAt).toLocaleDateString() : '',
+        Gallery: gallery.name,
+        SelectedBy: session.clientName,
+        SelectionDate: new Date(selections.find(s => s.photoId === photo.id)?.createdAt || new Date()).toLocaleDateString()
+      };
+    });
+    
+    // Converti in CSV
+    const csvRows = [];
+    const headers = Object.keys(csvData[0]);
+    
+    // Intestazioni
+    csvRows.push(headers.join(','));
+    
+    // Righe di dati
+    for (const row of csvData) {
+      const values = headers.map(header => {
+        const value = row[header as keyof typeof row] || '';
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
       });
-      
-      return acc;
-    }, {});
+      csvRows.push(values.join(','));
+    }
     
-    // Prepara il risultato
-    const result = {
-      session: {
-        id: session.id,
-        clientName: session.client_name,
-        clientEmail: session.client_email,
-        status: session.status,
-        startedAt: session.started_at,
-        completedAt: session.completed_at,
-        notes: session.notes
-      },
-      gallery,
-      selectionsCount: selectionsResult.rows.length,
-      selectionsByChapter
-    };
+    const csv = csvRows.join('\n');
     
-    res.status(200).json(result);
+    // Invia la risposta
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="selections_${session.clientName.replace(/\s+/g, '_')}_${sessionId}.csv"`);
+    res.status(200).send(csv);
   } catch (error: any) {
     console.error('Error in exportSelections:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });

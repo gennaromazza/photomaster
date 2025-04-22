@@ -29,7 +29,13 @@ import {
   createPhotoSelections,
   recompressGalleryImages,
   downloadPhoto,
-  downloadAllPhotos
+  downloadAllPhotos,
+  // Controller per i video
+  addGalleryVideo,
+  getGalleryVideos,
+  updateGalleryVideo,
+  deleteGalleryVideo,
+  setGalleryVideoAsFeatured
 } from "../controllers/gallery-controller";
 import { cleanupGalleries } from "../controllers/gallery-cleanup-controller";
 
@@ -280,6 +286,41 @@ router.get("/photos/:id/download", downloadPhoto);
 
 // Download di tutte le foto di una galleria
 router.get("/galleries/:id/download-all", downloadAllPhotos);
+
+// ROUTES PER VIDEO
+
+// Ottieni tutti i video di una galleria
+router.get("/galleries/:galleryId/videos", getGalleryVideos);
+
+// Aggiungi un nuovo video (richiede autenticazione)
+router.post(
+  "/galleries/:galleryId/videos", 
+  isAuthenticated, 
+  upload.single("thumbnail"), 
+  addGalleryVideo
+);
+
+// Aggiorna un video (richiede autenticazione)
+router.put(
+  "/galleries/:galleryId/videos/:videoId", 
+  isAuthenticated, 
+  upload.single("thumbnail"),
+  updateGalleryVideo
+);
+
+// Elimina un video (richiede autenticazione)
+router.delete(
+  "/galleries/:galleryId/videos/:videoId", 
+  isAuthenticated, 
+  deleteGalleryVideo
+);
+
+// Imposta un video come in evidenza (richiede autenticazione)
+router.patch(
+  "/galleries/:galleryId/videos/:videoId/featured", 
+  isAuthenticated, 
+  setGalleryVideoAsFeatured
+);
 
 // ROUTE PER AMMINISTRAZIONE
 

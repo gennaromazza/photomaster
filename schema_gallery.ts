@@ -13,7 +13,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users, clients, events } from "./shared/schema";
 
-// GESTIONE GALLERIE FOTOGRAFICHE
+// GESTIONE GALLERIE FOTOGRAFICHE E VIDEO
 
 // Tabella per le gallerie
 export const galleries = pgTable("galleries", {
@@ -313,6 +313,57 @@ export const insertPhotoCommentSchema = createInsertSchema(photoComments).pick({
 export type InsertPhotoComment = z.infer<typeof insertPhotoCommentSchema>;
 export type PhotoComment = typeof photoComments.$inferSelect;
 
+// Tabella per i video nella galleria
+export const galleryVideos = pgTable("gallery_videos", {
+  id: serial("id").primaryKey(),
+  galleryId: integer("gallery_id").notNull().references(() => galleries.id, { onDelete: "cascade" }),
+  chapterId: integer("chapter_id").references(() => galleryChapters.id, { onDelete: "set null" }), // Opzionale, può appartenere a un capitolo
+  title: text("title").notNull(),
+  description: text("description"),
+  videoType: text("video_type").notNull(), // youtube, vimeo, url, embed
+  videoId: text("video_id"), // ID del video su YouTube o Vimeo
+  videoUrl: text("video_url"), // URL diretto del video o URL di embed
+  embedCode: text("embed_code"), // Codice di embed completo
+  thumbnailUrl: text("thumbnail_url"), // URL della thumbnail
+  thumbnailPath: text("thumbnail_path"), // Percorso locale della thumbnail, se salvata sul server
+  isFeatured: boolean("is_featured").default(false).notNull(), // Se è un video in evidenza
+  isHidden: boolean("is_hidden").default(false).notNull(), // Se il video è nascosto
+  sortOrder: integer("sort_order").default(0).notNull(), // Ordine di visualizzazione
+  duration: integer("duration"), // Durata in secondi
+  addedAt: timestamp("added_at").defaultNow().notNull(),
+  addedBy: integer("added_by").references(() => users.id),
+  metaData: jsonb("meta_data"), // Dati aggiuntivi in formato JSON
+  tags: text("tags").array(), // Array di tag
+});
+
+export const insertGalleryVideoSchema = createInsertSchema(galleryVideos).pick({
+  galleryId: true,
+  chapterId: true,
+  title: true,
+  description: true,
+  videoType: true,
+  videoId: true,
+  videoUrl: true,
+  embedCode: true,
+  thumbnailUrl: true,
+  thumbnailPath: true,
+  isFeatured: true,
+  isHidden: true,
+  sortOrder: true,
+  duration: true,
+  addedBy: true,
+  metaData: true,
+  tags: true,
+}).extend({
+  title: z.string().min(1, "Il titolo è obbligatorio"),
+  videoType: z.enum(["youtube", "vimeo", "url", "embed"], {
+    errorMap: () => ({ message: "Tipo di video non valido" })
+  })
+});
+
+export type InsertGalleryVideo = z.infer<typeof insertGalleryVideoSchema>;
+export type GalleryVideo = typeof galleryVideos.$inferSelect;
+
 // Tabella per le selezioni del cliente
 export const photoSelections = pgTable("photo_selections", {
   id: serial("id").primaryKey(),
@@ -412,6 +463,7 @@ export const galleriesRelations = relations(galleries, ({ one, many }) => ({
   }),
   chapters: many(galleryChapters),
   photos: many(photos),
+  videos: many(galleryVideos),
   selections: many(photoSelections),
   subscriptions: many(gallerySubscriptions),
   shares: many(socialShares),
@@ -425,6 +477,10 @@ export const galleryChaptersRelations = relations(galleryChapters, ({ one, many 
   photos: many(photos, {
     fields: [galleryChapters.id],
     references: [photos.chapterId]
+  }),
+  videos: many(galleryVideos, {
+    fields: [galleryChapters.id],
+    references: [galleryVideos.chapterId]
   }),
 }));
 
@@ -492,6 +548,21 @@ export const gallerySubscriptionsRelations = relations(gallerySubscriptions, ({ 
   client: one(clients, {
     fields: [gallerySubscriptions.clientId],
     references: [clients.id],
+  }),
+}));
+
+export const galleryVideosRelations = relations(galleryVideos, ({ one }) => ({
+  gallery: one(galleries, {
+    fields: [galleryVideos.galleryId],
+    references: [galleries.id],
+  }),
+  chapter: one(galleryChapters, {
+    fields: [galleryVideos.chapterId],
+    references: [galleryChapters.id],
+  }),
+  addedBy: one(users, {
+    fields: [galleryVideos.addedBy],
+    references: [users.id],
   }),
 }));
 

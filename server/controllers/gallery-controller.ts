@@ -3,7 +3,8 @@ import { db } from "../db";
 import { 
   galleries, insertGallerySchema, galleryChapters, insertGalleryChapterSchema,
   photos, insertPhotoSchema, photoSelections, gallerySubscriptions, insertGallerySubscriptionSchema,
-  socialShares, insertSocialShareSchema, photoLikes, photoComments
+  socialShares, insertSocialShareSchema, photoLikes, photoComments,
+  galleryVideos, insertGalleryVideoSchema
 } from "../../schema_gallery";
 import { eq, and, desc, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 import * as fs from "fs";
@@ -1568,6 +1569,232 @@ export async function downloadPhoto(req: Request, res: Response) {
 }
 
 // Download di tutte le foto di una galleria o di un capitolo
+// GESTIONE VIDEO
+
+// Aggiungi un nuovo video alla galleria
+export const addGalleryVideo = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: "Utente non autorizzato" });
+    }
+
+    const { galleryId } = req.params;
+    
+    // Valida i dati del video
+    const videoData = {
+      ...req.body,
+      galleryId: Number(galleryId),
+      addedBy: req.user.id,
+      // Converti il chapterId in numero se presente
+      chapterId: req.body.chapterId ? Number(req.body.chapterId) : null,
+    };
+
+    // Se è fornita un'immagine di anteprima, salviamola
+    if (req.file) {
+      try {
+        // Genera un nome file unico per la thumbnail
+        const uniqueFilename = `video-thumb-${Date.now()}-${uuidv4().substring(0, 8)}${path.extname(req.file.originalname)}`;
+        const filePath = path.join(THUMBNAILS_DIR, uniqueFilename);
+
+        // Salva il file
+        fs.writeFileSync(filePath, req.file.buffer);
+
+        // Aggiungi il percorso alla thumbnail (usa slash per URL)
+        videoData.thumbnailPath = `/uploads/galleries/thumbnails/${uniqueFilename}`;
+      } catch (fileError) {
+        console.error("Errore nel salvataggio della thumbnail del video:", fileError);
+      }
+    }
+
+    // Per video di YouTube o Vimeo, recupera la thumbnail se non è stata caricata
+    if ((videoData.videoType === 'youtube' || videoData.videoType === 'vimeo') && 
+        videoData.videoId && !videoData.thumbnailUrl && !videoData.thumbnailPath) {
+      if (videoData.videoType === 'youtube') {
+        videoData.thumbnailUrl = `https://img.youtube.com/vi/${videoData.videoId}/maxresdefault.jpg`;
+      } else if (videoData.videoType === 'vimeo') {
+        // Nota: per Vimeo sarebbe necessario chiamare l'API per ottenere la thumbnail
+        // Qui impostiamo un placeholder
+        videoData.thumbnailUrl = null;
+      }
+    }
+
+    // Salva il video nel database
+    const [newVideo] = await db
+      .insert(galleryVideos)
+      .values(videoData)
+      .returning();
+
+    res.status(201).json(newVideo);
+  } catch (error) {
+    console.error("Errore nell'aggiunta del video alla galleria:", error);
+    if (error instanceof Error) {
+      res.status(500).json({ error: `Errore nell'aggiunta del video: ${error.message}` });
+    } else {
+      res.status(500).json({ error: "Errore nell'aggiunta del video" });
+    }
+  }
+};
+
+// Ottieni tutti i video di una galleria
+export const getGalleryVideos = async (req: Request, res: Response) => {
+  try {
+    const { galleryId } = req.params;
+    const { chapterId } = req.query;
+
+    let query = db
+      .select()
+      .from(galleryVideos)
+      .where(eq(galleryVideos.galleryId, Number(galleryId)))
+      .orderBy(galleryVideos.sortOrder);
+
+    // Se è specificato un capitolo, filtra per quel capitolo
+    if (chapterId) {
+      query = query.where(eq(galleryVideos.chapterId, Number(chapterId)));
+    }
+
+    const videos = await query;
+
+    res.json({ videos });
+  } catch (error) {
+    console.error("Errore nel recupero dei video:", error);
+    res.status(500).json({ error: "Errore nel recupero dei video" });
+  }
+};
+
+// Aggiorna un video
+export const updateGalleryVideo = async (req: Request, res: Response) => {
+  try {
+    const { galleryId, videoId } = req.params;
+
+    // Verifica che il video esista prima dell'aggiornamento
+    const existingVideo = await db
+      .select()
+      .from(galleryVideos)
+      .where(and(
+        eq(galleryVideos.id, Number(videoId)),
+        eq(galleryVideos.galleryId, Number(galleryId))
+      ))
+      .limit(1);
+
+    if (existingVideo.length === 0) {
+      return res.status(404).json({ error: "Video non trovato" });
+    }
+
+    // Gestisci l'upload della thumbnail se presente
+    let thumbnailData = {};
+    if (req.file) {
+      try {
+        // Genera un nome file unico per la thumbnail
+        const uniqueFilename = `video-thumb-${Date.now()}-${uuidv4().substring(0, 8)}${path.extname(req.file.originalname)}`;
+        const filePath = path.join(THUMBNAILS_DIR, uniqueFilename);
+
+        // Salva il file
+        fs.writeFileSync(filePath, req.file.buffer);
+
+        // Aggiungi il percorso alla thumbnail
+        thumbnailData = { 
+          thumbnailPath: `/uploads/galleries/thumbnails/${uniqueFilename}`,
+          thumbnailUrl: null // Azzeriamo l'URL esterno se carichiamo un'immagine
+        };
+      } catch (fileError) {
+        console.error("Errore nel salvataggio della thumbnail del video:", fileError);
+      }
+    }
+
+    // Aggiorna il video
+    const [updatedVideo] = await db
+      .update(galleryVideos)
+      .set({
+        ...req.body,
+        ...thumbnailData,
+        // Converti il chapterId in numero se presente, altrimenti null
+        chapterId: req.body.chapterId ? Number(req.body.chapterId) : null,
+      })
+      .where(and(
+        eq(galleryVideos.id, Number(videoId)),
+        eq(galleryVideos.galleryId, Number(galleryId))
+      ))
+      .returning();
+
+    res.json(updatedVideo);
+  } catch (error) {
+    console.error("Errore nell'aggiornamento del video:", error);
+    if (error instanceof Error) {
+      res.status(500).json({ error: `Errore nell'aggiornamento del video: ${error.message}` });
+    } else {
+      res.status(500).json({ error: "Errore nell'aggiornamento del video" });
+    }
+  }
+};
+
+// Elimina un video
+export const deleteGalleryVideo = async (req: Request, res: Response) => {
+  try {
+    const { galleryId, videoId } = req.params;
+
+    // Ottieni i dettagli del video prima di eliminarlo (per eliminare eventuali file locali)
+    const [video] = await db
+      .select()
+      .from(galleryVideos)
+      .where(and(
+        eq(galleryVideos.id, Number(videoId)),
+        eq(galleryVideos.galleryId, Number(galleryId))
+      ));
+
+    if (!video) {
+      return res.status(404).json({ error: "Video non trovato" });
+    }
+
+    // Elimina i file locali se presenti
+    if (video.thumbnailPath) {
+      const thumbnailFile = path.join(process.cwd(), video.thumbnailPath.replace(/^\//, ''));
+      if (fs.existsSync(thumbnailFile)) {
+        fs.unlinkSync(thumbnailFile);
+      }
+    }
+
+    // Elimina il video dal database
+    await db
+      .delete(galleryVideos)
+      .where(and(
+        eq(galleryVideos.id, Number(videoId)),
+        eq(galleryVideos.galleryId, Number(galleryId))
+      ));
+
+    res.json({ message: "Video eliminato con successo" });
+  } catch (error) {
+    console.error("Errore nell'eliminazione del video:", error);
+    res.status(500).json({ error: "Errore nell'eliminazione del video" });
+  }
+};
+
+// Imposta un video come featured
+export const setGalleryVideoAsFeatured = async (req: Request, res: Response) => {
+  try {
+    const { galleryId, videoId } = req.params;
+    const { isFeatured } = req.body;
+
+    // Aggiorna lo stato featured del video
+    const [updatedVideo] = await db
+      .update(galleryVideos)
+      .set({ isFeatured: !!isFeatured })
+      .where(and(
+        eq(galleryVideos.id, Number(videoId)),
+        eq(galleryVideos.galleryId, Number(galleryId))
+      ))
+      .returning();
+
+    if (!updatedVideo) {
+      return res.status(404).json({ error: "Video non trovato" });
+    }
+
+    res.json(updatedVideo);
+  } catch (error) {
+    console.error("Errore nell'aggiornamento dello stato featured del video:", error);
+    res.status(500).json({ error: "Errore nell'aggiornamento dello stato featured" });
+  }
+};
+
 export async function downloadAllPhotos(req: Request, res: Response) {
   const galleryId = Number(req.params.id);
   const chapterId = req.query.chapter ? Number(req.query.chapter) : undefined;

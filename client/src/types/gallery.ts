@@ -151,6 +151,28 @@ export interface GallerySubscription {
   updatedAt: string;
 }
 
+export interface GalleryVideo {
+  id: number;
+  galleryId: number;
+  chapterId: number | null;
+  title: string;
+  description: string | null;
+  videoType: "youtube" | "vimeo" | "url" | "embed";
+  videoId: string | null;
+  videoUrl: string | null;
+  embedCode: string | null;
+  thumbnailUrl: string | null;
+  thumbnailPath: string | null;
+  isFeatured: boolean;
+  isHidden: boolean;
+  sortOrder: number;
+  duration: number | null;
+  addedAt: string;
+  addedBy: number | null;
+  metaData: any | null;
+  tags: string[] | null;
+}
+
 export interface SocialShare {
   id: number;
   galleryId: number;

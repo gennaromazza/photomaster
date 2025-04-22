@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   Image as ImageIcon,
   Settings,
+  Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,13 @@ import EmptyState from "@/components/empty-state";
 import { GalleryItem } from "@/types/gallery";
 
 // Componente GalleryGrid
-function GalleryGrid({ galleries = [] }: { galleries: GalleryItem[] }) {
+function GalleryGrid({ 
+  galleries = [], 
+  onDeleteClick 
+}: { 
+  galleries: GalleryItem[], 
+  onDeleteClick: (galleryId: number) => void 
+}) {
   const [location, setLocation] = useLocation();
 
   return (
@@ -49,81 +56,39 @@ function GalleryGrid({ galleries = [] }: { galleries: GalleryItem[] }) {
       {galleries.map((gallery) => (
         <div
           key={gallery.id}
-          className="group cursor-pointer"
-          onClick={() => setLocation(`/galleries/${gallery.id}`)}
+          className="group relative"
         >
-          <div className="overflow-hidden rounded-lg aspect-[4/3] bg-muted mb-3 relative">
-            {gallery.coverImage ? (
-              <img
-                src={`/uploads/galleries/${gallery.coverImage}`}
-                alt={gallery.name}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = "/assets/image-placeholder.svg";
-                  target.onerror = null;
-                }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-muted">
-                <ImageIcon className="h-12 w-12 text-muted-foreground opacity-50" />
-              </div>
-            )}
-            {!gallery.isPublic && (
-              <div className="absolute top-2 right-2 bg-background/80 text-foreground px-2 py-1 rounded-md text-xs font-medium">
-                Privata
-              </div>
-            )}
-          </div>
-          <h3 className="font-medium text-lg truncate group-hover:text-primary transition-colors">
-            {gallery.name}
-          </h3>
-          <p className="text-sm text-muted-foreground truncate">
-            {new Date(gallery.createdAt).toLocaleDateString("it-IT", {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Componente GalleryList
-function GalleryList({ galleries = [] }: { galleries: GalleryItem[] }) {
-  const [location, setLocation] = useLocation();
-
-  return (
-    <div className="space-y-3">
-      {galleries.map((gallery) => (
-        <div
-          key={gallery.id}
-          className="flex items-center space-x-4 rounded-lg border p-4 hover:bg-muted/50 transition-colors cursor-pointer"
-          onClick={() => setLocation(`/galleries/${gallery.id}`)}
-        >
-          <div className="overflow-hidden rounded-md w-16 h-16 bg-muted flex-shrink-0">
-            {gallery.coverImage ? (
-              <img
-                src={`/uploads/galleries/${gallery.coverImage}`}
-                alt={gallery.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = "/assets/image-placeholder.svg";
-                  target.onerror = null;
-                }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <ImageIcon className="h-6 w-6 text-muted-foreground opacity-50" />
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium truncate">{gallery.name}</h3>
-            <p className="text-sm text-muted-foreground">
+          <div 
+            className="cursor-pointer"
+            onClick={() => setLocation(`/galleries/${gallery.id}`)}
+          >
+            <div className="overflow-hidden rounded-lg aspect-[4/3] bg-muted mb-3 relative">
+              {gallery.coverImage ? (
+                <img
+                  src={`/uploads/galleries/${gallery.coverImage}`}
+                  alt={gallery.name}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/assets/image-placeholder.svg";
+                    target.onerror = null;
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-muted">
+                  <ImageIcon className="h-12 w-12 text-muted-foreground opacity-50" />
+                </div>
+              )}
+              {!gallery.isPublic && (
+                <div className="absolute top-2 right-2 bg-background/80 text-foreground px-2 py-1 rounded-md text-xs font-medium">
+                  Privata
+                </div>
+              )}
+            </div>
+            <h3 className="font-medium text-lg truncate group-hover:text-primary transition-colors">
+              {gallery.name}
+            </h3>
+            <p className="text-sm text-muted-foreground truncate">
               {new Date(gallery.createdAt).toLocaleDateString("it-IT", {
                 day: "2-digit",
                 month: "long",
@@ -131,18 +96,100 @@ function GalleryList({ galleries = [] }: { galleries: GalleryItem[] }) {
               })}
             </p>
           </div>
-          <div className="flex items-center space-x-2">
-            {!gallery.isPublic && (
-              <div className="bg-muted text-muted-foreground px-2 py-1 rounded-md text-xs">
-                Privata
-              </div>
-            )}
-            {gallery.viewCount > 0 && (
-              <div className="text-sm text-muted-foreground">
-                {gallery.viewCount} visualizzazioni
-              </div>
-            )}
+          
+          {/* Pulsante elimina */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 left-2 h-8 w-8 bg-background/80 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteClick(gallery.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Componente GalleryList
+function GalleryList({ 
+  galleries = [],
+  onDeleteClick
+}: { 
+  galleries: GalleryItem[],
+  onDeleteClick: (galleryId: number) => void
+}) {
+  const [location, setLocation] = useLocation();
+
+  return (
+    <div className="space-y-3">
+      {galleries.map((gallery) => (
+        <div
+          key={gallery.id}
+          className="flex items-center space-x-4 rounded-lg border p-4 hover:bg-muted/50 transition-colors relative group"
+        >
+          <div 
+            className="flex items-center space-x-4 flex-1 cursor-pointer"
+            onClick={() => setLocation(`/galleries/${gallery.id}`)}
+          >
+            <div className="overflow-hidden rounded-md w-16 h-16 bg-muted flex-shrink-0">
+              {gallery.coverImage ? (
+                <img
+                  src={`/uploads/galleries/${gallery.coverImage}`}
+                  alt={gallery.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/assets/image-placeholder.svg";
+                    target.onerror = null;
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <ImageIcon className="h-6 w-6 text-muted-foreground opacity-50" />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium truncate">{gallery.name}</h3>
+              <p className="text-sm text-muted-foreground">
+                {new Date(gallery.createdAt).toLocaleDateString("it-IT", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              {!gallery.isPublic && (
+                <div className="bg-muted text-muted-foreground px-2 py-1 rounded-md text-xs">
+                  Privata
+                </div>
+              )}
+              {gallery.viewCount > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {gallery.viewCount} visualizzazioni
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Pulsante elimina */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteClick(gallery.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       ))}
     </div>
@@ -155,6 +202,9 @@ export default function GalleriesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name" | "views">("newest");
   const [filterStatus, setFilterStatus] = useState<"all" | "public" | "private">("all");
+  const [deleteGalleryId, setDeleteGalleryId] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   // Query per ottenere l'elenco di tutte le gallerie
   const { data: galleries, isLoading } = useQuery({

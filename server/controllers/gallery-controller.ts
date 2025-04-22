@@ -1571,6 +1571,7 @@ export async function downloadPhoto(req: Request, res: Response) {
 export async function downloadAllPhotos(req: Request, res: Response) {
   const galleryId = Number(req.params.id);
   const chapterId = req.query.chapter ? Number(req.query.chapter) : undefined;
+  const quality = req.query.quality as string || 'large'; // Opzioni: original, large, medium, thumbnail
   
   try {
     // Verifica che la galleria esista
@@ -1605,8 +1606,9 @@ export async function downloadAllPhotos(req: Request, res: Response) {
       return res.status(404).json({ error: "Nessuna foto trovata" });
     }
 
-    // Crea un nome per l'archivio
-    const archiveName = `${gallery.name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.zip`;
+    // Crea un nome per l'archivio che include informazioni sulla qualità
+    const qualitySuffix = quality === 'original' ? 'originale' : quality === 'large' ? 'alta' : quality === 'medium' ? 'media' : 'bassa';
+    const archiveName = `${gallery.name.replace(/[^a-z0-9]/gi, '_')}_${qualitySuffix}_${Date.now()}.zip`;
     const zipPath = path.join(process.cwd(), 'uploads', 'temp', archiveName);
     
     // Assicurati che la directory temp esista
@@ -1650,9 +1652,28 @@ export async function downloadAllPhotos(req: Request, res: Response) {
     
     // Aggiungi ogni foto all'archivio
     for (const photo of photosToDownload) {
-      // Definisci quale versione dell'immagine usare
-      // Utilizziamo le versioni compresse large, che hanno una buona qualità ma sono più leggere
-      let filePath = photo.largePath || photo.path;  // Fallback all'originale se non esiste large
+      // Determina quale versione dell'immagine usare in base alla qualità richiesta
+      let filePath = '';
+      
+      // Selezione del percorso in base alla qualità richiesta
+      switch (quality) {
+        case 'original':
+          filePath = photo.path;
+          break;
+        case 'large':
+          filePath = photo.largePath || photo.path;
+          break;
+        case 'medium':
+          filePath = photo.mediumPath || photo.largePath || photo.path;
+          break;
+        case 'thumbnail':
+          filePath = photo.thumbnailPath || photo.mediumPath || photo.path;
+          break;
+        default:
+          filePath = photo.largePath || photo.path;
+      }
+      
+      console.log(`Download multiplo - Foto ${photo.id} con qualità: ${quality}, percorso selezionato: ${filePath}`);
       
       // Determina il percorso assoluto per il file
       // Se il percorso è già assoluto (contiene workspace), usiamo direttamente quello

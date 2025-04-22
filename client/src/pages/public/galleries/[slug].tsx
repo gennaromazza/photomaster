@@ -42,7 +42,7 @@ import {
   Music
 } from "lucide-react";
 import { Photo, GalleryChapter } from "@/types/gallery";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 

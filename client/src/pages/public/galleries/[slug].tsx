@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// Rimosso ScrollArea per permettere lo scroll naturale della pagina
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   DropdownMenu,
@@ -824,10 +824,10 @@ export default function PublicGalleryPage() {
       {renderFullscreenView()}
 
       {/* Contenuto principale */}
-      <div className="h-screen flex flex-col overflow-hidden">
+      <div className="min-h-screen flex flex-col">
         {/* Header della galleria */}
         <div 
-          className="h-[50vh] lg:h-[70vh] bg-cover bg-center relative border-b border-muted"
+          className="h-[40vh] lg:h-[50vh] bg-cover bg-center relative border-b border-muted"
           style={{ 
             backgroundImage: gallery.coverImage 
               ? `url(/uploads/galleries/${gallery.coverImage})` 
@@ -921,8 +921,8 @@ export default function PublicGalleryPage() {
         </div>
 
         {/* Contenuto scrollabile */}
-        <ScrollArea 
-          className="flex-1 overflow-auto"
+        <div 
+          className="flex-1"
           ref={contentRef}
         >
           {/* Video Banner in stile Netflix/Prime Video */}
@@ -934,63 +934,7 @@ export default function PublicGalleryPage() {
             />
           )}
           <div className="max-w-screen-xl mx-auto w-full p-4 md:p-8">
-            {/* Capitoli della galleria (trattati come "Stagioni" di Netflix) */}
-            {chapters.length > 0 && (
-              <div className="mb-12">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold">Capitoli della storia</h2>
-                  
-                  {chapters.length > 5 && (
-                    <Button 
-                      variant="outline" 
-                      className="text-white border-white/30 bg-white/10 hover:bg-white/20"
-                      onClick={() => window.scrollTo({ 
-                        top: document.getElementById('chapters-list')?.offsetTop, 
-                        behavior: 'smooth' 
-                      })}
-                    >
-                      Vedi tutti
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {chapters.slice(0, 5).map((chapter) => (
-                    <div
-                      key={chapter.id}
-                      className="relative aspect-[2/3] overflow-hidden rounded-lg cursor-pointer group transform transition-all hover:scale-105"
-                      onClick={() => {
-                        const chapterPhotos = photos.filter(photo => photo.chapterId === chapter.id);
-                        if (chapterPhotos.length > 0) {
-                          setCurrentPhotoIndex(photos.findIndex(p => p.id === chapterPhotos[0].id));
-                          setFullscreenView(true);
-                        }
-                      }}
-                    >
-                      {/* Sfondo scuro gradiente */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent z-10" />
-                      
-                      {/* Immagine del capitolo */}
-                      <img 
-                        src={chapter.coverImage || 
-                             (photos.find(p => p.chapterId === chapter.id)?.thumbnailPath || 
-                              photos.find(p => p.chapterId === chapter.id)?.path)}
-                        alt={chapter.title}
-                        className="w-full h-full object-cover"
-                      />
-                      
-                      {/* Titolo del capitolo */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
-                        <h3 className="text-white font-semibold">{chapter.title}</h3>
-                        <p className="text-xs text-white/80">
-                          {photos.filter(p => p.chapterId === chapter.id).length} foto
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* I capitoli sono stati spostati in un'unica sezione più in basso */}
             
             {/* Foto in evidenza dalla galleria */}
             {photos.length > 0 && photos.some(p => p.isFeatured) && (
@@ -1453,7 +1397,7 @@ export default function PublicGalleryPage() {
               <p>Tutte le immagini sono protette da copyright e non possono essere utilizzate senza permesso.</p>
             </footer>
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Pulsante torna su */}
         {showBackToTop && (

@@ -22,22 +22,28 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GalleryFormValues } from "@/types/gallery";
 
-const galleryFormSchema = z.object({
+const galleryFormSchema = z
+.object({
   name: z.string().min(3, { message: "Il nome deve contenere almeno 3 caratteri" }),
   description: z.string().optional(),
   eventId: z.number().optional().nullable(),
   isPublic: z.boolean().default(true),
   isPasswordProtected: z.boolean().default(false),
-  password: z.string().optional()
-    .refine(
-      (password, { isPasswordProtected }) => !isPasswordProtected || (isPasswordProtected && password && password.length >= 6), 
-      { message: "La password è obbligatoria e deve essere di almeno 6 caratteri" }
-    ),
-  coverImage: z.any()
-    .refine(val => val !== null, {
-      message: "L'immagine di copertina è obbligatoria"
-    })
+  password: z.string().optional(),
+  coverImage: z.any().refine(val => val !== null, {
+    message: "L'immagine di copertina è obbligatoria"
+  })
 })
+.superRefine((data, ctx) => {
+  if (data.isPasswordProtected && (!data.password || data.password.length < 6)) {
+    ctx.addIssue({
+      path: ["password"],
+      code: z.ZodIssueCode.custom,
+      message: "La password è obbligatoria e deve essere di almeno 6 caratteri"
+    });
+  }
+});
+
 .refine(data => !data.isPasswordProtected || (data.isPasswordProtected && data.password), {
   message: "È necessario impostare una password quando la protezione è attiva",
   path: ["password"]
@@ -91,12 +97,12 @@ export function GalleryForm({ defaultValues, events, onSubmit, isSubmitting = fa
       alert("Il nome della galleria è obbligatorio"); // Idealmente usare un sistema di toast
       return;
     }
-    
+
     // Se la galleria non è protetta da password, azzera il campo password
     if (!data.isPasswordProtected) {
       data.password = "";
     }
-    
+
     // Forza eventId a number o null prima dell'invio
     onSubmit({ 
       ...data, 

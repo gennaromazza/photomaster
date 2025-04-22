@@ -1,150 +1,144 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarIcon, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { Switch } from '@/components/ui/switch';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
-// Schema di validazione
-const formSchema = z.object({
+// Schema validazione per le impostazioni
+const settingsSchema = z.object({
   isEnabled: z.boolean().default(false),
-  instructions: z.string().optional(),
-  minSelections: z.number().min(0).default(0),
-  maxSelections: z.number().min(0).default(0),
-  expiresAt: z.date().optional().nullable(),
+  instructions: z.string().nullable(),
+  minSelections: z.number().min(0, "Il numero minimo non può essere negativo"),
+  maxSelections: z.number().min(0, "Il numero massimo non può essere negativo"),
+  expiresAt: z.date().nullable()
 });
 
-// Tipo per i dati delle impostazioni
-type GallerySelectionSettings = {
-  id: number;
-  galleryId: number;
-  isEnabled: boolean;
-  instructions: string | null;
-  minSelections: number;
-  maxSelections: number;
-  expiresAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
+type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 type SettingsFormProps = {
   galleryId: number;
+  onSettingsUpdated?: () => void;
 };
 
-export default function SettingsForm({ galleryId }: SettingsFormProps) {
+export default function SettingsForm({ galleryId, onSettingsUpdated }: SettingsFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  // Caricare impostazioni esistenti
-  const { data, isLoading } = useQuery<GallerySelectionSettings>({
-    queryKey: [`/api/selection/settings/${galleryId}`],
-    enabled: !!galleryId,
-  });
-
-  // Form con valori predefiniti
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  
+  // Form con validazione
+  const form = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsSchema),
     defaultValues: {
-      isEnabled: data?.isEnabled || false,
-      instructions: data?.instructions || '',
-      minSelections: data?.minSelections || 0,
-      maxSelections: data?.maxSelections || 0,
-      expiresAt: data?.expiresAt ? new Date(data.expiresAt) : null,
+      isEnabled: false,
+      instructions: null,
+      minSelections: 0,
+      maxSelections: 0,
+      expiresAt: null,
     },
   });
 
-  // Aggiornare valori quando i dati vengono caricati
-  React.useEffect(() => {
-    if (data) {
-      form.reset({
-        isEnabled: data.isEnabled,
-        instructions: data.instructions || '',
-        minSelections: data.minSelections,
-        maxSelections: data.maxSelections,
-        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-      });
-    }
-  }, [data, form]);
+  // Carica le impostazioni esistenti
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setIsLoading(true);
+      try {
+        const response = await apiRequest('GET', `/api/selection/settings/${galleryId}`);
+        const data = await response.json();
+        
+        // Converti le date in oggetti Date
+        form.reset({
+          isEnabled: data.isEnabled,
+          instructions: data.instructions,
+          minSelections: data.minSelections,
+          maxSelections: data.maxSelections,
+          expiresAt: data.expiresAt ? new Date(data.expiresAt) : null
+        });
+      } catch (error) {
+        console.error('Errore nel caricamento delle impostazioni:', error);
+        toast({
+          title: 'Errore',
+          description: 'Impossibile caricare le impostazioni di selezione.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Mutation per salvare le impostazioni
-  const mutation = useMutation({
-    mutationFn: async (values: z.infer<typeof formSchema>) => {
-      const endpoint = data 
-        ? `/api/selection/settings/${galleryId}` 
-        : `/api/selection/settings`;
-      
-      const method = data ? 'PUT' : 'POST';
-      
-      const payload = {
+    fetchSettings();
+  }, [galleryId, form, toast]);
+
+  // Gestisce il submit del form
+  const onSubmit = async (values: SettingsFormValues) => {
+    setIsSaving(true);
+    try {
+      // Formatta la data per l'API
+      const formattedData = {
         ...values,
-        galleryId,
+        expiresAt: values.expiresAt ? values.expiresAt.toISOString() : null
       };
       
-      const response = await apiRequest(method, endpoint, payload);
+      const response = await apiRequest('PUT', `/api/selection/settings/${galleryId}`, formattedData);
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Errore durante il salvataggio delle impostazioni');
+      if (response.ok) {
+        toast({
+          title: 'Impostazioni aggiornate',
+          description: 'Le impostazioni di selezione sono state aggiornate con successo.',
+        });
+        
+        if (onSettingsUpdated) {
+          onSettingsUpdated();
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Errore sconosciuto');
       }
-      
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Impostazioni salvate',
-        description: 'Le impostazioni di selezione sono state aggiornate con successo',
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/selection/settings/${galleryId}`] });
-    },
-    onError: (error: Error) => {
+    } catch (error: any) {
+      console.error('Errore nel salvataggio delle impostazioni:', error);
       toast({
         title: 'Errore',
-        description: `Errore durante il salvataggio: ${error.message}`,
+        description: error.message || 'Impossibile aggiornare le impostazioni di selezione.',
         variant: 'destructive',
       });
-    },
-  });
-
-  // Invia il form
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutation.mutate(values);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <Card className="w-full">
+        <CardContent className="p-6 flex justify-center items-center min-h-[300px]">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>Impostazioni Selezione Foto</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle>Impostazioni Selezione Foto</CardTitle>
+          <Badge variant={form.watch('isEnabled') ? 'default' : 'secondary'}>
+            {form.watch('isEnabled') ? 'Abilitato' : 'Disabilitato'}
+          </Badge>
+        </div>
         <CardDescription>
-          Configura le opzioni per la selezione foto da parte dei clienti
+          Configura le impostazioni per la selezione delle foto da parte dei clienti
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -156,9 +150,9 @@ export default function SettingsForm({ galleryId }: SettingsFormProps) {
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">Abilita Selezione</FormLabel>
+                    <FormLabel className="text-base">Abilita selezione foto</FormLabel>
                     <FormDescription>
-                      Attiva la funzionalità di selezione foto per questa galleria
+                      Permetti ai clienti di selezionare le foto in questa galleria
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -170,96 +164,96 @@ export default function SettingsForm({ galleryId }: SettingsFormProps) {
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="instructions"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Istruzioni per il Cliente</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Inserisci le istruzioni per la selezione..."
-                      className="min-h-[120px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Queste istruzioni verranno mostrate al cliente quando accede alla selezione foto
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="minSelections"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Minimo Foto</FormLabel>
+                    <FormLabel>Numero minimo di foto</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         min={0}
+                        placeholder="0"
                         {...field}
                         onChange={e => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
                     <FormDescription>
-                      Numero minimo di foto da selezionare (0 = nessun minimo)
+                      Numero minimo di foto che il cliente deve selezionare (0 = nessun minimo)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
+              
               <FormField
                 control={form.control}
                 name="maxSelections"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Massimo Foto</FormLabel>
+                    <FormLabel>Numero massimo di foto</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         min={0}
+                        placeholder="0"
                         {...field}
                         onChange={e => field.onChange(parseInt(e.target.value))}
                       />
                     </FormControl>
                     <FormDescription>
-                      Numero massimo di foto selezionabili (0 = nessun limite)
+                      Numero massimo di foto che il cliente può selezionare (0 = nessun limite)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-
+            
+            <FormField
+              control={form.control}
+              name="instructions"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Istruzioni per la selezione</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Inserisci eventuali istruzioni per il cliente..."
+                      className="min-h-[100px]"
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Istruzioni che saranno mostrate al cliente nella pagina di selezione
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="expiresAt"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Data di Scadenza</FormLabel>
+                  <FormLabel>Data di scadenza</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
+                          variant="outline"
+                          className={`w-full justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
                         >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
                           {field.value ? (
-                            format(field.value, "d MMMM yyyy", { locale: it })
+                            format(field.value, "PPP", { locale: it })
                           ) : (
-                            <span>Nessuna scadenza</span>
+                            <span>Seleziona data (opzionale)</span>
                           )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
@@ -268,32 +262,24 @@ export default function SettingsForm({ galleryId }: SettingsFormProps) {
                         mode="single"
                         selected={field.value || undefined}
                         onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < new Date(new Date().setHours(0, 0, 0, 0))
-                        }
                         initialFocus
-                        locale={it}
                       />
                     </PopoverContent>
                   </Popover>
                   <FormDescription>
-                    Opzionale: data dopo la quale non sarà più possibile effettuare selezioni
+                    Data dopo la quale la selezione non sarà più disponibile
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <Button 
-              type="submit" 
-              disabled={mutation.isPending}
-              className="w-full"
-            >
-              {mutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Salva Impostazioni
-            </Button>
+            
+            <CardFooter className="px-0 pb-0 pt-6">
+              <Button type="submit" disabled={isSaving} className="ml-auto">
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSaving ? 'Salvataggio...' : 'Salva impostazioni'}
+              </Button>
+            </CardFooter>
           </form>
         </Form>
       </CardContent>

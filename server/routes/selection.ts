@@ -1,33 +1,68 @@
-import { Router } from 'express';
+import express from 'express';
+import { isAuthenticated } from '../auth';
 import * as selectionController from '../controllers/selection-controller';
-import { isAuthenticated, isAdmin } from '../auth';
 
-const router = Router();
+const router = express.Router();
 
-// Rotte per le impostazioni di selezione (admin)
-router.get('/settings/:galleryId', selectionController.getSelectionSettings);
-router.put('/settings/:galleryId', isAuthenticated, isAdmin, selectionController.updateSelectionSettings);
-router.post('/settings', isAuthenticated, isAdmin, selectionController.updateSelectionSettings);
+// ---- Rotte per impostazioni di selezione ----
 
-// Rotte per le sessioni
-router.post('/sessions', isAuthenticated, isAdmin, selectionController.createSelectionSession);
-router.get('/sessions/key/:key', selectionController.getSessionByKey);
-router.get('/sessions/:id', selectionController.getSession);
-router.get('/sessions', isAuthenticated, isAdmin, selectionController.getSessionsByGallery);
-router.post('/sessions/:id/complete', selectionController.completeSession);
+// Ottenere le impostazioni di una galleria
+// router.get('/settings/:galleryId', selectionController.getSelectionSettings);
 
-// Rotte per le selezioni di foto
-router.get('/sessions/:id/selections', selectionController.getSessionSelections);
-router.get('/sessions/:id/comments', isAuthenticated, isAdmin, selectionController.getSessionComments);
-router.get('/sessions/:id/photos/comment-counts', selectionController.getPhotoCommentsCount);
-router.get('/sessions/:id/export', isAuthenticated, isAdmin, selectionController.exportSelections);
+// Aggiornare le impostazioni di una galleria
+// router.put('/settings/:galleryId', isAuthenticated, selectionController.updateSelectionSettings);
 
-// Rotte per i commenti
-router.get('/photos/:photoId/comments', selectionController.getPhotoComments);
-router.post('/photos/:photoId', selectionController.togglePhotoSelection);
-router.delete('/photos/:photoId', selectionController.togglePhotoSelection);
-router.post('/comments', selectionController.addComment);
-router.post('/comments/:id/reply', isAuthenticated, isAdmin, selectionController.replyToComment);
-router.put('/comments/:id/read', isAuthenticated, isAdmin, selectionController.markCommentAsRead);
+// ---- Rotte per sessioni di selezione ----
+
+// Creare una nuova sessione
+// router.post('/sessions', isAuthenticated, selectionController.createSelectionSession);
+
+// Ottenere sessioni filtrate per galleria
+// router.get('/sessions', isAuthenticated, selectionController.getSessionsByGallery);
+
+// Ottenere una sessione specifica tramite ID
+// router.get('/sessions/:id', isAuthenticated, selectionController.getSession);
+
+// Ottenere una sessione tramite chiave
+// router.get('/sessions/key/:key', selectionController.getSessionByKey);
+
+// Completare una sessione
+// router.post('/sessions/:id/complete', selectionController.completeSession);
+
+// Eliminare una sessione - commentata temporaneamente in attesa del controller
+// router.delete('/sessions/:id', isAuthenticated, selectionController.deleteSession);
+
+// ---- Rotte per selezioni di foto ----
+
+// Selezionare/deselezionare una foto
+// router.post('/photos/:photoId', selectionController.togglePhotoSelection);
+
+// Ottenere le selezioni di una sessione
+// router.get('/sessions/:id/selections', selectionController.getSessionSelections);
+
+// Ottenere il conteggio di commenti per foto in una sessione
+// router.get('/sessions/:id/photos/comment-counts', selectionController.getPhotoCommentsCount);
+
+// ---- Rotte per commenti ----
+
+// Aggiungere un commento a una foto
+// router.post('/comments', selectionController.addComment);
+
+// Rispondere a un commento (solo staff)
+// router.post('/comments/:id/reply', isAuthenticated, selectionController.replyToComment);
+
+// Ottenere i commenti di una sessione
+// router.get('/sessions/:id/comments', selectionController.getSessionComments);
+
+// Ottenere i commenti di una foto specifica
+// router.get('/photos/:photoId/comments', selectionController.getPhotoComments);
+
+// Segnare un commento come letto
+// router.patch('/comments/:id/read', isAuthenticated, selectionController.markCommentAsRead);
+
+// ---- Rotte per esportazione ----
+
+// Esportare selezioni (CSV o ZIP di foto)
+// router.post('/sessions/:id/export', isAuthenticated, selectionController.exportSelections);
 
 export default router;

@@ -1,45 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
-import PhotoSelector from '../shared/PhotoSelector';
-import CommentSystem from './CommentSystem';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-  Heart,
-  Camera,
-  Clock,
-  CheckCircle2,
-  MessageSquare,
-  Loader2,
-  Info,
-  Search,
-  ImageIcon,
-  X,
-  ChevronLeft,
-  CheckIcon,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2, CheckCircle, MessageSquare, XCircle, Filter, Image, Send } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import CommentSystem from './CommentSystem';
 
-// Tipi di base
 type Photo = {
   id: number;
   galleryId: number;
@@ -106,608 +76,615 @@ type SelectionInterfaceProps = {
 };
 
 export default function SelectionInterface({ sessionKey, galleryId }: SelectionInterfaceProps) {
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [chapters, setChapters] = useState<GalleryChapter[]>([]);
+  const [gallery, setGallery] = useState<Gallery | null>(null);
+  const [session, setSession] = useState<SelectionSession | null>(null);
+  const [settings, setSettings] = useState<GallerySelectionSettings | null>(null);
+  const [selections, setSelections] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
+  const [commentPhotoId, setCommentPhotoId] = useState<number | null>(null);
+  const [commentsCount, setCommentsCount] = useState<Record<number, number>>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('photos');
-  const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPhotoIds, setSelectedPhotoIds] = useState<number[]>([]);
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
-  const [completionNotes, setCompletionNotes] = useState('');
-  const [showWarning, setShowWarning] = useState(false);
 
   // Carica la sessione
-  const { data: session, isLoading: isLoadingSession } = useQuery<SelectionSession>({
-    queryKey: [`/api/selection/sessions/key/${sessionKey}`],
-    enabled: !!sessionKey,
-  });
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const response = await apiRequest('GET', `/api/selection/sessions/key/${sessionKey}`);
+        if (!response.ok) {
+          throw new Error('Sessione non trovata o scaduta');
+        }
+        const data = await response.json();
+        setSession(data);
+      } catch (error: any) {
+        console.error('Errore nel caricamento della sessione:', error);
+        setErrorMessage('Sessione non trovata o scaduta. Contatta lo studio fotografico.');
+      }
+    };
+
+    fetchSession();
+  }, [sessionKey]);
 
   // Carica le impostazioni di selezione
-  const { data: settings, isLoading: isLoadingSettings } = useQuery<GallerySelectionSettings>({
-    queryKey: [`/api/selection/settings/${galleryId}`],
-    enabled: !!galleryId,
-  });
-
-  // Carica la galleria
-  const { data: gallery, isLoading: isLoadingGallery } = useQuery<Gallery>({
-    queryKey: [`/api/gallery/galleries/${galleryId}`],
-    enabled: !!galleryId,
-  });
-
-  // Carica i capitoli della galleria
-  const { data: chapters, isLoading: isLoadingChapters } = useQuery<GalleryChapter[]>({
-    queryKey: [`/api/gallery/galleries/${galleryId}/chapters`],
-    enabled: !!galleryId,
-  });
-
-  // Carica le foto della galleria
-  const { data: photosData, isLoading: isLoadingPhotos } = useQuery<{ photos: Photo[] }>({
-    queryKey: [`/api/gallery/galleries/${galleryId}/photos`, { chapterId: selectedChapterId }],
-    enabled: !!galleryId,
-  });
-
-  // Carica le selezioni correnti
-  const { data: selections, isLoading: isLoadingSelections } = useQuery<PhotoSelection[]>({
-    queryKey: [`/api/selection/sessions/${session?.id}/selections`],
-    enabled: !!session?.id,
-  });
-
-  // Carica i commenti (solo quando necessario)
-  const { data: photoComments } = useQuery<{ photoId: number; count: number }[]>({
-    queryKey: [`/api/selection/sessions/${session?.id}/photos/comment-counts`],
-    enabled: !!session?.id && activeTab === 'photos',
-  });
-
-  // Aggiorna lo stato delle foto selezionate quando i dati vengono caricati
   useEffect(() => {
-    if (selections) {
-      setSelectedPhotoIds(selections.map(s => s.photoId));
-    }
-  }, [selections]);
-
-  // Controlla se la sessione è scaduta 
-  useEffect(() => {
-    if (settings?.expiresAt && new Date(settings.expiresAt) < new Date()) {
-      toast({
-        title: 'Sessione scaduta',
-        description: 'Questa sessione di selezione è scaduta e non è più possibile effettuare modifiche.',
-        variant: 'destructive',
-      });
-    }
-  }, [settings, toast]);
-
-  // Mutation per completare la sessione
-  const completeSessionMutation = useMutation({
-    mutationFn: async (notes: string) => {
-      const response = await apiRequest('POST', `/api/selection/sessions/${session?.id}/complete`, {
-        notes
-      });
-      
-      if (!response.ok) {
-        throw new Error('Errore durante il completamento della sessione');
+    const fetchSettings = async () => {
+      try {
+        const response = await apiRequest('GET', `/api/selection/settings/${galleryId}`);
+        if (!response.ok) {
+          throw new Error('Impostazioni non trovate');
+        }
+        const data = await response.json();
+        setSettings(data);
+      } catch (error: any) {
+        console.error('Errore nel caricamento delle impostazioni:', error);
       }
-      
-      return await response.json();
-    },
-    onSuccess: () => {
+    };
+
+    fetchSettings();
+  }, [galleryId]);
+
+  // Carica la galleria, i capitoli e le foto
+  useEffect(() => {
+    const fetchGalleryData = async () => {
+      setIsLoading(true);
+      try {
+        // Carica i dettagli della galleria
+        const galleryResponse = await apiRequest('GET', `/api/gallery/galleries/${galleryId}`);
+        if (!galleryResponse.ok) {
+          throw new Error('Galleria non trovata');
+        }
+        setGallery(await galleryResponse.json());
+
+        // Carica i capitoli
+        const chaptersResponse = await apiRequest('GET', `/api/gallery/galleries/${galleryId}/chapters`);
+        if (chaptersResponse.ok) {
+          const chaptersData = await chaptersResponse.json();
+          setChapters(chaptersData);
+        }
+
+        // Carica le foto
+        const photosResponse = await apiRequest('GET', `/api/gallery/galleries/${galleryId}/photos`);
+        if (!photosResponse.ok) {
+          throw new Error('Impossibile caricare le foto');
+        }
+        const photosData = await photosResponse.json();
+        setPhotos(photosData.photos || []);
+      } catch (error: any) {
+        console.error('Errore nel caricamento dei dati della galleria:', error);
+        setErrorMessage('Impossibile caricare i dati della galleria. Riprova più tardi.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (galleryId) {
+      fetchGalleryData();
+    }
+  }, [galleryId]);
+
+  // Carica le selezioni attuali
+  useEffect(() => {
+    const fetchSelections = async () => {
+      if (!session) return;
+
+      try {
+        const response = await apiRequest('GET', `/api/selection/sessions/${session.id}/selections`);
+        if (response.ok) {
+          const selections = await response.json();
+          setSelections(selections.map((s: PhotoSelection) => s.photoId));
+        }
+      } catch (error: any) {
+        console.error('Errore nel caricamento delle selezioni:', error);
+      }
+    };
+
+    fetchSelections();
+  }, [session]);
+
+  // Carica i conteggi dei commenti
+  useEffect(() => {
+    const fetchCommentsCount = async () => {
+      if (!session) return;
+
+      try {
+        const response = await apiRequest('GET', `/api/selection/sessions/${session.id}/photos/comment-counts`);
+        if (response.ok) {
+          const counts = await response.json();
+          const countsMap: Record<number, number> = {};
+          counts.forEach((item: { photoId: number; count: number }) => {
+            countsMap[item.photoId] = item.count;
+          });
+          setCommentsCount(countsMap);
+        }
+      } catch (error: any) {
+        console.error('Errore nel caricamento del conteggio commenti:', error);
+      }
+    };
+
+    fetchCommentsCount();
+  }, [session]);
+
+  // Filtra le foto in base al capitolo selezionato
+  const filteredPhotos = activeTab === 'all' 
+    ? photos 
+    : activeTab === 'unassigned' 
+      ? photos.filter(photo => !photo.chapterId) 
+      : photos.filter(photo => photo.chapterId === parseInt(activeTab));
+
+  // Filtra le foto già selezionate
+  const selectedPhotos = photos.filter(photo => selections.includes(photo.id));
+
+  // Gestisce il toggle della selezione di una foto
+  const toggleSelection = async (photoId: number) => {
+    if (!session || session.status !== 'active') {
       toast({
-        title: 'Selezione completata',
-        description: 'Grazie! Le tue selezioni sono state salvate con successo.',
-      });
-      
-      queryClient.invalidateQueries({ queryKey: [`/api/selection/sessions/key/${sessionKey}`] });
-      setShowCompletionDialog(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Errore',
-        description: `Errore durante il completamento: ${error.message}`,
+        title: 'Sessione non attiva',
+        description: 'Questa sessione non è più attiva.',
         variant: 'destructive',
       });
-    },
-  });
-
-  // Filtra le foto in base alla ricerca e al capitolo selezionato
-  const filteredPhotos = photosData?.photos.filter(photo => {
-    // Filtra per capitolo se selezionato
-    if (selectedChapterId !== null && photo.chapterId !== selectedChapterId) {
-      return false;
-    }
-    
-    // Filtra per termine di ricerca
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        photo.filename.toLowerCase().includes(query) ||
-        (photo.title && photo.title.toLowerCase().includes(query)) ||
-        (photo.description && photo.description.toLowerCase().includes(query))
-      );
-    }
-    
-    return true;
-  }) || [];
-
-  // Funzione per gestire la selezione/deselezione di una foto
-  const handleTogglePhotoSelection = (photoId: number, isSelected: boolean) => {
-    if (isSelected) {
-      setSelectedPhotoIds(prev => [...prev, photoId]);
-    } else {
-      setSelectedPhotoIds(prev => prev.filter(id => id !== photoId));
-    }
-  };
-
-  // Funzione per gestire l'apertura dei commenti su una foto
-  const handleShowComments = (photo: Photo) => {
-    setSelectedPhoto(photo);
-    setActiveTab('comments');
-  };
-
-  // Funzione per verificare se ci sono commenti per una foto
-  const hasComments = (photoId: number) => {
-    return photoComments?.some(pc => pc.photoId === photoId && pc.count > 0) || false;
-  };
-
-  // Funzione per gestire il completamento della sessione
-  const handleCompleteSession = () => {
-    // Controlla se abbiamo raggiunto il minimo di selezioni richieste
-    if (settings?.minSelections && selectedPhotoIds.length < settings.minSelections) {
-      setShowWarning(true);
       return;
     }
-    
-    setShowCompletionDialog(true);
+
+    // Verifica se stiamo aggiungendo (anziché rimuovendo)
+    const isAdding = !selections.includes(photoId);
+
+    // Verifica se abbiamo raggiunto il limite massimo
+    if (isAdding && settings?.maxSelections && selections.length >= settings.maxSelections) {
+      toast({
+        title: 'Limite raggiunto',
+        description: `Hai raggiunto il limite massimo di ${settings.maxSelections} foto selezionate.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const response = await apiRequest('POST', `/api/selection/photos/${photoId}`, {
+        sessionId: session.id
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.action === 'added') {
+          setSelections(prev => [...prev, photoId]);
+          toast({
+            title: 'Foto selezionata',
+            description: 'La foto è stata aggiunta alla tua selezione.',
+          });
+        } else {
+          setSelections(prev => prev.filter(id => id !== photoId));
+          toast({
+            title: 'Foto rimossa',
+            description: 'La foto è stata rimossa dalla tua selezione.',
+          });
+        }
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Errore sconosciuto');
+      }
+    } catch (error: any) {
+      console.error('Errore nella selezione della foto:', error);
+      toast({
+        title: 'Errore',
+        description: error.message || 'Impossibile aggiornare la selezione. Riprova più tardi.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  // Funzione per confermare il completamento
-  const confirmCompletion = () => {
-    completeSessionMutation.mutate(completionNotes);
+  // Completa la sessione di selezione
+  const completeSession = async () => {
+    if (!session || session.status !== 'active') return;
+
+    // Verifica che sia stato selezionato il numero minimo di foto
+    if (settings && settings.minSelections > 0 && selections.length < settings.minSelections) {
+      toast({
+        title: 'Selezione incompleta',
+        description: `Devi selezionare almeno ${settings.minSelections} foto per completare la selezione.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await apiRequest('POST', `/api/selection/sessions/${session.id}/complete`);
+
+      if (response.ok) {
+        const updatedSession = await response.json();
+        setSession(updatedSession);
+        toast({
+          title: 'Selezione completata',
+          description: 'La tua selezione è stata inviata con successo!',
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Errore sconosciuto');
+      }
+    } catch (error: any) {
+      console.error('Errore nel completamento della sessione:', error);
+      toast({
+        title: 'Errore',
+        description: error.message || 'Impossibile completare la selezione. Riprova più tardi.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Verifica se la sessione è completata o scaduta
-  const isSessionActive = session?.status === 'active';
-  const isSessionCompleted = session?.status === 'completed';
-  const isSessionExpired = session?.status === 'expired' || 
-    (settings?.expiresAt && new Date(settings.expiresAt) < new Date());
-
-  // Stato di caricamento generale
-  const isLoading = isLoadingSession || isLoadingSettings || isLoadingGallery || 
-    isLoadingChapters || isLoadingPhotos || isLoadingSelections;
-
-  if (isLoading) {
+  // Gestisce gli errori di caricamento
+  if (errorMessage) {
     return (
-      <div className="flex justify-center items-center min-h-screen p-8">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Caricamento in corso...</p>
-        </div>
+      <div className="container mx-auto p-4">
+        <Alert variant="destructive">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Mostra il loader durante il caricamento
+  if (isLoading || !session) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-6xl">
-      {/* Intestazione */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">{gallery?.name}</h1>
-        <div className="flex flex-wrap gap-2 items-center text-sm text-muted-foreground">
-          <span className="flex items-center">
-            <Camera className="h-4 w-4 mr-1" />
-            {filteredPhotos.length} foto disponibili
-          </span>
-          <span className="hidden sm:flex items-center">
-            <Heart className="h-4 w-4 mr-1" />
-            {selectedPhotoIds.length} foto selezionate
-          </span>
-          {settings?.maxSelections > 0 && (
-            <Badge variant="outline" className="ml-1">
-              Max: {settings.maxSelections}
+    <div className="container mx-auto p-4">
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            {gallery?.name || 'Selezione foto'}
+          </CardTitle>
+          <CardDescription>
+            Ciao {session.clientName}, benvenuto/a nella selezione foto.
+            {settings?.instructions && (
+              <div className="mt-2 p-3 bg-secondary rounded-md text-secondary-foreground">
+                {settings.instructions}
+              </div>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <Badge variant={session.status === 'active' ? 'default' : 'secondary'}>
+                {session.status === 'active' ? 'Sessione attiva' : session.status === 'completed' ? 'Completata' : 'Scaduta'}
+              </Badge>
+              {settings && (
+                <div className="mt-2 text-sm">
+                  {settings.minSelections > 0 && (
+                    <p>Minimo: {settings.minSelections} foto</p>
+                  )}
+                  {settings.maxSelections > 0 && (
+                    <p>Massimo: {settings.maxSelections} foto</p>
+                  )}
+                  <p>Selezionate: {selections.length} foto</p>
+                </div>
+              )}
+            </div>
+            {session.status === 'active' && (
+              <Button 
+                onClick={completeSession} 
+                disabled={isSubmitting || (settings?.minSelections || 0) > selections.length}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Completa selezione
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-medium">Foto</h2>
+          <TabsList>
+            <TabsTrigger value="all">Tutte</TabsTrigger>
+            <TabsTrigger value="selected">Selezionate ({selections.length})</TabsTrigger>
+            {chapters.map(chapter => (
+              <TabsTrigger key={chapter.id} value={String(chapter.id)}>
+                {chapter.title}
+              </TabsTrigger>
+            ))}
+            <TabsTrigger value="unassigned">Non assegnate</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="all" className="mt-0">
+          <PhotoGrid 
+            photos={photos} 
+            selections={selections} 
+            commentsCount={commentsCount}
+            onSelect={toggleSelection} 
+            onComment={setCommentPhotoId} 
+            isSelectionActive={session.status === 'active'} 
+          />
+        </TabsContent>
+
+        <TabsContent value="selected" className="mt-0">
+          {selectedPhotos.length === 0 ? (
+            <div className="text-center py-12 bg-secondary/20 rounded-md">
+              <p>Nessuna foto selezionata</p>
+            </div>
+          ) : (
+            <PhotoGrid 
+              photos={selectedPhotos} 
+              selections={selections} 
+              commentsCount={commentsCount}
+              onSelect={toggleSelection} 
+              onComment={setCommentPhotoId} 
+              isSelectionActive={session.status === 'active'} 
+            />
+          )}
+        </TabsContent>
+
+        {chapters.map(chapter => (
+          <TabsContent key={chapter.id} value={String(chapter.id)} className="mt-0">
+            <PhotoGrid 
+              photos={filteredPhotos} 
+              selections={selections} 
+              commentsCount={commentsCount}
+              onSelect={toggleSelection} 
+              onComment={setCommentPhotoId} 
+              isSelectionActive={session.status === 'active'} 
+            />
+          </TabsContent>
+        ))}
+
+        <TabsContent value="unassigned" className="mt-0">
+          <PhotoGrid 
+            photos={filteredPhotos} 
+            selections={selections} 
+            commentsCount={commentsCount}
+            onSelect={toggleSelection} 
+            onComment={setCommentPhotoId} 
+            isSelectionActive={session.status === 'active'} 
+          />
+        </TabsContent>
+      </Tabs>
+
+      {commentPhotoId !== null && session && (
+        <CommentDialog 
+          photoId={commentPhotoId} 
+          sessionId={session.id}
+          clientName={session.clientName}
+          isActive={session.status === 'active'}
+          onClose={() => setCommentPhotoId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Componente griglia foto
+type PhotoGridProps = {
+  photos: Photo[];
+  selections: number[];
+  commentsCount: Record<number, number>;
+  onSelect: (photoId: number) => void;
+  onComment: (photoId: number) => void;
+  isSelectionActive: boolean;
+};
+
+function PhotoGrid({ photos, selections, commentsCount, onSelect, onComment, isSelectionActive }: PhotoGridProps) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {photos.map(photo => (
+        <PhotoCard 
+          key={photo.id} 
+          photo={photo} 
+          isSelected={selections.includes(photo.id)}
+          commentsCount={commentsCount[photo.id] || 0}
+          onSelect={() => onSelect(photo.id)}
+          onComment={() => onComment(photo.id)}
+          isSelectionActive={isSelectionActive}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Componente carta foto
+type PhotoCardProps = {
+  photo: Photo;
+  isSelected: boolean;
+  commentsCount: number;
+  onSelect: () => void;
+  onComment: () => void;
+  isSelectionActive: boolean;
+};
+
+function PhotoCard({ photo, isSelected, commentsCount, onSelect, onComment, isSelectionActive }: PhotoCardProps) {
+  const [fullImage, setFullImage] = useState(false);
+
+  return (
+    <Card className={`overflow-hidden transition-shadow ${isSelected ? 'ring-2 ring-primary shadow-lg' : ''}`}>
+      <div className="relative aspect-square overflow-hidden">
+        <img
+          src={photo.thumbnailUrl}
+          alt={photo.title || `Foto ${photo.id}`}
+          className="object-cover w-full h-full transition-transform hover:scale-105 cursor-pointer"
+          onClick={() => setFullImage(true)}
+        />
+        
+        <div className="absolute top-2 right-2 flex gap-1">
+          {commentsCount > 0 && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" />
+              {commentsCount}
             </Badge>
           )}
-          <span className="hidden sm:flex items-center">
-            <Clock className="h-4 w-4 mr-1" />
-            Iniziata il {format(new Date(session?.startedAt || new Date()), "d MMMM", { locale: it })}
-          </span>
-          <Badge 
-            variant={isSessionCompleted ? "success" : isSessionExpired ? "destructive" : "default"}
-            className="ml-auto"
-          >
-            {isSessionCompleted ? "Completata" : isSessionExpired ? "Scaduta" : "Attiva"}
-          </Badge>
+          {isSelected && (
+            <Badge variant="primary" className="flex items-center gap-1">
+              <CheckCircle className="h-3 w-3" />
+            </Badge>
+          )}
         </div>
       </div>
       
-      {/* Avviso di sessione non attiva */}
-      {!isSessionActive && (
-        <Alert className="mb-6">
-          <Info className="h-4 w-4" />
-          <AlertTitle>
-            {isSessionCompleted ? "Selezione completata" : "Sessione scaduta"}
-          </AlertTitle>
-          <AlertDescription>
-            {isSessionCompleted 
-              ? "Hai già completato questa selezione. Non è più possibile effettuare modifiche."
-              : "Questa sessione di selezione è scaduta. Non è più possibile effettuare modifiche."}
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {/* Istruzioni */}
-      {settings?.instructions && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Istruzioni</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-sm max-w-none">
-              {settings.instructions}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      {/* Tabs principali */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <CardContent className="p-3">
         <div className="flex justify-between items-center">
-          <TabsList>
-            <TabsTrigger value="photos" onClick={() => setSelectedPhoto(null)}>
-              Foto
-            </TabsTrigger>
-            <TabsTrigger value="selections">
-              Selezioni
-              <Badge variant="secondary" className="ml-2">
-                {selectedPhotoIds.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="comments" 
-              disabled={!selectedPhoto}
-              className={!selectedPhoto ? "opacity-50 cursor-not-allowed" : ""}
+          <div className="text-sm truncate max-w-[70%]">
+            {photo.title || `Foto ${photo.id}`}
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={onComment}
             >
-              {selectedPhoto ? `Commenti: ${selectedPhoto.filename}` : "Commenti"}
-            </TabsTrigger>
-          </TabsList>
-          
-          {isSessionActive && (
-            <Button 
-              onClick={handleCompleteSession}
-              disabled={completeSessionMutation.isPending}
-              className="hidden sm:flex"
-            >
-              {completeSessionMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-              )}
-              Completa Selezione
+              <MessageSquare className="h-4 w-4" />
             </Button>
-          )}
-        </div>
-        
-        {/* Contenuto Tab Foto */}
-        <TabsContent value="photos" className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Cerca foto..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+            {isSelectionActive && (
+              <Button
+                variant={isSelected ? "destructive" : "default"}
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={onSelect}
+              >
+                {isSelected ? (
+                  <XCircle className="h-4 w-4" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
                 )}
-              </div>
-            </div>
-            
-            {chapters && chapters.length > 0 && (
-              <div className="flex-1">
-                <div className="flex gap-2 items-center overflow-x-auto pb-2">
-                  <Button
-                    variant={selectedChapterId === null ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedChapterId(null)}
-                    className="whitespace-nowrap"
-                  >
-                    Tutte le foto
-                  </Button>
-                  
-                  {chapters.map(chapter => (
-                    <Button
-                      key={chapter.id}
-                      variant={selectedChapterId === chapter.id ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedChapterId(chapter.id)}
-                      className="whitespace-nowrap"
-                    >
-                      {chapter.title}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+              </Button>
             )}
           </div>
-          
-          {filteredPhotos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="rounded-full bg-muted p-3 mb-3">
-                <ImageIcon className="h-6 w-6 text-muted-foreground" />
-              </div>
-              {searchQuery ? (
-                <>
-                  <h3 className="font-medium">Nessuna foto trovata</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    La ricerca "{searchQuery}" non ha prodotto risultati
-                  </p>
-                </>
-              ) : selectedChapterId !== null ? (
-                <>
-                  <h3 className="font-medium">Nessuna foto in questo capitolo</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Seleziona un altro capitolo per visualizzare le foto
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h3 className="font-medium">Nessuna foto disponibile</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Non ci sono foto in questa galleria
-                  </p>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {filteredPhotos.map(photo => (
-                <PhotoSelector
-                  key={photo.id}
-                  photo={photo}
-                  sessionId={session?.id || 0}
-                  isSelected={selectedPhotoIds.includes(photo.id)}
-                  maxSelections={settings?.maxSelections || 0}
-                  isDisabled={!isSessionActive || 
-                    (settings?.maxSelections ? selectedPhotoIds.length >= settings.maxSelections && !selectedPhotoIds.includes(photo.id) : false)}
-                  hasComments={hasComments(photo.id)}
-                  onToggleSelect={handleTogglePhotoSelection}
-                  onShowComments={() => handleShowComments(photo)}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        
-        {/* Contenuto Tab Selezioni */}
-        <TabsContent value="selections">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Le tue selezioni</CardTitle>
-              <CardDescription>
-                Hai selezionato {selectedPhotoIds.length} foto
-                {settings?.minSelections > 0 && (
-                  <> (minimo richiesto: {settings.minSelections})</>
-                )}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {selectedPhotoIds.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="rounded-full bg-muted p-3 mb-3">
-                    <Heart className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-medium text-muted-foreground mt-2">
-                    Non hai ancora selezionato nessuna foto
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Vai alla scheda "Foto" per iniziare a selezionare
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {photosData?.photos
-                    .filter(photo => selectedPhotoIds.includes(photo.id))
-                    .map(photo => (
-                      <PhotoSelector
-                        key={photo.id}
-                        photo={photo}
-                        sessionId={session?.id || 0}
-                        isSelected={true}
-                        isDisabled={!isSessionActive}
-                        hasComments={hasComments(photo.id)}
-                        onToggleSelect={handleTogglePhotoSelection}
-                        onShowComments={() => handleShowComments(photo)}
-                      />
-                    ))}
-                </div>
-              )}
-            </CardContent>
-            {isSessionActive && (
-              <CardFooter className="flex justify-between">
-                <div>
-                  {settings?.minSelections > 0 && selectedPhotoIds.length < settings.minSelections && (
-                    <p className="text-sm text-amber-600">
-                      Devi selezionare almeno {settings.minSelections} foto
-                    </p>
-                  )}
-                </div>
-                <Button 
-                  onClick={handleCompleteSession}
-                  disabled={completeSessionMutation.isPending}
-                >
-                  {completeSessionMutation.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                  )}
-                  Completa Selezione
-                </Button>
-              </CardFooter>
-            )}
-          </Card>
-        </TabsContent>
-        
-        {/* Contenuto Tab Commenti */}
-        <TabsContent value="comments">
-          {selectedPhoto ? (
-            <Card>
-              <CardHeader className="flex flex-row items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setSelectedPhoto(null);
-                    setActiveTab('photos');
-                  }}
-                  className="h-8 w-8"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div>
-                  <CardTitle className="text-lg flex items-center">
-                    <MessageSquare className="h-5 w-5 mr-2" />
-                    Commenti
-                  </CardTitle>
-                  <CardDescription>
-                    {selectedPhoto.title || selectedPhoto.filename}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-6">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="md:w-1/3">
-                    <div className="rounded-md overflow-hidden bg-muted mb-4">
-                      <img 
-                        src={selectedPhoto.thumbnailUrl} 
-                        alt={selectedPhoto.title || selectedPhoto.filename}
-                        className="w-full h-auto"
-                      />
-                    </div>
-                    
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>
-                        {format(new Date(selectedPhoto.createdAt), "d MMMM yyyy", { locale: it })}
-                      </span>
-                      <Badge variant={selectedPhotoIds.includes(selectedPhoto.id) ? "default" : "outline"}>
-                        {selectedPhotoIds.includes(selectedPhoto.id) ? (
-                          <span className="flex items-center">
-                            <CheckIcon className="mr-1 h-3 w-3" />
-                            Selezionata
-                          </span>
-                        ) : "Non selezionata"}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="md:w-2/3">
-                    <CommentSystem 
-                      photoId={selectedPhoto.id}
-                      sessionId={session?.id || 0}
-                      clientName={session?.clientName}
-                      isActive={isSessionActive}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <MessageSquare className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  Seleziona una foto per visualizzare o aggiungere commenti
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-      
-      {/* Footer con bottone di completamento (mobile) */}
-      {isSessionActive && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t sm:hidden">
-          <Button 
-            onClick={handleCompleteSession}
-            disabled={completeSessionMutation.isPending}
-            className="w-full"
-          >
-            {completeSessionMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-            )}
-            Completa Selezione ({selectedPhotoIds.length})
-          </Button>
         </div>
-      )}
-      
-      {/* Dialog di avviso per selezioni insufficienti */}
-      <Dialog open={showWarning} onOpenChange={setShowWarning}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Attenzione</DialogTitle>
-            <DialogDescription>
-              Devi selezionare almeno {settings?.minSelections} foto per completare la selezione.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="pt-4 flex justify-end">
-            <Button onClick={() => setShowWarning(false)}>Ho capito</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Dialog di completamento */}
-      <Dialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Completa la tua selezione</DialogTitle>
-            <DialogDescription>
-              Hai selezionato {selectedPhotoIds.length} foto. 
-              Una volta completata, non sarà più possibile modificare le tue selezioni.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="notes">Note aggiuntive (opzionale)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Aggiungi eventuali note o richieste"
-                value={completionNotes}
-                onChange={e => setCompletionNotes(e.target.value)}
-                className="min-h-[100px]"
+      </CardContent>
+
+      {fullImage && (
+        <Dialog open={fullImage} onOpenChange={setFullImage}>
+          <DialogContent className="max-w-4xl w-[90vw]">
+            <DialogHeader>
+              <DialogTitle>{photo.title || `Foto ${photo.id}`}</DialogTitle>
+            </DialogHeader>
+            <div className="relative">
+              <img
+                src={photo.originalUrl}
+                alt={photo.title || `Foto ${photo.id}`}
+                className="object-contain max-h-[70vh] w-full"
               />
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                {isSelectionActive && (
+                  <Button
+                    variant={isSelected ? "destructive" : "default"}
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect();
+                    }}
+                  >
+                    {isSelected ? "Rimuovi" : "Seleziona"}
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFullImage(false);
+                    onComment();
+                  }}
+                >
+                  Commenta
+                </Button>
+              </div>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </Card>
+  );
+}
+
+// Componente dialogo commenti
+type CommentDialogProps = {
+  photoId: number;
+  sessionId: number;
+  clientName: string;
+  isActive: boolean;
+  onClose: () => void;
+};
+
+function CommentDialog({ photoId, sessionId, clientName, isActive, onClose }: CommentDialogProps) {
+  const [isOpen, setIsOpen] = useState(true);
+  const [photo, setPhoto] = useState<Photo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Carica i dettagli della foto
+  useEffect(() => {
+    const fetchPhoto = async () => {
+      setIsLoading(true);
+      try {
+        const response = await apiRequest('GET', `/api/gallery/photos/${photoId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setPhoto(data);
+        }
+      } catch (error) {
+        console.error('Errore nel caricamento della foto:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPhoto();
+  }, [photoId]);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-4xl w-[90vw]">
+        <DialogHeader>
+          <DialogTitle>Commenti</DialogTitle>
+        </DialogHeader>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative overflow-hidden rounded-md">
+            {isLoading || !photo ? (
+              <div className="flex justify-center items-center h-64 bg-secondary/20">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <img
+                src={photo.originalUrl}
+                alt={photo.title || `Foto ${photo.id}`}
+                className="object-contain w-full max-h-[50vh]"
+              />
+            )}
           </div>
           
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowCompletionDialog(false)}
-            >
-              Annulla
-            </Button>
-            <Button 
-              onClick={confirmCompletion}
-              disabled={completeSessionMutation.isPending}
-            >
-              {completeSessionMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-              )}
-              Conferma e Invia
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          <div className="h-full">
+            <CommentSystem
+              photoId={photoId}
+              sessionId={sessionId}
+              clientName={clientName}
+              isActive={isActive}
+            />
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -43,7 +43,7 @@ import { ChapterList } from "@/components/galleries/chapter-list";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
 import { PhotoChapterManager } from "@/components/galleries/photo-chapter-manager";
 import GalleryVideoManager from "@/components/galleries/gallery-video-manager";
-import { ClientSelectionsManager } from "@/components/galleries/client-selections-manager";
+import SelectionsDashboard from "@/components/selection-system/admin/SelectionsDashboard";
 
 export default function GalleryPage() {
   const [, params] = useRoute("/galleries/:id");
@@ -335,8 +335,9 @@ export default function GalleryPage() {
               </TabsContent>
               
               <TabsContent value="selections" className="mt-0">
-                <ClientSelectionsManager
+                <SelectionsDashboard
                   galleryId={gallery.id}
+                  galleryName={gallery.name}
                 />
               </TabsContent>
               

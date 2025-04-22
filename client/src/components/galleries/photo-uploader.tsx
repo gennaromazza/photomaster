@@ -112,11 +112,18 @@ export function PhotoUploader({
       );
 
       const formData = new FormData();
-      formData.append("photo", file);
+      // "photo" è il nome del campo che multer si aspetta sul server
+      formData.append("photo", file, file.name);
       formData.append("galleryId", String(galleryId));
       if (chapterId !== null) {
         formData.append("chapterId", String(chapterId));
       }
+      
+      console.log("FormData pronto per l'invio:", {
+        galleryId: String(galleryId),
+        chapterId: chapterId !== null ? String(chapterId) : "null",
+        filename: file.name
+      });
 
       try {
         // Otteniamo il token CSRF prima di iniziare il caricamento

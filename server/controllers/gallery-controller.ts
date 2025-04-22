@@ -3,7 +3,7 @@ import { db } from "../db";
 import { 
   galleries, insertGallerySchema, galleryChapters, insertGalleryChapterSchema,
   photos, insertPhotoSchema, photoSelections, gallerySubscriptions, insertGallerySubscriptionSchema,
-  socialShares, insertSocialShareSchema
+  socialShares, insertSocialShareSchema, photoLikes, photoComments
 } from "../../schema_gallery";
 import { eq, and, desc, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 import * as fs from "fs";

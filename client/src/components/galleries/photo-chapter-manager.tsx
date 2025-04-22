@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Camera, Folder, Move, Save } from "lucide-react";
+import { Camera, Folder, Move, Save, CheckSquare, Square, X, FolderInput, Filter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,25 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Photo, GalleryChapter } from "@/types/gallery";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface PhotoChapterManagerProps {
   galleryId: number;
@@ -27,6 +46,10 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [photosByChapter, setPhotosByChapter] = useState<ChapterData[]>([]);
   const [needsSaving, setNeedsSaving] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
+  const [selectMode, setSelectMode] = useState(false);
+  const [isMovingBatch, setIsMovingBatch] = useState(false);
+  const [targetChapterId, setTargetChapterId] = useState<string>('');
 
   // Ottieni tutti i capitoli
   const { data: chapters, isLoading: isLoadingChapters } = useQuery({
@@ -154,6 +177,80 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
         // Abilita il salvataggio anche per il riordino interno
         setNeedsSaving(true);
       }
+    }
+  };
+
+  // Gestisce la selezione/deselezione di una foto
+  const togglePhotoSelection = (photoId: number) => {
+    if (selectedPhotos.includes(photoId)) {
+      setSelectedPhotos(selectedPhotos.filter(id => id !== photoId));
+    } else {
+      setSelectedPhotos([...selectedPhotos, photoId]);
+    }
+  };
+
+  // Gestisce l'attivazione/disattivazione della modalità selezione
+  const toggleSelectMode = () => {
+    setSelectMode(!selectMode);
+    if (selectMode) {
+      // Deseleziona tutte le foto quando si esce dalla modalità selezione
+      setSelectedPhotos([]);
+    }
+  };
+
+  // Deseleziona tutte le foto
+  const deselectAll = () => {
+    setSelectedPhotos([]);
+  };
+
+  // Gestisce il movimento batch di foto selezionate in un capitolo specifico
+  const moveSelectedPhotos = async () => {
+    if (selectedPhotos.length === 0 || !targetChapterId) return;
+    
+    const destinationChapterId = targetChapterId === 'null' ? null : Number(targetChapterId);
+    
+    setIsMovingBatch(true);
+    
+    try {
+      const promises = [];
+      
+      // Per ogni foto selezionata, aggiorna il capitolo
+      for (const photoId of selectedPhotos) {
+        promises.push(
+          updatePhotoMutation.mutateAsync({
+            photoId,
+            chapterId: destinationChapterId
+          })
+        );
+      }
+      
+      // Attendi il completamento di tutte le operazioni
+      await Promise.all(promises);
+      
+      // Aggiorna i dati
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/gallery/galleries/${galleryId}/photos`] 
+      });
+      
+      // Feedback all'utente
+      toast({
+        title: "Foto spostate",
+        description: `${selectedPhotos.length} foto ${selectedPhotos.length === 1 ? 'spostata' : 'spostate'} nel capitolo selezionato`,
+      });
+      
+      // Reset della selezione e del target
+      setSelectedPhotos([]);
+      setTargetChapterId('');
+      setIsMovingBatch(false);
+      
+    } catch (error) {
+      console.error("Errore nello spostamento batch delle foto:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante lo spostamento delle foto",
+        variant: "destructive",
+      });
+      setIsMovingBatch(false);
     }
   };
 

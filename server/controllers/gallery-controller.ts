@@ -916,17 +916,31 @@ export const updatePhoto = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { title, caption, isFeatured, isHidden, chapterId, sortOrder, tags } = req.body;
 
+    // Gestisci correttamente chapterId, permettendo di impostarlo su null
+    let chapterIdValue = undefined;
+    if (chapterId === null || chapterId === 'null') {
+      chapterIdValue = null;
+    } else if (chapterId !== undefined) {
+      chapterIdValue = Number(chapterId);
+    }
+
+    console.log(`Aggiornamento foto ${id} con chapterId:`, chapterIdValue);
+    
+    const updateData = {
+      ...(title !== undefined ? { title } : {}),
+      ...(caption !== undefined ? { caption } : {}),
+      ...(isFeatured !== undefined ? { isFeatured: isFeatured === true || isFeatured === 'true' } : {}),
+      ...(isHidden !== undefined ? { isHidden: isHidden === true || isHidden === 'true' } : {}),
+      ...(chapterId !== undefined ? { chapterId: chapterIdValue } : {}),
+      ...(sortOrder !== undefined ? { sortOrder: Number(sortOrder) } : {}),
+      ...(tags !== undefined ? { tags: typeof tags === 'string' ? JSON.parse(tags) : tags } : {})
+    };
+    
+    console.log('Dati aggiornamento:', updateData);
+
     const [updatedPhoto] = await db
       .update(photos)
-      .set({
-        title,
-        caption,
-        isFeatured: isFeatured === true || isFeatured === 'true',
-        isHidden: isHidden === true || isHidden === 'true',
-        ...(chapterId !== undefined ? { chapterId: Number(chapterId) } : {}),
-        sortOrder: sortOrder ? Number(sortOrder) : undefined,
-        tags: tags ? JSON.parse(tags) : undefined
-      })
+      .set(updateData)
       .where(eq(photos.id, Number(id)))
       .returning();
 

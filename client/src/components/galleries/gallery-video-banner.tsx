@@ -8,9 +8,15 @@ import { GalleryVideo } from '@/types/gallery';
 
 interface GalleryVideoBannerProps {
   galleryId: number;
+  galleryName?: string;
+  description?: string;
 }
 
-const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({ galleryId }) => {
+const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({ 
+  galleryId,
+  galleryName,
+  description
+}) => {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   
   // Query per caricare i video della galleria

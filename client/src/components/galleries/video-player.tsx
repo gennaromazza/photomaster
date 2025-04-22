@@ -60,7 +60,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose }) => 
   };
 
   const embedUrl = getVideoEmbedUrl(video);
-  const isDirectVideo = videoUrl?.match(/\.(mp4|webm|ogg)$/i);
+  const isDirectVideo = video.videoUrl?.match(/\.(mp4|webm|ogg)$/i);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

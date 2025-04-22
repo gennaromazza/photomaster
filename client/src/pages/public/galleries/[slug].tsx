@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
 import { PhotoSelectionManager } from "@/components/galleries/photo-selection-manager";
 import { VisitorInfoForm } from "@/components/galleries/visitor-info-form";
+import { GalleryCardFooter } from "@/components/galleries/gallery-card-footer";
 import { 
   Loader2, 
   Heart, 
@@ -792,9 +793,7 @@ export default function PublicGalleryPage() {
                 </Button>
               </form>
             </CardContent>
-            <CardFooter className="flex justify-between text-xs text-muted-foreground">
-              <p>© ImageStudio</p>
-            </CardFooter>
+            <GalleryCardFooter />
           </Card>
         </div>
       );

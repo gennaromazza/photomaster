@@ -1491,6 +1491,7 @@ export const createPhotoSelections = async (req: Request, res: Response) => {
 // Download di una singola foto
 export async function downloadPhoto(req: Request, res: Response) {
   const photoId = Number(req.params.id);
+  const quality = req.query.quality as string || 'large'; // Opzioni: original, large, medium, thumbnail
   
   try {
     // Ottieni la foto con la relativa galleria per controllare i permessi
@@ -1510,8 +1511,27 @@ export async function downloadPhoto(req: Request, res: Response) {
       return res.status(403).json({ error: "Download non consentito per questa galleria" });
     }
 
-    // Trova il percorso completo del file originale
-    let filePath = photo.path;
+    // Determina quale versione dell'immagine usare in base alla qualità richiesta
+    let filePath = '';
+    
+    switch (quality) {
+      case 'original':
+        filePath = photo.path;
+        break;
+      case 'large':
+        filePath = photo.largePath || photo.path;
+        break;
+      case 'medium':
+        filePath = photo.mediumPath || photo.largePath || photo.path;
+        break;
+      case 'thumbnail':
+        filePath = photo.thumbnailPath || photo.mediumPath || photo.path;
+        break;
+      default:
+        filePath = photo.largePath || photo.path;
+    }
+    
+    console.log(`Download foto con qualità: ${quality}, percorso selezionato: ${filePath}`);
     
     // Se il percorso è già assoluto (contiene workspace), usiamo direttamente quello
     if (filePath.includes('/home/runner/workspace/')) {
@@ -1630,9 +1650,11 @@ export async function downloadAllPhotos(req: Request, res: Response) {
     
     // Aggiungi ogni foto all'archivio
     for (const photo of photosToDownload) {
-      // Determina il percorso corretto del file
-      let filePath = photo.path;
+      // Definisci quale versione dell'immagine usare
+      // Utilizziamo le versioni compresse large, che hanno una buona qualità ma sono più leggere
+      let filePath = photo.largePath || photo.path;  // Fallback all'originale se non esiste large
       
+      // Determina il percorso assoluto per il file
       // Se il percorso è già assoluto (contiene workspace), usiamo direttamente quello
       if (filePath.includes('/home/runner/workspace/')) {
         // Usa direttamente il percorso assoluto
@@ -1647,6 +1669,19 @@ export async function downloadAllPhotos(req: Request, res: Response) {
       else {
         filePath = path.join(process.cwd(), 'uploads', filePath);
         console.log(`Tentativo di aggiungere allo ZIP - Costruito percorso da relativo semplice: ${filePath}`);
+      }
+      
+      // Se il file compresso non esiste, prova con l'originale come fallback
+      if (!fs.existsSync(filePath) && photo.path) {
+        let originalPath = photo.path;
+        if (originalPath.includes('/home/runner/workspace/')) {
+          filePath = originalPath;
+        } else if (originalPath.startsWith('/uploads/')) {
+          filePath = path.join(process.cwd(), originalPath);
+        } else {
+          filePath = path.join(process.cwd(), 'uploads', originalPath);
+        }
+        console.log(`File compresso non trovato, utilizzo originale: ${filePath}`);
       }
       
       console.log(`Tentativo di aggiungere allo ZIP - File: ${photo.originalFilename}, Percorso finale: ${filePath}`);

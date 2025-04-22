@@ -22,7 +22,7 @@ app.use(
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "blob:", "https://cdn.ckeditor.com", "https://*.googleusercontent.com", "https:"],
         connectSrc: ["'self'", "https://www.googleapis.com"],
-        frameSrc: ["'self'", "https://accounts.google.com"],
+        frameSrc: ["'self'", "https://accounts.google.com", "https://www.youtube.com", "https://youtube.com", "https://player.vimeo.com", "https://vimeo.com", "https://*.replit.app"],
       },
     },
     crossOriginEmbedderPolicy: false, // Necessario per CKEditor

@@ -188,6 +188,19 @@ export default function PublicGalleryPage() {
   
   // Variabile derivata per la protezione con password
   const isPasswordProtected = gallery?.requiresPassword || !!gallery?.password;
+  
+  // Filtra le foto in base al capitolo attivo
+  const filteredPhotos = useMemo(() => {
+    if (activeChapter === null) {
+      return photos; // Mostra tutte le foto se nessun capitolo è selezionato
+    }
+    return photos.filter(photo => photo.chapterId === activeChapter);
+  }, [photos, activeChapter]);
+  
+  // Trova la prima foto di ogni capitolo (per l'immagine di anteprima)
+  const getFirstPhotoForChapter = useCallback((chapterId: number) => {
+    return photos.find(photo => photo.chapterId === chapterId);
+  }, [photos]);
 
   // useEffect per i capitoli: imposta il primo capitolo come attivo se non c'è nessun capitolo attivo
   useEffect(() => {
@@ -202,9 +215,10 @@ export default function PublicGalleryPage() {
   useEffect(() => {
     if (activeChapter !== null && gallery) {
       console.log("[Gallery] Chapter changed, refetching photos for chapter:", activeChapter);
-      refetchPhotos();
+      // Non è più necessario ricaricare le foto perché filtriamo localmente
+      // refetchPhotos();
     }
-  }, [activeChapter, gallery, refetchPhotos]);
+  }, [activeChapter, gallery]);
 
   // useEffect per lo scroll: monitoraggio dello scroll per mostrare/nascondere il pulsante "Torna su"
   useEffect(() => {
@@ -1031,9 +1045,9 @@ export default function PublicGalleryPage() {
                     >
                       <div className="aspect-video relative overflow-hidden">
                         {/* Immagine di copertina del capitolo */}
-                        {chapter.coverImage ? (
+                        {chapter.coverImage || getFirstPhotoForChapter(chapter.id) ? (
                           <img 
-                            src={chapter.coverImage}
+                            src={chapter.coverImage || getFirstPhotoForChapter(chapter.id)?.path}
                             alt={`Copertina: ${chapter.title}`}
                             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                           />
@@ -1201,7 +1215,7 @@ export default function PublicGalleryPage() {
                     <Skeleton key={i} className="aspect-square rounded-xl" />
                   ))}
                 </div>
-              ) : photos.length === 0 ? (
+              ) : filteredPhotos.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl">
                   <div className="flex flex-col items-center justify-center p-8">
                     <Camera className="h-12 w-12 text-muted-foreground/40 mb-4" />
@@ -1240,7 +1254,7 @@ export default function PublicGalleryPage() {
                         <Camera className="h-4 w-4 text-primary" />
                         <span className="text-sm font-medium text-primary">Album fotografico</span>
                       </div>
-                      <h3 className="text-lg font-medium">{photos.length} fotografie{activeChapter ? ` in "${chapters.find(c => c.id === activeChapter)?.title}"` : ""}</h3>
+                      <h3 className="text-lg font-medium">{filteredPhotos.length} fotografie{activeChapter ? ` in "${chapters.find(c => c.id === activeChapter)?.title}"` : ""}</h3>
                       <p className="text-muted-foreground text-sm mt-1">Clicca su una foto per visualizzarla a schermo intero</p>
                     </div>
                     
@@ -1274,6 +1288,16 @@ export default function PublicGalleryPage() {
                     {(() => {
                       // Funzione per raggruppare le foto per capitolo
                       const groupPhotosByChapter = () => {
+                        // Se un capitolo è selezionato, mostriamo solo quelle foto
+                        if (activeChapter !== null) {
+                          const chapter = chapters.find(c => c.id === activeChapter);
+                          if (chapter) {
+                            return [[chapter.title, filteredPhotos]];
+                          }
+                          return [["Capitolo", filteredPhotos]];
+                        }
+                        
+                        // Se non c'è un capitolo selezionato, raggruppiamo le foto per capitolo
                         // Creiamo un Map per mantenere l'ordinamento
                         const grouped = new Map<string, Photo[]>();
                         
@@ -1286,7 +1310,7 @@ export default function PublicGalleryPage() {
                         });
                         
                         // Distribuiamo le foto nei relativi capitoli
-                        photos.forEach(photo => {
+                        filteredPhotos.forEach(photo => {
                           if (photo.chapterId) {
                             // Troviamo il titolo del capitolo corrispondente
                             const chapter = chapters.find(c => c.id === photo.chapterId);

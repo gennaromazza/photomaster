@@ -322,6 +322,12 @@ export default function GalleryPage() {
                 />
               </TabsContent>
               
+              <TabsContent value="video" className="mt-0">
+                <GalleryVideoManager
+                  galleryId={gallery.id}
+                />
+              </TabsContent>
+              
               <TabsContent value="settings" className="mt-0">
                 <GallerySettings
                   gallery={gallery}

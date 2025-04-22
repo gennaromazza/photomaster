@@ -169,20 +169,9 @@ export default function GalleryPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Colonna sinistra: Capitoli */}
-          <div className="md:col-span-3">
-            <ChapterList
-              chapters={chapters || []}
-              galleryId={gallery.id}
-              onChapterSelect={handleChapterSelect}
-              selectedChapterId={selectedChapterId}
-              canEdit={true}
-            />
-          </div>
-          
-          {/* Colonna destra: Contenuto principale */}
-          <div className="md:col-span-9">
+        <div className="grid grid-cols-1 gap-6">
+          {/* Contenuto principale */}
+          <div>
             <Tabs value={selectedTab} onValueChange={setSelectedTab}>
               <TabsList className="grid grid-cols-4 mb-4">
                 <TabsTrigger value="photos">

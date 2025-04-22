@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Camera, Folder, Move, Save, CheckSquare, Square, X, FolderInput, Filter } from "lucide-react";
+import { Camera, Folder, Move, Save, CheckSquare, Square, X, FolderInput } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Photo, GalleryChapter } from "@/types/gallery";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Select,
   SelectContent,
@@ -19,17 +18,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 interface PhotoChapterManagerProps {
   galleryId: number;
@@ -365,18 +353,90 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
             <Move className="h-5 w-5" />
             Organizza foto nei capitoli
           </CardTitle>
-          <Button 
-            onClick={saveChanges} 
-            disabled={!needsSaving || isSaving}
-            className={`${needsSaving ? 'animate-pulse bg-primary' : ''}`}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? "Salvataggio..." : "Salva modifiche"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              onClick={toggleSelectMode} 
+              variant={selectMode ? "secondary" : "outline"}
+              className="text-xs"
+            >
+              {selectMode ? (
+                <>
+                  <X className="h-4 w-4 mr-1" />
+                  Annulla selezione
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="h-4 w-4 mr-1" />
+                  Selezione multipla
+                </>
+              )}
+            </Button>
+            <Button 
+              onClick={saveChanges} 
+              disabled={!needsSaving || isSaving}
+              className={`${needsSaving ? 'animate-pulse bg-primary' : ''}`}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? "Salvataggio..." : "Salva modifiche"}
+            </Button>
+          </div>
         </div>
+        
         <div className="text-sm text-muted-foreground mt-2">
-          Trascina le foto per spostarle tra i vari capitoli. Le modifiche saranno effettive dopo aver cliccato su "Salva modifiche".
+          {selectMode 
+            ? "Seleziona più foto cliccando su di esse, poi utilizza gli strumenti in basso per spostarle in blocco." 
+            : "Trascina le foto per spostarle tra i vari capitoli. Le modifiche saranno effettive dopo aver cliccato su 'Salva modifiche'."}
         </div>
+        
+        {selectMode && selectedPhotos.length > 0 && (
+          <div className="mt-4 p-3 border rounded-md bg-muted/30">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{selectedPhotos.length} foto selezionate</Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={deselectAll}
+                  className="h-8 text-xs"
+                >
+                  Deseleziona tutte
+                </Button>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm whitespace-nowrap">Sposta in:</span>
+                <Select
+                  value={targetChapterId}
+                  onValueChange={setTargetChapterId}
+                >
+                  <SelectTrigger className="w-[180px] h-8">
+                    <SelectValue placeholder="Seleziona capitolo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="null">Nessun capitolo</SelectItem>
+                    {photosByChapter
+                      .filter(chapter => chapter.id !== null)
+                      .map(chapter => (
+                        <SelectItem key={chapter.id} value={String(chapter.id)}>
+                          {chapter.title}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                
+                <Button 
+                  size="sm"
+                  className="h-8" 
+                  onClick={moveSelectedPhotos}
+                  disabled={!targetChapterId || isMovingBatch}
+                >
+                  <FolderInput className="h-3.5 w-3.5 mr-1" />
+                  {isMovingBatch ? "Spostamento..." : "Sposta foto"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="bg-muted/30 p-2 mb-4 border rounded-sm text-xs text-muted-foreground">
@@ -434,55 +494,88 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
                           </div>
                           <ScrollArea className="h-full max-h-[200px]">
                             <div className="flex flex-wrap gap-1 p-1">
-                              {chapter.photos.map((photo, index) => (
-                                <Draggable
-                                  key={photo.id}
-                                  draggableId={String(photo.id)}
-                                  index={index}
-                                >
-                                  {(provided, snapshot) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                      className={`relative w-16 h-16 md:w-20 md:h-20 border rounded-md overflow-hidden ${
-                                        snapshot.isDragging ? "ring-2 ring-primary" : ""
-                                      } transition-all hover:scale-105 hover:shadow-md`}
-                                      style={{
-                                        ...provided.draggableProps.style,
-                                      }}
-                                      title={photo.title || `Foto ${index + 1}`}
-                                    >
-                                      <img
-                                        src={photo.thumbnailUrl}
-                                        alt={photo.title || `Foto ${index + 1}`}
-                                        className="object-cover w-full h-full"
-                                        loading="lazy"
-                                      />
-                                      {photo.chapterId !== chapter.id ? (
-                                        <div className="absolute inset-0 bg-amber-500/20 flex items-center justify-center backdrop-blur-[1px]">
-                                          <div className="relative">
-                                            <span className="text-[10px] text-white font-medium bg-amber-600 px-1.5 py-0.5 rounded-sm shadow-sm">
-                                              Spostata
-                                            </span>
-                                            <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-amber-600"></div>
-                                          </div>
+                              {chapter.photos.map((photo, index) => 
+                                selectMode ? (
+                                  // Modalità selezione - mostro foto selezionabili con checkbox
+                                  <div 
+                                    key={photo.id} 
+                                    onClick={() => togglePhotoSelection(photo.id)}
+                                    className={`relative w-16 h-16 md:w-20 md:h-20 border rounded-md overflow-hidden 
+                                      cursor-pointer transition-all hover:scale-105 hover:shadow-md
+                                      ${selectedPhotos.includes(photo.id) ? 'ring-2 ring-primary border-primary' : ''}`}
+                                    title={photo.title || `Foto ${index + 1}`}
+                                  >
+                                    <img
+                                      src={photo.thumbnailUrl}
+                                      alt={photo.title || `Foto ${index + 1}`}
+                                      className="object-cover w-full h-full"
+                                      loading="lazy"
+                                    />
+                                    
+                                    {/* Indicatore di selezione */}
+                                    <div className="absolute top-1 right-1">
+                                      {selectedPhotos.includes(photo.id) ? (
+                                        <div className="bg-primary text-white rounded-full p-0.5 shadow-sm">
+                                          <CheckSquare className="h-3.5 w-3.5" />
                                         </div>
-                                      ) : 'originalSortOrder' in photo && photo.originalSortOrder !== undefined && 
-                                          photo.sortOrder !== photo.originalSortOrder ? (
-                                        <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center backdrop-blur-[1px]">
-                                          <div className="relative">
-                                            <span className="text-[10px] text-white font-medium bg-blue-600 px-1.5 py-0.5 rounded-sm shadow-sm">
-                                              Riordinata
-                                            </span>
-                                            <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-blue-600"></div>
-                                          </div>
+                                      ) : (
+                                        <div className="bg-background/70 backdrop-blur-[1px] rounded-full p-0.5 shadow-sm">
+                                          <Square className="h-3.5 w-3.5" />
                                         </div>
-                                      ) : null}
+                                      )}
                                     </div>
-                                  )}
-                                </Draggable>
-                              ))}
+                                  </div>
+                                ) : (
+                                  // Modalità drag-and-drop normale
+                                  <Draggable
+                                    key={photo.id}
+                                    draggableId={String(photo.id)}
+                                    index={index}
+                                  >
+                                    {(provided, snapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className={`relative w-16 h-16 md:w-20 md:h-20 border rounded-md overflow-hidden ${
+                                          snapshot.isDragging ? "ring-2 ring-primary" : ""
+                                        } transition-all hover:scale-105 hover:shadow-md`}
+                                        style={{
+                                          ...provided.draggableProps.style,
+                                        }}
+                                        title={photo.title || `Foto ${index + 1}`}
+                                      >
+                                        <img
+                                          src={photo.thumbnailUrl}
+                                          alt={photo.title || `Foto ${index + 1}`}
+                                          className="object-cover w-full h-full"
+                                          loading="lazy"
+                                        />
+                                        {photo.chapterId !== chapter.id ? (
+                                          <div className="absolute inset-0 bg-amber-500/20 flex items-center justify-center backdrop-blur-[1px]">
+                                            <div className="relative">
+                                              <span className="text-[10px] text-white font-medium bg-amber-600 px-1.5 py-0.5 rounded-sm shadow-sm">
+                                                Spostata
+                                              </span>
+                                              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-amber-600"></div>
+                                            </div>
+                                          </div>
+                                        ) : 'originalSortOrder' in photo && photo.originalSortOrder !== undefined && 
+                                            photo.sortOrder !== photo.originalSortOrder ? (
+                                          <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center backdrop-blur-[1px]">
+                                            <div className="relative">
+                                              <span className="text-[10px] text-white font-medium bg-blue-600 px-1.5 py-0.5 rounded-sm shadow-sm">
+                                                Riordinata
+                                              </span>
+                                              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-blue-600"></div>
+                                            </div>
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                )
+                              )}
                             </div>
                           </ScrollArea>
                         </div>

@@ -194,7 +194,7 @@ export function PhotoUploader({
                 toast({
                   title: errorTitle,
                   description: errorMsg,
-                  variant: "warning"
+                  variant: "default"
                 });
                 
                 // Risolviamo la promessa in modo che gli altri file possano continuare a essere caricati

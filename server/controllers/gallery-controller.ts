@@ -1497,9 +1497,20 @@ export async function downloadPhoto(req: Request, res: Response) {
     }
 
     // Trova il percorso completo del file originale
-    const filePath = path.join(process.cwd(), 'uploads', photo.path);
+    // Controlla se il percorso già inizia con "/uploads" per evitare duplicazioni
+    let relativePath = photo.path;
+    if (relativePath.startsWith('/uploads/')) {
+      relativePath = relativePath.substring('/uploads/'.length);
+    }
+    
+    const filePath = path.join(process.cwd(), 'uploads', relativePath);
+    
+    console.log(`Tentativo di download - Percorso originale: ${photo.path}`);
+    console.log(`Percorso relativo elaborato: ${relativePath}`);
+    console.log(`Percorso completo del file: ${filePath}`);
     
     if (!fs.existsSync(filePath)) {
+      console.error(`File non trovato: ${filePath}`);
       return res.status(404).json({ error: "File non trovato" });
     }
     
@@ -1599,12 +1610,21 @@ export async function downloadAllPhotos(req: Request, res: Response) {
     
     // Aggiungi ogni foto all'archivio
     for (const photo of photosToDownload) {
-      const filePath = path.join(process.cwd(), 'uploads', photo.path);
+      // Controlla se il percorso già inizia con "/uploads" per evitare duplicazioni
+      let relativePath = photo.path;
+      if (relativePath.startsWith('/uploads/')) {
+        relativePath = relativePath.substring('/uploads/'.length);
+      }
+      
+      const filePath = path.join(process.cwd(), 'uploads', relativePath);
+      console.log(`Tentativo di aggiungere allo ZIP - File: ${photo.originalFilename}, Percorso: ${filePath}`);
       
       if (fs.existsSync(filePath)) {
         // Usa il nome originale del file se disponibile
         const fileName = photo.originalFilename || path.basename(photo.path);
         archive.file(filePath, { name: fileName });
+      } else {
+        console.error(`File non trovato durante la creazione dello ZIP: ${filePath}`);
       }
     }
     

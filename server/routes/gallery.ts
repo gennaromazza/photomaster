@@ -18,6 +18,9 @@ import {
   updateChapter,
   deleteChapter,
   getGalleryPhotos,
+  getAllGallerySelections,
+  generateSelectionsReport,
+  deleteClientSelections,
   uploadPhoto,
   updatePhoto,
   deletePhoto,
@@ -275,6 +278,15 @@ router.post("/photos/:photoId/select", togglePhotoSelection);
 
 // Ottieni tutte le selezioni di un cliente per una galleria
 router.get("/galleries/:galleryId/selections", getClientSelections);
+
+// Ottieni tutte le selezioni per una galleria (admin)
+router.get("/galleries/:galleryId/selections/all", isAuthenticated, getAllGallerySelections);
+
+// Genera report CSV delle selezioni (admin)
+router.get("/galleries/:galleryId/selections/report", isAuthenticated, generateSelectionsReport);
+
+// Elimina le selezioni di un cliente per una galleria (admin)
+router.delete("/galleries/:galleryId/selections/client/:clientEmail", isAuthenticated, deleteClientSelections);
 
 // Salva tutte le selezioni in batch
 router.post("/galleries/selections/batch", createPhotoSelections);

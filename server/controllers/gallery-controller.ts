@@ -1432,6 +1432,136 @@ export const getClientSelections = async (req: Request, res: Response) => {
   }
 };
 
+// Ottieni tutte le selezioni per una galleria (solo per amministratori)
+export const getAllGallerySelections = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.isAdmin) {
+      return res.status(403).json({ error: "Non autorizzato" });
+    }
+    
+    const { galleryId } = req.params;
+    
+    // Ottieni tutte le selezioni con dati delle foto associate
+    const selections = await db.query.photoSelections.findMany({
+      where: eq(photoSelections.galleryId, Number(galleryId)),
+      with: {
+        photo: true
+      },
+      orderBy: desc(photoSelections.createdAt)
+    });
+    
+    res.json({ selections });
+  } catch (error) {
+    console.error("Errore nel recupero di tutte le selezioni:", error);
+    res.status(500).json({ error: "Errore nel recupero delle selezioni" });
+  }
+};
+
+// Elimina tutte le selezioni di un cliente per una galleria
+export const deleteClientSelections = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.isAdmin) {
+      return res.status(403).json({ error: "Non autorizzato" });
+    }
+    
+    const { galleryId, clientEmail } = req.params;
+    
+    // Elimina le selezioni
+    const result = await db.delete(photoSelections)
+      .where(
+        and(
+          eq(photoSelections.galleryId, Number(galleryId)),
+          eq(photoSelections.clientEmail, decodeURIComponent(clientEmail))
+        )
+      );
+    
+    res.json({ success: true, message: "Selezioni eliminate con successo" });
+  } catch (error) {
+    console.error("Errore nell'eliminazione delle selezioni:", error);
+    res.status(500).json({ error: "Errore nell'eliminazione delle selezioni" });
+  }
+};
+
+// Genera report CSV delle selezioni
+export const generateSelectionsReport = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.isAdmin) {
+      return res.status(403).json({ error: "Non autorizzato" });
+    }
+    
+    const { galleryId } = req.params;
+    
+    // Ottieni i dati della galleria
+    const gallery = await db.query.galleries.findFirst({
+      where: eq(galleries.id, Number(galleryId)),
+    });
+    
+    if (!gallery) {
+      return res.status(404).json({ error: "Galleria non trovata" });
+    }
+    
+    // Ottieni tutte le selezioni con i dati delle foto
+    const selections = await db.query.photoSelections.findMany({
+      where: eq(photoSelections.galleryId, Number(galleryId)),
+      with: {
+        photo: true
+      },
+      orderBy: desc(photoSelections.createdAt)
+    });
+    
+    if (selections.length === 0) {
+      return res.status(404).json({ error: "Nessuna selezione trovata" });
+    }
+    
+    // Crea l'header CSV
+    const csvHeader = [
+      "ID Selezione",
+      "Nome Cliente",
+      "Email Cliente", 
+      "ID Foto", 
+      "Nome File", 
+      "Titolo Foto",
+      "Tipo Selezione",
+      "Data Selezione",
+      "Note"
+    ].join(",");
+    
+    // Crea le righe CSV
+    const csvRows = selections.map(selection => {
+      // Prepara i campi per il CSV (gestisce virgole e caratteri speciali)
+      const fields = [
+        selection.id,
+        `"${(selection.clientName || "").replace(/"/g, '""')}"`,
+        `"${(selection.clientEmail || "").replace(/"/g, '""')}"`,
+        selection.photoId,
+        `"${(selection.photo?.filename || "").replace(/"/g, '""')}"`,
+        `"${(selection.photo?.title || "").replace(/"/g, '""')}"`,
+        selection.selectionType,
+        new Date(selection.createdAt).toISOString(),
+        `"${(selection.notes || "").replace(/"/g, '""')}"`
+      ];
+      
+      return fields.join(",");
+    });
+    
+    // Unisci header e righe
+    const csvContent = [csvHeader, ...csvRows].join("\n");
+    
+    // Imposta gli header per il download
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition", 
+      `attachment; filename="selezioni-galleria-${gallery.name.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv"`
+    );
+    
+    // Invia il contenuto CSV
+    res.send(csvContent);
+  } catch (error) {
+    console.error("Errore nella generazione del report:", error);
+    res.status(500).json({ error: "Errore nella generazione del report" });
+  }
+};
+
 // Salva le selezioni foto tutte insieme
 export const createPhotoSelections = async (req: Request, res: Response) => {
   try {

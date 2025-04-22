@@ -15,7 +15,8 @@ import {
   QrCode,
   MoveVertical,
   Download,
-  Film
+  Film,
+  Heart as HeartIcon
 } from "lucide-react";
 
 import {
@@ -42,6 +43,7 @@ import { ChapterList } from "@/components/galleries/chapter-list";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
 import { PhotoChapterManager } from "@/components/galleries/photo-chapter-manager";
 import GalleryVideoManager from "@/components/galleries/gallery-video-manager";
+import { ClientSelectionsManager } from "@/components/galleries/client-selections-manager";
 
 export default function GalleryPage() {
   const [, params] = useRoute("/galleries/:id");
@@ -175,7 +177,7 @@ export default function GalleryPage() {
           {/* Contenuto principale */}
           <div>
             <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-              <TabsList className="grid grid-cols-5 mb-4">
+              <TabsList className="grid grid-cols-6 mb-4">
                 <TabsTrigger value="photos">
                   <LayoutGrid className="h-4 w-4 mr-2" />
                   Foto
@@ -191,6 +193,10 @@ export default function GalleryPage() {
                 <TabsTrigger value="video">
                   <Film className="h-4 w-4 mr-2" />
                   Video
+                </TabsTrigger>
+                <TabsTrigger value="selections">
+                  <HeartIcon className="h-4 w-4 mr-2" />
+                  Selezioni
                 </TabsTrigger>
                 <TabsTrigger value="settings">
                   <SettingsIcon className="h-4 w-4 mr-2" />
@@ -324,6 +330,12 @@ export default function GalleryPage() {
               
               <TabsContent value="video" className="mt-0">
                 <GalleryVideoManager
+                  galleryId={gallery.id}
+                />
+              </TabsContent>
+              
+              <TabsContent value="selections" className="mt-0">
+                <ClientSelectionsManager
                   galleryId={gallery.id}
                 />
               </TabsContent>

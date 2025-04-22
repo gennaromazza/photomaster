@@ -1435,11 +1435,17 @@ export const getClientSelections = async (req: Request, res: Response) => {
 // Ottieni tutte le selezioni per una galleria (solo per amministratori)
 export const getAllGallerySelections = async (req: Request, res: Response) => {
   try {
+    // Log per debug dell'autenticazione
+    console.log("DEBUG getAllGallerySelections - Utente:", req.user ? 
+      { id: req.user.id, role: req.user.role } : "Nessun utente");
+    
     if (!req.user || req.user.role !== 'admin') {
+      console.log("DEBUG getAllGallerySelections - Accesso negato, utente non è admin o non autenticato");
       return res.status(403).json({ error: "Non autorizzato" });
     }
     
     const { galleryId } = req.params;
+    console.log("DEBUG getAllGallerySelections - Recupero selezioni per galleria:", galleryId);
     
     // Ottieni tutte le selezioni con dati delle foto associate
     const selections = await db.query.photoSelections.findMany({
@@ -1460,11 +1466,17 @@ export const getAllGallerySelections = async (req: Request, res: Response) => {
 // Elimina tutte le selezioni di un cliente per una galleria
 export const deleteClientSelections = async (req: Request, res: Response) => {
   try {
+    // Log per debug dell'autenticazione
+    console.log("DEBUG deleteClientSelections - Utente:", req.user ? 
+      { id: req.user.id, role: req.user.role } : "Nessun utente");
+      
     if (!req.user || req.user.role !== 'admin') {
+      console.log("DEBUG deleteClientSelections - Accesso negato, utente non è admin o non autenticato");
       return res.status(403).json({ error: "Non autorizzato" });
     }
     
     const { galleryId, clientEmail } = req.params;
+    console.log("DEBUG deleteClientSelections - Eliminazione selezioni per galleria:", galleryId, "cliente:", clientEmail);
     
     // Elimina le selezioni
     const result = await db.delete(photoSelections)
@@ -1485,11 +1497,17 @@ export const deleteClientSelections = async (req: Request, res: Response) => {
 // Genera report CSV delle selezioni
 export const generateSelectionsReport = async (req: Request, res: Response) => {
   try {
+    // Log per debug dell'autenticazione
+    console.log("DEBUG generateSelectionsReport - Utente:", req.user ? 
+      { id: req.user.id, role: req.user.role } : "Nessun utente");
+      
     if (!req.user || req.user.role !== 'admin') {
+      console.log("DEBUG generateSelectionsReport - Accesso negato, utente non è admin o non autenticato");
       return res.status(403).json({ error: "Non autorizzato" });
     }
     
     const { galleryId } = req.params;
+    console.log("DEBUG generateSelectionsReport - Generazione report per galleria:", galleryId);
     
     // Ottieni i dati della galleria
     const gallery = await db.query.galleries.findFirst({

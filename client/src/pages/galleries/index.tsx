@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Plus,
   Search,
@@ -14,6 +15,17 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -205,6 +217,38 @@ export default function GalleriesPage() {
   const [deleteGalleryId, setDeleteGalleryId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Funzione per gestire il click sul pulsante elimina
+  const handleDeleteClick = (galleryId: number) => {
+    setDeleteGalleryId(galleryId);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Funzione per gestire la conferma dell'eliminazione
+  const handleDeleteConfirm = async () => {
+    if (!deleteGalleryId) return;
+    
+    try {
+      await apiRequest("DELETE", `/api/gallery/galleries/${deleteGalleryId}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/gallery/galleries"] });
+      
+      toast({
+        title: "Galleria eliminata",
+        description: "La galleria è stata eliminata con successo",
+      });
+      
+    } catch (error) {
+      console.error("Errore nell'eliminazione della galleria:", error);
+      toast({
+        title: "Errore nell'eliminazione",
+        description: "Si è verificato un errore durante l'eliminazione della galleria",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setDeleteGalleryId(null);
+    }
+  };
 
   // Query per ottenere l'elenco di tutte le gallerie
   const { data: galleries, isLoading } = useQuery({
@@ -420,12 +464,34 @@ export default function GalleriesPage() {
       ) : (
         <>
           {viewMode === "grid" ? (
-            <GalleryGrid galleries={filteredGalleries} />
+            <GalleryGrid galleries={filteredGalleries} onDeleteClick={handleDeleteClick} />
           ) : (
-            <GalleryList galleries={filteredGalleries} />
+            <GalleryList galleries={filteredGalleries} onDeleteClick={handleDeleteClick} />
           )}
         </>
       )}
+      
+      {/* Dialog di conferma eliminazione */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sei sicuro di voler eliminare questa galleria?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Questa azione eliminerà permanentemente la galleria e tutte le sue foto.
+              Non sarà possibile recuperare i dati in seguito.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

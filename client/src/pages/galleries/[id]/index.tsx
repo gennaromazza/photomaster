@@ -13,7 +13,8 @@ import {
   Loader2,
   Share,
   QrCode,
-  MoveVertical
+  MoveVertical,
+  Download
 } from "lucide-react";
 
 import {
@@ -28,6 +29,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/empty-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { GallerySettings } from "@/components/galleries/gallery-settings";
 import { PhotoUploader } from "@/components/galleries/photo-uploader";
 import { ChapterList } from "@/components/galleries/chapter-list";
@@ -199,17 +206,59 @@ export default function GalleryPage() {
               <TabsContent value="photos" className="mt-0">
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center text-xl">
-                      <LayoutGrid className="h-5 w-5 mr-2" />
-                      {selectedChapterId 
-                        ? `Foto: ${chapters?.find(c => c.id === selectedChapterId)?.title || 'Capitolo'}`
-                        : 'Tutte le foto'}
-                    </CardTitle>
-                    <CardDescription>
-                      {selectedChapterId 
-                        ? `Visualizzazione delle foto del capitolo selezionato`
-                        : `Visualizzazione di tutte le foto della galleria`}
-                    </CardDescription>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      <div>
+                        <CardTitle className="flex items-center text-xl">
+                          <LayoutGrid className="h-5 w-5 mr-2" />
+                          {selectedChapterId 
+                            ? `Foto: ${chapters?.find(c => c.id === selectedChapterId)?.title || 'Capitolo'}`
+                            : 'Tutte le foto'}
+                        </CardTitle>
+                        <CardDescription>
+                          {selectedChapterId 
+                            ? `Visualizzazione delle foto del capitolo selezionato`
+                            : `Visualizzazione di tutte le foto della galleria`}
+                        </CardDescription>
+                      </div>
+                      
+                      {photos.length > 0 && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Download className="h-4 w-4 mr-2" />
+                              Scarica foto
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem disabled className="opacity-100 cursor-default">
+                              <Download className="mr-2 h-4 w-4" />
+                              Scarica tutte le foto
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuItem
+                              onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?quality=original`, "_blank")}
+                              className="pl-8"
+                            >
+                              Qualità originale
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuItem
+                              onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?quality=large`, "_blank")}
+                              className="pl-8"
+                            >
+                              Qualità alta
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuItem
+                              onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?quality=medium`, "_blank")}
+                              className="pl-8"
+                            >
+                              Qualità media
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
                   </CardHeader>
                   
                   <CardContent>

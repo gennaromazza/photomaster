@@ -233,12 +233,30 @@ export function PhotoGrid({
                           Visualizza originale
                         </DropdownMenuItem>
                         
+                        <DropdownMenuItem disabled className="opacity-100 cursor-default">
+                          <Download className="mr-2 h-4 w-4" />
+                          Scarica immagine
+                        </DropdownMenuItem>
+                        
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
-                          window.open(`/api/gallery/photos/${photo.id}/download`, "_blank");
-                        }}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Scarica
+                          window.open(`/api/gallery/photos/${photo.id}/download?quality=original`, "_blank");
+                        }} className="pl-8">
+                          Qualità originale
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/api/gallery/photos/${photo.id}/download?quality=large`, "_blank");
+                        }} className="pl-8">
+                          Qualità alta
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/api/gallery/photos/${photo.id}/download?quality=medium`, "_blank");
+                        }} className="pl-8">
+                          Qualità media
                         </DropdownMenuItem>
 
                         <DropdownMenuSeparator />

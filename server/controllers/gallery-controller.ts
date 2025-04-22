@@ -31,15 +31,15 @@ const QR_DIR = path.join(UPLOAD_DIR, "qr");
 });
 
 // Dimensioni delle immagini
-const THUMBNAIL_SIZE = 250;
-const MEDIUM_SIZE = 800;
-const LARGE_SIZE = 1600;
+const THUMBNAIL_SIZE = 400;  // Aumentato per migliore qualità thumbnails
+const MEDIUM_SIZE = 1200;    // Aumentato per migliore qualità media
+const LARGE_SIZE = 1800;     // Mantenuto per garantire buona velocità
 
 // Configurazioni di compressione
 const COMPRESSION_QUALITY = {
-  jpeg: 85,    // Qualità JPEG (0-100)
-  webp: 80,    // Qualità WebP (0-100)
-  png: 9       // Livello di compressione PNG (0-9)
+  jpeg: 90,    // Qualità JPEG aumentata (0-100)
+  webp: 85,    // Qualità WebP aumentata (0-100)
+  png: 8       // Livello di compressione PNG ridotto per migliore qualità (0-9)
 };
 
 // Impostazioni per dimensioni massime

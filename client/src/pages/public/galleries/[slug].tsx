@@ -199,7 +199,10 @@ export default function PublicGalleryPage() {
   
   // Trova la prima foto di ogni capitolo (per l'immagine di anteprima)
   const getFirstPhotoForChapter = useCallback((chapterId: number) => {
-    return photos.find(photo => photo.chapterId === chapterId);
+    // Trova la prima foto del capitolo
+    const firstPhoto = photos.find(photo => photo.chapterId === chapterId);
+    console.log(`Prima foto per capitolo ${chapterId}:`, firstPhoto);
+    return firstPhoto;
   }, [photos]);
 
   // useEffect per i capitoli: imposta il primo capitolo come attivo se non c'è nessun capitolo attivo
@@ -1047,9 +1050,23 @@ export default function PublicGalleryPage() {
                         {/* Immagine di copertina del capitolo */}
                         {chapter.coverImage || getFirstPhotoForChapter(chapter.id) ? (
                           <img 
-                            src={chapter.coverImage || getFirstPhotoForChapter(chapter.id)?.path}
+                            src={chapter.coverImage || 
+                                (getFirstPhotoForChapter(chapter.id)?.thumbnailUrl || 
+                                 `/uploads/galleries/thumbnails/${getFirstPhotoForChapter(chapter.id)?.filename}`)}
                             alt={`Copertina: ${chapter.title}`}
                             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                            onError={(e) => {
+                              console.log("Errore caricamento thumbnail capitolo");
+                              const target = e.target as HTMLImageElement;
+                              const photo = getFirstPhotoForChapter(chapter.id);
+                              if (photo?.filename && !target.src.includes(`/uploads/galleries/thumbnails/${photo.filename}`)) {
+                                console.log("Tentativo fallback thumbnail:", photo.filename);
+                                target.src = `/uploads/galleries/thumbnails/${photo.filename}`;
+                              } else {
+                                target.src = "/assets/image-placeholder.svg";
+                                target.onerror = null;
+                              }
+                            }}
                           />
                         ) : (
                           <div className="w-full h-full bg-muted/50 flex items-center justify-center">

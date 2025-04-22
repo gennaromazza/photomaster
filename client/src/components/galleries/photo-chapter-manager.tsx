@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Camera, Folder, Move, Save, CheckSquare, Square, X, FolderInput } from "lucide-react";
@@ -393,6 +394,8 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
     );
   }
 
+  const [, setLocation] = useLocation();
+  
   return (
     <Card>
       <CardHeader>
@@ -401,7 +404,14 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
             <Move className="h-5 w-5" />
             Organizza foto nei capitoli
           </CardTitle>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button 
+              size="sm" 
+              onClick={() => setLocation(`/galleries/${galleryId}/chapters/new`)}
+              className="mr-2"
+            >
+              <FolderInput className="h-4 w-4 mr-1" /> Nuovo Capitolo
+            </Button>
             <Button 
               onClick={toggleSelectMode} 
               variant={selectMode ? "secondary" : "outline"}

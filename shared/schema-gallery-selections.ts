@@ -2,44 +2,55 @@ import { pgTable, varchar, timestamp, boolean, serial, integer, text, jsonb } fr
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { photos, galleries, clients } from "./schema_gallery";
+import { photos, galleries } from "../schema_gallery";
+import { users } from "../schema_backup";
+import { clients } from "../schema_backup";
 
-// Abilita la modalità selezione e opzioni relative
+// Impostazioni semplici per la modalità selezione
 export const gallerySelectionSettings = pgTable("gallery_selection_settings", {
   id: serial("id").primaryKey(),
   galleryId: integer("gallery_id").notNull().references(() => galleries.id, { onDelete: "cascade" }),
   isEnabled: boolean("is_enabled").default(false).notNull(),
-  instructions: text("instructions"),  // Istruzioni per la selezione formattate in HTML
+  instructions: text("instructions"),  // Istruzioni per la selezione
   minSelections: integer("min_selections").default(0),
   maxSelections: integer("max_selections").default(0), // 0 significa nessun limite
-  allowedSelectionTypes: jsonb("allowed_selection_types").$type<string[]>().default(['favorite']),
   expiresAt: timestamp("expires_at"), // Data/ora di scadenza opzionale
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Sessioni di selezione (quando un cliente inizia a selezionare)
+// Sessioni di selezione (per tenant/cliente)
 export const selectionSessions = pgTable("selection_sessions", {
   id: serial("id").primaryKey(),
   galleryId: integer("gallery_id").notNull().references(() => galleries.id, { onDelete: "cascade" }),
   clientId: integer("client_id").references(() => clients.id),
-  sessionKey: varchar("session_key", { length: 64 }).notNull().unique(),
+  sessionKey: varchar("session_key", { length: 64 }).notNull().unique(), // chiave pubblica per accesso
   clientName: varchar("client_name", { length: 255 }),
   clientEmail: varchar("client_email", { length: 255 }),
   status: varchar("status", { length: 50 }).default("active").notNull(), // active, completed, expired
   startedAt: timestamp("started_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
-  lastAccessedAt: timestamp("last_accessed_at").defaultNow().notNull(),
-  feedbackNotes: text("feedback_notes"), // Note o feedback forniti dal cliente
+  notes: text("notes"), // Note finali
 });
 
-// Le singole selezioni foto
+// Le selezioni foto 
 export const photoSelections = pgTable("photo_selections", {
   id: serial("id").primaryKey(),
   sessionId: integer("session_id").notNull().references(() => selectionSessions.id, { onDelete: "cascade" }),
   photoId: integer("photo_id").notNull().references(() => photos.id, { onDelete: "cascade" }),
-  selectionType: varchar("selection_type", { length: 50 }).default("favorite").notNull(), // favorite, must_have, like, ecc.
   notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Commenti sulle foto (sistema di chat)
+export const photoComments = pgTable("photo_comments", {
+  id: serial("id").primaryKey(),
+  photoId: integer("photo_id").notNull().references(() => photos.id, { onDelete: "cascade" }),
+  sessionId: integer("session_id").references(() => selectionSessions.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => users.id), // Per commenti dello staff
+  clientName: varchar("client_name", { length: 255 }), 
+  content: text("content").notNull(),
+  isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -60,7 +71,8 @@ export const selectionSessionsRelations = relations(selectionSessions, ({ one, m
     fields: [selectionSessions.clientId],
     references: [clients.id]
   }),
-  selections: many(photoSelections)
+  selections: many(photoSelections),
+  comments: many(photoComments)
 }));
 
 export const photoSelectionsRelations = relations(photoSelections, ({ one }) => ({
@@ -74,14 +86,28 @@ export const photoSelectionsRelations = relations(photoSelections, ({ one }) => 
   })
 }));
 
-// Schemi Zod per la validazione
+export const photoCommentsRelations = relations(photoComments, ({ one }) => ({
+  photo: one(photos, {
+    fields: [photoComments.photoId],
+    references: [photos.id]
+  }),
+  session: one(selectionSessions, {
+    fields: [photoComments.sessionId],
+    references: [selectionSessions.id]
+  }),
+  user: one(users, {
+    fields: [photoComments.userId],
+    references: [users.id]
+  })
+}));
+
+// Schemi per validazione
 export const insertGallerySelectionSettingsSchema = createInsertSchema(gallerySelectionSettings).pick({
   galleryId: true,
   isEnabled: true,
   instructions: true,
   minSelections: true,
   maxSelections: true,
-  allowedSelectionTypes: true,
   expiresAt: true
 });
 
@@ -92,14 +118,21 @@ export const insertSelectionSessionSchema = createInsertSchema(selectionSessions
   clientName: true,
   clientEmail: true,
   status: true,
-  feedbackNotes: true
+  notes: true
 });
 
 export const insertPhotoSelectionSchema = createInsertSchema(photoSelections).pick({
   sessionId: true,
   photoId: true,
-  selectionType: true,
   notes: true
+});
+
+export const insertPhotoCommentSchema = createInsertSchema(photoComments).pick({
+  photoId: true,
+  sessionId: true,
+  userId: true,
+  clientName: true,
+  content: true
 });
 
 // Tipi per TypeScript
@@ -111,3 +144,6 @@ export type SelectionSession = typeof selectionSessions.$inferSelect;
 
 export type InsertPhotoSelection = z.infer<typeof insertPhotoSelectionSchema>;
 export type PhotoSelection = typeof photoSelections.$inferSelect;
+
+export type InsertPhotoComment = z.infer<typeof insertPhotoCommentSchema>;
+export type PhotoComment = typeof photoComments.$inferSelect;

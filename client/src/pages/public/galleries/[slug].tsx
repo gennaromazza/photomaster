@@ -8,6 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
@@ -502,14 +508,44 @@ export default function PublicGalleryPage() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-white hover:bg-white/20 h-8 w-8 md:h-10 md:w-10"
-                      onClick={() => window.open(`/api/gallery/photos/${photo.id}/download`, '_blank')}
-                    >
-                      <Download className="h-4 w-4 md:h-5 md:w-5" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-white hover:bg-white/20 h-8 w-8 md:h-10 md:w-10"
+                        >
+                          <Download className="h-4 w-4 md:h-5 md:w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem disabled className="opacity-100 cursor-default">
+                          <Download className="mr-2 h-4 w-4" />
+                          Scarica immagine
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem
+                          onClick={() => window.open(`/api/gallery/photos/${photo.id}/download?quality=original`, '_blank')}
+                          className="pl-8"
+                        >
+                          Qualità originale
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem
+                          onClick={() => window.open(`/api/gallery/photos/${photo.id}/download?quality=large`, '_blank')}
+                          className="pl-8"
+                        >
+                          Qualità alta
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem
+                          onClick={() => window.open(`/api/gallery/photos/${photo.id}/download?quality=medium`, '_blank')}
+                          className="pl-8"
+                        >
+                          Qualità media
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">Scarica foto</TooltipContent>
                 </Tooltip>
@@ -933,40 +969,86 @@ export default function PublicGalleryPage() {
                 {/* Pulsanti per scaricare le foto */}
                 {gallery.downloadEnabled && photos.length > 0 && (
                   <div className="flex gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          <span className="hidden md:inline">Scarica tutte</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem disabled className="opacity-100 cursor-default">
+                          <Download className="mr-2 h-4 w-4" />
+                          Scarica tutte le foto
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem
+                          onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?quality=original`, '_blank')}
+                          className="pl-8"
+                        >
+                          Qualità originale
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem
+                          onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?quality=large`, '_blank')}
+                          className="pl-8"
+                        >
+                          Qualità alta
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuItem
+                          onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?quality=medium`, '_blank')}
+                          className="pl-8"
+                        >
+                          Qualità media
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    {activeChapter && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button 
                             variant="outline" 
                             size="sm"
                             className="flex items-center gap-2"
-                            onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all`, '_blank')}
                           >
                             <Download className="h-4 w-4" />
-                            <span className="hidden md:inline">Scarica tutte</span>
+                            <span className="hidden md:inline">Scarica capitolo</span>
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Scarica tutte le foto</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    
-                    {activeChapter && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="flex items-center gap-2"
-                              onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?chapter=${activeChapter}`, '_blank')}
-                            >
-                              <Download className="h-4 w-4" />
-                              <span className="hidden md:inline">Scarica capitolo</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Scarica solo foto di questo capitolo</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem disabled className="opacity-100 cursor-default">
+                            <Download className="mr-2 h-4 w-4" />
+                            Scarica capitolo
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
+                            onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?chapter=${activeChapter}&quality=original`, '_blank')}
+                            className="pl-8"
+                          >
+                            Qualità originale
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
+                            onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?chapter=${activeChapter}&quality=large`, '_blank')}
+                            className="pl-8"
+                          >
+                            Qualità alta
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
+                            onClick={() => window.open(`/api/gallery/galleries/${gallery.id}/download-all?chapter=${activeChapter}&quality=medium`, '_blank')}
+                            className="pl-8"
+                          >
+                            Qualità media
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
                 )}

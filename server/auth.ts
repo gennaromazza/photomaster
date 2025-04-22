@@ -881,15 +881,23 @@ export function checkGalleryAccess(req: Request, res: Response, next: NextFuncti
     
     // Identifica l'ID galleria da diversi parametri possibili
     let galleryIdentifier;
+    let lookupValue;
+    let lookupField;
     
     if (id) {
       galleryIdentifier = { id: parseInt(id) };
+      lookupField = galleries.id;
+      lookupValue = parseInt(id);
       console.log(`DEBUG - Utilizzo id: ${id} per identificare la galleria`);
     } else if (galleryId) {
       galleryIdentifier = { id: parseInt(galleryId) };
+      lookupField = galleries.id;
+      lookupValue = parseInt(galleryId);
       console.log(`DEBUG - Utilizzo galleryId: ${galleryId} per identificare la galleria`);
     } else if (slug) {
       galleryIdentifier = { slug };
+      lookupField = galleries.slug;
+      lookupValue = slug;
       console.log(`DEBUG - Utilizzo slug: ${slug} per identificare la galleria`);
     } else {
       console.log(`DEBUG - Nessun identificatore galleria trovato nei parametri`);
@@ -901,10 +909,7 @@ export function checkGalleryAccess(req: Request, res: Response, next: NextFuncti
     console.log(`DEBUG - Gallerie con accesso in sessione: ${Object.keys(req.session.galleryAccess).join(', ') || 'nessuna'}`);
     
     // Verifica se la galleria esiste e se richiede password
-    db.select().from(galleries).where(eq(
-      slug ? galleries.slug : galleries.id, 
-      slug || parseInt(id || galleryId)
-    ))
+    db.select().from(galleries).where(eq(lookupField, lookupValue))
     .then(([gallery]) => {
       if (!gallery) {
         console.log(`DEBUG - Galleria non trovata per: ${JSON.stringify(galleryIdentifier)}`);
@@ -921,24 +926,33 @@ export function checkGalleryAccess(req: Request, res: Response, next: NextFuncti
         return next();
       }
       
-      // Se la galleria ha una password ma l'utente non ha autorizzazione nella sessione
-      if (gallery.password) {
-        console.log(`DEBUG - Accesso negato: richiesta password per galleria ID ${gallery.id}`);
-        return res.status(401).json({ 
-          error: "Accesso non autorizzato. Password richiesta.",
-          requiresPassword: true,
-          isPublic: gallery.isPublic
+      // Se la galleria non richiede password o non è impostata come pubblica, consenti l'accesso
+      if (!gallery.password || !gallery.isPublic) {
+        console.log(`DEBUG - Accesso consentito per galleria ID: ${gallery.id} (non richiede password o non pubblica)`);
+        // Aggiungiamo l'accesso alla sessione anche in questo caso per coerenza
+        req.session.galleryAccess[gallery.id] = true;
+        // Salviamo esplicitamente la sessione prima di procedere
+        req.session.save(err => {
+          if (err) {
+            console.error(`DEBUG - Errore nel salvare la sessione: ${err.message}`);
+          }
+          return next();
         });
+        return;
       }
       
-      // Se la galleria non richiede password, consenti l'accesso
-      console.log(`DEBUG - Accesso consentito per galleria ID: ${gallery.id} (non richiede password)`);
-      next();
-    })
-      .catch(error => {
-        console.error("Errore nel controllo dell'accesso alla galleria:", error);
-        res.status(500).json({ error: "Errore nel controllo dell'accesso alla galleria" });
+      // Se la galleria ha una password ma l'utente non ha autorizzazione nella sessione
+      console.log(`DEBUG - Accesso negato: richiesta password per galleria ID ${gallery.id}`);
+      return res.status(401).json({ 
+        error: "Accesso non autorizzato. Password richiesta.",
+        requiresPassword: true,
+        isPublic: gallery.isPublic
       });
+    })
+    .catch(error => {
+      console.error("Errore nel controllo dell'accesso alla galleria:", error);
+      res.status(500).json({ error: "Errore nel controllo dell'accesso alla galleria" });
+    });
   } catch (error) {
     console.error("Errore nel controllo dell'accesso alla galleria:", error);
     res.status(500).json({ error: "Errore nel controllo dell'accesso alla galleria" });

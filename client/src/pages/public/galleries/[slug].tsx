@@ -71,7 +71,8 @@ export default function PublicGalleryPage() {
   const { 
     data: gallery, 
     isLoading: isGalleryLoading, 
-    error: galleryError 
+    error: galleryError,
+    refetch: refetchGallery 
   } = useQuery({
     queryKey: [`/api/gallery/public/galleries/${slug}`],
     queryFn: async () => {
@@ -81,7 +82,16 @@ export default function PublicGalleryPage() {
 
         if (res.status === 401) {
           console.log("[Gallery] Gallery richiede password");
-          return null;
+          const errorData = await res.json();
+          console.log("[Gallery] Dettagli richiesta password:", errorData);
+          // Se richiede password, impostiamo isAuthorized a false
+          setIsAuthorized(false);
+          // Restituiamo l'errore con le informazioni sulla richiesta di password
+          return {
+            requiresPassword: true,
+            isPublic: errorData.isPublic,
+            error: errorData.error
+          };
         }
 
         if (!res.ok) {
@@ -117,7 +127,7 @@ export default function PublicGalleryPage() {
       console.log("[Gallery] Chapters loaded:", data?.length);
       return data;
     },
-    enabled: !!gallery?.id && (!gallery?.password || isAuthorized),
+    enabled: !!gallery?.id && !gallery?.requiresPassword && isAuthorized,
   });
   
   // Ordina i capitoli per sortOrder
@@ -146,7 +156,7 @@ export default function PublicGalleryPage() {
       console.log("[Gallery] Photos loaded:", data?.photos?.length);
       return data;
     },
-    enabled: !!gallery?.id && (!gallery?.password || isAuthorized),
+    enabled: !!gallery?.id && !gallery?.requiresPassword && isAuthorized,
   });
 
   console.log("[Gallery] Photos data:", photosData);
@@ -154,7 +164,7 @@ export default function PublicGalleryPage() {
   const pagination = photosData?.pagination || { total: 0, page: 1, limit: 50, pages: 0 };
   
   // Variabile derivata per la protezione con password
-  const isPasswordProtected = !!gallery?.password;
+  const isPasswordProtected = gallery?.requiresPassword || !!gallery?.password;
 
   // useEffect per i capitoli: imposta il primo capitolo come attivo se non c'è nessun capitolo attivo
   useEffect(() => {

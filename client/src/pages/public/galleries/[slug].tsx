@@ -1138,6 +1138,20 @@ export default function PublicGalleryPage() {
                   </h2>
                 </div>
                 
+                {/* Pulsante per accedere al nuovo sistema di selezione */}
+                {gallery.selectionEnabled && (
+                  <Link href={`/public/selection/${gallery.id}`} className="block">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="flex items-center gap-2 mr-2"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="hidden md:inline">Sistema di Selezione</span>
+                    </Button>
+                  </Link>
+                )}
+                
                 {/* Pulsanti per scaricare le foto */}
                 {gallery.downloadEnabled && photos.length > 0 && (
                   <div className="flex gap-2">

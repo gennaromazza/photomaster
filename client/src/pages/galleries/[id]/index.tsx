@@ -41,7 +41,7 @@ import { PhotoUploader } from "@/components/galleries/photo-uploader";
 import { ChapterList } from "@/components/galleries/chapter-list";
 import { PhotoGrid } from "@/components/galleries/photo-grid";
 import { PhotoChapterManager } from "@/components/galleries/photo-chapter-manager";
-import VideoManager from "@/components/galleries/video-manager";
+import GalleryVideoManager from "@/components/galleries/gallery-video-manager";
 
 export default function GalleryPage() {
   const [, params] = useRoute("/galleries/:id");

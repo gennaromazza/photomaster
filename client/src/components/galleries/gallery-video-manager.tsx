@@ -1,75 +1,65 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Film, Pencil, Plus, Trash2, Play, ExternalLink } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { AlertCircle, PlaySquare, FileVideo, Trash2, Edit, Plus, Video } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "@/hooks/use-toast";
 import { GalleryVideo } from "@/types/gallery";
-import GalleryVideoForm from "./gallery-video-form";
-import VideoPlayer from "./video-player";
-import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
+import { formatDistanceToNow } from "date-fns";
+import { it } from "date-fns/locale";
+import LoadingSpinner from "@/components/ui/loading-spinner";
+import GalleryVideoForm from "./gallery-video-form";
 
 interface GalleryVideoManagerProps {
   galleryId: number;
 }
 
 const GalleryVideoManager: React.FC<GalleryVideoManagerProps> = ({ galleryId }) => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [showPlayer, setShowPlayer] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<GalleryVideo | null>(null);
 
-  // Query per ottenere il video della galleria
-  const { 
-    data: video, 
-    isLoading, 
-    isError 
-  } = useQuery({
+  // Query per ottenere i video della galleria
+  const { data: video, isLoading, isError } = useQuery({
     queryKey: [`/api/gallery/galleries/${galleryId}/video`],
     queryFn: async () => {
-      const response = await fetch(`/api/gallery/galleries/${galleryId}/video`);
-      if (!response.ok) {
+      try {
+        const response = await fetch(`/api/gallery/galleries/${galleryId}/video`);
         if (response.status === 404) {
-          return null; // Nessun video trovato, non è un errore
+          // Nessun video trovato, ma non è un errore
+          return null;
         }
-        throw new Error("Errore nel caricamento del video");
+        if (!response.ok) {
+          throw new Error("Errore nel caricamento del video");
+        }
+        return await response.json() as GalleryVideo;
+      } catch (error) {
+        console.error("Errore nel caricamento dei video:", error);
+        throw error;
       }
-      return await response.json() as GalleryVideo;
     }
   });
 
-  // Mutation per eliminare il video
-  const deleteMutation = useMutation({
+  // Mutation per eliminare un video
+  const deleteVideoMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest(
-        "DELETE", 
-        `/api/gallery/galleries/${galleryId}/video`
-      );
-      
+      const response = await apiRequest("DELETE", `/api/gallery/galleries/${galleryId}/video`);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Errore durante l'eliminazione del video");
+        throw new Error("Errore nell'eliminazione del video");
       }
-      
       return await response.json();
     },
     onSuccess: () => {
       toast({
         title: "Video eliminato",
-        description: "Il video è stato rimosso dalla galleria con successo",
+        description: "Il video è stato eliminato con successo.",
       });
-      
-      // Invalida le query per aggiornare i dati
-      queryClient.invalidateQueries({
-        queryKey: [`/api/gallery/galleries/${galleryId}/video`],
-      });
-      
-      queryClient.invalidateQueries({
-        queryKey: [`/api/gallery/galleries/${galleryId}`],
-      });
+      // Aggiorna i dati dopo l'eliminazione
+      queryClient.invalidateQueries({ queryKey: [`/api/gallery/galleries/${galleryId}/video`] });
     },
     onError: (error) => {
       toast({
@@ -80,13 +70,33 @@ const GalleryVideoManager: React.FC<GalleryVideoManagerProps> = ({ galleryId }) 
     },
   });
 
-  // Handler per l'eliminazione del video
+  // Handler per l'eliminazione di un video
   const handleDeleteVideo = () => {
-    deleteMutation.mutate();
+    if (confirm("Sei sicuro di voler eliminare questo video?")) {
+      deleteVideoMutation.mutate();
+    }
   };
 
-  // Rendering del tipo di video
-  const renderVideoTypeBadge = (type: string) => {
+  // Handler per l'apertura della form di modifica
+  const handleEditVideo = (video: GalleryVideo) => {
+    setEditingVideo(video);
+    setIsModalOpen(true);
+  };
+
+  // Handler per l'apertura della form di creazione
+  const handleAddVideo = () => {
+    setEditingVideo(null);
+    setIsModalOpen(true);
+  };
+
+  // Handler per la chiusura della form
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingVideo(null);
+  };
+
+  // Funzione per determinare il tipo di video in italiano
+  const getVideoTypeName = (type: string) => {
     switch (type) {
       case "youtube":
         return "YouTube";
@@ -101,237 +111,155 @@ const GalleryVideoManager: React.FC<GalleryVideoManagerProps> = ({ galleryId }) 
     }
   };
 
-  // Anteprima del video
-  const renderVideoPreview = () => {
-    if (!video) return null;
-
-    let thumbnailUrl = video.thumbnailUrl || "";
-    
-    // Se non c'è una thumbnail, usa un'immagine di default in base al tipo
-    if (!thumbnailUrl) {
-      if (video.videoType === "youtube" && video.videoId) {
-        thumbnailUrl = `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
-      } else if (video.videoType === "vimeo" && video.videoId) {
-        // Vimeo non ha un'API diretta per le thumbnail, quindi usiamo un'immagine generica
-        thumbnailUrl = ""; // Qui potresti usare un'immagine default per Vimeo
-      }
-    }
-
+  // Render dello stato di caricamento
+  if (isLoading) {
     return (
-      <div className="relative bg-black rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
-        {thumbnailUrl ? (
-          <img 
-            src={thumbnailUrl} 
-            alt={video.title} 
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-muted">
-            <Film className="h-16 w-16 text-muted-foreground" />
-          </div>
-        )}
-        
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-          <Button 
-            variant="outline"
-            size="lg"
-            className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 hover:text-white"
-            onClick={() => setShowPlayer(true)}
-          >
-            <Play className="mr-2 h-5 w-5" />
-            Guarda
-          </Button>
-        </div>
+      <div className="flex justify-center items-center p-8">
+        <LoadingSpinner size="lg" message="Caricamento video..." />
       </div>
     );
-  };
+  }
 
-  // Contenuto principale
-  const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      );
-    }
-
-    if (isError) {
-      return (
-        <div className="text-center py-12">
-          <Film className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-medium">Errore</h3>
-          <p className="mt-2 text-muted-foreground">
-            Si è verificato un errore durante il caricamento del video.
-            <br />
-            <Button 
-              variant="link" 
-              onClick={() => queryClient.invalidateQueries({
-                queryKey: [`/api/gallery/galleries/${galleryId}/video`],
-              })}
-            >
-              Riprova
-            </Button>
-          </p>
-        </div>
-      );
-    }
-
-    if (!video) {
-      return (
-        <div className="text-center py-12">
-          <Film className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-medium">Nessun video</h3>
-          <p className="mt-2 text-muted-foreground">
-            Non è stato ancora aggiunto alcun video a questa galleria.
-          </p>
-          <Button 
-            variant="default" 
-            className="mt-4"
-            onClick={() => setShowForm(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Aggiungi video
-          </Button>
-        </div>
-      );
-    }
-
-    // Video trovato, mostriamo i dettagli
+  // Render dello stato di errore
+  if (isError) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h3 className="text-xl font-semibold">{video.title}</h3>
-            {video.description && (
-              <p className="text-muted-foreground mt-1">{video.description}</p>
-            )}
-            <div className="mt-2">
-              <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
-                {renderVideoTypeBadge(video.videoType)}
-              </span>
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Errore</AlertTitle>
+        <AlertDescription>
+          Si è verificato un errore durante il caricamento dei video.
+          Ricarica la pagina o contatta l'amministratore.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header della sezione */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold mb-1">Video Trailer</h2>
+          <p className="text-muted-foreground">
+            Gestisci il video trailer della galleria che sarà mostrato in cima alla pagina pubblica.
+          </p>
+        </div>
+        
+        <Button onClick={handleAddVideo} className="gap-2">
+          <Plus className="h-4 w-4" />
+          {video ? "Aggiorna Video" : "Aggiungi Video"}
+        </Button>
+      </div>
+      
+      <Separator />
+      
+      {/* Contenuto principale */}
+      {!video ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Nessun video disponibile</CardTitle>
+            <CardDescription>
+              Aggiungi un video per mostrare un trailer nella galleria.
+              Il video sarà visualizzato in formato banner nella parte superiore della galleria condivisa.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center justify-center p-12 text-center bg-muted/50 rounded-lg border border-dashed border-muted-foreground/50">
+              <FileVideo className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nessun video trailer</h3>
+              <p className="text-muted-foreground mb-4 max-w-md">
+                Aggiungi un video YouTube, Vimeo o carica un file video per creare un trailer accattivante per la tua galleria.
+              </p>
+              <Button onClick={handleAddVideo} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Aggiungi Video
+              </Button>
             </div>
-          </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>{video.title || "Video Trailer"}</CardTitle>
+                <CardDescription>
+                  {video.description || "Nessuna descrizione disponibile"}
+                </CardDescription>
+              </div>
+              <Badge className="ml-2">{getVideoTypeName(video.videoType)}</Badge>
+            </div>
+          </CardHeader>
           
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPlayer(true)}
-            >
-              <Play className="h-4 w-4 mr-2" />
-              Guarda
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowForm(true)}
-            >
-              <Pencil className="h-4 w-4 mr-2" />
+          <CardContent>
+            <div className="space-y-4">
+              {/* Anteprima video */}
+              <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+                {video.thumbnailPath ? (
+                  <div className="relative h-full">
+                    <img 
+                      src={video.thumbnailPath} 
+                      alt={video.title || "Anteprima video"} 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <PlaySquare className="h-16 w-16 text-white/90" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center bg-primary/10">
+                    <Video className="h-16 w-16 text-primary/50" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Dettagli video */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Tipo di video</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {getVideoTypeName(video.videoType)}
+                    {video.videoType === "youtube" && video.videoId && (
+                      <> (ID: {video.videoId})</>
+                    )}
+                    {video.videoType === "vimeo" && video.videoId && (
+                      <> (ID: {video.videoId})</>
+                    )}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Aggiunto</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {video.addedAt && formatDistanceToNow(new Date(video.addedAt), { addSuffix: true, locale: it })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+          
+          <CardFooter className="justify-between border-t pt-4">
+            <Button variant="outline" onClick={() => handleEditVideo(video)}>
+              <Edit className="h-4 w-4 mr-2" />
               Modifica
             </Button>
             
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Elimina
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Vuoi davvero eliminare questo video?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Questa azione non può essere annullata. Il video verrà rimosso definitivamente dalla galleria.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annulla</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteVideo}>
-                    Elimina
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
-        
-        <Separator />
-        
-        {/* Anteprima del video */}
-        {renderVideoPreview()}
-        
-        {/* Informazioni aggiuntive */}
-        {video.videoType === "youtube" && video.videoId && (
-          <div className="text-sm text-muted-foreground">
-            <Button 
-              variant="link" 
-              size="sm" 
-              className="p-0 h-auto" 
-              onClick={() => window.open(`https://www.youtube.com/watch?v=${video.videoId}`, "_blank")}
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              Visualizza su YouTube
+            <Button variant="destructive" onClick={handleDeleteVideo}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Elimina
             </Button>
-          </div>
-        )}
-        
-        {video.videoType === "vimeo" && video.videoId && (
-          <div className="text-sm text-muted-foreground">
-            <Button 
-              variant="link" 
-              size="sm" 
-              className="p-0 h-auto" 
-              onClick={() => window.open(`https://vimeo.com/${video.videoId}`, "_blank")}
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              Visualizza su Vimeo
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center text-xl">
-          <Film className="h-5 w-5 mr-2" />
-          Video della galleria
-        </CardTitle>
-        <CardDescription>
-          Gestisci il video promozionale da mostrare nella parte superiore della galleria
-        </CardDescription>
-      </CardHeader>
+          </CardFooter>
+        </Card>
+      )}
       
-      <CardContent>
-        {renderContent()}
-      </CardContent>
-      
-      {/* Form per aggiungere/modificare il video */}
+      {/* Modal per l'aggiunta/modifica */}
       <GalleryVideoForm
         galleryId={galleryId}
-        isOpen={showForm}
-        onClose={() => setShowForm(false)}
-        existingVideo={video || undefined}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        existingVideo={editingVideo}
       />
-      
-      {/* Player video */}
-      {video && (
-        <VideoPlayer
-          video={video}
-          isOpen={showPlayer}
-          onClose={() => setShowPlayer(false)}
-        />
-      )}
-    </Card>
+    </div>
   );
 };
 

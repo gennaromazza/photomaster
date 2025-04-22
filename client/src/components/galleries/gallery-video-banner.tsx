@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Play, Volume2, VolumeX, Info } from "lucide-react";
+import { Play, Info, Volume2, VolumeX } from "lucide-react";
 import { GalleryVideo } from "@/types/gallery";
 import VideoPlayer from "./video-player";
 
@@ -11,185 +11,118 @@ interface GalleryVideoBannerProps {
   description?: string | null;
 }
 
-const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({ 
+const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({
   galleryId,
   galleryName,
   description
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showPlayer, setShowPlayer] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
-
-  // Query per ottenere il video della galleria
+  
+  // Query per ottenere il video trailer della galleria
   const { data: video, isLoading, isError } = useQuery({
     queryKey: [`/api/gallery/galleries/${galleryId}/video`],
     queryFn: async () => {
-      const response = await fetch(`/api/gallery/galleries/${galleryId}/video`);
-      if (!response.ok) {
+      try {
+        const response = await fetch(`/api/gallery/galleries/${galleryId}/video`);
         if (response.status === 404) {
-          return null; // Nessun video trovato, non è un errore
+          // Nessun video trovato, ma non è un errore
+          return null;
         }
-        throw new Error("Errore nel caricamento del video");
+        if (!response.ok) {
+          throw new Error("Errore nel caricamento del video");
+        }
+        return await response.json() as GalleryVideo;
+      } catch (error) {
+        console.error("Errore nel caricamento del video:", error);
+        throw error;
       }
-      return await response.json() as GalleryVideo;
     }
   });
-
-  // Se non c'è un video o c'è un errore, non mostriamo nulla
+  
+  // Se non c'è video o c'è un errore, non mostrare nulla
   if (isLoading || isError || !video) {
     return null;
   }
-
-  // Funzione per generare l'embed del video di YouTube
-  const renderYouTubeEmbed = (videoId: string, autoplay: boolean = false) => {
-    return (
-      <iframe
-        src={`https://www.youtube.com/embed/${videoId}?autoplay=${autoplay ? '1' : '0'}&mute=${isMuted ? '1' : '0'}&controls=0&modestbranding=1&loop=1&playlist=${videoId}`}
-        className="absolute inset-0 w-full h-full"
-        frameBorder="0"
-        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      ></iframe>
-    );
-  };
-
-  // Funzione per generare l'embed del video di Vimeo
-  const renderVimeoEmbed = (videoId: string, autoplay: boolean = false) => {
-    return (
-      <iframe
-        src={`https://player.vimeo.com/video/${videoId}?autoplay=${autoplay ? '1' : '0'}&muted=${isMuted ? '1' : '0'}&background=1&loop=1`}
-        className="absolute inset-0 w-full h-full"
-        frameBorder="0"
-        allow="autoplay; fullscreen"
-        allowFullScreen
-      ></iframe>
-    );
-  };
-
-  // Funzione per generare il tag video per URL diretti
-  const renderVideo = (videoUrl: string | null, autoplay: boolean = false) => {
-    if (!videoUrl) return null;
+  
+  // Generiamo l'URL di anteprima in base al tipo di video
+  const getThumbnailUrl = () => {
+    if (video.thumbnailPath) return video.thumbnailPath;
+    if (video.thumbnailUrl) return video.thumbnailUrl;
     
-    return (
-      <video
-        src={videoUrl}
-        className="absolute inset-0 w-full h-full object-cover"
-        autoPlay={autoplay}
-        muted={isMuted}
-        loop
-        playsInline
-      ></video>
-    );
-  };
-
-  // Funzione per generare l'embed HTML personalizzato
-  const renderCustomEmbed = (embedCode: string | null) => {
-    if (!embedCode) return null;
-    
-    // Creiamo un div e inseriamo il codice embed
-    return (
-      <div 
-        className="absolute inset-0 w-full h-full"
-        dangerouslySetInnerHTML={{ __html: embedCode }}
-      />
-    );
-  };
-
-  // Render dell'anteprima del video in base al tipo
-  const renderVideoPreview = () => {
-    if (video.videoType === 'youtube' && video.videoId) {
-      return renderYouTubeEmbed(video.videoId, isPlaying);
-    } else if (video.videoType === 'vimeo' && video.videoId) {
-      return renderVimeoEmbed(video.videoId, isPlaying);
-    } else if (video.videoType === 'url' && video.videoUrl) {
-      return renderVideo(video.videoUrl, isPlaying);
-    } else if (video.videoType === 'embed' && video.embedCode) {
-      return renderCustomEmbed(video.embedCode);
+    // Generare URL di anteprima per YouTube o Vimeo se non specificato
+    if (video.videoType === "youtube" && video.videoId) {
+      return `https://img.youtube.com/vi/${video.videoId}/maxresdefault.jpg`;
     }
     
-    return null;
+    if (video.videoType === "vimeo" && video.videoId) {
+      // Vimeo richiede un'API per ottenere le thumbnail, quindi usiamo un fallback generico
+      return `/assets/video-placeholder.jpg`;
+    }
+    
+    // Fallback per altri tipi di video
+    return `/assets/video-placeholder.jpg`;
   };
-
-  // Banner in stile Netflix
+  
   return (
     <>
-      <div className="relative w-full h-[70vh] overflow-hidden">
-        {/* Overlay scuro gradiente */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent z-10"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent z-10"></div>
-        
-        {/* Video di sfondo */}
+      {/* Video Banner in stile Netflix/Prime */}
+      <div className="relative w-full h-[50vh] md:h-[70vh] overflow-hidden">
+        {/* Immagine di sfondo/thumbnail */}
         <div className="absolute inset-0">
-          {renderVideoPreview()}
+          <img 
+            src={getThumbnailUrl()}
+            alt={video.title || "Video Trailer"}
+            className="w-full h-full object-cover"
+          />
+          
+          {/* Overlay scuro con gradiente */}
+          <div 
+            className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/20"
+          />
         </div>
         
-        {/* Contenuto in overlay */}
-        <div className="absolute inset-0 z-20 flex flex-col justify-end p-8 md:p-12">
-          <div className="max-w-screen-xl mx-auto w-full">
-            <div className="max-w-xl mb-8">
-              <h1 className="text-3xl md:text-5xl font-bold text-white mb-3 font-serif">{galleryName}</h1>
-              {description && (
-                <p className="text-white/90 text-base md:text-lg">
-                  {description}
-                </p>
-              )}
-              
-              <div className="flex flex-wrap gap-3 mt-6">
-                <Button
-                  size="lg"
-                  className="font-semibold gap-2"
-                  onClick={() => setShowVideoPlayer(true)}
-                >
-                  <Play className="h-5 w-5" fill="currentColor" />
-                  Guarda il trailer
-                </Button>
-                
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="font-semibold gap-2"
-                  onClick={() => {
-                    if (isPlaying) {
-                      setIsPlaying(false);
-                    } else {
-                      setIsPlaying(true);
-                    }
-                  }}
-                >
-                  {isPlaying ? (
-                    <>
-                      <Info className="h-5 w-5" />
-                      Pausa anteprima
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-5 w-5" />
-                      Play anteprima
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+        {/* Contenuto testuale */}
+        <div className="absolute bottom-0 left-0 right-0 p-8 md:p-16 z-10">
+          <h2 className="text-3xl md:text-5xl font-bold mb-3 text-white drop-shadow-md">
+            {galleryName}
+          </h2>
+          
+          {description && (
+            <p className="text-white/90 max-w-2xl mb-8 text-lg">
+              {description}
+            </p>
+          )}
+          
+          <div className="flex gap-4">
+            <Button 
+              onClick={() => setShowPlayer(true)} 
+              size="lg"
+              className="gap-2 bg-white text-black hover:bg-white/90"
+            >
+              <Play className="h-5 w-5" />
+              Guarda il trailer
+            </Button>
+            
+            <Button 
+              onClick={() => setIsMuted(!isMuted)}
+              variant="outline" 
+              size="icon"
+              className="bg-white/10 border-white/20 hover:bg-white/20 text-white"
+            >
+              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </Button>
           </div>
         </div>
-        
-        {/* Controllo volume */}
-        <Button
-          variant="outline"
-          size="icon"
-          className="absolute top-4 right-4 z-20 bg-black/50 hover:bg-black/70 border-white/20 text-white"
-          onClick={() => setIsMuted(!isMuted)}
-        >
-          {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-        </Button>
       </div>
       
-      {/* Dialog del video player */}
+      {/* Modal per il video player */}
       {video && (
-        <VideoPlayer
+        <VideoPlayer 
           video={video}
-          isOpen={showVideoPlayer}
-          onClose={() => setShowVideoPlayer(false)}
+          isOpen={showPlayer}
+          onClose={() => setShowPlayer(false)}
         />
       )}
     </>

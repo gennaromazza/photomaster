@@ -1,63 +1,50 @@
-import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { GalleryVideo } from "@/types/gallery";
-import { toast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogClose
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import React, { useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { GalleryVideo } from "@/types/gallery";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
-// Schema per la validazione del form
+// Schema di validazione per il form
 const videoFormSchema = z.object({
+  galleryId: z.number(),
   title: z.string().min(1, "Il titolo è obbligatorio"),
   description: z.string().optional(),
-  videoType: z.enum(["youtube", "vimeo", "url", "embed"]),
+  videoType: z.enum(["youtube", "vimeo", "url", "embed"], {
+    errorMap: () => ({ message: "Tipo di video non valido" })
+  }),
   videoId: z.string().optional(),
   videoUrl: z.string().optional(),
   embedCode: z.string().optional(),
   thumbnailUrl: z.string().optional(),
+  isFeatured: z.boolean().default(false),
+  isHidden: z.boolean().default(false),
+  // Campi opzionali che verranno ignorati nell'invio al server se non valorizzati
+  chapterId: z.number().optional().nullable(),
+  sortOrder: z.number().default(0),
 }).refine(data => {
-  // Verifica che i campi appropriati siano compilati in base al tipo di video
-  if (data.videoType === "youtube" || data.videoType === "vimeo") {
-    return !!data.videoId;
-  } else if (data.videoType === "url") {
-    return !!data.videoUrl;
-  } else if (data.videoType === "embed") {
-    return !!data.embedCode;
+  // Validazione condizionale in base al tipo di video
+  if (data.videoType === 'youtube' || data.videoType === 'vimeo') {
+    return !!data.videoId; // Richiedi videoId per youtube e vimeo
+  } else if (data.videoType === 'url') {
+    return !!data.videoUrl; // Richiedi videoUrl per URL diretti
+  } else if (data.videoType === 'embed') {
+    return !!data.embedCode; // Richiedi embedCode per embed personalizzati
   }
-  return false;
+  return true;
 }, {
-  message: "Inserisci le informazioni richieste per il tipo di video selezionato",
-  path: ["videoType"],
+  message: "Devi fornire le informazioni richieste per il tipo di video selezionato",
+  path: ["videoId"]
 });
 
 type VideoFormValues = z.infer<typeof videoFormSchema>;
@@ -76,50 +63,73 @@ const GalleryVideoForm: React.FC<GalleryVideoFormProps> = ({
   existingVideo
 }) => {
   const queryClient = useQueryClient();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditing = !!existingVideo;
   
-  // Inizializza il form con i valori predefiniti o esistenti
+  // Inizializzazione del form
   const form = useForm<VideoFormValues>({
     resolver: zodResolver(videoFormSchema),
     defaultValues: {
-      title: existingVideo?.title || "",
-      description: existingVideo?.description || "",
-      videoType: (existingVideo?.videoType as any) || "youtube",
-      videoId: existingVideo?.videoId || "",
-      videoUrl: existingVideo?.videoUrl || "",
-      embedCode: existingVideo?.embedCode || "",
-      thumbnailUrl: existingVideo?.thumbnailUrl || ""
-    }
+      galleryId,
+      title: "",
+      description: "",
+      videoType: "youtube",
+      videoId: "",
+      videoUrl: "",
+      embedCode: "",
+      thumbnailUrl: "",
+      isFeatured: false,
+      isHidden: false,
+      chapterId: null,
+      sortOrder: 0,
+    },
   });
   
-  // Resetta il form quando cambiano i dati esistenti o si apre/chiude il modal
+  // Aggiornamento dei valori del form quando si modifica un video esistente
   useEffect(() => {
-    if (isOpen) {
+    if (existingVideo) {
       form.reset({
-        title: existingVideo?.title || "",
-        description: existingVideo?.description || "",
-        videoType: (existingVideo?.videoType as any) || "youtube",
-        videoId: existingVideo?.videoId || "",
-        videoUrl: existingVideo?.videoUrl || "",
-        embedCode: existingVideo?.embedCode || "",
-        thumbnailUrl: existingVideo?.thumbnailUrl || ""
+        galleryId,
+        title: existingVideo.title || "",
+        description: existingVideo.description || "",
+        videoType: existingVideo.videoType as any,
+        videoId: existingVideo.videoId || "",
+        videoUrl: existingVideo.videoUrl || "",
+        embedCode: existingVideo.embedCode || "",
+        thumbnailUrl: existingVideo.thumbnailUrl || "",
+        isFeatured: existingVideo.isFeatured || false,
+        isHidden: existingVideo.isHidden || false,
+        chapterId: existingVideo.chapterId || null,
+        sortOrder: existingVideo.sortOrder || 0,
+      });
+    } else {
+      form.reset({
+        galleryId,
+        title: "",
+        description: "",
+        videoType: "youtube",
+        videoId: "",
+        videoUrl: "",
+        embedCode: "",
+        thumbnailUrl: "",
+        isFeatured: false,
+        isHidden: false,
+        chapterId: null,
+        sortOrder: 0,
       });
     }
-  }, [existingVideo, isOpen, form]);
+  }, [existingVideo, galleryId, form]);
   
-  // Mutation per salvare il video
-  const saveVideoMutation = useMutation({
-    mutationFn: async (formData: VideoFormValues) => {
-      // Determina se è un aggiornamento o una creazione
-      const isUpdate = !!existingVideo;
-      const method = isUpdate ? "PUT" : "POST";
+  // Mutation per aggiunta/modifica video
+  const videoMutation = useMutation({
+    mutationFn: async (data: VideoFormValues) => {
+      // Endpoint e metodo differenti per creazione vs modifica
+      const endpoint = isEditing
+        ? `/api/gallery/galleries/${galleryId}/video/${existingVideo?.id}`
+        : `/api/gallery/galleries/${galleryId}/video`;
       
-      // Invia la richiesta API
-      const response = await apiRequest(
-        method, 
-        `/api/gallery/galleries/${galleryId}/video`, 
-        formData
-      );
+      const method = isEditing ? "PATCH" : "POST";
+      
+      const response = await apiRequest(method, endpoint, data);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -129,19 +139,20 @@ const GalleryVideoForm: React.FC<GalleryVideoFormProps> = ({
       return await response.json();
     },
     onSuccess: () => {
-      // Mostra messaggio di successo
+      // Notifica di successo
       toast({
-        title: existingVideo ? "Video aggiornato" : "Video aggiunto",
-        description: existingVideo 
-          ? "Il video è stato aggiornato con successo."
-          : "Il video è stato aggiunto con successo alla galleria.",
+        title: isEditing ? "Video aggiornato" : "Video aggiunto",
+        description: isEditing
+          ? "Il video è stato aggiornato con successo"
+          : "Il video è stato aggiunto alla galleria con successo",
       });
       
       // Invalida la query per ricaricare i dati
       queryClient.invalidateQueries({ queryKey: [`/api/gallery/galleries/${galleryId}/video`] });
       
-      // Chiudi il form
+      // Chiudi il form e resetta lo stato
       onClose();
+      form.reset();
     },
     onError: (error) => {
       toast({
@@ -149,46 +160,77 @@ const GalleryVideoForm: React.FC<GalleryVideoFormProps> = ({
         description: error instanceof Error ? error.message : "Si è verificato un errore durante il salvataggio del video",
         variant: "destructive",
       });
-    },
-    onSettled: () => {
-      setIsSubmitting(false);
     }
   });
   
-  // Gestisce l'invio del form
-  const onSubmit = (data: VideoFormValues) => {
-    setIsSubmitting(true);
-    saveVideoMutation.mutate(data);
+  // Handler per la submission del form
+  const onSubmit = (values: VideoFormValues) => {
+    videoMutation.mutate(values);
   };
   
-  // Ottiene il tipo di video corrente
-  const currentVideoType = form.watch("videoType");
+  // Determina quali campi mostrare in base al tipo di video selezionato
+  const videoType = form.watch("videoType");
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{existingVideo ? "Modifica video" : "Aggiungi un nuovo video"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Modifica video" : "Aggiungi nuovo video"}
+          </DialogTitle>
           <DialogDescription>
-            {existingVideo 
-              ? "Modifica le informazioni del video trailer."
-              : "Aggiungi un nuovo video trailer alla galleria."}
+            {isEditing
+              ? "Modifica le informazioni del video esistente nella galleria"
+              : "Aggiungi un nuovo video trailer alla tua galleria fotografica"
+            }
           </DialogDescription>
         </DialogHeader>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Tipo di video */}
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Titolo del video *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Inserisci un titolo" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrizione</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Inserisci una descrizione (opzionale)"
+                      className="resize-y min-h-[80px]"
+                      {...field}
+                      value={field.value || ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="videoType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tipo di video</FormLabel>
+                  <FormLabel>Tipo di video *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    disabled={isSubmitting}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -203,181 +245,159 @@ const GalleryVideoForm: React.FC<GalleryVideoFormProps> = ({
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Seleziona la fonte del video trailer.
+                    {videoType === "youtube" && "Inserisci solo l'ID del video YouTube (es. dQw4w9WgXcQ, non l'URL completo)"}
+                    {videoType === "vimeo" && "Inserisci solo l'ID del video Vimeo (es. 123456789, non l'URL completo)"}
+                    {videoType === "url" && "Inserisci l'URL completo di un file video (MP4, WebM, ecc.)"}
+                    {videoType === "embed" && "Incolla il codice di incorporamento completo del video"}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
             
-            {/* Titolo del video */}
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Titolo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Inserisci il titolo del video" {...field} disabled={isSubmitting} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Descrizione del video */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrizione</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Inserisci una breve descrizione del video" 
-                      {...field} 
-                      disabled={isSubmitting}
-                      rows={3} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Campi specifici per tipo di video */}
-            {currentVideoType === "youtube" && (
+            {/* Campo per YouTube/Vimeo ID */}
+            {(videoType === "youtube" || videoType === "vimeo") && (
               <FormField
                 control={form.control}
                 name="videoId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ID YouTube</FormLabel>
+                    <FormLabel>ID Video *</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="es. dQw4w9WgXcQ" 
+                        placeholder={videoType === "youtube" ? "Es. dQw4w9WgXcQ" : "Es. 123456789"} 
                         {...field} 
-                        disabled={isSubmitting}
+                        value={field.value || ""}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Inserisci l'ID del video YouTube (parte finale dell'URL dopo v=).
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             )}
             
-            {currentVideoType === "vimeo" && (
-              <FormField
-                control={form.control}
-                name="videoId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ID Vimeo</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="es. 123456789" 
-                        {...field} 
-                        disabled={isSubmitting}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Inserisci l'ID numerico del video Vimeo.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            
-            {currentVideoType === "url" && (
+            {/* Campo per URL diretto */}
+            {videoType === "url" && (
               <FormField
                 control={form.control}
                 name="videoUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL del video</FormLabel>
+                    <FormLabel>URL del video *</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="https://example.com/video.mp4" 
                         {...field} 
-                        disabled={isSubmitting}
+                        value={field.value || ""}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Inserisci l'URL diretto al file video (mp4, webm, etc.).
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             )}
             
-            {currentVideoType === "embed" && (
+            {/* Campo per codice embed */}
+            {videoType === "embed" && (
               <FormField
                 control={form.control}
                 name="embedCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Codice embed</FormLabel>
+                    <FormLabel>Codice di incorporamento *</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="<iframe src='...'></iframe>" 
+                        placeholder="<iframe src=..." 
+                        className="font-mono text-sm resize-y min-h-[100px]"
                         {...field} 
-                        disabled={isSubmitting}
-                        rows={4}
+                        value={field.value || ""}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Inserisci il codice HTML di incorporamento del video.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             )}
             
-            {/* Thumbnail URL */}
+            {/* URL immagine anteprima opzionale */}
             <FormField
               control={form.control}
               name="thumbnailUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL anteprima (opzionale)</FormLabel>
+                  <FormLabel>URL immagine anteprima (opzionale)</FormLabel>
                   <FormControl>
                     <Input 
                       placeholder="https://example.com/thumbnail.jpg" 
                       {...field} 
-                      disabled={isSubmitting}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormDescription>
-                    Inserisci l'URL di un'immagine di anteprima personalizzata.
+                    Lascia vuoto per usare l'anteprima predefinita del servizio video
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
             
-            <DialogFooter className="pt-4">
-              <DialogClose asChild>
-                <Button variant="outline" disabled={isSubmitting}>
-                  Annulla
-                </Button>
-              </DialogClose>
+            {/* Opzioni aggiuntive */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="isFeatured"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Video in evidenza</FormLabel>
+                      <FormDescription>
+                        Mostra questo video come trailer principale
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
+              <FormField
+                control={form.control}
+                name="isHidden"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Nascondi video</FormLabel>
+                      <FormDescription>
+                        Il video sarà nascosto nella galleria
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <DialogFooter className="pt-4">
+              <Button variant="outline" type="button" onClick={onClose} disabled={videoMutation.isPending}>
+                Annulla
+              </Button>
+              <Button type="submit" disabled={videoMutation.isPending}>
+                {videoMutation.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Salvataggio...
+                    <LoadingSpinner className="mr-2" />
+                    {isEditing ? "Aggiornamento..." : "Salvataggio..."}
                   </>
-                ) : existingVideo ? (
-                  "Aggiorna video"
                 ) : (
-                  "Aggiungi video"
+                  isEditing ? "Aggiorna video" : "Salva video"
                 )}
               </Button>
             </DialogFooter>

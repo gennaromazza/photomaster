@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../shared/schema";
+import { Pool } from "pg"; 
 
 // Verifica che DATABASE_URL sia definito
 if (!process.env.DATABASE_URL) {
@@ -13,6 +14,11 @@ if (!process.env.DATABASE_URL) {
 const connectionString = process.env.DATABASE_URL;
 let client;
 let db;
+
+// Create a Pool for direct SQL queries
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 // Aggiunto blocco try-catch per gestire meglio gli errori di connessione
 try {

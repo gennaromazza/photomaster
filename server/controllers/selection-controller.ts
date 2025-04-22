@@ -14,10 +14,44 @@ import {
   PhotoCommentWithUser,
   SelectionSessionWithCounts
 } from '@shared/selection-schema';
+import { gallerySelectionSettings, selectionSessions, photoSelections, photoComments } from './selection-tables';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import { pool } from '../db';
 
-// Funzioni stub temporanee
-// Queste verranno implementate correttamente in seguito
+// Schemi di validazione
+const insertGallerySelectionSettingsSchema = z.object({
+  galleryId: z.number(),
+  isEnabled: z.boolean().optional().default(false),
+  maxSelections: z.number().optional().default(0),
+  allowComments: z.boolean().optional().default(true),
+  expiresAt: z.date().nullable().optional(),
+  customMessage: z.string().nullable().optional()
+});
+
+const insertSelectionSessionSchema = z.object({
+  galleryId: z.number(),
+  clientId: z.number().nullable().optional(),
+  clientName: z.string(),
+  clientEmail: z.string().nullable().optional(),
+  sessionKey: z.string(),
+  notes: z.string().nullable().optional()
+});
+
+const insertPhotoSelectionSchema = z.object({
+  photoId: z.number(),
+  sessionId: z.number()
+});
+
+const insertPhotoCommentSchema = z.object({
+  photoId: z.number(),
+  sessionId: z.number(),
+  content: z.string(),
+  userId: z.number().nullable().optional(),
+  clientName: z.string().nullable().optional()
+});
+
+// Implementazione delle funzioni controller
 
 export const getSelectionSettings = async (req: Request, res: Response) => {
   try {
@@ -28,31 +62,59 @@ export const getSelectionSettings = async (req: Request, res: Response) => {
     }
     
     // Verifica se la galleria esiste
-    const [gallery] = await db.select().from(galleries).where(eq(galleries.id, galleryId));
+    const galleryResult = await pool.query(
+      'SELECT id, name FROM galleries WHERE id = $1',
+      [galleryId]
+    );
     
-    if (!gallery) {
+    if (galleryResult.rows.length === 0) {
       return res.status(404).json({ error: 'Galleria non trovata' });
     }
     
     // Cerca le impostazioni esistenti
-    const [settings] = await db.select()
-      .from(gallerySelectionSettings)
-      .where(eq(gallerySelectionSettings.galleryId, galleryId));
+    const settingsResult = await pool.query(
+      'SELECT * FROM gallery_selection_settings WHERE gallery_id = $1',
+      [galleryId]
+    );
     
-    if (settings) {
+    if (settingsResult.rows.length > 0) {
+      // Converti i nomi delle colonne da snake_case a camelCase
+      const settings = {
+        id: settingsResult.rows[0].id,
+        galleryId: settingsResult.rows[0].gallery_id,
+        isEnabled: settingsResult.rows[0].is_enabled,
+        maxSelections: settingsResult.rows[0].max_selections,
+        allowComments: settingsResult.rows[0].allow_comments,
+        expiresAt: settingsResult.rows[0].expires_at,
+        customMessage: settingsResult.rows[0].custom_message,
+        createdAt: settingsResult.rows[0].created_at,
+        updatedAt: settingsResult.rows[0].updated_at
+      };
+      
       return res.status(200).json(settings);
     }
     
     // Se non esistono impostazioni, crea delle impostazioni di default
-    const [newSettings] = await db.insert(gallerySelectionSettings)
-      .values({
-        galleryId,
-        isEnabled: false,
-        maxSelections: 0,
-        allowComments: true,
-        customMessage: 'Seleziona le foto che preferisci'
-      })
-      .returning();
+    const newSettingsResult = await pool.query(
+      `INSERT INTO gallery_selection_settings 
+       (gallery_id, is_enabled, max_selections, allow_comments, custom_message) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING *`,
+      [galleryId, false, 0, true, 'Seleziona le foto che preferisci']
+    );
+    
+    // Converti i nomi delle colonne da snake_case a camelCase
+    const newSettings = {
+      id: newSettingsResult.rows[0].id,
+      galleryId: newSettingsResult.rows[0].gallery_id,
+      isEnabled: newSettingsResult.rows[0].is_enabled,
+      maxSelections: newSettingsResult.rows[0].max_selections,
+      allowComments: newSettingsResult.rows[0].allow_comments,
+      expiresAt: newSettingsResult.rows[0].expires_at,
+      customMessage: newSettingsResult.rows[0].custom_message,
+      createdAt: newSettingsResult.rows[0].created_at,
+      updatedAt: newSettingsResult.rows[0].updated_at
+    };
     
     res.status(200).json(newSettings);
   } catch (error: any) {
@@ -83,26 +145,73 @@ export const updateSelectionSettings = async (req: Request, res: Response) => {
     }
     
     // Cerca le impostazioni esistenti
-    const [existingSettings] = await db.select()
-      .from(gallerySelectionSettings)
-      .where(eq(gallerySelectionSettings.galleryId, galleryId));
+    const existingSettingsResult = await pool.query(
+      'SELECT * FROM gallery_selection_settings WHERE gallery_id = $1',
+      [galleryId]
+    );
     
-    if (existingSettings) {
+    if (existingSettingsResult.rows.length > 0) {
       // Aggiorna le impostazioni esistenti
-      const [updatedSettings] = await db.update(gallerySelectionSettings)
-        .set({
-          ...parseResult.data,
-          updatedAt: new Date()
-        })
-        .where(eq(gallerySelectionSettings.galleryId, galleryId))
-        .returning();
+      const updatedSettingsResult = await pool.query(
+        `UPDATE gallery_selection_settings 
+         SET is_enabled = $1, max_selections = $2, allow_comments = $3, 
+             expires_at = $4, custom_message = $5, updated_at = $6
+         WHERE gallery_id = $7
+         RETURNING *`,
+        [
+          parseResult.data.isEnabled, 
+          parseResult.data.maxSelections, 
+          parseResult.data.allowComments,
+          parseResult.data.expiresAt, 
+          parseResult.data.customMessage, 
+          new Date(), 
+          galleryId
+        ]
+      );
+      
+      // Converti i nomi delle colonne da snake_case a camelCase
+      const updatedSettings = {
+        id: updatedSettingsResult.rows[0].id,
+        galleryId: updatedSettingsResult.rows[0].gallery_id,
+        isEnabled: updatedSettingsResult.rows[0].is_enabled,
+        maxSelections: updatedSettingsResult.rows[0].max_selections,
+        allowComments: updatedSettingsResult.rows[0].allow_comments,
+        expiresAt: updatedSettingsResult.rows[0].expires_at,
+        customMessage: updatedSettingsResult.rows[0].custom_message,
+        createdAt: updatedSettingsResult.rows[0].created_at,
+        updatedAt: updatedSettingsResult.rows[0].updated_at
+      };
       
       return res.status(200).json(updatedSettings);
     } else {
       // Crea nuove impostazioni
-      const [newSettings] = await db.insert(gallerySelectionSettings)
-        .values(parseResult.data)
-        .returning();
+      const newSettingsResult = await pool.query(
+        `INSERT INTO gallery_selection_settings 
+         (gallery_id, is_enabled, max_selections, allow_comments, expires_at, custom_message) 
+         VALUES ($1, $2, $3, $4, $5, $6) 
+         RETURNING *`,
+        [
+          galleryId, 
+          parseResult.data.isEnabled, 
+          parseResult.data.maxSelections, 
+          parseResult.data.allowComments,
+          parseResult.data.expiresAt, 
+          parseResult.data.customMessage
+        ]
+      );
+      
+      // Converti i nomi delle colonne da snake_case a camelCase
+      const newSettings = {
+        id: newSettingsResult.rows[0].id,
+        galleryId: newSettingsResult.rows[0].gallery_id,
+        isEnabled: newSettingsResult.rows[0].is_enabled,
+        maxSelections: newSettingsResult.rows[0].max_selections,
+        allowComments: newSettingsResult.rows[0].allow_comments,
+        expiresAt: newSettingsResult.rows[0].expires_at,
+        customMessage: newSettingsResult.rows[0].custom_message,
+        createdAt: newSettingsResult.rows[0].created_at,
+        updatedAt: newSettingsResult.rows[0].updated_at
+      };
       
       return res.status(201).json(newSettings);
     }

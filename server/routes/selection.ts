@@ -1,34 +1,52 @@
-import express from 'express';
-import * as selectionController from '../controllers/selection-controller';
-import { isAuthenticated } from '../auth';
+import { Router } from 'express';
+import { 
+  getSelectionSettings, 
+  updateSelectionSettings,
+  createSelectionSession,
+  getSessionsByGallery,
+  getSession,
+  getSessionByKey,
+  completeSession,
+  deleteSession,
+  togglePhotoSelection,
+  getSessionSelections,
+  getPhotoCommentsCount,
+  addComment,
+  replyToComment,
+  getSessionComments,
+  getPhotoComments,
+  markCommentAsRead,
+  exportSelections
+} from '../controllers/selection-controller';
+import { csrfProtection } from '../auth';
 
-const router = express.Router();
+const router = Router();
 
-// Impostazioni selezione
-router.get('/settings/:galleryId', selectionController.getSelectionSettings);
-router.put('/settings/:galleryId', isAuthenticated, selectionController.updateSelectionSettings);
+// Impostazioni di selezione
+router.get('/settings/:galleryId', getSelectionSettings);
+router.put('/settings/:galleryId', csrfProtection, updateSelectionSettings);
 
-// Sessioni di selezione
-router.post('/sessions', selectionController.createSelectionSession);
-router.get('/sessions/gallery/:galleryId', isAuthenticated, selectionController.getSessionsByGallery);
-router.get('/sessions/:id', isAuthenticated, selectionController.getSession);
-router.get('/sessions/key/:key', selectionController.getSessionByKey);
-router.put('/sessions/:id/complete', selectionController.completeSession);
-router.delete('/sessions/:id', isAuthenticated, selectionController.deleteSession);
+// Sessioni
+router.post('/sessions', csrfProtection, createSelectionSession);
+router.get('/sessions/gallery/:galleryId', getSessionsByGallery);
+router.get('/sessions/:id', getSession);
+router.get('/sessions/key/:key', getSessionByKey);
+router.put('/sessions/:id/complete', csrfProtection, completeSession);
+router.delete('/sessions/:id', csrfProtection, deleteSession);
 
-// Selezioni di foto
-router.post('/photo/:photoId/toggle', selectionController.togglePhotoSelection);
-router.get('/sessions/:sessionId/selections', selectionController.getSessionSelections);
-router.get('/sessions/:sessionId/comments-count', selectionController.getPhotoCommentsCount);
+// Selezioni
+router.post('/selections/toggle', csrfProtection, togglePhotoSelection);
+router.get('/selections/session/:sessionId', getSessionSelections);
 
 // Commenti
-router.post('/comments', selectionController.addComment);
-router.post('/comments/reply', isAuthenticated, selectionController.replyToComment);
-router.get('/sessions/:sessionId/comments', selectionController.getSessionComments);
-router.get('/photo/:photoId/comments/:sessionId', selectionController.getPhotoComments);
-router.put('/comments/:id/mark-read', isAuthenticated, selectionController.markCommentAsRead);
+router.get('/comments/count/:photoId', getPhotoCommentsCount);
+router.post('/comments', csrfProtection, addComment);
+router.post('/comments/reply', csrfProtection, replyToComment);
+router.get('/comments/session/:sessionId', getSessionComments);
+router.get('/comments/photo/:photoId', getPhotoComments);
+router.put('/comments/:id/read', csrfProtection, markCommentAsRead);
 
-// Esportazione
-router.get('/sessions/:sessionId/export', isAuthenticated, selectionController.exportSelections);
+// Export
+router.get('/export/:sessionId', exportSelections);
 
 export default router;

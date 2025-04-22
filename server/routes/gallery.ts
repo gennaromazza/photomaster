@@ -290,27 +290,25 @@ router.get("/galleries/:id/download-all", downloadAllPhotos);
 // ROUTES PER VIDEO
 
 // Ottieni tutti i video di una galleria
-router.get("/galleries/:galleryId/videos", getGalleryVideos);
+router.get("/galleries/:galleryId/video", getGalleryVideos);
 
 // Aggiungi un nuovo video (richiede autenticazione)
 router.post(
-  "/galleries/:galleryId/videos", 
+  "/galleries/:galleryId/video", 
   isAuthenticated, 
-  upload.single("thumbnail"), 
   addGalleryVideo
 );
 
 // Aggiorna un video (richiede autenticazione)
-router.put(
-  "/galleries/:galleryId/videos/:videoId", 
+router.patch(
+  "/galleries/:galleryId/video/:videoId", 
   isAuthenticated, 
-  upload.single("thumbnail"),
   updateGalleryVideo
 );
 
 // Elimina un video (richiede autenticazione)
 router.delete(
-  "/galleries/:galleryId/videos/:videoId", 
+  "/galleries/:galleryId/video/:videoId", 
   isAuthenticated, 
   deleteGalleryVideo
 );
@@ -362,18 +360,6 @@ router.post("/galleries/:id/duplicate", isAuthenticated, async (req, res) => {
   }
 });
 
-// ###### GESTIONE VIDEO ######
-
-// Ottieni il video di una galleria
-router.get('/galleries/:galleryId/video', isAuthenticated, getGalleryVideos);
-
-// Aggiungi/aggiorna un video a una galleria
-router.post('/galleries/:galleryId/video', isAuthenticated, addGalleryVideo);
-
-// Aggiorna il video di una galleria
-router.put('/galleries/:galleryId/video', isAuthenticated, updateGalleryVideo);
-
-// Elimina il video di una galleria
-router.delete('/galleries/:galleryId/video', isAuthenticated, deleteGalleryVideo);
+// Fine routes
 
 export default router;

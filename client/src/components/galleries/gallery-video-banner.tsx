@@ -1,132 +1,117 @@
-import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Play, Info, Volume2, VolumeX } from "lucide-react";
-import { GalleryVideo } from "@/types/gallery";
-import VideoPlayer from "./video-player";
+import React, { useState } from 'react';
+import { GalleryVideo } from '@/types/gallery';
+import { Play } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import VideoPlayer from './video-player';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useQuery } from '@tanstack/react-query';
 
 interface GalleryVideoBannerProps {
   galleryId: number;
-  galleryName: string;
-  description?: string | null;
 }
 
-const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({
-  galleryId,
-  galleryName,
-  description
-}) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showPlayer, setShowPlayer] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+const GalleryVideoBanner: React.FC<GalleryVideoBannerProps> = ({ galleryId }) => {
+  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<GalleryVideo | null>(null);
   
-  // Query per ottenere il video trailer della galleria
-  const { data: video, isLoading, isError } = useQuery({
+  // Query per ottenere i video della galleria
+  const { data, isLoading, isError } = useQuery({
     queryKey: [`/api/gallery/galleries/${galleryId}/video`],
     queryFn: async () => {
       try {
         const response = await fetch(`/api/gallery/galleries/${galleryId}/video`);
-        if (response.status === 404) {
-          // Nessun video trovato, ma non è un errore
-          return null;
-        }
         if (!response.ok) {
-          throw new Error("Errore nel caricamento del video");
+          throw new Error("Errore nel caricamento dei video");
         }
-        return await response.json() as GalleryVideo;
+        return await response.json();
       } catch (error) {
-        console.error("Errore nel caricamento del video:", error);
+        console.error("Errore nel caricamento dei video:", error);
         throw error;
       }
     }
   });
   
-  // Se non c'è video o c'è un errore, non mostrare nulla
-  if (isLoading || isError || !video) {
-    return null;
-  }
+  // Trova il video in evidenza
+  const featuredVideo = data?.videos?.find((video: GalleryVideo) => video.isFeatured);
   
-  // Generiamo l'URL di anteprima in base al tipo di video
-  const getThumbnailUrl = () => {
-    if (video.thumbnailPath) return video.thumbnailPath;
+  // Se non c'è un video in evidenza, prende il primo video disponibile
+  const mainVideo = featuredVideo || (data?.videos && data.videos.length > 0 ? data.videos[0] : null);
+  
+  // Funzione per ottenere l'URL o path della thumbnail
+  const getThumbnailUrl = (video: GalleryVideo): string => {
     if (video.thumbnailUrl) return video.thumbnailUrl;
+    if (video.thumbnailPath) return video.thumbnailPath;
     
-    // Generare URL di anteprima per YouTube o Vimeo se non specificato
     if (video.videoType === "youtube" && video.videoId) {
       return `https://img.youtube.com/vi/${video.videoId}/maxresdefault.jpg`;
     }
     
-    if (video.videoType === "vimeo" && video.videoId) {
-      // Vimeo richiede un'API per ottenere le thumbnail, quindi usiamo un fallback generico
-      return `/assets/video-placeholder.jpg`;
-    }
-    
-    // Fallback per altri tipi di video
-    return `/assets/video-placeholder.jpg`;
+    return '/assets/video-placeholder.jpg';
   };
   
-  return (
-    <>
-      {/* Video Banner in stile Netflix/Prime */}
-      <div className="relative w-full h-[50vh] md:h-[70vh] overflow-hidden">
-        {/* Immagine di sfondo/thumbnail */}
-        <div className="absolute inset-0">
+  // Apre il player video
+  const openVideoPlayer = (video: GalleryVideo) => {
+    setSelectedVideo(video);
+    setIsPlayerOpen(true);
+  };
+  
+  // Se è in caricamento, mostra un loader
+  if (isLoading) {
+    return (
+      <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+  
+  // Se c'è un errore, non mostra nulla
+  if (isError || !data || !data.videos || data.videos.length === 0) {
+    return null;
+  }
+  
+  // Se c'è un video da mostrare
+  if (mainVideo) {
+    return (
+      <>
+        <div className="w-full aspect-video relative rounded-lg overflow-hidden group cursor-pointer mb-8 shadow-lg" onClick={() => openVideoPlayer(mainVideo)}>
+          {/* Thumbnail */}
           <img 
-            src={getThumbnailUrl()}
-            alt={video.title || "Video Trailer"}
-            className="w-full h-full object-cover"
+            src={getThumbnailUrl(mainVideo)} 
+            alt={mainVideo.title} 
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           
-          {/* Overlay scuro con gradiente */}
-          <div 
-            className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/20"
-          />
-        </div>
-        
-        {/* Contenuto testuale */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 md:p-16 z-10">
-          <h2 className="text-3xl md:text-5xl font-bold mb-3 text-white drop-shadow-md">
-            {galleryName}
-          </h2>
-          
-          {description && (
-            <p className="text-white/90 max-w-2xl mb-8 text-lg">
-              {description}
-            </p>
-          )}
-          
-          <div className="flex gap-4">
-            <Button 
-              onClick={() => setShowPlayer(true)} 
-              size="lg"
-              className="gap-2 bg-white text-black hover:bg-white/90"
-            >
-              <Play className="h-5 w-5" />
-              Guarda il trailer
-            </Button>
+          {/* Overlay scuro */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-black/20 flex flex-col items-center justify-center">
+            {/* Pulsante play centrale */}
+            <div className="rounded-full bg-white/20 p-5 backdrop-blur-sm transition-all duration-300 group-hover:bg-primary group-hover:scale-110">
+              <Play className="h-10 w-10 text-white" />
+            </div>
             
-            <Button 
-              onClick={() => setIsMuted(!isMuted)}
-              variant="outline" 
-              size="icon"
-              className="bg-white/10 border-white/20 hover:bg-white/20 text-white"
-            >
-              {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-            </Button>
+            {/* Titolo e descrizione */}
+            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+              <h3 className="text-2xl font-bold mb-2">{mainVideo.title}</h3>
+              {mainVideo.description && (
+                <p className="text-sm text-white/80 line-clamp-2">{mainVideo.description}</p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* Modal per il video player */}
-      {video && (
-        <VideoPlayer 
-          video={video}
-          isOpen={showPlayer}
-          onClose={() => setShowPlayer(false)}
-        />
-      )}
-    </>
-  );
+        
+        {/* Player Video */}
+        {selectedVideo && (
+          <VideoPlayer 
+            video={selectedVideo} 
+            isOpen={isPlayerOpen} 
+            onClose={() => setIsPlayerOpen(false)} 
+          />
+        )}
+      </>
+    );
+  }
+  
+  // Fallback in caso non ci siano video
+  return null;
 };
 
 export default GalleryVideoBanner;

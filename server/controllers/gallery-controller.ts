@@ -1868,86 +1868,14 @@ export async function downloadAllPhotos(req: Request, res: Response) {
       const zipStream = fs.createReadStream(zipPath);
       zipStream.pipe(res);
       
-      // Elimina il file ZIP dopo l'invio
-      zipStream.on('end', () => {
-        fs.unlinkSync(zipPath);
-      });
     });
-    
-    // Pipe archive data to the output file
-    archive.pipe(output);
-    
-    // Aggiungi ogni foto all'archivio
-    for (const photo of photosToDownload) {
-      // Determina quale versione dell'immagine usare in base alla qualità richiesta
-      let filePath = '';
-      
-      // Selezione del percorso in base alla qualità richiesta
-      switch (quality) {
-        case 'original':
-          filePath = photo.path;
-          break;
-        case 'large':
-          filePath = photo.largePath || photo.path;
-          break;
-        case 'medium':
-          filePath = photo.mediumPath || photo.largePath || photo.path;
-          break;
-        case 'thumbnail':
-          filePath = photo.thumbnailPath || photo.mediumPath || photo.path;
-          break;
-        default:
-          filePath = photo.largePath || photo.path;
-      }
-      
-      console.log(`Download multiplo - Foto ${photo.id} con qualità: ${quality}, percorso selezionato: ${filePath}`);
-      
-      // Determina il percorso assoluto per il file
-      // Se il percorso è già assoluto (contiene workspace), usiamo direttamente quello
-      if (filePath.includes('/home/runner/workspace/')) {
-        // Usa direttamente il percorso assoluto
-        console.log(`Tentativo di aggiungere allo ZIP - Usando percorso assoluto: ${filePath}`);
-      } 
-      // Se il percorso inizia con /uploads, costruisci un percorso completo
-      else if (filePath.startsWith('/uploads/')) {
-        filePath = path.join(process.cwd(), filePath);
-        console.log(`Tentativo di aggiungere allo ZIP - Costruito percorso da relativo: ${filePath}`);
-      }
-      // Altrimenti, assumiamo che sia un percorso relativo dentro uploads
-      else {
-        filePath = path.join(process.cwd(), 'uploads', filePath);
-        console.log(`Tentativo di aggiungere allo ZIP - Costruito percorso da relativo semplice: ${filePath}`);
-      }
-      
-      // Se il file compresso non esiste, prova con l'originale come fallback
-      if (!fs.existsSync(filePath) && photo.path) {
-        let originalPath = photo.path;
-        if (originalPath.includes('/home/runner/workspace/')) {
-          filePath = originalPath;
-        } else if (originalPath.startsWith('/uploads/')) {
-          filePath = path.join(process.cwd(), originalPath);
-        } else {
-          filePath = path.join(process.cwd(), 'uploads', originalPath);
-        }
-        console.log(`File compresso non trovato, utilizzo originale: ${filePath}`);
-      }
-      
-      console.log(`Tentativo di aggiungere allo ZIP - File: ${photo.originalFilename}, Percorso finale: ${filePath}`);
-      
-      if (fs.existsSync(filePath)) {
-        // Usa il nome originale del file se disponibile
-        const fileName = photo.originalFilename || path.basename(photo.path);
-        archive.file(filePath, { name: fileName });
-      } else {
-        console.error(`File non trovato durante la creazione dello ZIP: ${filePath}`);
-      }
-    }
-    
-    // Finalizza l'archivio
-    await archive.finalize();
   } catch (error) {
     console.error('Errore nel download di tutte le foto:', error);
     res.status(500).json({ error: "Errore durante il download" });
   }
-};
+}
+
+// VIDEO CONTROLLER ---------------------------------------------------
+
+// I controller dei video sono stati spostati nella sezione precedente
 

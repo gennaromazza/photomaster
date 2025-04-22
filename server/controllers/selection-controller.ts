@@ -45,9 +45,9 @@ export const getSelectionSettings = async (req: Request, res: Response) => {
       .values({
         galleryId,
         isEnabled: false,
-        instructions: 'Seleziona le foto che preferisci',
-        minSelections: 0,
-        maxSelections: 0
+        maxSelections: 0,
+        allowComments: true,
+        customMessage: 'Seleziona le foto che preferisci'
       })
       .returning();
     
@@ -837,8 +837,115 @@ export const markCommentAsRead = async (req: Request, res: Response) => {
 
 export const exportSelections = async (req: Request, res: Response) => {
   try {
-    // Implementazione temporanea - risposta vuota
-    res.status(200).send('');
+    const sessionId = parseInt(req.params.sessionId);
+    
+    if (isNaN(sessionId)) {
+      return res.status(400).json({ error: 'ID sessione non valido' });
+    }
+    
+    // Verifica se la sessione esiste
+    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, sessionId));
+    
+    if (!session) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+    
+    // Ottieni tutte le selezioni per questa sessione
+    const selections = await db.select({
+      id: photoSelections.id,
+      photoId: photoSelections.photoId,
+      sessionId: photoSelections.sessionId,
+      createdAt: photoSelections.createdAt,
+    })
+      .from(photoSelections)
+      .where(eq(photoSelections.sessionId, sessionId))
+      .orderBy(photoSelections.createdAt);
+    
+    if (selections.length === 0) {
+      return res.status(404).json({ error: 'Nessuna selezione trovata per questa sessione' });
+    }
+    
+    // Ottieni i dettagli delle foto selezionate
+    const photoDetails = await db.select({
+      id: photos.id,
+      filename: photos.filename,
+      title: photos.title,
+      description: photos.description,
+      chapterId: photos.chapterId,
+      galleryId: photos.galleryId,
+      uploadedAt: photos.uploadedAt
+    })
+      .from(photos)
+      .where(inArray(photos.id, selections.map(s => s.photoId)));
+    
+    // Ottieni dettagli capitoli (se presenti)
+    const chapterIds = photoDetails
+      .filter(p => p.chapterId !== null)
+      .map(p => p.chapterId as number);
+    
+    let chapters: Record<number, string> = {};
+    
+    if (chapterIds.length > 0) {
+      const chapterDetails = await db.select({
+        id: galleryChapters.id,
+        title: galleryChapters.title
+      })
+        .from(galleryChapters)
+        .where(inArray(galleryChapters.id, chapterIds));
+      
+      chapters = chapterDetails.reduce((acc, chapter) => {
+        acc[chapter.id] = chapter.title;
+        return acc;
+      }, {} as Record<number, string>);
+    }
+    
+    // Ottieni dettagli galleria
+    const [gallery] = await db.select({
+      id: galleries.id,
+      name: galleries.name,
+      slug: galleries.slug
+    })
+      .from(galleries)
+      .where(eq(galleries.id, photoDetails[0].galleryId));
+      
+    // Prepara i dati per l'esportazione in formato CSV
+    const csvData = photoDetails.map(photo => {
+      return {
+        ID: photo.id,
+        Filename: photo.filename,
+        Title: photo.title || '',
+        Description: photo.description || '',
+        Chapter: photo.chapterId ? chapters[photo.chapterId] || '' : '',
+        UploadedAt: photo.uploadedAt ? new Date(photo.uploadedAt).toLocaleDateString() : '',
+        Gallery: gallery.name,
+        SelectedBy: session.clientName,
+        SelectionDate: new Date(selections.find(s => s.photoId === photo.id)?.createdAt || new Date()).toLocaleDateString()
+      };
+    });
+    
+    // Converti in CSV
+    const csvRows = [];
+    const headers = Object.keys(csvData[0]);
+    
+    // Intestazioni
+    csvRows.push(headers.join(','));
+    
+    // Righe di dati
+    for (const row of csvData) {
+      const values = headers.map(header => {
+        const value = row[header as keyof typeof row] || '';
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    }
+    
+    const csv = csvRows.join('\n');
+    
+    // Invia la risposta
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="selections_${session.clientName.replace(/\s+/g, '_')}_${sessionId}.csv"`);
+    res.status(200).send(csv);
   } catch (error: any) {
     console.error('Error in exportSelections:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });

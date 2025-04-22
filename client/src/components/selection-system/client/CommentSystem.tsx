@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Send, Info } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Send, Check } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
+// Interfacce
 interface Comment {
   id: number;
   photoId: number;
@@ -31,180 +34,191 @@ interface CommentSystemProps {
   onCommentAdded?: () => void;
 }
 
-const CommentSystem: React.FC<CommentSystemProps> = ({
-  photoId,
-  sessionId,
+function formatDateTime(dateStr: string) {
+  const date = new Date(dateStr);
+  return date.toLocaleString('it-IT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+export const CommentSystem: React.FC<CommentSystemProps> = ({ 
+  photoId, 
+  sessionId, 
   clientName,
   readonly = false,
   onCommentAdded
 }) => {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [loadingComments, setLoadingComments] = useState(true);
   const { toast } = useToast();
+  const [comment, setComment] = useState('');
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Recupera i commenti per questa foto nella sessione corrente
+  const { data: comments = [], isLoading } = useQuery({
+    queryKey: ['/api/selection/photo', photoId, 'comments', sessionId],
+    queryFn: () => fetch(`/api/selection/photo/${photoId}/comments/${sessionId}`).then(res => res.json()),
+    refetchInterval: 10000, // Ricarica ogni 10 secondi per verificare nuovi commenti
+  });
 
-  const fetchComments = async () => {
-    try {
-      setLoadingComments(true);
-      const response = await apiRequest('GET', `/api/selection/photos/${photoId}/comments?sessionId=${sessionId}`);
-      const data = await response.json();
-      setComments(data);
-    } catch (error) {
-      console.error('Errore nel recupero dei commenti:', error);
-      toast({
-        title: 'Errore',
-        description: 'Impossibile caricare i commenti',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingComments(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchComments();
-  }, [photoId, sessionId]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
-
-    try {
-      setLoading(true);
+  // Mutazione per aggiungere un commento
+  const addCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
       const response = await apiRequest('POST', '/api/selection/comments', {
         photoId,
         sessionId,
-        content: newComment,
+        content,
         clientName
       });
-
-      if (response.ok) {
-        setNewComment('');
-        toast({
-          title: 'Commento aggiunto',
-          description: 'Il tuo commento è stato salvato con successo',
-        });
-        fetchComments();
-        if (onCommentAdded) onCommentAdded();
-      } else {
-        throw new Error('Errore nell\'aggiunta del commento');
+      return response.json();
+    },
+    onSuccess: () => {
+      setComment('');
+      // Invalida la query per ricaricare i commenti
+      queryClient.invalidateQueries({ queryKey: ['/api/selection/photo', photoId, 'comments', sessionId] });
+      if (onCommentAdded) {
+        onCommentAdded();
       }
-    } catch (error) {
-      console.error('Errore nell\'invio del commento:', error);
+    },
+    onError: (error: any) => {
       toast({
         title: 'Errore',
-        description: 'Impossibile salvare il commento',
+        description: `Impossibile aggiungere il commento: ${error.message}`,
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
+    }
+  });
+
+  // Mutazione per segnare un commento come letto
+  const markAsReadMutation = useMutation({
+    mutationFn: async (commentId: number) => {
+      const response = await apiRequest('PUT', `/api/selection/comments/${commentId}/mark-read`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalida la query per ricaricare i commenti
+      queryClient.invalidateQueries({ queryKey: ['/api/selection/photo', photoId, 'comments', sessionId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Errore',
+        description: `Impossibile segnare il commento come letto: ${error.message}`,
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Effetto per scorrere automaticamente alla fine quando arrivano nuovi commenti
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollElement = scrollAreaRef.current;
+      scrollElement.scrollTop = scrollElement.scrollHeight;
+    }
+  }, [comments]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (comment.trim()) {
+      addCommentMutation.mutate(comment);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('it-IT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+  const handleMarkAsRead = (commentId: number) => {
+    markAsReadMutation.mutate(commentId);
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex justify-between items-center text-lg">
-          Commenti
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Puoi aggiungere note o richieste su questa foto</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pb-0">
-        <ScrollArea className="h-48 pr-4">
-          {loadingComments ? (
-            <div className="flex justify-center items-center h-full">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
-            </div>
-          ) : comments.length === 0 ? (
-            <div className="text-center text-muted-foreground py-10">
-              Nessun commento presente
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {comments.map((comment) => (
-                <div 
-                  key={comment.id} 
-                  className={`flex gap-2 ${comment.userId ? 'flex-row-reverse' : 'flex-row'}`}
-                >
-                  <Avatar className="h-8 w-8">
-                    {comment.userId ? (
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {comment.user?.username?.charAt(0) || 'S'}
-                      </AvatarFallback>
-                    ) : (
-                      <AvatarFallback className="bg-secondary text-secondary-foreground">
-                        {comment.clientName?.charAt(0) || 'C'}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div 
-                    className={`max-w-[85%] rounded-lg p-3 text-sm ${
-                      comment.userId 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'bg-secondary text-secondary-foreground'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-semibold">
-                        {comment.userId ? comment.user?.username || 'Staff' : comment.clientName || 'Cliente'}
-                      </span>
-                      <span className="text-xs opacity-80">{formatDate(comment.createdAt)}</span>
-                    </div>
-                    <p className="whitespace-pre-wrap">{comment.content}</p>
-                  </div>
+    <div className="flex flex-col h-full border rounded-md overflow-hidden bg-background">
+      <div className="p-3 border-b bg-muted/30">
+        <h3 className="text-lg font-medium">Commenti</h3>
+      </div>
+      
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-3">
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-start gap-2">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[200px]" />
+                  <Skeleton className="h-12 w-[300px]" />
                 </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-      </CardContent>
+              </div>
+            ))}
+          </div>
+        ) : comments.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            Nessun commento. Sii il primo a commentare questa foto.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {comments.map((comment: Comment) => (
+              <div key={comment.id} className={cn(
+                "flex items-start gap-2 p-3 rounded-lg",
+                comment.userId ? "bg-primary/10 ml-4" : "bg-muted/30 mr-4"
+              )}>
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback>
+                    {comment.userId 
+                      ? comment.user?.username?.slice(0, 2).toUpperCase() || 'ST' 
+                      : comment.clientName?.slice(0, 2).toUpperCase() || 'CL'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {comment.userId 
+                        ? comment.user?.username || 'Studio'
+                        : comment.clientName || 'Cliente'}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDateTime(comment.createdAt)}
+                    </span>
+                    {!comment.isRead && comment.userId && (
+                      <Badge variant="default" className="text-xs ml-auto">
+                        Nuovo
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mt-1">{comment.content}</p>
+                </div>
+                {!readonly && !comment.isRead && comment.userId && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => handleMarkAsRead(comment.id)}
+                    className="h-8 w-8"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+      
       {!readonly && (
-        <CardFooter className="pt-4">
-          <form onSubmit={handleSubmit} className="w-full flex gap-2">
-            <Textarea
-              placeholder="Scrivi un commento..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="min-h-10 h-10 resize-none"
-              disabled={loading}
-            />
-            <Button 
-              type="submit" 
-              disabled={loading || !newComment.trim()} 
-              className="h-10 w-10 p-0"
-            >
-              {loading ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              <span className="sr-only">Invia commento</span>
-            </Button>
-          </form>
-        </CardFooter>
+        <form onSubmit={handleSubmit} className="p-3 border-t flex gap-2">
+          <Textarea
+            placeholder="Scrivi un commento..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className="flex-1 min-h-[60px] max-h-[120px]"
+          />
+          <Button 
+            type="submit" 
+            disabled={!comment.trim() || addCommentMutation.isPending}
+            className="self-end"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Invia
+          </Button>
+        </form>
       )}
-    </Card>
+    </div>
   );
 };
 

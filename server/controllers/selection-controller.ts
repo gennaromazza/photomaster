@@ -1,6 +1,4 @@
 import { Request, Response } from 'express';
-import { db } from '../db';
-import { photos, galleries } from '@shared/schema';
 import { 
   GallerySelectionSettings, 
   SelectionSession, 
@@ -14,8 +12,6 @@ import {
   PhotoCommentWithUser,
   SelectionSessionWithCounts
 } from '@shared/selection-schema';
-import { gallerySelectionSettings, selectionSessions, photoSelections, photoComments } from './selection-tables';
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { pool } from '../db';
 
@@ -241,29 +237,56 @@ export const createSelectionSession = async (req: Request, res: Response) => {
     
     // Verificare se la galleria esiste
     const galleryId = parseResult.data.galleryId;
-    const [gallery] = await db.select().from(galleries).where(eq(galleries.id, galleryId));
+    const galleryResult = await pool.query(
+      'SELECT id, name FROM galleries WHERE id = $1',
+      [galleryId]
+    );
     
-    if (!gallery) {
+    if (galleryResult.rows.length === 0) {
       return res.status(404).json({ error: 'Galleria non trovata' });
     }
     
     // Verificare se le selezioni sono abilitate per questa galleria
-    const [settings] = await db.select()
-      .from(gallerySelectionSettings)
-      .where(eq(gallerySelectionSettings.galleryId, galleryId));
-      
-    if (!settings || !settings.isEnabled) {
+    const settingsResult = await pool.query(
+      'SELECT * FROM gallery_selection_settings WHERE gallery_id = $1',
+      [galleryId]
+    );
+    
+    const settings = settingsResult.rows.length > 0 ? settingsResult.rows[0] : null;
+    
+    if (!settings || !settings.is_enabled) {
       return res.status(403).json({ error: 'Le selezioni non sono abilitate per questa galleria' });
     }
     
     // Creare la sessione
-    const [session] = await db.insert(selectionSessions)
-      .values(parseResult.data)
-      .returning();
+    const sessionResult = await pool.query(
+      `INSERT INTO selection_sessions 
+       (gallery_id, client_id, client_name, client_email, session_key, notes)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [
+        parseResult.data.galleryId,
+        parseResult.data.clientId,
+        parseResult.data.clientName,
+        parseResult.data.clientEmail,
+        parseResult.data.sessionKey,
+        parseResult.data.notes
+      ]
+    );
     
-    // Aggiungere _count per mantenere compatibilità con l'interfaccia frontend
+    // Converti i nomi delle colonne da snake_case a camelCase
+    const session = sessionResult.rows[0];
     const result = {
-      ...session,
+      id: session.id,
+      galleryId: session.gallery_id,
+      clientId: session.client_id,
+      clientName: session.client_name,
+      clientEmail: session.client_email,
+      sessionKey: session.session_key,
+      status: session.status,
+      startedAt: session.started_at,
+      completedAt: session.completed_at,
+      notes: session.notes,
       _count: {
         selections: 0,
         comments: 0
@@ -286,34 +309,48 @@ export const getSessionsByGallery = async (req: Request, res: Response) => {
     }
     
     // Verificare se la galleria esiste
-    const [gallery] = await db.select().from(galleries).where(eq(galleries.id, galleryId));
+    const galleryResult = await pool.query(
+      'SELECT id, name FROM galleries WHERE id = $1',
+      [galleryId]
+    );
     
-    if (!gallery) {
+    if (galleryResult.rows.length === 0) {
       return res.status(404).json({ error: 'Galleria non trovata' });
     }
     
     // Ottenere tutte le sessioni per questa galleria
-    const sessions = await db.select().from(selectionSessions)
-      .where(eq(selectionSessions.galleryId, galleryId))
-      .orderBy(selectionSessions.startedAt);
+    const sessionsResult = await pool.query(
+      'SELECT * FROM selection_sessions WHERE gallery_id = $1 ORDER BY started_at',
+      [galleryId]
+    );
     
     // Per ogni sessione, contare le selezioni e i commenti
-    const sessionsWithCounts = await Promise.all(sessions.map(async (session) => {
-      const [selectionsCount] = await db.select({
-        count: sql`count(*)`
-      }).from(photoSelections)
-        .where(eq(photoSelections.sessionId, session.id));
-        
-      const [commentsCount] = await db.select({
-        count: sql`count(*)`
-      }).from(photoComments)
-        .where(eq(photoComments.sessionId, session.id));
-        
+    const sessionsWithCounts = await Promise.all(sessionsResult.rows.map(async (session) => {
+      const selectionsCountResult = await pool.query(
+        'SELECT COUNT(*) FROM photo_selections WHERE session_id = $1',
+        [session.id]
+      );
+      
+      const commentsCountResult = await pool.query(
+        'SELECT COUNT(*) FROM photo_comments WHERE session_id = $1',
+        [session.id]
+      );
+      
+      // Converti i nomi delle colonne da snake_case a camelCase
       return {
-        ...session,
+        id: session.id,
+        galleryId: session.gallery_id,
+        clientId: session.client_id,
+        clientName: session.client_name,
+        clientEmail: session.client_email,
+        sessionKey: session.session_key,
+        status: session.status,
+        startedAt: session.started_at,
+        completedAt: session.completed_at,
+        notes: session.notes,
         _count: {
-          selections: Number(selectionsCount?.count || 0),
-          comments: Number(commentsCount?.count || 0)
+          selections: parseInt(selectionsCountResult.rows[0].count),
+          comments: parseInt(commentsCountResult.rows[0].count)
         }
       };
     }));
@@ -334,32 +371,51 @@ export const getSession = async (req: Request, res: Response) => {
     }
     
     // Ottieni la sessione
-    const [session] = await db.select().from(selectionSessions).where(eq(selectionSessions.id, id));
+    const sessionResult = await pool.query(
+      'SELECT * FROM selection_sessions WHERE id = $1',
+      [id]
+    );
     
-    if (!session) {
+    if (sessionResult.rows.length === 0) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
-    // Conta il numero di selezioni e commenti
-    const [selectionsCount] = await db.select({
-      count: sql`count(*)`
-    }).from(photoSelections)
-      .where(eq(photoSelections.sessionId, id));
-      
-    const [commentsCount] = await db.select({
-      count: sql`count(*)`
-    }).from(photoComments)
-      .where(eq(photoComments.sessionId, id));
-      
-    // Ottieni la galleria associata
-    const [gallery] = await db.select().from(galleries)
-      .where(eq(galleries.id, session.galleryId));
+    const session = sessionResult.rows[0];
     
+    // Conta il numero di selezioni e commenti
+    const selectionsCountResult = await pool.query(
+      'SELECT COUNT(*) FROM photo_selections WHERE session_id = $1',
+      [id]
+    );
+    
+    const commentsCountResult = await pool.query(
+      'SELECT COUNT(*) FROM photo_comments WHERE session_id = $1',
+      [id]
+    );
+    
+    // Ottieni la galleria associata
+    const galleryResult = await pool.query(
+      'SELECT id, name, slug FROM galleries WHERE id = $1',
+      [session.gallery_id]
+    );
+    
+    const gallery = galleryResult.rows.length > 0 ? galleryResult.rows[0] : null;
+    
+    // Converti i nomi delle colonne da snake_case a camelCase
     const result = {
-      ...session,
+      id: session.id,
+      galleryId: session.gallery_id,
+      clientId: session.client_id,
+      clientName: session.client_name,
+      clientEmail: session.client_email,
+      sessionKey: session.session_key,
+      status: session.status,
+      startedAt: session.started_at,
+      completedAt: session.completed_at,
+      notes: session.notes,
       _count: {
-        selections: Number(selectionsCount?.count || 0),
-        comments: Number(commentsCount?.count || 0)
+        selections: parseInt(selectionsCountResult.rows[0].count),
+        comments: parseInt(commentsCountResult.rows[0].count)
       },
       gallery: gallery ? {
         id: gallery.id,
@@ -384,48 +440,80 @@ export const getSessionByKey = async (req: Request, res: Response) => {
     }
     
     // Ottieni la sessione
-    const [session] = await db.select().from(selectionSessions)
-      .where(eq(selectionSessions.sessionKey, key));
+    const sessionResult = await pool.query(
+      'SELECT * FROM selection_sessions WHERE session_key = $1',
+      [key]
+    );
     
-    if (!session) {
+    if (sessionResult.rows.length === 0) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     
+    const session = sessionResult.rows[0];
+    
     // Controlla se la sessione è scaduta
-    const [settings] = await db.select().from(gallerySelectionSettings)
-      .where(eq(gallerySelectionSettings.galleryId, session.galleryId));
-      
-    if (settings?.expiresAt && new Date(settings.expiresAt) < new Date() && session.status !== 'completed') {
+    const settingsResult = await pool.query(
+      'SELECT * FROM gallery_selection_settings WHERE gallery_id = $1',
+      [session.gallery_id]
+    );
+    
+    const settings = settingsResult.rows.length > 0 ? settingsResult.rows[0] : null;
+    
+    if (settings?.expires_at && new Date(settings.expires_at) < new Date() && session.status !== 'completed') {
       return res.status(403).json({ error: 'La sessione è scaduta' });
     }
     
     // Ottieni la galleria associata
-    const [gallery] = await db.select().from(galleries)
-      .where(eq(galleries.id, session.galleryId));
+    const galleryResult = await pool.query(
+      'SELECT id, name, slug FROM galleries WHERE id = $1',
+      [session.gallery_id]
+    );
+    
+    const gallery = galleryResult.rows.length > 0 ? galleryResult.rows[0] : null;
     
     // Conta il numero di selezioni e commenti
-    const [selectionsCount] = await db.select({
-      count: sql`count(*)`
-    }).from(photoSelections)
-      .where(eq(photoSelections.sessionId, session.id));
-      
-    const [commentsCount] = await db.select({
-      count: sql`count(*)`
-    }).from(photoComments)
-      .where(eq(photoComments.sessionId, session.id));
+    const selectionsCountResult = await pool.query(
+      'SELECT COUNT(*) FROM photo_selections WHERE session_id = $1',
+      [session.id]
+    );
     
+    const commentsCountResult = await pool.query(
+      'SELECT COUNT(*) FROM photo_comments WHERE session_id = $1',
+      [session.id]
+    );
+    
+    // Converti i nomi delle colonne da snake_case a camelCase
     const result = {
-      ...session,
+      id: session.id,
+      galleryId: session.gallery_id,
+      clientId: session.client_id,
+      clientName: session.client_name,
+      clientEmail: session.client_email,
+      sessionKey: session.session_key,
+      status: session.status,
+      startedAt: session.started_at,
+      completedAt: session.completed_at,
+      notes: session.notes,
       _count: {
-        selections: Number(selectionsCount?.count || 0),
-        comments: Number(commentsCount?.count || 0)
+        selections: parseInt(selectionsCountResult.rows[0].count),
+        comments: parseInt(commentsCountResult.rows[0].count)
       },
       gallery: gallery ? {
         id: gallery.id,
         name: gallery.name,
         slug: gallery.slug
       } : null,
-      settings: settings || null
+      settings: settings ? {
+        id: settings.id,
+        galleryId: settings.gallery_id,
+        isEnabled: settings.is_enabled,
+        maxSelections: settings.max_selections,
+        allowComments: settings.allow_comments,
+        expiresAt: settings.expires_at,
+        customMessage: settings.custom_message,
+        createdAt: settings.created_at,
+        updatedAt: settings.updated_at
+      } : null
     };
     
     res.status(200).json(result);

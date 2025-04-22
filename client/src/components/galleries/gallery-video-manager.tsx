@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import VideoPlayer from './video-player';
+import GalleryVideoForm from './gallery-video-form';
 
 interface GalleryVideoManagerProps {
   galleryId: number;
@@ -145,7 +146,10 @@ const GalleryVideoManager: React.FC<GalleryVideoManagerProps> = ({ galleryId }) 
             <DialogHeader>
               <DialogTitle>Aggiungi nuovo video</DialogTitle>
             </DialogHeader>
-            {/* Qui inseriremo il form per aggiungere un video */}
+            <GalleryVideoForm 
+              galleryId={galleryId} 
+              onSuccess={() => setIsAddingVideo(false)} 
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -245,7 +249,13 @@ const GalleryVideoManager: React.FC<GalleryVideoManagerProps> = ({ galleryId }) 
           <DialogHeader>
             <DialogTitle>Modifica video</DialogTitle>
           </DialogHeader>
-          {/* Form di modifica video */}
+          {selectedVideo && (
+            <GalleryVideoForm
+              galleryId={galleryId}
+              videoToEdit={selectedVideo}
+              onSuccess={() => setIsEditingVideo(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

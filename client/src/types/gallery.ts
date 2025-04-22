@@ -157,7 +157,7 @@ export interface GalleryVideo {
   chapterId: number | null;
   title: string;
   description: string | null;
-  videoType: "youtube" | "vimeo" | "url" | "embed";
+  videoType: "youtube" | "vimeo" | "direct";
   videoId: string | null;
   videoUrl: string | null;
   embedCode: string | null;
@@ -171,6 +171,7 @@ export interface GalleryVideo {
   addedBy: number | null;
   metaData: any | null;
   tags: string[] | null;
+  createdAt?: string; // Alias per addedAt (per compatibilità)
 }
 
 export interface SocialShare {

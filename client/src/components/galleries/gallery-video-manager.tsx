@@ -142,9 +142,12 @@ const GalleryVideoManager: React.FC<GalleryVideoManagerProps> = ({ galleryId }) 
               Aggiungi video
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-screen overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-screen overflow-y-auto" aria-describedby="video-form-description">
             <DialogHeader>
               <DialogTitle>Aggiungi nuovo video</DialogTitle>
+              <p id="video-form-description" className="text-sm text-muted-foreground">
+                Aggiungi un video da YouTube, Vimeo o con un URL diretto per mostrarlo nella galleria.
+              </p>
             </DialogHeader>
             <GalleryVideoForm 
               galleryId={galleryId} 
@@ -245,9 +248,12 @@ const GalleryVideoManager: React.FC<GalleryVideoManagerProps> = ({ galleryId }) 
           if (!open) setSelectedVideo(null);
         }}
       >
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl" aria-describedby="edit-video-description">
           <DialogHeader>
             <DialogTitle>Modifica video</DialogTitle>
+            <p id="edit-video-description" className="text-sm text-muted-foreground">
+              Modifica le informazioni del video selezionato.
+            </p>
           </DialogHeader>
           {selectedVideo && (
             <GalleryVideoForm

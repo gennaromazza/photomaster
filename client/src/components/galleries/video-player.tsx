@@ -60,13 +60,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, isOpen, onClose }) => 
   };
 
   const embedUrl = getVideoEmbedUrl(video);
-  const isDirectVideo = video.videoType === 'direct' || video.videoUrl?.match(/\.(mp4|webm|ogg)$/i);
+  const isDirectVideo = videoUrl?.match(/\.(mp4|webm|ogg)$/i);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-4xl" aria-describedby="video-player-description">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-xl font-semibold">{video.title}</DialogTitle>
+          <p id="video-player-description" className="sr-only">
+            Player video per {video.title}
+          </p>
           <DialogClose asChild>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />

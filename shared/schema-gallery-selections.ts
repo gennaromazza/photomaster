@@ -1,12 +1,25 @@
-import { pgTable, integer, timestamp, text, boolean, varchar, real } from "drizzle-orm/pg-core";
-import { users, galleries, photos, galleryChapters } from "./schema";
+import { pgTable, integer, timestamp, text, boolean, varchar, real, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// Riferimenti alle tabelle esterne (definite nello schema principale)
+// Queste tabelle sono solo per riferimento e non verranno create/migrate
+export const users = pgTable("users", {
+  id: serial("id").primaryKey()
+});
+
+export const galleries = pgTable("galleries", {
+  id: serial("id").primaryKey()
+});
+
+export const photos = pgTable("photos", {
+  id: serial("id").primaryKey()
+});
+
 // Impostazioni di selezione per galleria
 export const gallerySelectionSettings = pgTable("gallery_selection_settings", {
-  id: integer("id").primaryKey().notNull(),
+  id: serial("id").primaryKey(),
   galleryId: integer("gallery_id").references(() => galleries.id, { onDelete: "cascade" }).notNull(),
   isEnabled: boolean("is_enabled").default(false).notNull(),
   maxSelections: integer("max_selections").default(0),  // 0 = nessun limite
@@ -31,7 +44,7 @@ export type GallerySelectionSettings = typeof gallerySelectionSettings.$inferSel
 
 // Sessioni di selezione
 export const selectionSessions = pgTable("selection_sessions", {
-  id: integer("id").primaryKey().notNull(),
+  id: serial("id").primaryKey(),
   galleryId: integer("gallery_id").references(() => galleries.id, { onDelete: "cascade" }).notNull(),
   clientId: integer("client_id").references(() => users.id, { onDelete: "set null" }),
   clientName: varchar("client_name", { length: 255 }).notNull(),
@@ -57,7 +70,7 @@ export type SelectionSession = typeof selectionSessions.$inferSelect;
 
 // Selezioni di foto
 export const photoSelections = pgTable("photo_selections", {
-  id: integer("id").primaryKey().notNull(),
+  id: serial("id").primaryKey(),
   photoId: integer("photo_id").references(() => photos.id, { onDelete: "cascade" }).notNull(),
   sessionId: integer("session_id").references(() => selectionSessions.id, { onDelete: "cascade" }).notNull(),
   createdAt: timestamp("created_at", { mode: 'date' }).defaultNow().notNull()
@@ -73,7 +86,7 @@ export type PhotoSelection = typeof photoSelections.$inferSelect;
 
 // Commenti sulle foto
 export const photoComments = pgTable("photo_comments", {
-  id: integer("id").primaryKey().notNull(),
+  id: serial("id").primaryKey(),
   photoId: integer("photo_id").references(() => photos.id, { onDelete: "cascade" }).notNull(),
   sessionId: integer("session_id").references(() => selectionSessions.id, { onDelete: "cascade" }).notNull(),
   content: text("content").notNull(),

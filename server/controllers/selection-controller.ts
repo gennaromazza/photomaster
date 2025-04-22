@@ -1,16 +1,19 @@
 import { Request, Response } from 'express';
 import { db } from '../db';
-import { 
-  gallerySelectionSettings, 
-  selectionSessions, 
-  photoSelections, 
-  photoComments,
-  insertGallerySelectionSettingsSchema,
-  insertSelectionSessionSchema,
-  insertPhotoSelectionSchema,
-  insertPhotoCommentSchema
-} from '@shared/schema-gallery-selections';
 import { photos, galleries } from '@shared/schema';
+import { 
+  GallerySelectionSettings, 
+  SelectionSession, 
+  PhotoSelection, 
+  PhotoComment,
+  InsertGallerySelectionSettings,
+  InsertSelectionSession,
+  InsertPhotoSelection,
+  InsertPhotoComment,
+  PhotoSelectionWithPhotoDetails,
+  PhotoCommentWithUser,
+  SelectionSessionWithCounts
+} from '@shared/selection-schema';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 // Funzioni stub temporanee

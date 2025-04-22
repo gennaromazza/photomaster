@@ -215,8 +215,55 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
       // Attendi il completamento di tutte le operazioni
       await Promise.all(promises);
       
-      // Aggiorna i dati
+      // Aggiorna i dati - forziamo il refetch per assicurarci che i dati siano aggiornati
       await queryClient.invalidateQueries({ 
+        queryKey: [`/api/gallery/galleries/${galleryId}/photos`] 
+      });
+      
+      // Aggiorno anche manualmente lo stato locale
+      if (photosByChapter && photosByChapter.length > 0) {
+        const newPhotosByChapter = [...photosByChapter];
+        
+        // Trova l'indice del capitolo di destinazione
+        const destinationChapterIndex = newPhotosByChapter.findIndex(
+          c => c.id === destinationChapterId
+        );
+        
+        if (destinationChapterIndex !== -1) {
+          // Per ogni foto selezionata...
+          selectedPhotos.forEach(selectedPhotoId => {
+            // Trova la foto e il capitolo di origine
+            let foundPhoto: Photo | null = null;
+            let sourceChapterIndex = -1;
+            
+            // Cerca la foto tra tutti i capitoli
+            for (let i = 0; i < newPhotosByChapter.length; i++) {
+              const photoIndex = newPhotosByChapter[i].photos.findIndex(p => p.id === selectedPhotoId);
+              if (photoIndex !== -1) {
+                sourceChapterIndex = i;
+                foundPhoto = { ...newPhotosByChapter[i].photos[photoIndex] };
+                // Rimuovi la foto dal capitolo di origine
+                newPhotosByChapter[i].photos.splice(photoIndex, 1);
+                break;
+              }
+            }
+            
+            // Se ho trovato la foto, aggiungila al capitolo di destinazione
+            if (foundPhoto && destinationChapterIndex !== -1) {
+              // Aggiorna l'ID del capitolo della foto
+              foundPhoto.chapterId = destinationChapterId;
+              // Aggiungi la foto al capitolo di destinazione
+              newPhotosByChapter[destinationChapterIndex].photos.push(foundPhoto);
+            }
+          });
+          
+          // Aggiorna lo stato
+          setPhotosByChapter(newPhotosByChapter);
+        }
+      }
+      
+      // Forza un refetch per essere sicuri che i dati siano aggiornati
+      await queryClient.refetchQueries({ 
         queryKey: [`/api/gallery/galleries/${galleryId}/photos`] 
       });
       
@@ -229,6 +276,7 @@ export function PhotoChapterManager({ galleryId }: PhotoChapterManagerProps) {
       // Reset della selezione e del target
       setSelectedPhotos([]);
       setTargetChapterId('');
+      setNeedsSaving(false); // Non c'è più bisogno di salvare dato che è stato tutto fatto
       setIsMovingBatch(false);
       
     } catch (error) {

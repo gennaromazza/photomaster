@@ -21,7 +21,7 @@ export interface CreateClauseData {
   title: string;
   content: string;
   categoryId: number | null;
-  eventType: string | null;
+  eventType: string | null; // Manteniamo il campo nel tipo per compatibilità con il backend
   isRequired: boolean;
   isActive: boolean;
   order: number;

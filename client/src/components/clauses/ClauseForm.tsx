@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -22,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RichTextEditor } from '@/components/rich-text-editor';
 import { ContractClause, CreateClauseData } from './types';
 import { useClauses } from '@/hooks/use-clauses';
 
@@ -29,7 +29,6 @@ const clauseSchema = z.object({
   title: z.string().min(3, 'Il titolo deve contenere almeno 3 caratteri'),
   content: z.string().min(10, 'Il contenuto deve contenere almeno 10 caratteri'),
   categoryId: z.number().nullable(),
-  eventType: z.string().nullable(),
   isRequired: z.boolean().default(true),
   isActive: z.boolean().default(true),
   order: z.number().min(0, 'L\'ordine non può essere negativo').default(0),
@@ -45,7 +44,8 @@ interface ClauseFormProps {
 }
 
 export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }: ClauseFormProps) {
-  const { categoriesQuery, eventTypesQuery } = useClauses();
+  const { categoriesQuery } = useClauses();
+  const [editorContent, setEditorContent] = useState('');
   
   const form = useForm<ClauseFormData>({
     resolver: zodResolver(clauseSchema),
@@ -53,7 +53,6 @@ export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }:
       title: '',
       content: '',
       categoryId: null,
-      eventType: null,
       isRequired: true,
       isActive: true,
       order: 0,
@@ -67,21 +66,38 @@ export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }:
         title: clause.title,
         content: clause.content,
         categoryId: clause.categoryId,
-        eventType: clause.eventType,
         isRequired: clause.isRequired,
         isActive: clause.isActive,
         order: clause.order,
       });
+      
+      setEditorContent(clause.content);
     }
   }, [clause, form]);
 
-  const handleSubmit = (data: ClauseFormData) => {
-    onSubmit(data);
+  // Gestisce il cambiamento nell'editor di testo e aggiorna il form
+  const handleEditorChange = (content: string) => {
+    setEditorContent(content);
+    form.setValue('content', content, { shouldValidate: true });
   };
 
-  // Caricamento delle categorie e tipi di evento
+  const handleSubmit = (data: ClauseFormData) => {
+    // Creiamo un oggetto che rispetti l'interfaccia CreateClauseData
+    const submitData: CreateClauseData = {
+      title: data.title,
+      content: data.content,
+      categoryId: data.categoryId,
+      eventType: null, // Impostiamo sempre a null come richiesto
+      isRequired: data.isRequired,
+      isActive: data.isActive,
+      order: data.order
+    };
+    
+    onSubmit(submitData);
+  };
+
+  // Caricamento delle categorie
   const categories = categoriesQuery.data || [];
-  const eventTypes = eventTypesQuery.data || [];
 
   return (
     <Form {...form}>
@@ -110,10 +126,10 @@ export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }:
             <FormItem>
               <FormLabel>Contenuto</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Testo completo della clausola contrattuale"
-                  className="min-h-[150px] resize-y"
-                  {...field}
+                <RichTextEditor 
+                  content={editorContent} 
+                  onChange={handleEditorChange}
+                  placeholder="Testo completo della clausola contrattuale..." 
                 />
               </FormControl>
               <FormDescription>
@@ -165,46 +181,6 @@ export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }:
 
           <FormField
             control={form.control}
-            name="eventType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tipo di evento</FormLabel>
-                <Select
-                  onValueChange={(value) => field.onChange(value === 'null' ? null : value)}
-                  value={field.value || 'null'}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona un tipo di evento (opzionale)" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="null">Nessun tipo specifico</SelectItem>
-                    {eventTypesQuery.isLoading ? (
-                      <SelectItem value="loading" disabled>
-                        Caricamento tipi di evento...
-                      </SelectItem>
-                    ) : (
-                      eventTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  Associa la clausola a un tipo specifico di evento
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField
-            control={form.control}
             name="order"
             render={({ field }) => (
               <FormItem>
@@ -224,7 +200,9 @@ export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }:
               </FormItem>
             )}
           />
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="isRequired"

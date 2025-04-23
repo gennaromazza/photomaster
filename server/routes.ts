@@ -16,6 +16,7 @@ import galleryRouter from "./routes/gallery";
 import searchRouter from "./routes/search";
 import selectionRouter from "./routes/selection";
 import clausesRouter from "./routes/clauses";
+import notificationsRouter from "./routes/notifications";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
 import multer from "multer";
 import { tmpdir } from "os";

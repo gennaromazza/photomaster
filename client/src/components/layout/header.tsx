@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
 import { GlobalSearchBar } from "@/components/global-search";
+import NotificationsPopover from "@/components/layout/notifications";
 
 export interface HeaderProps {
   onOpenSidebar: () => void;
@@ -62,10 +63,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
             <GlobalSearchBar />
           </div>
           
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary"></span>
-          </Button>
+          <NotificationsPopover />
           
           <Button variant="ghost" size="icon">
             <MessageSquare className="h-5 w-5" />

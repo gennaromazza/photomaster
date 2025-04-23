@@ -227,7 +227,7 @@ export default function SessionsList({ galleryId, galleryName, onViewSelections 
   // Copia il link della sessione
   const copySessionLink = (session: SelectionSession) => {
     const baseUrl = window.location.origin;
-    const link = `${baseUrl}/public/selection/${session.sessionKey}/${galleryId}`;
+    const link = `${baseUrl}/selection/session/${session.sessionKey}/${galleryId}`;
     
     navigator.clipboard.writeText(link).then(() => {
       toast({
@@ -356,7 +356,7 @@ export default function SessionsList({ galleryId, galleryName, onViewSelections 
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
                               const baseUrl = window.location.origin;
-                              window.open(`${baseUrl}/public/galleries/${galleryName}?session=${session.sessionKey}`, '_blank');
+                              window.open(`${baseUrl}/selection/session/${session.sessionKey}/${galleryId}`, '_blank');
                             }}>
                               <ExternalLink className="h-4 w-4 mr-2" />
                               Apri in nuova scheda

@@ -3,6 +3,8 @@ import { User } from "../shared/schema";
 import { storage } from './storage';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { db } from './db';
+import { eq } from 'drizzle-orm';
 
 // Configura il servizio SendGrid
 const mailService = new MailService();
@@ -283,7 +285,7 @@ Accedi alla piattaforma per visualizzare tutti i dettagli.`;
 }
 
 /**
- * Invia una conferma al cliente dopo la firma del preventivo
+ * Invia una conferma al cliente dopo la firma del preventivo con riepilogo dettagliato
  */
 export async function sendQuoteSignedConfirmation(clientEmail: string, clientName: string, quote: any): Promise<boolean> {
   if (!clientEmail) return false;
@@ -291,10 +293,39 @@ export async function sendQuoteSignedConfirmation(clientEmail: string, clientNam
   const settings = await storage.getSettings();
   const subject = `Conferma firma: ${quote.title}`;
   
+  // Ottieni informazioni dettagliate sul preventivo
+  const quoteItemsList = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
+  const client = await storage.getClient(quote.clientId);
+  
+  // Calcola il totale
+  let totale = 0;
+  if (quoteItemsList && quoteItemsList.length > 0) {
+    totale = quoteItemsList.reduce((sum: number, item: any) => sum + parseFloat(item.price) * (item.quantity || 1), 0);
+  }
+  
+  // Applica eventuali sconti
+  if (quote.discountType === 'percentage' && quote.discountValue) {
+    totale = totale * (1 - (quote.discountValue / 100));
+  } else if (quote.discountType === 'fixed' && quote.discountValue) {
+    totale = totale - quote.discountValue;
+  }
+  
+  // Formatta il totale come valuta
+  const totalFormatted = totale.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
+  
+  // Ottieni la data di accettazione
+  const acceptanceDate = format(new Date(), 'dd/MM/yyyy');
+  
   // Prepara i dati per il template
   const templateData: TemplateData = {
     cliente_nome: clientName,
-    preventivo_titolo: quote.title
+    preventivo_titolo: quote.title,
+    preventivo_totale: totalFormatted,
+    preventivo_data: acceptanceDate,
+    preventivo_servizio: quote.eventType || 'Servizio fotografico',
+    cliente_indirizzo: client?.address || '',
+    cliente_email: client?.email || '',
+    cliente_telefono: client?.phone || ''
   };
   
   // Ottieni il template dalle impostazioni o usa quello predefinito
@@ -305,17 +336,72 @@ Grazie per aver firmato il preventivo "{preventivo_titolo}".
 Confermiamo di aver ricevuto la tua accettazione e procederemo con l'organizzazione del servizio fotografico.
 Ti contatteremo a breve per definire tutti i dettagli.
 
+RIEPILOGO SERVIZIO:
+- Titolo: {preventivo_titolo}
+- Servizio: {preventivo_servizio}
+- Importo totale: {preventivo_totale}
+- Data accettazione: {preventivo_data}
+
+I tuoi dati di contatto:
+- Email: {cliente_email}
+- Telefono: {cliente_telefono}
+- Indirizzo: {cliente_indirizzo}
+
+Per qualsiasi domanda, non esitare a contattarci.
+
 Cordiali saluti,
 {studio_nome}
 {studio_telefono}
 {studio_email}`;
 
+  // HTML version with better formatting
+  const htmlTemplate = `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+    <h2 style="color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">Conferma Firma Preventivo</h2>
+    
+    <p>Gentile <strong>{cliente_nome}</strong>,</p>
+    
+    <p>Grazie per aver firmato il preventivo "<strong>{preventivo_titolo}</strong>".</p>
+    
+    <p>Confermiamo di aver ricevuto la tua accettazione e procederemo con l'organizzazione del servizio fotografico. Ti contatteremo a breve per definire tutti i dettagli.</p>
+    
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+      <h3 style="margin-top: 0; color: #444;">RIEPILOGO SERVIZIO:</h3>
+      <ul style="list-style-type: none; padding-left: 0;">
+        <li><strong>Titolo:</strong> {preventivo_titolo}</li>
+        <li><strong>Servizio:</strong> {preventivo_servizio}</li>
+        <li><strong>Importo totale:</strong> {preventivo_totale}</li>
+        <li><strong>Data accettazione:</strong> {preventivo_data}</li>
+      </ul>
+    </div>
+    
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+      <h3 style="margin-top: 0; color: #444;">I tuoi dati di contatto:</h3>
+      <ul style="list-style-type: none; padding-left: 0;">
+        <li><strong>Email:</strong> {cliente_email}</li>
+        <li><strong>Telefono:</strong> {cliente_telefono}</li>
+        <li><strong>Indirizzo:</strong> {cliente_indirizzo}</li>
+      </ul>
+    </div>
+    
+    <p>Per qualsiasi domanda, non esitare a contattarci.</p>
+    
+    <p style="margin-top: 30px; color: #666; border-top: 1px solid #f0f0f0; padding-top: 15px;">
+      Cordiali saluti,<br>
+      <strong>{studio_nome}</strong><br>
+      {studio_telefono}<br>
+      {studio_email}
+    </p>
+  </div>`;
+
   // Processa il template con le variabili
   const text = await processTemplate(settings?.emailQuoteSignedClient || defaultTemplate, templateData);
+  const html = await processTemplate(htmlTemplate, templateData);
 
   return await sendEmail({
     to: clientEmail,
     subject,
     text,
+    html,
   });
 }

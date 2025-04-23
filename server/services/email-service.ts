@@ -3,6 +3,9 @@ import { db } from '../db';
 import { settings } from '@shared/schema';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { sql } from 'drizzle-orm';
+import { emailLimitService, EmailPriority } from './email-limit-service';
+import { subscriptionLimitsService } from './subscription-limits-service';
 
 // Inizializza SendGrid con la chiave API
 if (process.env.SENDGRID_API_KEY) {
@@ -17,10 +20,12 @@ interface EmailParams {
   text?: string;
   html?: string;
   attachments?: any[];
+  userId?: number;                     // ID dell'utente che invia l'email
+  priority?: EmailPriority;            // Priorità dell'email
 }
 
 /**
- * Invia un'email utilizzando SendGrid
+ * Invia un'email utilizzando SendGrid, rispettando i limiti di invio
  * @param templateName Nome del template (opzionale, per futuri template personalizzati)
  * @param params Parametri dell'email (destinatario, oggetto, contenuto)
  * @returns Promise che restituisce true se l'invio è riuscito, false altrimenti
@@ -36,6 +41,35 @@ export async function sendEmail(templateName: string, params: EmailParams): Prom
         content: params.html || params.text
       });
       return true;
+    }
+    
+    // Imposta la priorità predefinita se non specificata
+    const priority = params.priority || EmailPriority.MEDIUM;
+    
+    // Verifica i limiti di invio email
+    const isAdmin = !params.userId; // Se non è specificato userId, assume sia un'email di sistema
+    
+    if (!isAdmin) {
+      // Se non è un'email di sistema, verifica i limiti del piano utente
+      const canSend = await subscriptionLimitsService.canUserSendEmail(params.userId, priority);
+      if (!canSend) {
+        console.warn(`Limite di invio email raggiunto per l'utente ${params.userId}. Email a ${params.to} non inviata.`);
+        
+        // Registra il tentativo fallito nel log
+        await db.execute(
+          sql`INSERT INTO email_logs (recipient, subject, priority, sent_at, user_id, status)
+              VALUES (${params.to}, ${params.subject}, ${priority}, ${new Date().toISOString()}, ${params.userId}, 'failed_limit')`
+        );
+        
+        return false;
+      }
+    } else {
+      // Se è un'email di sistema, verifica i limiti globali
+      const canSend = await emailLimitService.canSendEmail(priority);
+      if (!canSend && priority !== EmailPriority.CRITICAL) {
+        console.warn(`Limite globale di invio email raggiunto. Email a ${params.to} non inviata.`);
+        return false;
+      }
     }
 
     // Ottieni le impostazioni per l'email del mittente
@@ -78,9 +112,37 @@ export async function sendEmail(templateName: string, params: EmailParams): Prom
     };
 
     await sgMail.send(msg as any);
+    
+    // Registra l'email inviata nel log
+    if (params.userId) {
+      await db.execute(
+        sql`INSERT INTO email_logs (recipient, subject, priority, sent_at, user_id, status)
+            VALUES (${params.to}, ${params.subject}, ${priority}, ${new Date().toISOString()}, ${params.userId}, 'sent')`
+      );
+    } else {
+      // Email di sistema (senza userId)
+      await db.execute(
+        sql`INSERT INTO email_logs (recipient, subject, priority, sent_at, status)
+            VALUES (${params.to}, ${params.subject}, ${priority}, ${new Date().toISOString()}, 'sent')`
+      );
+    }
+    
     return true;
   } catch (error) {
     console.error('Errore nell\'invio dell\'email:', error);
+    
+    // Registra il fallimento nel log
+    if (params.userId) {
+      try {
+        await db.execute(
+          sql`INSERT INTO email_logs (recipient, subject, priority, sent_at, user_id, status)
+              VALUES (${params.to}, ${params.subject}, ${priority}, ${new Date().toISOString()}, ${params.userId}, 'failed')`
+        );
+      } catch (logError) {
+        console.error('Errore nella registrazione del fallimento dell\'invio:', logError);
+      }
+    }
+    
     return false;
   }
 }

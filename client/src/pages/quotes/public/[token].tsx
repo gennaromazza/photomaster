@@ -118,6 +118,7 @@ export default function PublicQuotePage() {
   >({});
   const [signature, setSignature] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [allClausesAccepted, setAllClausesAccepted] = useState(false);
 
   // Utilizziamo useMemo per ottenere una reference stabile nel tempo del token
   // Questo evita query inutili causate dal token che cambia reference
@@ -243,8 +244,7 @@ export default function PublicQuotePage() {
     return { isValid: true };
   }, [modules, selectedModuleItems]);
 
-  // Stato per tenere traccia dell'accettazione delle clausole
-  const [allClausesAccepted, setAllClausesAccepted] = useState(false);
+
 
   // Gestione firma e conferma preventivo - implementato come funzione per gestire la firma
   const handleSignQuote = async (signatureValue: string) => {

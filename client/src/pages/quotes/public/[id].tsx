@@ -19,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, FileCheck } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useCompanyProfile } from "@/config/companyProfile";
+import ContractClauses from "@/components/quotes/contract-clauses";
 
 // Componente per la visualizzazione pubblica e firma del preventivo
 const PublicQuotePage: React.FC = () => {
@@ -26,6 +28,18 @@ const PublicQuotePage: React.FC = () => {
   const { toast } = useToast();
   const [signature, setSignature] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [allClausesAccepted, setAllClausesAccepted] = useState(false);
+  
+  // Utilizza il hook centralizzato per i dati aziendali
+  const { 
+    companyName, 
+    companyEmail, 
+    companyPhone, 
+    companyAddress, 
+    companyLogo,
+    companyInfoString,
+    isLoading: isLoadingCompanyProfile
+  } = useCompanyProfile();
 
   // Recupera i dettagli del preventivo
   const quoteQuery = useQuery({
@@ -59,19 +73,18 @@ const PublicQuotePage: React.FC = () => {
     enabled: !!id,
   });
   
-  // Recupera le impostazioni dello studio
-  const settingsQuery = useQuery({
-    queryKey: ['/api/settings'],
-    queryFn: async () => {
-      const res = await fetch('/api/settings');
-      if (!res.ok) throw new Error('Errore nel caricamento delle impostazioni');
-      return await res.json();
-    }
-  });
-  
   // Mutation per firmare il preventivo
   const signQuoteMutation = useMutation({
     mutationFn: async () => {
+      // Prima accetta le clausole se ci sono
+      try {
+        await apiRequest("POST", `/api/clauses/quote/${id}/accept`, {});
+      } catch (error) {
+        console.error("Errore nell'accettazione delle clausole:", error);
+        // Continua comunque con la firma anche se fallisce l'accettazione delle clausole
+      }
+      
+      // Poi firma il preventivo
       const res = await apiRequest("PUT", `/api/quotes/${id}`, {
         status: "approved",
         signature: signature,
@@ -114,6 +127,15 @@ const PublicQuotePage: React.FC = () => {
       return;
     }
     
+    if (!allClausesAccepted) {
+      toast({
+        title: "Clausole non accettate",
+        description: "Devi accettare tutte le clausole obbligatorie prima di firmare",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     signQuoteMutation.mutate();
   };
   
@@ -125,7 +147,7 @@ const PublicQuotePage: React.FC = () => {
   }, [clientQuery.data]);
   
   // Loading state
-  if (quoteQuery.isLoading || clientQuery.isLoading || settingsQuery.isLoading) {
+  if (quoteQuery.isLoading || clientQuery.isLoading || isLoadingCompanyProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -160,7 +182,6 @@ const PublicQuotePage: React.FC = () => {
   const quote = quoteQuery.data;
   const client = clientQuery.data;
   const quoteItems = quoteItemsQuery.data || [];
-  const settings = settingsQuery.data || {};
   const isApproved = quote.status === "approved";
   
   // Se il preventivo è già stato approvato
@@ -187,7 +208,7 @@ const PublicQuotePage: React.FC = () => {
           </CardContent>
           <CardFooter className="justify-center">
             <p className="text-sm text-gray-500">
-              {settings.companyName} • {settings.companyPhone} • {settings.companyEmail}
+              {companyInfoString}
             </p>
           </CardFooter>
         </Card>
@@ -201,10 +222,10 @@ const PublicQuotePage: React.FC = () => {
         <Card className="w-full max-w-4xl mx-auto">
           <CardHeader className="text-center border-b">
             <div className="mb-4">
-              {settings.companyLogo ? (
-                <img src={settings.companyLogo} alt={settings.companyName} className="h-16 mx-auto" />
+              {companyLogo ? (
+                <img src={companyLogo} alt={companyName} className="h-16 mx-auto" />
               ) : (
-                <h1 className="text-2xl font-playfair font-bold">{settings.companyName || "Studio Fotografico"}</h1>
+                <h1 className="text-2xl font-playfair font-bold">{companyName}</h1>
               )}
             </div>
             <CardTitle className="text-2xl">Preventivo: {quote.title}</CardTitle>
@@ -315,6 +336,14 @@ const PublicQuotePage: React.FC = () => {
             
             <Separator className="my-8" />
             
+            {/* Clausole contrattuali - AGGIUNTO PRIMA DELLA FIRMA */}
+            <ContractClauses 
+              quoteId={id as string} 
+              onClausesAccepted={setAllClausesAccepted}
+            />
+            
+            <Separator className="my-8" />
+            
             {/* Sezione firma */}
             <div className="pt-4">
               <h3 className="font-medium mb-4">Approva Preventivo</h3>
@@ -370,9 +399,7 @@ const PublicQuotePage: React.FC = () => {
             </Button>
             
             <div className="text-xs text-gray-500 mt-6 w-full text-center">
-              <p>
-                {settings.companyName} • {settings.companyAddress} • {settings.companyPhone} • {settings.companyEmail}
-              </p>
+              <p>{companyInfoString}</p>
             </div>
           </CardFooter>
         </Card>

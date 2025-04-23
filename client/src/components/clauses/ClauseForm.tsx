@@ -132,8 +132,8 @@ export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }:
               <FormItem>
                 <FormLabel>Categoria</FormLabel>
                 <Select
-                  onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
-                  value={field.value?.toString() || ''}
+                  onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))}
+                  value={field.value?.toString() || "null"}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -141,9 +141,9 @@ export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }:
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Nessuna categoria (generale)</SelectItem>
+                    <SelectItem value="null">Nessuna categoria (generale)</SelectItem>
                     {categoriesQuery.isLoading ? (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="loading" disabled>
                         Caricamento categorie...
                       </SelectItem>
                     ) : (
@@ -170,8 +170,8 @@ export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }:
               <FormItem>
                 <FormLabel>Tipo di evento</FormLabel>
                 <Select
-                  onValueChange={(value) => field.onChange(value === '' ? null : value)}
-                  value={field.value || ''}
+                  onValueChange={(value) => field.onChange(value === 'null' ? null : value)}
+                  value={field.value || 'null'}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -179,9 +179,9 @@ export function ClauseForm({ clause, onSubmit, onCancel, isSubmitting = false }:
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Nessun tipo specifico</SelectItem>
+                    <SelectItem value="null">Nessun tipo specifico</SelectItem>
                     {eventTypesQuery.isLoading ? (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="loading" disabled>
                         Caricamento tipi di evento...
                       </SelectItem>
                     ) : (

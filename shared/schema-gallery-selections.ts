@@ -26,8 +26,8 @@ export const gallerySelectionSettings = pgTable("gallery_selection_settings", {
   allowComments: boolean("allow_comments").default(true).notNull(),
   expiresAt: timestamp("expires_at", { mode: 'date' }),
   customMessage: text("custom_message"),
-  createdAt: timestamp("created_at", { mode: 'date' }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: 'date' }).defaultNow().notNull()
+  createdAt: timestamp("created_at", { mode: 'timestamp' }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: 'timestamp' }).defaultNow().notNull()
 });
 
 export const insertGallerySelectionSettingsSchema = createInsertSchema(gallerySelectionSettings).pick({
@@ -73,7 +73,7 @@ export const photoSelections = pgTable("photo_selections", {
   id: serial("id").primaryKey(),
   photoId: integer("photo_id").references(() => photos.id, { onDelete: "cascade" }).notNull(),
   sessionId: integer("session_id").references(() => selectionSessions.id, { onDelete: "cascade" }).notNull(),
-  createdAt: timestamp("created_at", { mode: 'date' }).defaultNow().notNull()
+  createdAt: timestamp("created_at", { mode: 'timestamp' }).defaultNow().notNull()
 });
 
 export const insertPhotoSelectionSchema = createInsertSchema(photoSelections).pick({
@@ -93,7 +93,7 @@ export const photoComments = pgTable("photo_comments", {
   userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
   clientName: varchar("client_name", { length: 255 }),
   isRead: boolean("is_read").default(false).notNull(),
-  createdAt: timestamp("created_at", { mode: 'date' }).defaultNow().notNull()
+  createdAt: timestamp("created_at", { mode: 'timestamp' }).defaultNow().notNull()
 });
 
 export const insertPhotoCommentSchema = createInsertSchema(photoComments).pick({

@@ -604,46 +604,35 @@ export const deleteSession = async (req: Request, res: Response) => {
 };
 
 export const togglePhotoSelection = async (req: Request, res: Response) => {
+  const { photoId, sessionId } = req.body;
+
   try {
-    // Validare i dati in ingresso
-    const parseResult = insertPhotoSelectionSchema.safeParse(req.body);
-
-    if (!parseResult.success) {
-      return res.status(400).json({ 
-        error: 'Dati non validi',
-        details: parseResult.error.format()
-      });
-    }
-
-    const { photoId, sessionId } = parseResult.data;
-
-    // Verificare se la foto esiste
-    const photoResult = await pool.query(
-      'SELECT id FROM photos WHERE id = $1',
-      [photoId]
-    );
-
-    if (photoResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Foto non trovata' });
-    }
-
-    // Verificare se la sessione esiste e non è completata
+    //Check if session exists
     const sessionResult = await pool.query(
       'SELECT id, status, gallery_id FROM selection_sessions WHERE id = $1',
       [sessionId]
     );
-
     if (sessionResult.rows.length === 0) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
-
     const session = sessionResult.rows[0];
 
+    // Check if photo exists
+    const photoResult = await pool.query(
+      'SELECT id FROM photos WHERE id = $1',
+      [photoId]
+    );
+    if (photoResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Foto non trovata' });
+    }
+
+
+    // Check if session is completed
     if (session.status === 'completed') {
       return res.status(403).json({ error: 'La sessione è stata completata e non può essere modificata' });
     }
 
-    // Verificare se la foto è già selezionata
+    // Check for existing selection
     const existingSelectionResult = await pool.query(
       'SELECT id FROM photo_selections WHERE photo_id = $1 AND session_id = $2',
       [photoId, sessionId]
@@ -652,15 +641,14 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
     let action = '';
 
     if (existingSelectionResult.rows.length > 0) {
-      // Rimuovere la selezione
+      // Remove selection
       await pool.query(
         'DELETE FROM photo_selections WHERE photo_id = $1 AND session_id = $2',
         [photoId, sessionId]
       );
-
       action = 'removed';
     } else {
-      // Verificare eventuali limiti sulle selezioni
+      // Add selection (with max selection check)
       const settingsResult = await pool.query(
         'SELECT max_selections FROM gallery_selection_settings WHERE gallery_id = $1',
         [session.gallery_id]
@@ -669,14 +657,11 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
       const settings = settingsResult.rows.length > 0 ? settingsResult.rows[0] : null;
 
       if (settings && settings.max_selections > 0) {
-        // Contare le selezioni attuali
         const selectionsCountResult = await pool.query(
           'SELECT COUNT(*) FROM photo_selections WHERE session_id = $1',
           [sessionId]
         );
-
         const currentSelectionsCount = parseInt(selectionsCountResult.rows[0].count);
-
         if (currentSelectionsCount >= settings.max_selections) {
           return res.status(403).json({ 
             error: 'Numero massimo di selezioni raggiunto',
@@ -685,34 +670,15 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
           });
         }
       }
-
-      // Ottieni gallery_id dalla foto
-      const photoInfoResult = await pool.query(
-        'SELECT gallery_id FROM photos WHERE id = $1',
-        [photoId]
-      );
-
-      if (photoInfoResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Foto non trovata' });
-      }
-
-      const galleryId = photoInfoResult.rows[0].gallery_id;
-
-      // Aggiungere la selezione
+      // Add the selection.
       await pool.query(
         'INSERT INTO photo_selections (photo_id, session_id, gallery_id) VALUES ($1, $2, $3)',
-        [photoId, sessionId, galleryId]
+        [photoId, sessionId, session.gallery_id]
       );
-
       action = 'added';
     }
 
-    res.status(200).json({ 
-      success: true, 
-      action,
-      photoId,
-      sessionId
-    });
+    res.status(200).json({ success: true, action, photoId, sessionId });
   } catch (error: any) {
     console.error('Error in togglePhotoSelection:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });

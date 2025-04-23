@@ -17,13 +17,14 @@ export interface SelectionSession {
   id: number;
   galleryId: number;
   clientId: number | null;
-  clientName: string;
-  clientEmail: string | null;
+  clientName: string | null;
   sessionKey: string;
   status: 'active' | 'completed';
   startedAt: Date;
   completedAt: Date | null;
   notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface PhotoSelection {

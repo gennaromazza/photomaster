@@ -5,7 +5,20 @@ import * as clausesController from '../controllers/clauses-controller';
 const router = express.Router();
 
 // Require authentication for all routes
-router.use(isAuthenticated);
+// Rimuoviamo l'autenticazione per l'endpoint quote clauses in modo che possa essere 
+// accessibile anche dalla pagina pubblica
+router.use((req, res, next) => {
+  // Saltiamo l'autenticazione per le route di quote clauses
+  if (req.path.includes('/quote/') && req.method === 'GET') {
+    return next();
+  }
+  // Saltiamo l'autenticazione per l'accettazione delle clausole
+  if (req.path.includes('/quote/') && req.path.includes('/accept') && req.method === 'POST') {
+    return next();
+  }
+  // Per tutte le altre route, richiediamo l'autenticazione
+  isAuthenticated(req, res, next);
+});
 
 // Routes for managing contract clauses
 router.get('/', clausesController.getAllClauses);

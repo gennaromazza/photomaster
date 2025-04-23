@@ -24,6 +24,7 @@ import CalendarPage from "./calendar";
 import CollaboratorsPage from "./collaborators";
 import CollaboratorDetailPage from "./collaborators/[id]";
 import TasksPage from "./tasks";
+import ClausesPage from "./clauses";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 // Crea un client React Query
@@ -96,6 +97,9 @@ function Router() {
       
       {/* Tasks */}
       <Route path="/tasks" component={TasksPage} />
+      
+      {/* Clausole Contrattuali */}
+      <Route path="/clauses" component={ClausesPage} />
       
       {/* Not Found */}
       <Route component={NotFoundPage} />

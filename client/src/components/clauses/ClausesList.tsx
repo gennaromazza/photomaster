@@ -41,9 +41,10 @@ import { EmptyState } from '@/components/empty-state';
 interface ClausesListProps {
   onAdd: () => void;
   onEdit: (clause: ContractClause) => void;
+  clauses?: ContractClause[]; // Lista specifica di clausole da visualizzare
 }
 
-export function ClausesList({ onAdd, onEdit }: ClausesListProps) {
+export function ClausesList({ onAdd, onEdit, clauses: propClauses }: ClausesListProps) {
   const { clausesQuery, deleteClauseMutation } = useClauses();
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; clause: ContractClause | null }>({
@@ -51,7 +52,8 @@ export function ClausesList({ onAdd, onEdit }: ClausesListProps) {
     clause: null,
   });
 
-  const clauses = clausesQuery.data || [];
+  // Usa le clausole fornite via props se disponibili, altrimenti usa quelle dalla query
+  const clauses = propClauses || clausesQuery.data || [];
   
   // Filtra le clausole in base alla ricerca
   const filteredClauses = searchTerm 

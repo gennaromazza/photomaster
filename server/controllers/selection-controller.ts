@@ -607,12 +607,15 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
   const { photoId, sessionId } = req.body;
 
   try {
-    //Check if session exists
+    await pool.query('BEGIN');
+
+    // Check if session exists
     const sessionResult = await pool.query(
       'SELECT id, status, gallery_id FROM selection_sessions WHERE id = $1',
       [sessionId]
     );
     if (sessionResult.rows.length === 0) {
+      await pool.query('ROLLBACK');
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     const session = sessionResult.rows[0];
@@ -623,12 +626,13 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
       [photoId]
     );
     if (photoResult.rows.length === 0) {
+      await pool.query('ROLLBACK');
       return res.status(404).json({ error: 'Foto non trovata' });
     }
 
-
     // Check if session is completed
     if (session.status === 'completed') {
+      await pool.query('ROLLBACK');
       return res.status(403).json({ error: 'La sessione è stata completata e non può essere modificata' });
     }
 
@@ -663,6 +667,7 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
         );
         const currentSelectionsCount = parseInt(selectionsCountResult.rows[0].count);
         if (currentSelectionsCount >= settings.max_selections) {
+          await pool.query('ROLLBACK');
           return res.status(403).json({ 
             error: 'Numero massimo di selezioni raggiunto',
             max: settings.max_selections,
@@ -670,16 +675,21 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
           });
         }
       }
-      // Add the selection.
+
+      // Add the selection with conflict handling
       await pool.query(
-        'INSERT INTO photo_selections (photo_id, session_id, gallery_id) VALUES ($1, $2, $3)',
-        [photoId, sessionId, session.gallery_id]
+        `INSERT INTO photo_selections (photo_id, session_id) 
+         VALUES ($1, $2) 
+         ON CONFLICT (photo_id, session_id) DO NOTHING`,
+        [photoId, sessionId]
       );
       action = 'added';
     }
 
+    await pool.query('COMMIT');
     res.status(200).json({ success: true, action, photoId, sessionId });
   } catch (error: any) {
+    await pool.query('ROLLBACK');
     console.error('Error in togglePhotoSelection:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }

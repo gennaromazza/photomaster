@@ -96,7 +96,7 @@ export default function SessionsList({ galleryId, galleryName, onViewSelections 
   const fetchSessions = async () => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('GET', `/api/selection/sessions?galleryId=${galleryId}`);
+      const response = await apiRequest('GET', `/api/selection/sessions/gallery/${galleryId}`);
       if (response.ok) {
         const data = await response.json();
         setSessions(data);

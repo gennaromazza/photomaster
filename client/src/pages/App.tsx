@@ -25,6 +25,12 @@ import CollaboratorsPage from "./collaborators";
 import CollaboratorDetailPage from "./collaborators/[id]";
 import TasksPage from "./tasks";
 import ClausesPage from "./clauses";
+import GalleriesPage from "./galleries";
+import NewGalleryPage from "./galleries/new";
+import GalleryDetailPage from "./galleries/[id]";
+import GalleryAdminPage from "./galleries/admin";
+import FinancesPage from "./dashboard/finances";
+import ScheduledPaymentsPage from "./dashboard/finances/scheduled";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 // Crea un client React Query
@@ -100,6 +106,16 @@ function Router() {
       
       {/* Clausole Contrattuali */}
       <Route path="/clauses" component={ClausesPage} />
+      
+      {/* Gallerie */}
+      <Route path="/galleries" component={GalleriesPage} />
+      <Route path="/galleries/new" component={NewGalleryPage} />
+      <Route path="/galleries/admin" component={GalleryAdminPage} />
+      <Route path="/galleries/:id" component={GalleryDetailPage} />
+      
+      {/* Finanze */}
+      <Route path="/dashboard/finances" component={FinancesPage} />
+      <Route path="/dashboard/finances/scheduled" component={ScheduledPaymentsPage} />
       
       {/* Not Found */}
       <Route component={NotFoundPage} />

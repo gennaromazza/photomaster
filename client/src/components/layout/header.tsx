@@ -105,13 +105,7 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/profile">Profilo</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
                 <Link href="/settings">Impostazioni</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/help">Aiuto</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>

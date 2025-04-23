@@ -1,0 +1,131 @@
+**🔧 Migrazioni DB – Allineamento schema**
+   1. **Rimuovi** in `migrations/fix_selection_tables.sql` tutte le colonne già definite in `create_selection_tables.sql` (es. `client_name`, `content`, `is_read`, `session_id` se già presenti).
+   2. **Crea** una nuova migrazione `align_selection_schema.sql` con:
+      ```sql
+      BEGIN;
+      -- Aggiunta dei campi mancanti in selection_sessions
+      ALTER TABLE selection_sessions
+        ADD COLUMN IF NOT EXISTS session_key TEXT NOT NULL DEFAULT '',
+        ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active',
+        ADD COLUMN IF NOT EXISTS started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP NULL,
+        ADD COLUMN IF NOT EXISTS notes TEXT NULL;
+      -- Drop colonne duplicate/pre-esistenti con tipi errati
+      ALTER TABLE photo_comments
+        DROP COLUMN IF EXISTS parent_id_old,
+        DROP COLUMN IF EXISTS client_name_old;
+      -- Aggiungi indici mancanti
+      CREATE INDEX IF NOT EXISTS idx_photo_selections_photo_id ON photo_selections(photo_id);
+      CREATE INDEX IF NOT EXISTS idx_selection_sessions_gallery_id ON selection_sessions(gallery_id);
+      COMMIT;
+      ```
+   3. **Esegui** `npx drizzle-kit migrate` o `psql -f migrations/align_selection_schema.sql`
+   - 🐞 **DEBUG**: dopo `migrate`, lancia `\d selection_sessions` e `\d photo_selections` in psql per verificare le colonne.
+
+3. **🧩 Allineamento Drizzle & TypeScript**
+   1. In `shared/schema-gallery-selections.ts`:
+      ```ts
+      // cambia mode: 'date' → mode: 'timestamp'
+      createdAt: timestamp('created_at', { mode: 'timestamp' }).defaultNow().notNull(),
+      updatedAt: timestamp('updated_at', { mode: 'timestamp' }).defaultNow().notNull(),
+      ```
+   2. In `shared/selection-schema.ts`:
+      ```ts
+      export interface SelectionSession {
+        id: number;
+        galleryId: number;
+        clientId: number | null;
+        clientName: string | null;
+        sessionKey: string;
+        status: 'active' | 'completed';
+        startedAt: Date;
+        completedAt: Date | null;
+        notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+      }
+      ```
+   3. 📦 Ricostruisci gli zod/Drizzle schema:
+      ```bash
+      npx tsc --noEmit
+      ```
+   - 🐞 **DEBUG**: inserisci un `console.log(dzSchema.shape)` in un file di test per verificare i campi.
+
+4. **🛠️ Controller: transaction, upsert, autorizzazioni**
+   1. Nel `selection-controller.ts`, importa `db.transaction` e riscrivi:
+      ```ts
+      export async function togglePhotoSelection(req, res) {
+        const { photoId, sessionId } = req.body;
+        try {
+          await db.transaction(async (trx) => {
+            const exists = await trx
+              .select()
+              .from(photoSelections)
+              .where({ photoId, sessionId });
+            if (exists.length) {
+              console.log('[DEBUG] Deselezionando', photoId, sessionId);
+              await trx
+                .delete(photoSelections)
+                .where({ photoId, sessionId });
+            } else {
+              console.log('[DEBUG] Selezionando', photoId, sessionId);
+              await trx
+                .insert(photoSelections)
+                .values({ photoId, sessionId, createdAt: new Date() })
+                .onConflict(['photo_id', 'session_id'])
+                .ignore();
+            }
+          });
+          res.status(200).json({ success: true });
+        } catch (err) {
+          console.error('[ERROR] togglePhotoSelection:', err);
+          res.status(500).json({ error: err.message });
+        }
+      }
+      ```
+   2. **Validazione/autorizzazione** all’inizio del controller:
+      ```ts
+      if (session.clientId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      if (session.expiresAt && session.expiresAt < new Date()) {
+        return res.status(400).json({ error: 'Session expired' });
+      }
+      ```
+   - 🐞 **DEBUG**: logga `req.user.id`, `session.clientId`, `session.expiresAt` prima delle query.
+
+5. **⚛️ Frontend React – sincronizzazione stato e limiti**
+   1. In `SelectionInterface.tsx`:
+      ```tsx
+      const [selectedPhotos, setSelectedPhotos] = useState<number[]>([]);
+      useEffect(() => {
+        setSelectedPhotos(props.initialSelections);
+        console.log('[DEBUG] inizialSelections:', props.initialSelections);
+      }, [props.initialSelections]);
+      ```
+   2. In `PhotoSelector.tsx`:
+      ```tsx
+      const canSelectMore = selectedPhotos.length < settings.maxSelections || settings.maxSelections === 0;
+      <button
+        disabled={!canSelectMore}
+        onClick={async () => {
+          console.log('[DEBUG] click su photo', photo.id, 'canSelectMore:', canSelectMore);
+          try {
+            const res = await fetch('/api/selections/toggle', { method: 'POST', body: JSON.stringify({ photoId: photo.id, sessionId })});
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            onToggle(photo.id);
+          } catch (e) {
+            console.error('[ERROR] toggle fetch:', e);
+            alert('Errore durante la selezione: ' + e.message);
+          }
+        }}
+      >
+        { isSelected ? 'Deseleziona' : 'Seleziona' }
+      </button>
+      ```
+   3. Aggiungi feedback visivo per limiti raggiunti:
+      ```tsx
+      {!canSelectMore && <div className="text-red-500">Hai raggiunto il limite di {settings.maxSelections} foto.</div>}
+      ```
+   - 🐞 **DEBUG**: complimenta ogni `onToggle` con un `console.log('[DEBUG] selectedPhotos now:', selectedPhotos)`.

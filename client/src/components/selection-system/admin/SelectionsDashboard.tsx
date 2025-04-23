@@ -159,16 +159,25 @@ export default function SelectionsDashboard({ galleryId, galleryName }: Selectio
   useEffect(() => {
     const fetchSessions = async () => {
       try {
-        const response = await apiRequest('GET', `/api/selection/sessions?galleryId=${galleryId}`);
-        const data = await response.json();
-        setSessions(data);
+        const response = await apiRequest('GET', `/api/selection/sessions/gallery/${galleryId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSessions(data);
+        } else {
+          throw new Error('Errore durante il recupero delle sessioni');
+        }
       } catch (error) {
         console.error('Errore nel caricamento delle sessioni:', error);
+        toast({
+          title: 'Errore',
+          description: 'Impossibile caricare le sessioni per questa galleria.',
+          variant: 'destructive',
+        });
       }
     };
 
     fetchSessions();
-  }, [galleryId]);
+  }, [galleryId, toast]);
 
   // Gestisce l'invio del form delle impostazioni
   const handleSettingsSubmit = async (data: z.infer<typeof settingsSchema>) => {
@@ -233,13 +242,20 @@ export default function SelectionsDashboard({ galleryId, galleryName }: Selectio
     setSelectedSession(session);
     
     try {
-      const response = await apiRequest('GET', `/api/selection/sessions/${session.id}/selections`);
+      const response = await apiRequest('GET', `/api/selection/selections/session/${session.id}`);
       if (response.ok) {
         const data = await response.json();
         setSelectedPhotos(data);
+      } else {
+        throw new Error('Errore durante il recupero delle selezioni');
       }
     } catch (error) {
       console.error('Errore nel caricamento delle selezioni:', error);
+      toast({
+        title: 'Errore',
+        description: 'Impossibile caricare le selezioni per questa sessione.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -252,10 +268,7 @@ export default function SelectionsDashboard({ galleryId, galleryName }: Selectio
     try {
       const photoIds = selectedPhotoIds.length > 0 ? selectedPhotoIds : selectedPhotos.map(s => s.photo.id);
       
-      const response = await apiRequest('POST', `/api/selection/sessions/${selectedSession.id}/export`, {
-        format: exportFormat,
-        photoIds
-      });
+      const response = await apiRequest('GET', `/api/selection/export/${selectedSession.id}?format=${exportFormat}`);
       
       if (response.ok) {
         const blob = await response.blob();

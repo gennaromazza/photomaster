@@ -410,6 +410,8 @@ export const quotes = pgTable("quotes", {
   isShared: boolean("is_shared").default(false), // Indica se il preventivo è condiviso pubblicamente
   shareToken: text("share_token"), // Token univoco per l'URL di condivisione
   shareTokenExpiry: timestamp("share_token_expiry"), // Data di scadenza del token di condivisione
+  clausesConfirmed: boolean("clauses_confirmed").default(false), // Indica se le clausole sono state confermate
+  signedAt: timestamp("signed_at"), // Data di firma del preventivo
   // Questi campi non esistono nella tabella reale
   // subtotal: integer("subtotal").default(0), // Subtotale (somma dei servizi/prodotti prima degli sconti)
   // total: integer("total").default(0), // Totale (subtotale - sconti)
@@ -457,6 +459,7 @@ export const quotesRelations = relations(quotes, ({ one, many }) => ({
   modules: many(quoteModules),
   transactions: many(transactions),
   scheduledPayments: many(scheduledPayments),
+  quoteClauses: many(quoteClauses),
 }));
 
 // Quote Items Schema
@@ -805,6 +808,69 @@ export type ServiceCategory = typeof serviceCategories.$inferSelect;
 export const serviceCategoriesRelations = relations(serviceCategories, ({ many }) => ({
   services: many(services),
   events: many(events),
+}));
+
+// Contract Clauses Schema (Clausole Contrattuali)
+export const contractClauses = pgTable("contract_clauses", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  categoryId: integer("category_id"),
+  eventType: text("event_type"),
+  isRequired: boolean("is_required").default(true).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  order: integer("order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at"),
+});
+
+export const insertContractClauseSchema = createInsertSchema(contractClauses).pick({
+  title: true,
+  content: true,
+  categoryId: true,
+  eventType: true,
+  isRequired: true,
+  isActive: true,
+  order: true,
+});
+
+export type InsertContractClause = z.infer<typeof insertContractClauseSchema>;
+export type ContractClause = typeof contractClauses.$inferSelect;
+
+export const contractClausesRelations = relations(contractClauses, ({ one }) => ({
+  category: one(serviceCategories, {
+    fields: [contractClauses.categoryId],
+    references: [serviceCategories.id],
+  }),
+}));
+
+// Quote Clauses Schema (Clausole associate ai preventivi)
+export const quoteClauses = pgTable("quote_clauses", {
+  id: serial("id").primaryKey(),
+  quoteId: integer("quote_id").notNull(),
+  clauseId: integer("clause_id").notNull(),
+  isAccepted: boolean("is_accepted").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertQuoteClauseSchema = createInsertSchema(quoteClauses).pick({
+  quoteId: true,
+  clauseId: true,
+  isAccepted: true,
+});
+
+export type InsertQuoteClause = z.infer<typeof insertQuoteClauseSchema>;
+export type QuoteClause = typeof quoteClauses.$inferSelect;
+
+export const quoteClausesRelations = relations(quoteClauses, ({ one }) => ({
+  quote: one(quotes, {
+    fields: [quoteClauses.quoteId],
+    references: [quotes.id],
+  }),
+  clause: one(contractClauses, {
+    fields: [quoteClauses.clauseId],
+    references: [contractClauses.id],
+  }),
 }));
 
 // Lead Source Schema (Provenienze)

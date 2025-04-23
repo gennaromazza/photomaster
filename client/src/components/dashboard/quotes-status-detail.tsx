@@ -1,16 +1,17 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/utils';
+import { Quote } from '@shared/schema';
 
 const QuotesStatusDetail = () => {
-  const [_, navigate] = useNavigate();
+  const [_, navigate] = useLocation();
 
   // Query per tutti i preventivi
-  const { data: quotes = [], isLoading } = useQuery({
+  const { data: quotes = [], isLoading } = useQuery<Quote[]>({
     queryKey: ['/api/quotes'],
   });
 

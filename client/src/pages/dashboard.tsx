@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import StatCard from "@/components/dashboard/stat-card";
 import CalendarSection from "@/components/dashboard/calendar-section";
@@ -6,10 +6,14 @@ import EventsSection from "@/components/dashboard/events-section";
 import TaskSection from "@/components/dashboard/task-section";
 import ContractsSection from "@/components/dashboard/contracts-section";
 import TeamSection from "@/components/dashboard/team-section";
+import EventCategoriesChart from "@/components/dashboard/event-categories-chart";
+import QuotesStatusDetail from "@/components/dashboard/quotes-status-detail";
 import { useQuery } from "@tanstack/react-query";
-import { Event, Task, Contract, Collaborator } from "@shared/schema";
+import { Event, Task, Contract, Collaborator, Quote } from "@shared/schema";
 
 const Dashboard = () => {
+  const [_, navigate] = useLocation();
+  
   // Ottieni i dati dell'utente corrente
   const { data: userData } = useQuery<{
     id: number;
@@ -36,18 +40,14 @@ const Dashboard = () => {
     queryKey: ["/api/collaborators"],
   });
   
-  // Query per i preventivi non firmati
-  const { data: unsignedQuotes = [] } = useQuery({
-    queryKey: ["/api/quotes/unsigned"],
-    queryFn: async () => {
-      const res = await fetch("/api/quotes?status=draft,pending");
-      if (!res.ok) throw new Error("Errore nel caricamento dei preventivi");
-      return res.json();
-    },
+  // Query per tutti i preventivi per poterli filtrare
+  const { data: quotes = [] } = useQuery<Quote[]>({
+    queryKey: ["/api/quotes"],
   });
   
-  // Calcolo statistiche
-  const pendingContracts = contracts.filter(contract => contract.status === "pending").length;
+  // Filtrare preventivi per stato
+  const quotesToSign = quotes.filter(quote => quote.status === 'draft' || quote.status === 'pending');
+  const signedQuotes = quotes.filter(quote => quote.status === 'signed');
   
   // Conteggio eventi attivi corretto - verifica se è definito lo stato
   const activeEvents = events.filter(event => event.status === "in-progress" || event.status === "active").length;
@@ -62,6 +62,9 @@ const Dashboard = () => {
     }
     return acc;
   }, {} as Record<number, number>);
+  
+  // IMPORTANTE: un preventivo firmato diventa un evento attivo
+  // Quindi gli eventi attivi rappresentano i preventivi che sono stati firmati e sono in corso
   
   return (
     <div className="lg:px-8 px-4 mt-6 lg:mt-8">
@@ -97,6 +100,7 @@ const Dashboard = () => {
           iconTextColor="text-primary"
           title="Eventi Attivi"
           value={activeEvents}
+          detailsComponent={<EventCategoriesChart />}
         />
         
         <StatCard
@@ -104,7 +108,8 @@ const Dashboard = () => {
           iconBgColor="bg-pink-100"
           iconTextColor="text-pink-700"
           title="Preventivi da Firmare"
-          value={unsignedQuotes.length}
+          value={quotesToSign.length}
+          detailsComponent={<QuotesStatusDetail />}
         />
         
         <StatCard
@@ -113,6 +118,7 @@ const Dashboard = () => {
           iconTextColor="text-warning"
           title="Task In Attesa"
           value={pendingTasks}
+          onClick={() => navigate("/tasks")}
         />
         
         <StatCard
@@ -121,6 +127,7 @@ const Dashboard = () => {
           iconTextColor="text-indigo-700"
           title="Collaboratori"
           value={collaborators.length}
+          onClick={() => navigate("/collaborators")}
         />
       </div>
 

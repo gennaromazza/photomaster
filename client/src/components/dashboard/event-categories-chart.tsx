@@ -11,6 +11,12 @@ interface CategoryData {
   color: string;
 }
 
+interface ServiceCategory {
+  id: number;
+  name: string;
+  description?: string;
+}
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
 
 const EventCategoriesChart = () => {
@@ -20,7 +26,7 @@ const EventCategoriesChart = () => {
     queryKey: ['/api/events'],
   });
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<ServiceCategory[]>({
     queryKey: ['/api/service-categories'],
   });
 
@@ -36,13 +42,13 @@ const EventCategoriesChart = () => {
 
       // Create data for chart
       const chartData = categories
-        .map((category, index) => ({
+        .map((category: ServiceCategory, index: number) => ({
           id: category.id,
           name: category.name,
           count: eventsByCategoryId[category.id] || 0,
           color: COLORS[index % COLORS.length],
         }))
-        .filter(item => item.count > 0);
+        .filter((item: CategoryData) => item.count > 0);
 
       setData(chartData);
     }

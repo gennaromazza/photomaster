@@ -458,22 +458,17 @@ export class ClausesController {
       
       const result = await pool.query(queryText);
       
-      // Log per debugging
-      console.log("Query risultati tipi evento:", result.rows);
-      
       // Estraiamo i valori unici e assicuriamoci che siano stringhe valide
       const eventTypes = result.rows
         .map((row: any) => row.event_type)
         .filter((type: any) => type && typeof type === 'string' && type.trim() !== '');
       
-      // Log dell'array finale
-      console.log("Array tipi evento:", eventTypes);
-      
-      // Per sicurezza, trasformiamo l'array in oggetto e poi in JSON
-      return res.json(eventTypes.length > 0 ? eventTypes : []);
+      // Restituisce un array vuoto se non ci sono tipi di evento
+      return res.json(eventTypes);
     } catch (error) {
       console.error("Errore nel recupero dei tipi di evento:", error);
-      return res.status(500).json({ error: "Errore nel recupero dei tipi di evento" });
+      // In caso di errore, restituiamo un array vuoto per non bloccare l'UI
+      return res.json([]);
     }
   }
 }

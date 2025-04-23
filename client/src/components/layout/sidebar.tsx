@@ -116,24 +116,10 @@ export default function Sidebar() {
         />
         
         <SidebarLink
-          href="/messages"
-          icon={<MessageSquare className="h-4 w-4" />}
-          text="Messaggi"
-          isActive={isActive("/messages")}
-        />
-        
-        <SidebarLink
           href="/tasks"
           icon={<BookMarked className="h-4 w-4" />}
           text="Attività"
           isActive={isActive("/tasks")}
-        />
-        
-        <SidebarLink
-          href="/reports"
-          icon={<BarChart2 className="h-4 w-4" />}
-          text="Reportistica"
-          isActive={isActive("/reports")}
         />
         
         <SidebarLink

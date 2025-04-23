@@ -120,14 +120,6 @@ export default function MobileSidebar({
             />
 
             <NavItem
-              href="/reports"
-              icon={<BarChart2 className="h-4 w-4" />}
-              label="Reportistica"
-              isActive={isActive("/reports")}
-              onClick={onClose}
-            />
-
-            <NavItem
               href="/dashboard/finances"
               icon={<Euro className="h-4 w-4" />}
               label="Finanza"

@@ -453,15 +453,24 @@ export class ClausesController {
       const queryText = `
         SELECT DISTINCT event_type 
         FROM quotes 
-        WHERE event_type IS NOT NULL
+        WHERE event_type IS NOT NULL AND event_type != ''
       `;
       
       const result = await pool.query(queryText);
       
-      // Estraiamo i valori unici
-      const eventTypes = result.rows.map((row: any) => row.event_type).filter(Boolean);
+      // Log per debugging
+      console.log("Query risultati tipi evento:", result.rows);
       
-      return res.json(eventTypes);
+      // Estraiamo i valori unici e assicuriamoci che siano stringhe valide
+      const eventTypes = result.rows
+        .map((row: any) => row.event_type)
+        .filter((type: any) => type && typeof type === 'string' && type.trim() !== '');
+      
+      // Log dell'array finale
+      console.log("Array tipi evento:", eventTypes);
+      
+      // Per sicurezza, trasformiamo l'array in oggetto e poi in JSON
+      return res.json(eventTypes.length > 0 ? eventTypes : []);
     } catch (error) {
       console.error("Errore nel recupero dei tipi di evento:", error);
       return res.status(500).json({ error: "Errore nel recupero dei tipi di evento" });

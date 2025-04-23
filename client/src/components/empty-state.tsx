@@ -1,38 +1,26 @@
-
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { ReactNode } from 'react';
+import { File, FileText } from 'lucide-react';
 
 interface EmptyStateProps {
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   title: string;
   description?: string;
-  action?: React.ReactNode;
-  className?: string;
+  action?: ReactNode;
 }
 
-export default function EmptyState({
-  icon,
-  title,
-  description,
-  action,
-  className = "",
-}: EmptyStateProps) {
+export default function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <Card className={`w-full border-2 border-dashed bg-muted/5 ${className}`}>
-      <CardContent className="flex flex-col items-center justify-center py-16 text-center px-4">
-        {icon && (
-          <div className="mb-6 text-muted-foreground/60 [&>svg]:h-12 [&>svg]:w-12">
-            {icon}
-          </div>
-        )}
-        <h3 className="text-xl font-medium tracking-tight mb-3">{title}</h3>
-        {description && (
-          <p className="text-muted-foreground mb-8 max-w-sm leading-relaxed">
-            {description}
-          </p>
-        )}
-        {action && <div className="[&>button]:shadow-sm">{action}</div>}
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-muted/20 rounded-lg border border-dashed">
+      <div className="mb-4 p-3 rounded-full bg-muted/50">
+        {icon || <FileText className="h-8 w-8 text-muted-foreground" />}
+      </div>
+      <h3 className="text-lg font-medium">{title}</h3>
+      {description && (
+        <p className="mt-2 text-sm text-muted-foreground max-w-md">
+          {description}
+        </p>
+      )}
+      {action && <div className="mt-6">{action}</div>}
+    </div>
   );
 }

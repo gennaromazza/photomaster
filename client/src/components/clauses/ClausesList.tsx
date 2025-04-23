@@ -36,7 +36,7 @@ import {
 import { useClauses } from '@/hooks/use-clauses';
 import { ContractClause, formatClauseType } from './types';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { EmptyState } from '@/components/empty-state';
+import EmptyState from '@/components/empty-state';
 
 interface ClausesListProps {
   onAdd: () => void;

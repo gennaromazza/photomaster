@@ -20,6 +20,8 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { GlobalSearchBar } from "@/components/global-search";
 import NotificationsPopover from "@/components/layout/notifications";
+import { useQuery } from "@tanstack/react-query";
+import { Settings } from "@shared/schema";
 
 export interface HeaderProps {
   onOpenSidebar: () => void;
@@ -32,6 +34,19 @@ export interface HeaderProps {
 export default function Header({ onOpenSidebar }: HeaderProps) {
   const { user, logoutMutation } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
+  
+  // Carica le impostazioni per ottenere il nome dell'azienda
+  const { data: settings } = useQuery<Settings>({
+    queryKey: ["/api/settings"],
+  });
+  
+  // Nome azienda dalle impostazioni o fallback a ImageStudio
+  const companyName = settings?.companyName || "ImageStudio";
+  
+  // Separazione del nome in due parti per lo stile (come l'originale Image + Studio)
+  const splitIndex = Math.ceil(companyName.length / 2);
+  const firstPart = companyName.substring(0, splitIndex);
+  const secondPart = companyName.substring(splitIndex);
   
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -52,8 +67,8 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
           
           <Link href="/" className="flex items-center">
             <span className="font-playfair text-xl font-bold tracking-wide">
-              <span>Image</span>
-              <span className="font-light">Studio</span>
+              <span>{firstPart}</span>
+              <span className="font-light">{secondPart}</span>
             </span>
           </Link>
         </div>

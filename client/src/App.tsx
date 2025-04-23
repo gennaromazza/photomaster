@@ -54,6 +54,7 @@ import NewQuotePage from "@/pages/quotes/new-redesign";
 import QuoteDetailPage from "@/pages/quotes/detail/[id]";
 import QuotePublicPage from "@/pages/quotes/public/[token]";
 import SignSuccessPage from "@/pages/quotes/sign-success";
+import ClausesPage from "@/pages/clauses";
 
 // Importa le pagine finanziarie
 import FinancesPage from "@/pages/dashboard/finances";
@@ -98,6 +99,7 @@ function Router() {
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/settings/categories" component={CategoriesPage} />
       <ProtectedRoute path="/settings/origins" component={OriginsPage} />
+      <ProtectedRoute path="/clauses" component={ClausesPage} />
       <ProtectedRoute path="/dashboard/finances" component={FinancesPage} />
       <ProtectedRoute path="/dashboard/finances/scheduled" component={ScheduledPaymentsPage} />
       <ProtectedRoute path="/galleries" component={GalleriesPage} />

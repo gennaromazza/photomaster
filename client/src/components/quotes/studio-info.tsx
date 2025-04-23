@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
 import { Mail, Phone, MapPin, Globe } from "lucide-react";
+import { useCompanyProfile } from "@/config/companyProfile";
 
 type StudioInfoProps = {
   className?: string;
@@ -10,18 +10,17 @@ type StudioInfoProps = {
 
 /**
  * Componente che mostra le informazioni di contatto dello studio fotografico
- * Recupera i dati dalle impostazioni dell'applicazione
+ * Utilizza il hook centralizzato useCompanyProfile per recuperare i dati
  */
 export function StudioInfo({ className = "", compact = false }: StudioInfoProps) {
-  // Carica i dati delle impostazioni dello studio
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["/api/settings"],
-    queryFn: async () => {
-      const res = await fetch("/api/settings");
-      if (!res.ok) throw new Error("Errore nel caricamento delle impostazioni");
-      return res.json();
-    },
-  });
+  // Carica i dati del profilo aziendale dal hook centralizzato
+  const { 
+    isLoading, 
+    companyName, 
+    companyEmail, 
+    companyPhone, 
+    companyAddress 
+  } = useCompanyProfile();
 
   if (isLoading) {
     return (
@@ -39,18 +38,18 @@ export function StudioInfo({ className = "", compact = false }: StudioInfoProps)
   if (compact) {
     return (
       <div className={`${className} space-y-2`}>
-        <h3 className="text-lg font-medium">Contatta {settings?.companyName || "Studio Fotografico"}</h3>
+        <h3 className="text-lg font-medium">Contatta {companyName}</h3>
         <div className="flex flex-wrap gap-4">
-          {settings?.companyEmail && (
+          {companyEmail && (
             <div className="flex items-center">
               <Mail className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{settings.companyEmail}</span>
+              <span>{companyEmail}</span>
             </div>
           )}
-          {settings?.companyPhone && (
+          {companyPhone && (
             <div className="flex items-center">
               <Phone className="h-4 w-4 mr-1 text-muted-foreground" />
-              <span>{settings.companyPhone}</span>
+              <span>{companyPhone}</span>
             </div>
           )}
         </div>
@@ -65,26 +64,26 @@ export function StudioInfo({ className = "", compact = false }: StudioInfoProps)
         <CardTitle>Contatti Studio</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="text-xl font-medium">{settings?.companyName || "Studio Fotografico"}</div>
+        <div className="text-xl font-medium">{companyName}</div>
         
-        {settings?.companyAddress && (
+        {companyAddress && (
           <div className="flex items-start">
             <MapPin className="h-5 w-5 mr-2 text-muted-foreground shrink-0 mt-0.5" />
-            <p className="whitespace-pre-line">{settings.companyAddress}</p>
+            <p className="whitespace-pre-line">{companyAddress}</p>
           </div>
         )}
         
-        {settings?.companyEmail && (
+        {companyEmail && (
           <div className="flex items-center">
             <Mail className="h-5 w-5 mr-2 text-muted-foreground" />
-            <p>{settings.companyEmail}</p>
+            <p>{companyEmail}</p>
           </div>
         )}
         
-        {settings?.companyPhone && (
+        {companyPhone && (
           <div className="flex items-center">
             <Phone className="h-5 w-5 mr-2 text-muted-foreground" />
-            <p>{settings.companyPhone}</p>
+            <p>{companyPhone}</p>
           </div>
         )}
       </CardContent>

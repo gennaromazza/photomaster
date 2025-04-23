@@ -1,13 +1,5 @@
 import { Router } from 'express';
 import { 
-  getSelectionSettings, 
-  updateSelectionSettings,
-  createSelectionSession,
-  getSessionsByGallery,
-  getSession,
-  getSessionByKey,
-  completeSession,
-  deleteSession,
   togglePhotoSelection,
   getSessionSelections,
   getPhotoCommentsCount,
@@ -23,16 +15,22 @@ import { csrfProtection } from '../auth';
 const router = Router();
 
 // Impostazioni di selezione
+// Rimuoviamo temporaneamente queste rotte in attesa di implementazione
+/*
 router.get('/settings/:galleryId', getSelectionSettings);
 router.put('/settings/:galleryId', csrfProtection, updateSelectionSettings);
+*/
 
 // Sessioni
+// Rimuoviamo temporaneamente queste rotte in attesa di implementazione
+/*
 router.post('/sessions', csrfProtection, createSelectionSession);
 router.get('/sessions/gallery/:galleryId', getSessionsByGallery);
 router.get('/sessions/:id', getSession);
 router.get('/sessions/key/:key', getSessionByKey);
 router.put('/sessions/:id/complete', csrfProtection, completeSession);
 router.delete('/sessions/:id', csrfProtection, deleteSession);
+*/
 
 // Selezioni
 router.post('/selections/toggle', csrfProtection, togglePhotoSelection);

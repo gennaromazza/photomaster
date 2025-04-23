@@ -3,6 +3,11 @@ import { pool } from '../db';
 import { insertPhotoSelectionSchema, insertPhotoCommentSchema } from '../../shared/schema-gallery-selections';
 import { z } from 'zod';
 
+// Schema per la funzione completeSession
+const completeSessionSchema = z.object({
+  notes: z.string().optional().nullable()
+});
+
 export const togglePhotoSelection = async (req: Request, res: Response) => {
   const { photoId, sessionId } = insertPhotoSelectionSchema.parse(req.body);
 
@@ -360,6 +365,95 @@ export const replyToComment = async (req: Request, res: Response) => {
     res.status(201).json(result);
   } catch (error: any) {
     console.error('Error in replyToComment:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+};
+
+// Implementazione della funzione completeSession
+export const completeSession = async (req: Request, res: Response) => {
+  try {
+    const sessionId = parseInt(req.params.id);
+    const { notes } = completeSessionSchema.parse(req.body);
+
+    if (isNaN(sessionId)) {
+      return res.status(400).json({ error: 'ID sessione non valido' });
+    }
+
+    // Verifica che la sessione esista e non sia già completata
+    const sessionResult = await pool.query(
+      'SELECT id, status FROM selection_sessions WHERE id = $1',
+      [sessionId]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+
+    const session = sessionResult.rows[0];
+    if (session.status === 'completed') {
+      return res.status(400).json({ error: 'La sessione è già stata completata' });
+    }
+
+    // Aggiorna lo stato della sessione a completato
+    const updatedSessionResult = await pool.query(
+      `UPDATE selection_sessions 
+       SET status = 'completed', completed_at = NOW(), notes = $1
+       WHERE id = $2
+       RETURNING *`,
+      [notes, sessionId]
+    );
+
+    // Formatta la risposta
+    const updatedSession = updatedSessionResult.rows[0];
+    const result = {
+      id: updatedSession.id,
+      galleryId: updatedSession.gallery_id,
+      clientId: updatedSession.client_id,
+      clientName: updatedSession.client_name,
+      clientEmail: updatedSession.client_email,
+      sessionKey: updatedSession.session_key,
+      status: updatedSession.status,
+      startedAt: updatedSession.started_at,
+      completedAt: updatedSession.completed_at,
+      notes: updatedSession.notes
+    };
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Error in completeSession:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+};
+
+// Implementazione della funzione deleteSession
+export const deleteSession = async (req: Request, res: Response) => {
+  try {
+    const sessionId = parseInt(req.params.id);
+
+    if (isNaN(sessionId)) {
+      return res.status(400).json({ error: 'ID sessione non valido' });
+    }
+
+    // Verifica che la sessione esista
+    const sessionResult = await pool.query(
+      'SELECT id FROM selection_sessions WHERE id = $1',
+      [sessionId]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+
+    // Elimina prima i record correlati (commenti e selezioni)
+    await pool.query('DELETE FROM photo_comments WHERE session_id = $1', [sessionId]);
+    await pool.query('DELETE FROM photo_selections WHERE session_id = $1', [sessionId]);
+    
+    // Elimina la sessione
+    await pool.query('DELETE FROM selection_sessions WHERE id = $1', [sessionId]);
+
+    res.status(200).json({ success: true, message: 'Sessione eliminata con successo' });
+  } catch (error: any) {
+    console.error('Error in deleteSession:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 };

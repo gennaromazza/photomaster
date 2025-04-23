@@ -477,6 +477,16 @@ export default function QuoteDetailPage() {
               </CardContent>
             </Card>
 
+            {/* Clausole Events */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Clausole Eventi</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ClausoleEvents categoryId={quote.categoryId} />
+              </CardContent>
+            </Card>
+
             {/* Note */}
             <Card>
               <CardHeader>

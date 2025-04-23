@@ -529,6 +529,31 @@ Studio {studio_nome}`}
             
             <Card>
               <CardHeader>
+                <CardTitle>Clausole Contrattuali</CardTitle>
+                <CardDescription>
+                  Gestione delle clausole per preventivi e contratti
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="prose">
+                <p>
+                  Crea e gestisci le clausole legali che verranno incluse nei tuoi preventivi e contratti.
+                  Puoi personalizzare quali clausole sono obbligatorie e associarle a categorie di servizi.
+                </p>
+                <ul className="mt-4">
+                  <li>Clausole personalizzate per tipo di servizio</li>
+                  <li>Testo formattato per maggiore chiarezza</li>
+                  <li>Ordina e organizza per importanza</li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button asChild className="w-full">
+                  <a href="/clauses">Gestisci Clausole</a>
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            <Card>
+              <CardHeader>
                 <CardTitle>Filigrana Preventivi</CardTitle>
                 <CardDescription>
                   Personalizza la filigrana dei preventivi condivisi

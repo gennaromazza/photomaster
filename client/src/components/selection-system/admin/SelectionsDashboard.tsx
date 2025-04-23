@@ -412,15 +412,12 @@ export default function SelectionsDashboard({ galleryId, galleryName }: Selectio
                               <Copy className="h-4 w-4 mr-2" />
                               Copia link
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <a 
-                                href={`/public/selection/${session.sessionKey}/${galleryId}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                              >
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Apri in nuova scheda
-                              </a>
+                            <DropdownMenuItem onClick={() => {
+                              const baseUrl = window.location.origin;
+                              window.open(`${baseUrl}/public/selection/${session.sessionKey}/${galleryId}`, '_blank');
+                            }}>
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Apri in nuova scheda
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

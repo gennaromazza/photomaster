@@ -22,14 +22,42 @@ export class ClausesController {
    */
   static async getAllClauses(req: Request, res: Response) {
     try {
-      const clauses = await db.query.contractClauses.findMany({
-        with: {
-          category: true
-        },
-        orderBy: [
-          { isActive: desc },
-          { order: "asc" }
-        ]
+      // Utilizziamo SQL diretto per evitare problemi di compatibilità con Drizzle
+      const result = await db.execute(sql`
+        SELECT 
+          c.*,
+          sc.id as category_id, 
+          sc.name as category_name, 
+          sc.description as category_description
+        FROM 
+          contract_clauses c
+        LEFT JOIN 
+          service_categories sc ON c.category_id = sc.id
+        ORDER BY 
+          c.is_active DESC, 
+          c.order ASC
+      `);
+      
+      // Processiamo i risultati per avere lo stesso formato delle relazioni
+      const clauses = result.rows.map((row: any) => {
+        const clause = {
+          id: row.id,
+          title: row.title,
+          content: row.content,
+          categoryId: row.category_id,
+          eventType: row.event_type,
+          isRequired: row.is_required,
+          isActive: row.is_active,
+          order: row.order,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          category: row.category_id ? {
+            id: row.category_id,
+            name: row.category_name,
+            description: row.category_description
+          } : null
+        };
+        return clause;
       });
       
       return res.json(clauses);
@@ -49,18 +77,33 @@ export class ClausesController {
         return res.status(400).json({ error: "ID clausola non valido" });
       }
       
-      const clause = await db.query.contractClauses.findFirst({
-        where: eq(contractClauses.id, id),
-        with: {
-          category: true
-        }
-      });
+      // Utilizziamo una query diretta invece della query con relazioni
+      const clause = await db.select()
+        .from(contractClauses)
+        .where(eq(contractClauses.id, id))
+        .limit(1);
       
-      if (!clause) {
+      if (!clause || clause.length === 0) {
         return res.status(404).json({ error: "Clausola non trovata" });
       }
       
-      return res.json(clause);
+      // Ora otteniamo i dati della categoria se presente
+      let category = null;
+      if (clause[0].categoryId) {
+        const categoryResult = await db.select()
+          .from(serviceCategories)
+          .where(eq(serviceCategories.id, clause[0].categoryId))
+          .limit(1);
+          
+        if (categoryResult && categoryResult.length > 0) {
+          category = categoryResult[0];
+        }
+      }
+      
+      return res.json({
+        ...clause[0],
+        category
+      });
     } catch (error) {
       console.error("Errore nel recupero della clausola:", error);
       return res.status(500).json({ error: "Errore nel recupero della clausola" });
@@ -384,13 +427,13 @@ export class ClausesController {
    */
   static async getCategories(req: Request, res: Response) {
     try {
-      const categories = await db.query.serviceCategories.findMany({
-        orderBy: [
-          { name: "asc" }
-        ]
-      });
+      // Utilizziamo SQL diretto per evitare problemi di compatibilità con Drizzle
+      const result = await db.execute(sql`
+        SELECT * FROM service_categories
+        ORDER BY name
+      `);
       
-      return res.json(categories);
+      return res.json(result.rows);
     } catch (error) {
       console.error("Errore nel recupero delle categorie:", error);
       return res.status(500).json({ error: "Errore nel recupero delle categorie di servizio" });
@@ -402,14 +445,15 @@ export class ClausesController {
    */
   static async getEventTypes(req: Request, res: Response) {
     try {
-      // Recuperiamo i tipi di evento unici dal database
-      const result = await db.select({ eventType: quotes.eventType })
-        .from(quotes)
-        .where(isNull(quotes.eventType).not())
-        .groupBy(quotes.eventType);
+      // Utilizziamo SQL diretto per evitare problemi di compatibilità con Drizzle
+      const result = await db.execute(sql`
+        SELECT DISTINCT event_type 
+        FROM quotes 
+        WHERE event_type IS NOT NULL
+      `);
       
       // Estraiamo i valori unici
-      const eventTypes = result.map(row => row.eventType).filter(Boolean);
+      const eventTypes = result.rows.map((row: any) => row.event_type).filter(Boolean);
       
       return res.json(eventTypes);
     } catch (error) {

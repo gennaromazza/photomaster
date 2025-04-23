@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { db } from "../db";
+import { db, pool } from "../db";
 import { 
   contractClauses, 
   quoteClauses, 
@@ -22,8 +22,8 @@ export class ClausesController {
    */
   static async getAllClauses(req: Request, res: Response) {
     try {
-      // Utilizziamo SQL diretto per evitare problemi di compatibilità con Drizzle
-      const result = await db.execute(sql`
+      // Utilizziamo pool per eseguire query SQL dirette
+      const queryText = `
         SELECT 
           c.*,
           sc.id as category_id, 
@@ -36,7 +36,9 @@ export class ClausesController {
         ORDER BY 
           c.is_active DESC, 
           c.order ASC
-      `);
+      `;
+      
+      const result = await pool.query(queryText);
       
       // Processiamo i risultati per avere lo stesso formato delle relazioni
       const clauses = result.rows.map((row: any) => {
@@ -427,11 +429,13 @@ export class ClausesController {
    */
   static async getCategories(req: Request, res: Response) {
     try {
-      // Utilizziamo SQL diretto per evitare problemi di compatibilità con Drizzle
-      const result = await db.execute(sql`
+      // Utilizziamo pool per eseguire query SQL dirette
+      const queryText = `
         SELECT * FROM service_categories
         ORDER BY name
-      `);
+      `;
+      
+      const result = await pool.query(queryText);
       
       return res.json(result.rows);
     } catch (error) {
@@ -445,12 +449,14 @@ export class ClausesController {
    */
   static async getEventTypes(req: Request, res: Response) {
     try {
-      // Utilizziamo SQL diretto per evitare problemi di compatibilità con Drizzle
-      const result = await db.execute(sql`
+      // Utilizziamo pool per eseguire query SQL dirette
+      const queryText = `
         SELECT DISTINCT event_type 
         FROM quotes 
         WHERE event_type IS NOT NULL
-      `);
+      `;
+      
+      const result = await pool.query(queryText);
       
       // Estraiamo i valori unici
       const eventTypes = result.rows.map((row: any) => row.event_type).filter(Boolean);

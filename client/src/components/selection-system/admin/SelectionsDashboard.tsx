@@ -678,7 +678,7 @@ export default function SelectionsDashboard({ galleryId, galleryName }: Selectio
                 <Checkbox 
                   id="selectAll" 
                   checked={selectAll}
-                  onCheckedChange={setSelectAll}
+                  onCheckedChange={(checked) => setSelectAll(checked === true)}
                 />
                 <Label htmlFor="selectAll">Seleziona tutte</Label>
                 <span className="ml-auto text-sm text-gray-500">
@@ -698,7 +698,11 @@ export default function SelectionsDashboard({ galleryId, galleryName }: Selectio
                       <div className="absolute top-2 right-2">
                         <Checkbox 
                           checked={selectedPhotoIds.includes(selection.photo.id)}
-                          onCheckedChange={() => togglePhotoSelection(selection.photo.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked !== "indeterminate") {
+                              togglePhotoSelection(selection.photo.id);
+                            }
+                          }}
                           className="bg-white/90 border-0"
                         />
                       </div>

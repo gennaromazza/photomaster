@@ -7,9 +7,10 @@ import {
   insertContractClauseSchema, 
   serviceCategories,
   ContractClause,
-  QuoteClause 
+  QuoteClause,
+  ServiceCategory
 } from "@shared/schema";
-import { eq, and, isNull, inArray, sql, desc } from "drizzle-orm";
+import { eq, and, isNull, inArray, sql, desc, SQL } from "drizzle-orm";
 import { ZodError } from "zod";
 
 /**
@@ -25,7 +26,10 @@ export class ClausesController {
         with: {
           category: true
         },
-        orderBy: (clause: typeof contractClauses.$inferSelect) => [desc(clause.isActive), clause.order]
+        orderBy: [
+          { isActive: desc },
+          { order: "asc" }
+        ]
       });
       
       return res.json(clauses);
@@ -182,14 +186,14 @@ export class ClausesController {
       }
       
       // Recupera le clausole associate al preventivo
-      const quoteClauses = await db.query.quoteClauses.findMany({
+      const quoteClausesList = await db.query.quoteClauses.findMany({
         where: eq(quoteClauses.quoteId, quoteId),
         with: {
           clause: true
         }
       });
       
-      return res.json(quoteClauses);
+      return res.json(quoteClausesList);
     } catch (error) {
       console.error("Errore nel recupero delle clausole del preventivo:", error);
       return res.status(500).json({ error: "Errore nel recupero delle clausole del preventivo" });
@@ -216,7 +220,7 @@ export class ClausesController {
       }
       
       // Costruisci condizione per filtrare clausole per categoria e tipo di evento
-      const conditions = [];
+      const conditions: SQL[] = [];
       
       // Clausole per tutte le categorie e tipi di evento (generiche)
       conditions.push(and(isNull(contractClauses.categoryId), isNull(contractClauses.eventType)));
@@ -248,7 +252,9 @@ export class ClausesController {
         with: {
           category: true
         },
-        orderBy: contractClauses.order
+        orderBy: [
+          { order: "asc" }
+        ]
       });
       
       return res.json(availableClauses);
@@ -347,7 +353,7 @@ export class ClausesController {
       const quoteClausesCount = await db.select({ count: sql<number>`count(*)` })
         .from(quoteClauses)
         .where(eq(quoteClauses.quoteId, quoteId))
-        .then(result => result[0]?.count || 0);
+        .then((result: Array<{count: number}>) => result[0]?.count || 0);
       
       if (quoteClausesCount === 0) {
         return res.status(400).json({ error: "Nessuna clausola associata a questo preventivo" });
@@ -362,10 +368,10 @@ export class ClausesController {
       await db.update(quotes)
         .set({ clausesConfirmed: true })
         .where(eq(quotes.id, quoteId));
-      
-      return res.json({ 
-        success: true, 
-        message: "Clausole accettate con successo" 
+        
+      return res.status(200).json({
+        success: true,
+        message: "Clausole accettate con successo"
       });
     } catch (error) {
       console.error("Errore nell'accettazione delle clausole:", error);
@@ -378,14 +384,16 @@ export class ClausesController {
    */
   static async getCategories(req: Request, res: Response) {
     try {
-      const categories = await db.select()
-        .from(serviceCategories)
-        .orderBy(serviceCategories.name);
+      const categories = await db.query.serviceCategories.findMany({
+        orderBy: [
+          { name: "asc" }
+        ]
+      });
       
       return res.json(categories);
     } catch (error) {
       console.error("Errore nel recupero delle categorie:", error);
-      return res.status(500).json({ error: "Errore nel recupero delle categorie" });
+      return res.status(500).json({ error: "Errore nel recupero delle categorie di servizio" });
     }
   }
   
@@ -394,26 +402,16 @@ export class ClausesController {
    */
   static async getEventTypes(req: Request, res: Response) {
     try {
-      // Tipi di evento predefiniti
-      const defaultEventTypes = [
-        { value: "wedding", label: "Matrimonio" },
-        { value: "baptism", label: "Battesimo" },
-        { value: "communion", label: "Comunione" },
-        { value: "confirmation", label: "Cresima" },
-        { value: "engagement", label: "Fidanzamento" },
-        { value: "maternity", label: "Maternità" },
-        { value: "newborn", label: "Neonato" },
-        { value: "portrait", label: "Ritratto" },
-        { value: "family", label: "Famiglia" },
-        { value: "event", label: "Eventi" },
-        { value: "commercial", label: "Commerciale" },
-        { value: "food", label: "Food" },
-        { value: "product", label: "Prodotti" },
-        { value: "realestate", label: "Immobiliare" },
-        { value: "other", label: "Altro" }
-      ];
+      // Recuperiamo i tipi di evento unici dal database
+      const result = await db.select({ eventType: quotes.eventType })
+        .from(quotes)
+        .where(isNull(quotes.eventType).not())
+        .groupBy(quotes.eventType);
       
-      return res.json(defaultEventTypes);
+      // Estraiamo i valori unici
+      const eventTypes = result.map(row => row.eventType).filter(Boolean);
+      
+      return res.json(eventTypes);
     } catch (error) {
       console.error("Errore nel recupero dei tipi di evento:", error);
       return res.status(500).json({ error: "Errore nel recupero dei tipi di evento" });
@@ -421,7 +419,7 @@ export class ClausesController {
   }
 }
 
-// Esporta le funzioni come metodi individuali per facilitare l'importazione
+// Esportazione dei metodi della classe
 export const getAllClauses = ClausesController.getAllClauses;
 export const getClauseById = ClausesController.getClauseById;
 export const createClause = ClausesController.createClause;

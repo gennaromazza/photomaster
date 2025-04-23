@@ -354,15 +354,12 @@ export default function SessionsList({ galleryId, galleryName, onViewSelections 
                               <Copy className="h-4 w-4 mr-2" />
                               Copia link
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <a 
-                                href={`/public/selection/${session.sessionKey}/${galleryId}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                              >
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Apri in nuova scheda
-                              </a>
+                            <DropdownMenuItem onClick={() => {
+                              const baseUrl = window.location.origin;
+                              window.open(`${baseUrl}/public/galleries/${galleryName}?session=${session.sessionKey}`, '_blank');
+                            }}>
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Apri in nuova scheda
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => deleteSession(session)}>
                               <Trash2 className="h-4 w-4 mr-2 text-destructive" />

@@ -51,6 +51,8 @@ export default function PublicGalleryPage() {
   console.log("[Gallery] Componente rendering iniziato");
   const { slug } = useParams();
   const { toast } = useToast();
+  const [location] = useLocation();
+  const sessionKey = new URLSearchParams(location.split('?')[1]).get('session');
 
   // Stati per la pagina
   const [activeChapter, setActiveChapter] = useState<number | null>(null);

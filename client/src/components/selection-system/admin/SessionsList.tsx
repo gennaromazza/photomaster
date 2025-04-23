@@ -157,7 +157,7 @@ export default function SessionsList({ galleryId, galleryName, onViewSelections 
   // Visualizza i dettagli di una sessione
   const viewSession = async (session: SelectionSession) => {
     try {
-      const response = await apiRequest('GET', `/api/selection/sessions/${session.id}/selections`);
+      const response = await apiRequest('GET', `/api/selection/selections/session/${session.id}`);
       if (response.ok) {
         const selections = await response.json();
         onViewSelections(session, selections);
@@ -180,7 +180,7 @@ export default function SessionsList({ galleryId, galleryName, onViewSelections 
     setIsViewingComments(true);
     
     try {
-      const response = await apiRequest('GET', `/api/selection/sessions/${session.id}/comments`);
+      const response = await apiRequest('GET', `/api/selection/comments/session/${session.id}`);
       if (response.ok) {
         const data = await response.json();
         setComments(data);

@@ -298,7 +298,16 @@ export default function PublicQuotePage() {
 
     setIsSubmitting(true);
     try {
-      // Utilizziamo apiRequest che gestisce automaticamente il token CSRF e implementa retry
+      // Prima proviamo ad accettare le clausole
+      try {
+        await apiRequest("POST", `/api/clauses/quote/${quote.id}/accept`, {});
+        console.log("Clausole accettate con successo");
+      } catch (error) {
+        console.error("Errore nell'accettazione delle clausole:", error);
+        // Continua comunque con la firma anche se fallisce l'accettazione delle clausole
+      }
+      
+      // Poi procediamo con la firma del preventivo
       const response = await apiRequest("POST", `/api/quotes/share/${token}/sign`, {
         signature: signatureValue.trim(),
         status: "approved",

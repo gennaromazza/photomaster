@@ -32,11 +32,14 @@ router.get('/sessions/gallery/:galleryId', getSessionsByGallery);
 router.get('/sessions/:id', getSession);
 router.get('/sessions/key/:key', getSessionByKey);
 router.put('/sessions/:id/complete', csrfProtection, completeSession);
+router.post('/sessions/:id/complete', csrfProtection, completeSession); // Aggiunto per compatibilità con il frontend
 router.delete('/sessions/:id', csrfProtection, deleteSession);
 
 // Selezioni
 router.post('/selections/toggle', csrfProtection, togglePhotoSelection);
+router.post('/photos/:photoId', csrfProtection, togglePhotoSelection); // Aggiunto per compatibilità con il frontend
 router.get('/selections/session/:sessionId', getSessionSelections);
+router.get('/sessions/:sessionId/selections', getSessionSelections); // Aggiunto per compatibilità con il frontend
 
 // Commenti
 router.get('/comments/count/:photoId', getPhotoCommentsCount);

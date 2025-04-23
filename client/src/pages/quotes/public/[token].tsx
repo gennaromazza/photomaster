@@ -28,6 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ClientAddressDetails } from "@/components/quotes/client-address-details";
 import { StudioInfo } from "@/components/quotes/studio-info";
 import { CeremonyDetails } from "@/components/quotes/ceremony-details";
+import ContractClauses from "@/components/quotes/contract-clauses";
+import { useCompanyProfile } from "@/config/companyProfile";
 import { PublicFixedModule } from "@/components/quotes/public-fixed-module";
 import { PublicVariableModule } from "@/components/quotes/public-variable-module";
 import { FinancialSummaryWrapper } from "@/components/quotes/financial-summary-wrapper";
@@ -241,6 +243,9 @@ export default function PublicQuotePage() {
     return { isValid: true };
   }, [modules, selectedModuleItems]);
 
+  // Stato per tenere traccia dell'accettazione delle clausole
+  const [allClausesAccepted, setAllClausesAccepted] = useState(false);
+
   // Gestione firma e conferma preventivo - implementato come funzione per gestire la firma
   const handleSignQuote = async (signatureValue: string) => {
     //Check if quote is already signed
@@ -260,6 +265,16 @@ export default function PublicQuotePage() {
       toast({
         title: "Errore",
         description: "Inserisci il tuo nome e cognome per firmare",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Verifica che le clausole obbligatorie siano state accettate
+    if (!allClausesAccepted) {
+      toast({
+        title: "Clausole non accettate",
+        description: "Devi accettare tutte le clausole obbligatorie prima di firmare",
         variant: "destructive",
       });
       return;
@@ -675,6 +690,25 @@ export default function PublicQuotePage() {
           </Card>
         )}
 
+        {/* Clausole contrattuali - Aggiunto prima della firma */}
+        <Card className="mb-8 border-primary/20">
+          <CardHeader className="bg-primary/5 border-b">
+            <CardTitle className="flex items-center">
+              <FileText className="h-5 w-5 mr-2 text-primary" />
+              Termini e Clausole Contrattuali
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <ContractClauses 
+              quoteId={quote.id} 
+              readOnly={quote.status === "approved" || quote.status === "confermato"}
+              onClausesAccepted={(accepted) => {
+                setAllClausesAccepted(accepted);
+              }}
+            />
+          </CardContent>
+        </Card>
+        
         {/* Sezione Firma Digitale */}
         <Card className="mb-8 border-primary/20">
           <CardHeader className="bg-primary/5 border-b">
@@ -719,7 +753,7 @@ export default function PublicQuotePage() {
               <div className="text-center space-y-4">
                 <p className="text-muted-foreground">
                   Firmando questo documento, confermi di accettare il preventivo
-                  e tutti i servizi/prodotti inclusi.
+                  e tutti i servizi/prodotti inclusi, insieme a tutte le clausole contrattuali.
                 </p>
 
                 <div className="max-w-sm mx-auto">

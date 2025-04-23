@@ -604,94 +604,103 @@ export const deleteSession = async (req: Request, res: Response) => {
 };
 
 export const togglePhotoSelection = async (req: Request, res: Response) => {
-  const { photoId, sessionId } = req.body;
+  const { photoId, sessionId } = insertPhotoSelectionSchema.parse(req.body);
 
+  const client = await pool.connect();
   try {
-    await pool.query('BEGIN');
+    await client.query('BEGIN');
 
-    // Check if session exists
-    const sessionResult = await pool.query(
-      'SELECT id, status, gallery_id FROM selection_sessions WHERE id = $1',
+    // 1) Verifica sessione
+    const sessionRes = await client.query(
+      `SELECT id, status 
+       FROM selection_sessions 
+       WHERE id = $1 FOR UPDATE`,
       [sessionId]
     );
-    if (sessionResult.rows.length === 0) {
-      await pool.query('ROLLBACK');
+    if (sessionRes.rowCount === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
-    const session = sessionResult.rows[0];
+    const { status } = sessionRes.rows[0];
+    if (status === 'completed') {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Sessione completata' });
+    }
 
-    // Check if photo exists
-    const photoResult = await pool.query(
-      'SELECT id FROM photos WHERE id = $1',
+    // 2) Verifica foto
+    const photoRes = await client.query(
+      `SELECT id 
+       FROM photos 
+       WHERE id = $1`,
       [photoId]
     );
-    if (photoResult.rows.length === 0) {
-      await pool.query('ROLLBACK');
+    if (photoRes.rowCount === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Foto non trovata' });
     }
 
-    // Check if session is completed
-    if (session.status === 'completed') {
-      await pool.query('ROLLBACK');
-      return res.status(403).json({ error: 'La sessione è stata completata e non può essere modificata' });
-    }
-
-    // Check for existing selection
-    const existingSelectionResult = await pool.query(
-      'SELECT id FROM photo_selections WHERE photo_id = $1 AND session_id = $2',
+    // 3) Toggle selezione
+    const existsRes = await client.query(
+      `SELECT id 
+       FROM photo_selections 
+       WHERE photo_id = $1 AND session_id = $2`,
       [photoId, sessionId]
     );
 
-    let action = '';
-
-    if (existingSelectionResult.rows.length > 0) {
-      // Remove selection
-      await pool.query(
-        'DELETE FROM photo_selections WHERE photo_id = $1 AND session_id = $2',
+    let action: 'added' | 'removed';
+    if (existsRes.rowCount > 0) {
+      await client.query(
+        `DELETE FROM photo_selections 
+         WHERE photo_id = $1 AND session_id = $2`,
         [photoId, sessionId]
       );
       action = 'removed';
     } else {
-      // Add selection (with max selection check)
-      const settingsResult = await pool.query(
-        'SELECT max_selections FROM gallery_selection_settings WHERE gallery_id = $1',
-        [session.gallery_id]
+      // Controllo maxSelections
+      const maxRes = await client.query(
+        `SELECT max_selections 
+         FROM gallery_selection_settings gss
+         JOIN selection_sessions ss ON ss.gallery_id = gss.gallery_id
+         WHERE ss.id = $1`,
+        [sessionId]
       );
-
-      const settings = settingsResult.rows.length > 0 ? settingsResult.rows[0] : null;
-
-      if (settings && settings.max_selections > 0) {
-        const selectionsCountResult = await pool.query(
-          'SELECT COUNT(*) FROM photo_selections WHERE session_id = $1',
+      const max = maxRes.rowCount ? maxRes.rows[0].max_selections : 0;
+      if (max > 0) {
+        const countRes = await client.query(
+          `SELECT COUNT(*)::int AS cnt 
+           FROM photo_selections 
+           WHERE session_id = $1`,
           [sessionId]
         );
-        const currentSelectionsCount = parseInt(selectionsCountResult.rows[0].count);
-        if (currentSelectionsCount >= settings.max_selections) {
-          await pool.query('ROLLBACK');
-          return res.status(403).json({ 
+        if (countRes.rows[0].cnt >= max) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({
             error: 'Numero massimo di selezioni raggiunto',
-            max: settings.max_selections,
-            current: currentSelectionsCount
+            max,
+            current: countRes.rows[0].cnt
           });
         }
       }
 
-      // Add the selection with conflict handling
-      await pool.query(
-        `INSERT INTO photo_selections (photo_id, session_id) 
-         VALUES ($1, $2) 
-         ON CONFLICT (photo_id, session_id) DO NOTHING`,
+      // INSERISCI con ON CONFLICT
+      await client.query(
+        `INSERT INTO photo_selections(photo_id, session_id, created_at)
+         VALUES($1, $2, NOW())
+         ON CONFLICT(photo_id, session_id) DO NOTHING`,
         [photoId, sessionId]
       );
       action = 'added';
     }
 
-    await pool.query('COMMIT');
-    res.status(200).json({ success: true, action, photoId, sessionId });
-  } catch (error: any) {
-    await pool.query('ROLLBACK');
-    console.error('Error in togglePhotoSelection:', error);
-    res.status(500).json({ error: error.message || 'Internal server error' });
+    await client.query('COMMIT');
+    return res.status(200).json({ success: true, action, photoId, sessionId });
+
+  } catch (err: any) {
+    await client.query('ROLLBACK');
+    console.error('Error in togglePhotoSelection:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  } finally {
+    client.release();
   }
 };
 

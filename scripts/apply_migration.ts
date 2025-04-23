@@ -2,9 +2,14 @@ import { Pool } from 'pg';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 
 // Carica le variabili d'ambiente
 dotenv.config();
+
+// Ottieni il percorso corrente in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Crea una connessione al database
 const pool = new Pool({

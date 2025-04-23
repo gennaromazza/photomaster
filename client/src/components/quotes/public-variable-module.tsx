@@ -32,7 +32,8 @@ interface ModuleItem {
   serviceCategoryDescription?: string;
   productCategoryDescription?: string;
   bundleCategoryDescription?: string;
-  minSelectCount?: number;
+  isRequired?: boolean;  // Campo dal backend che indica se l'elemento è obbligatorio
+  minSelectCount?: number; // Campo legacy usato dal frontend per indicare obbligatorietà
   notes?: string; // Campo notes per contenere informazioni di categoria
 }
 
@@ -103,14 +104,19 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
   // Teniamo traccia dello stato di caricamento delle immagini
   const [imageLoadState, setImageLoadState] = useState<{[key: number]: ImageLoadStateItem}>({});
 
-  // Controlla se sono obbligatori item con minSelectCount
+  // Controlla se ci sono elementi obbligatori 
+  // Verifica sia la proprietà isRequired che il controllo legacy minSelectCount
   const hasRequiredItems = (module.items || []).some((item: ModuleItem) => 
-    item && item.minSelectCount && item.minSelectCount > 0
+    item && ((item.isRequired) || (item.minSelectCount && item.minSelectCount > 0))
   );
 
   // Funzione per controllare se un item è richiesto
   const isItemRequired = (item: ModuleItem): boolean => {
-    return Boolean(item && item.minSelectCount && item.minSelectCount > 0);
+    // Verifica sia la proprietà isRequired (backend) che minSelectCount (frontend legacy)
+    return Boolean(item && (
+      (item.isRequired) || 
+      (item.minSelectCount && item.minSelectCount > 0)
+    ));
   };
   
   // Formatta un messaggio informativo sui vincoli di selezione

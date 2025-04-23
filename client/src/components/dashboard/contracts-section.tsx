@@ -35,24 +35,22 @@ const ContractsSection = () => {
           </div>
         ) : (
           contracts.slice(0, 3).map((contract) => (
-            <Link key={contract.id} href={`/contracts/${contract.id}`}>
-              <a className="block p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex justify-between">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-900">{contract.title}</h3>
-                    <div className="flex items-center mt-1">
-                      <i className="ri-calendar-line text-xs text-gray-400 mr-1.5"></i>
-                      <span className="text-xs text-gray-500">
-                        {contract.createdAt ? formatDate(contract.createdAt, "dd/MM/yyyy") : ""}
-                      </span>
-                    </div>
+            <div key={contract.id} onClick={() => window.location.href = `/contracts/${contract.id}`} className="block p-4 hover:bg-gray-50 transition-colors cursor-pointer">
+              <div className="flex justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900">{contract.title}</h3>
+                  <div className="flex items-center mt-1">
+                    <i className="ri-calendar-line text-xs text-gray-400 mr-1.5"></i>
+                    <span className="text-xs text-gray-500">
+                      {contract.createdAt ? formatDate(contract.createdAt, "dd/MM/yyyy") : ""}
+                    </span>
                   </div>
-                  <Badge variant={getStatusBadge(contract.status)}>
-                    {contract.status === "signed" ? "Firmato" : "In Attesa"}
-                  </Badge>
                 </div>
-              </a>
-            </Link>
+                <Badge variant={getStatusBadge(contract.status)}>
+                  {contract.status === "signed" ? "Firmato" : "In Attesa"}
+                </Badge>
+              </div>
+            </div>
           ))
         )}
       </div>

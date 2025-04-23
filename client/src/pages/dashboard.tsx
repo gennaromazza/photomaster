@@ -10,6 +10,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Event, Task, Contract, Collaborator } from "@shared/schema";
 
 const Dashboard = () => {
+  // Ottieni i dati dell'utente corrente
+  const { data: userData } = useQuery<{
+    id: number;
+    username: string;
+    fullName?: string;
+    email?: string;
+  }>({
+    queryKey: ["/api/user"],
+  });
+  
   const { data: events = [] } = useQuery<Event[]>({
     queryKey: ["/api/events"],
   });
@@ -26,17 +36,41 @@ const Dashboard = () => {
     queryKey: ["/api/collaborators"],
   });
   
+  // Query per i preventivi non firmati
+  const { data: unsignedQuotes = [] } = useQuery({
+    queryKey: ["/api/quotes/unsigned"],
+    queryFn: async () => {
+      const res = await fetch("/api/quotes?status=draft,pending");
+      if (!res.ok) throw new Error("Errore nel caricamento dei preventivi");
+      return res.json();
+    },
+  });
+  
+  // Calcolo statistiche
   const pendingContracts = contracts.filter(contract => contract.status === "pending").length;
-  const activeEvents = events.filter(event => event.status === "in-progress").length;
+  
+  // Conteggio eventi attivi corretto - verifica se è definito lo stato
+  const activeEvents = events.filter(event => event.status === "in-progress" || event.status === "active").length;
+  
   const completedTasks = tasks.filter(task => task.completed).length;
   const pendingTasks = tasks.filter(task => !task.completed).length;
+  
+  // Conteggio eventi per categoria
+  const eventsByCategory = events.reduce((acc, event) => {
+    if (event.categoryId) {
+      acc[event.categoryId] = (acc[event.categoryId] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<number, number>);
   
   return (
     <div className="lg:px-8 px-4 mt-6 lg:mt-8">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-900">Benvenuto, Marco</h1>
+          <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-900">
+            Benvenuto, {userData?.fullName || userData?.username || "Utente"}
+          </h1>
           <p className="mt-1 text-gray-500">Ecco un riepilogo delle tue attività</p>
         </div>
         <div className="mt-4 lg:mt-0 flex space-x-3">
@@ -66,11 +100,11 @@ const Dashboard = () => {
         />
         
         <StatCard
-          icon={<i className="ri-check-double-line"></i>}
-          iconBgColor="bg-green-100"
-          iconTextColor="text-success"
-          title="Task Completati"
-          value={completedTasks}
+          icon={<i className="ri-file-list-3-line"></i>}
+          iconBgColor="bg-pink-100"
+          iconTextColor="text-pink-700"
+          title="Preventivi da Firmare"
+          value={unsignedQuotes.length}
         />
         
         <StatCard
@@ -82,11 +116,11 @@ const Dashboard = () => {
         />
         
         <StatCard
-          icon={<i className="ri-file-list-3-line"></i>}
-          iconBgColor="bg-red-100"
-          iconTextColor="text-error"
-          title="Contratti Pendenti"
-          value={pendingContracts}
+          icon={<i className="ri-group-line"></i>}
+          iconBgColor="bg-indigo-100"
+          iconTextColor="text-indigo-700"
+          title="Collaboratori"
+          value={collaborators.length}
         />
       </div>
 

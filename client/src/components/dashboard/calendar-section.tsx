@@ -57,9 +57,23 @@ const CalendarSection = () => {
   
   // Function to get events for a specific day
   const getEventsForDay = (day: Date) => {
+    // Filtra gli eventi per il giorno specificato, gestendo anche eventi senza data
     const dayEvents = events.filter(event => {
+      // Verifica che l'evento abbia una data valida
       if (!event.date) return false;
-      const eventDate = new Date(event.date);
+      
+      // Converti la stringa ISO in un oggetto Date
+      let eventDate;
+      try {
+        eventDate = new Date(event.date);
+        // Verifica che la data sia valida
+        if (isNaN(eventDate.getTime())) return false;
+      } catch (error) {
+        console.error("Data evento non valida:", event.date);
+        return false;
+      }
+      
+      // Confronta la data dell'evento con il giorno specificato
       return eventDate.getDate() === day.getDate() && 
              eventDate.getMonth() === day.getMonth() && 
              eventDate.getFullYear() === day.getFullYear();

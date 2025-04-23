@@ -740,7 +740,8 @@ export default function PublicQuotePage() {
                   <div className="border-2 border-dashed border-primary/30 rounded-lg p-6 bg-primary/5">
                     <p className="text-sm text-muted-foreground mb-3 text-center">Firmato da:</p>
                     <p className="text-center text-3xl text-primary font-handwriting-great-vibes">
-                      {quote.signature || "Nome non disponibile"}
+                      {quote.signature || 
+                        (quote.client ? `${quote.client.firstName} ${quote.client.lastName}`.trim() : "Nome non disponibile")}
                     </p>
                     {quote.signedAt && (
                       <p className="text-xs text-muted-foreground mt-3 text-center">

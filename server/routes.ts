@@ -3307,6 +3307,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/search", searchRouter);
   app.use("/api/selection", selectionRouter);
   app.use("/api/clauses", clausesRouter);
+  app.use("/api/notifications", notificationsRouter);
 
   // Configurazione di multer per l'upload dei file
   const upload = multer({

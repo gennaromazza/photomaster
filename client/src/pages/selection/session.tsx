@@ -259,8 +259,7 @@ export default function SelectionSessionPage() {
     if (!session) return;
     
     try {
-      const response = await apiRequest('POST', '/api/selection/selections/toggle', {
-        photoId,
+      const response = await apiRequest('POST', `/api/selection/photos/${photoId}`, {
         sessionId: session.id
       });
       

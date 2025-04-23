@@ -1,6 +1,14 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { contractClauses, quoteClauses, quotes, insertContractClauseSchema, serviceCategories } from "@shared/schema";
+import { 
+  contractClauses, 
+  quoteClauses, 
+  quotes, 
+  insertContractClauseSchema, 
+  serviceCategories,
+  ContractClause,
+  QuoteClause 
+} from "@shared/schema";
 import { eq, and, isNull, inArray, sql, desc } from "drizzle-orm";
 import { ZodError } from "zod";
 
@@ -17,7 +25,7 @@ export class ClausesController {
         with: {
           category: true
         },
-        orderBy: (clause) => [desc(clause.isActive), clause.order]
+        orderBy: (clause: typeof contractClauses.$inferSelect) => [desc(clause.isActive), clause.order]
       });
       
       return res.json(clauses);

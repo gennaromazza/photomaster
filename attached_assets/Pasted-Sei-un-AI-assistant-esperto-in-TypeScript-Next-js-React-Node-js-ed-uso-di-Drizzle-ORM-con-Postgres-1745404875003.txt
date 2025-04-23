@@ -1,0 +1,103 @@
+Sei un AI assistant esperto in TypeScript, Next.js/React, Node.js ed uso di Drizzle ORM con Postgres. Ti fornirò il contesto di un progetto chiamato “ImageStudio/StudioMaster”:
+
+- Front-end: React + TanStack Query (+ React Hook Form, Zod, CKEditor via rich-text-editor.tsx)
+- Back-end: server Node (Express) che usa Drizzle ORM per schema e migration PostgreSQL
+- Entità esistenti: `service_categories` con id, name, description, color, isActive; già esposti via `/api/service-categories`
+- Hai già creato un componente React `ClausoleEvents` che legge `/api/service-categories` e `/api/event-clauses` e usa RichTextEditor
+
+**Obiettivo**: aggiungere la gestione delle clausole legali per categoria evento, creando il flusso end-to-end:
+
+1. **Migration SQL**  
+   Crea `migrations/20250423_create_event_clauses.sql`:
+   ```sql
+   CREATE TABLE event_clauses (
+     id SERIAL PRIMARY KEY,
+     category_id INTEGER NOT NULL REFERENCES service_categories(id) ON DELETE CASCADE,
+     content TEXT NOT NULL,
+     created_at TIMESTAMP NOT NULL DEFAULT now(),
+     updated_at TIMESTAMP NOT NULL DEFAULT now()
+   );
+Shared Schema (shared/schema.ts):
+
+ts
+Copia
+Modifica
+export const eventClauses = pgTable("event_clauses", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id").notNull().references(() => serviceCategories.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertEventClauseSchema = createInsertSchema(eventClauses).pick({
+  categoryId: true,
+  content: true,
+});
+
+export type EventClause = typeof eventClauses.$inferSelect;
+export type InsertEventClause = z.infer<typeof insertEventClauseSchema>;
+Storage (server/storage.ts):
+
+ts
+Copia
+Modifica
+// In IStorage:
+getAllEventClauses(): Promise<EventClause[]>;
+upsertEventClause(payload: { categoryId: number; content: string }): Promise<EventClause>;
+
+// Nella classe Storage:
+async getAllEventClauses(): Promise<EventClause[]> {
+  return await db.select().from(eventClauses);
+}
+
+async upsertEventClause({ categoryId, content }: { categoryId: number; content: string; }): Promise<EventClause> {
+  const [existing] = await db.select().from(eventClauses).where(eq(eventClauses.categoryId, categoryId));
+  let result: EventClause;
+  if (existing) {
+    [result] = await db
+      .update(eventClauses)
+      .set({ content, updatedAt: new Date() })
+      .where(eq(eventClauses.categoryId, categoryId))
+      .returning();
+  } else {
+    [result] = await db
+      .insert(eventClauses)
+      .values({ categoryId, content })
+      .returning();
+  }
+  return result;
+}
+Route (server/routes.ts), all’interno di registerRoutes(app) subito dopo /service-categories:
+
+ts
+Copia
+Modifica
+// Event Clause routes
+apiRouter.get("/event-clauses", async (req, res) => {
+  try {
+    const clauses = await storage.getAllEventClauses();
+    res.json(clauses);
+  } catch (err) {
+    console.error("Errore nel recupero clausole:", err);
+    res.status(500).json({ message: "Errore nel recupero clausole", details: err });
+  }
+});
+
+apiRouter.post("/event-clauses", async (req, res) => {
+  try {
+    const { categoryId, content } = req.body as { categoryId: number; content: string };
+    const clause = await storage.upsertEventClause({ categoryId, content });
+    res.json(clause);
+  } catch (err) {
+    console.error("Errore nel salvataggio clausola:", err);
+    res.status(500).json({ message: "Errore nel salvataggio clausola", details: err });
+  }
+});
+Integrazione Front-end:
+
+Verifica che il componente ClausoleEvents sia importato e utilizzato nella pagina di firma contratto (es. client/src/pages/quotes/[id].tsx).
+
+Assicurati che TanStack Query punti a /api/event-clauses.
+
+Una volta generato tutto, esegui la migration, ricompila il backend e testa il flusso completo (creazione/upsert via UI e fetch sul front).```

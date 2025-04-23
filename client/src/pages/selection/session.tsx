@@ -226,8 +226,8 @@ export default function SelectionSessionPage() {
             setSelections(selectionsData);
             
             // Calcola rimanenti selezioni se ci sono limiti
-            if (settingsData && settingsData.maxSelections > 0) {
-              const remaining = settingsData.maxSelections - selectionsData.length;
+            if (settings && settings.maxSelections > 0) {
+              const remaining = settings.maxSelections - selectionsData.length;
               setRemainingSelections(remaining > 0 ? remaining : 0);
             }
           }
@@ -470,7 +470,7 @@ export default function SelectionSessionPage() {
             </div>
             
             <div className="flex items-center gap-2">
-              {settings?.maxSelections > 0 && (
+              {settings && settings.maxSelections && settings.maxSelections > 0 && (
                 <Badge variant="outline" className="bg-primary-foreground text-primary">
                   {selections.length}/{settings.maxSelections} foto selezionate
                 </Badge>

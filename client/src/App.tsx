@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import Layout from "@/components/layout/layout";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
+// Importa pagine di selezione
+import SelectionPage from "@/pages/selection";
+import SelectionSessionPage from "@/pages/selection/session";
 
 // Importa calendario
 import Calendar from "@/pages/calendar";
@@ -112,6 +115,8 @@ function Router() {
       <Route path="/quotes/sign-success" component={SignSuccessPage} />
       <Route path="/galleries/:slug" component={PublicGalleryPage} />
       <Route path="/public/galleries/:slug" component={PublicGalleryPage} />
+      <Route path="/selection" component={SelectionPage} />
+      <Route path="/selection/session/:key/:galleryId" component={SelectionSessionPage} />
       <Route component={NotFound} />
     </Switch>
   );

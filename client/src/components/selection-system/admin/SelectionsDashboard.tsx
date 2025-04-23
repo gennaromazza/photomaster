@@ -306,7 +306,7 @@ export default function SelectionsDashboard({ galleryId, galleryName }: Selectio
   // Copia il link della sessione
   const copySessionLink = (session: SelectionSession) => {
     const baseUrl = window.location.origin;
-    const link = `${baseUrl}/public/selection/${session.sessionKey}/${galleryId}`;
+    const link = `${baseUrl}/selection/session/${session.sessionKey}/${galleryId}`;
     
     navigator.clipboard.writeText(link).then(() => {
       toast({

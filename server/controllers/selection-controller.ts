@@ -8,6 +8,433 @@ const completeSessionSchema = z.object({
   notes: z.string().optional().nullable()
 });
 
+// Schema per le impostazioni di selezione
+const selectionSettingsSchema = z.object({
+  isEnabled: z.boolean(),
+  instructions: z.string().nullable(),
+  minSelections: z.number().min(0),
+  maxSelections: z.number().min(0),
+  expiresAt: z.string().nullable(),
+  allowComments: z.boolean().default(true)
+});
+
+// Schema per la creazione della sessione
+const createSessionSchema = z.object({
+  galleryId: z.number(),
+  clientName: z.string().min(1, 'Il nome del cliente è richiesto'),
+  clientEmail: z.string().email('Email non valida'),
+  clientId: z.number().optional().nullable(),
+  notes: z.string().optional().nullable()
+});
+
+// Funzione per ottenere le impostazioni di selezione per una galleria
+export const getSelectionSettings = async (req: Request, res: Response) => {
+  try {
+    const galleryId = parseInt(req.params.galleryId);
+
+    if (isNaN(galleryId)) {
+      return res.status(400).json({ error: 'ID galleria non valido' });
+    }
+
+    // Verifica che la galleria esista
+    const galleryResult = await pool.query(
+      'SELECT id FROM galleries WHERE id = $1',
+      [galleryId]
+    );
+
+    if (galleryResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Galleria non trovata' });
+    }
+
+    // Ottieni le impostazioni di selezione o crea default se non esistono
+    const settingsResult = await pool.query(
+      'SELECT * FROM gallery_selection_settings WHERE gallery_id = $1',
+      [galleryId]
+    );
+
+    if (settingsResult.rows.length === 0) {
+      // Crea impostazioni di default
+      const defaultSettings = {
+        galleryId,
+        isEnabled: false,
+        instructions: null,
+        minSelections: 0,
+        maxSelections: 0,
+        expiresAt: null,
+        allowComments: true
+      };
+
+      const newSettingsResult = await pool.query(
+        `INSERT INTO gallery_selection_settings 
+         (gallery_id, is_enabled, instructions, min_selections, max_selections, expires_at, allow_comments, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+         RETURNING *`,
+        [
+          defaultSettings.galleryId,
+          defaultSettings.isEnabled,
+          defaultSettings.instructions,
+          defaultSettings.minSelections,
+          defaultSettings.maxSelections,
+          defaultSettings.expiresAt,
+          defaultSettings.allowComments
+        ]
+      );
+
+      // Converti i nomi delle colonne da snake_case a camelCase
+      const settings = newSettingsResult.rows[0];
+      const result = {
+        id: settings.id,
+        galleryId: settings.gallery_id,
+        isEnabled: settings.is_enabled,
+        instructions: settings.instructions,
+        minSelections: settings.min_selections,
+        maxSelections: settings.max_selections,
+        expiresAt: settings.expires_at,
+        allowComments: settings.allow_comments,
+        createdAt: settings.created_at,
+        updatedAt: settings.updated_at
+      };
+
+      return res.status(200).json(result);
+    } else {
+      // Converti i nomi delle colonne da snake_case a camelCase
+      const settings = settingsResult.rows[0];
+      const result = {
+        id: settings.id,
+        galleryId: settings.gallery_id,
+        isEnabled: settings.is_enabled,
+        instructions: settings.instructions,
+        minSelections: settings.min_selections,
+        maxSelections: settings.max_selections,
+        expiresAt: settings.expires_at,
+        allowComments: settings.allow_comments,
+        createdAt: settings.created_at,
+        updatedAt: settings.updated_at
+      };
+
+      return res.status(200).json(result);
+    }
+  } catch (error: any) {
+    console.error('Error in getSelectionSettings:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+};
+
+// Funzione per aggiornare le impostazioni di selezione
+export const updateSelectionSettings = async (req: Request, res: Response) => {
+  try {
+    const galleryId = parseInt(req.params.galleryId);
+    const updateData = selectionSettingsSchema.parse(req.body);
+
+    if (isNaN(galleryId)) {
+      return res.status(400).json({ error: 'ID galleria non valido' });
+    }
+
+    // Verifica che la galleria esista
+    const galleryResult = await pool.query(
+      'SELECT id FROM galleries WHERE id = $1',
+      [galleryId]
+    );
+
+    if (galleryResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Galleria non trovata' });
+    }
+
+    // Verifica se le impostazioni esistono già
+    const existingSettingsResult = await pool.query(
+      'SELECT id FROM gallery_selection_settings WHERE gallery_id = $1',
+      [galleryId]
+    );
+
+    if (existingSettingsResult.rows.length === 0) {
+      // Crea nuove impostazioni
+      const newSettingsResult = await pool.query(
+        `INSERT INTO gallery_selection_settings 
+         (gallery_id, is_enabled, instructions, min_selections, max_selections, expires_at, allow_comments, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+         RETURNING *`,
+        [
+          galleryId,
+          updateData.isEnabled,
+          updateData.instructions,
+          updateData.minSelections,
+          updateData.maxSelections,
+          updateData.expiresAt,
+          updateData.allowComments
+        ]
+      );
+
+      // Converti i nomi delle colonne da snake_case a camelCase
+      const settings = newSettingsResult.rows[0];
+      const result = {
+        id: settings.id,
+        galleryId: settings.gallery_id,
+        isEnabled: settings.is_enabled,
+        instructions: settings.instructions,
+        minSelections: settings.min_selections,
+        maxSelections: settings.max_selections,
+        expiresAt: settings.expires_at,
+        allowComments: settings.allow_comments,
+        createdAt: settings.created_at,
+        updatedAt: settings.updated_at
+      };
+
+      return res.status(201).json(result);
+    } else {
+      // Aggiorna impostazioni esistenti
+      const updatedSettingsResult = await pool.query(
+        `UPDATE gallery_selection_settings 
+         SET is_enabled = $1, 
+             instructions = $2, 
+             min_selections = $3, 
+             max_selections = $4, 
+             expires_at = $5,
+             allow_comments = $6,
+             updated_at = NOW()
+         WHERE gallery_id = $7
+         RETURNING *`,
+        [
+          updateData.isEnabled,
+          updateData.instructions,
+          updateData.minSelections,
+          updateData.maxSelections,
+          updateData.expiresAt,
+          updateData.allowComments,
+          galleryId
+        ]
+      );
+
+      // Converti i nomi delle colonne da snake_case a camelCase
+      const settings = updatedSettingsResult.rows[0];
+      const result = {
+        id: settings.id,
+        galleryId: settings.gallery_id,
+        isEnabled: settings.is_enabled,
+        instructions: settings.instructions,
+        minSelections: settings.min_selections,
+        maxSelections: settings.max_selections,
+        expiresAt: settings.expires_at,
+        allowComments: settings.allow_comments,
+        createdAt: settings.created_at,
+        updatedAt: settings.updated_at
+      };
+
+      return res.status(200).json(result);
+    }
+  } catch (error: any) {
+    console.error('Error in updateSelectionSettings:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+};
+
+// Funzione per creare una nuova sessione di selezione
+export const createSelectionSession = async (req: Request, res: Response) => {
+  try {
+    const { galleryId, clientName, clientEmail, clientId, notes } = createSessionSchema.parse(req.body);
+
+    // Verifica che la galleria esista
+    const galleryResult = await pool.query(
+      'SELECT id FROM galleries WHERE id = $1',
+      [galleryId]
+    );
+
+    if (galleryResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Galleria non trovata' });
+    }
+
+    // Verifica che la selezione sia abilitata per questa galleria
+    const settingsResult = await pool.query(
+      'SELECT is_enabled FROM gallery_selection_settings WHERE gallery_id = $1',
+      [galleryId]
+    );
+
+    if (settingsResult.rows.length > 0 && !settingsResult.rows[0].is_enabled) {
+      return res.status(403).json({ error: 'La selezione non è abilitata per questa galleria' });
+    }
+
+    // Genera un ID univoco per la sessione
+    const sessionKey = `session_${Math.random().toString(36).substring(2, 16)}${Date.now().toString(36)}`;
+
+    // Crea la sessione
+    const sessionResult = await pool.query(
+      `INSERT INTO selection_sessions 
+       (gallery_id, client_id, client_name, client_email, session_key, status, started_at, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
+       RETURNING *`,
+      [galleryId, clientId, clientName, clientEmail, sessionKey, 'active', notes]
+    );
+
+    // Converti i nomi delle colonne da snake_case a camelCase
+    const session = sessionResult.rows[0];
+    const result = {
+      id: session.id,
+      galleryId: session.gallery_id,
+      clientId: session.client_id,
+      clientName: session.client_name,
+      clientEmail: session.client_email,
+      sessionKey: session.session_key,
+      status: session.status,
+      startedAt: session.started_at,
+      completedAt: session.completed_at,
+      notes: session.notes
+    };
+
+    res.status(201).json(result);
+  } catch (error: any) {
+    console.error('Error in createSelectionSession:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+};
+
+// Funzione per ottenere le sessioni di una galleria
+export const getSessionsByGallery = async (req: Request, res: Response) => {
+  try {
+    const galleryId = parseInt(req.params.galleryId);
+
+    if (isNaN(galleryId)) {
+      return res.status(400).json({ error: 'ID galleria non valido' });
+    }
+
+    // Verifica che la galleria esista
+    const galleryResult = await pool.query(
+      'SELECT id FROM galleries WHERE id = $1',
+      [galleryId]
+    );
+
+    if (galleryResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Galleria non trovata' });
+    }
+
+    // Ottieni tutte le sessioni per questa galleria con conteggi delle selezioni e commenti
+    const sessionsResult = await pool.query(
+      `SELECT s.*, 
+              (SELECT COUNT(*) FROM photo_selections WHERE session_id = s.id) as selections_count,
+              (SELECT COUNT(*) FROM photo_comments WHERE session_id = s.id) as comments_count
+       FROM selection_sessions s
+       WHERE s.gallery_id = $1
+       ORDER BY s.started_at DESC`,
+      [galleryId]
+    );
+
+    // Converti i nomi delle colonne da snake_case a camelCase e aggiungi i conteggi
+    const sessions = sessionsResult.rows.map(session => ({
+      id: session.id,
+      galleryId: session.gallery_id,
+      clientId: session.client_id,
+      clientName: session.client_name,
+      clientEmail: session.client_email,
+      sessionKey: session.session_key,
+      status: session.status,
+      startedAt: session.started_at,
+      completedAt: session.completed_at,
+      notes: session.notes,
+      _count: {
+        selections: parseInt(session.selections_count),
+        comments: parseInt(session.comments_count)
+      }
+    }));
+
+    res.status(200).json(sessions);
+  } catch (error: any) {
+    console.error('Error in getSessionsByGallery:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+};
+
+// Funzione per ottenere una sessione specifica
+export const getSession = async (req: Request, res: Response) => {
+  try {
+    const sessionId = parseInt(req.params.id);
+
+    if (isNaN(sessionId)) {
+      return res.status(400).json({ error: 'ID sessione non valido' });
+    }
+
+    // Ottieni la sessione con conteggi
+    const sessionResult = await pool.query(
+      `SELECT s.*, 
+              (SELECT COUNT(*) FROM photo_selections WHERE session_id = s.id) as selections_count,
+              (SELECT COUNT(*) FROM photo_comments WHERE session_id = s.id) as comments_count
+       FROM selection_sessions s
+       WHERE s.id = $1`,
+      [sessionId]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+
+    // Converti i nomi delle colonne da snake_case a camelCase e aggiungi i conteggi
+    const session = sessionResult.rows[0];
+    const result = {
+      id: session.id,
+      galleryId: session.gallery_id,
+      clientId: session.client_id,
+      clientName: session.client_name,
+      clientEmail: session.client_email,
+      sessionKey: session.session_key,
+      status: session.status,
+      startedAt: session.started_at,
+      completedAt: session.completed_at,
+      notes: session.notes,
+      _count: {
+        selections: parseInt(session.selections_count),
+        comments: parseInt(session.comments_count)
+      }
+    };
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Error in getSession:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+};
+
+// Funzione per ottenere una sessione tramite chiave
+export const getSessionByKey = async (req: Request, res: Response) => {
+  try {
+    const sessionKey = req.params.key;
+
+    // Ottieni la sessione con conteggi
+    const sessionResult = await pool.query(
+      `SELECT s.*, 
+              (SELECT COUNT(*) FROM photo_selections WHERE session_id = s.id) as selections_count,
+              (SELECT COUNT(*) FROM photo_comments WHERE session_id = s.id) as comments_count
+       FROM selection_sessions s
+       WHERE s.session_key = $1`,
+      [sessionKey]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+
+    // Converti i nomi delle colonne da snake_case a camelCase e aggiungi i conteggi
+    const session = sessionResult.rows[0];
+    const result = {
+      id: session.id,
+      galleryId: session.gallery_id,
+      clientId: session.client_id,
+      clientName: session.client_name,
+      clientEmail: session.client_email,
+      sessionKey: session.session_key,
+      status: session.status,
+      startedAt: session.started_at,
+      completedAt: session.completed_at,
+      notes: session.notes,
+      _count: {
+        selections: parseInt(session.selections_count),
+        comments: parseInt(session.comments_count)
+      }
+    };
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error('Error in getSessionByKey:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+};
+
 export const togglePhotoSelection = async (req: Request, res: Response) => {
   const { photoId, sessionId } = insertPhotoSelectionSchema.parse(req.body);
 
@@ -53,7 +480,7 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
     );
 
     let action: 'added' | 'removed';
-    if (existsRes.rowCount > 0) {
+    if (existsRes.rows.length > 0) {
       await client.query(
         `DELETE FROM photo_selections 
          WHERE photo_id = $1 AND session_id = $2`,
@@ -69,7 +496,7 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
          WHERE ss.id = $1`,
         [sessionId]
       );
-      const max = maxRes.rowCount ? maxRes.rows[0].max_selections : 0;
+      const max = maxRes.rows.length ? maxRes.rows[0].max_selections : 0;
       if (max > 0) {
         const countRes = await client.query(
           `SELECT COUNT(*)::int AS cnt 
@@ -191,7 +618,8 @@ export const addComment = async (req: Request, res: Response) => {
       });
     }
 
-    const { photoId, sessionId, content, userId, clientName } = parseResult.data;
+    const { photoId, sessionId, content, clientName } = parseResult.data;
+    const userId = req.user?.id;
 
     // Verificare se la foto esiste
     const photoResult = await pool.query(

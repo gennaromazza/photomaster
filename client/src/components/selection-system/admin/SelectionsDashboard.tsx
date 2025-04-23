@@ -427,7 +427,7 @@ export default function SelectionsDashboard({ galleryId, galleryName }: Selectio
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
                               const baseUrl = window.location.origin;
-                              window.open(`${baseUrl}/public/selection/${session.sessionKey}/${galleryId}`, '_blank');
+                              window.open(`${baseUrl}/selection/session/${session.sessionKey}/${galleryId}`, '_blank');
                             }}>
                               <ExternalLink className="h-4 w-4 mr-2" />
                               Apri in nuova scheda

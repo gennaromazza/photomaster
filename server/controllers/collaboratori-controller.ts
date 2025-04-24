@@ -14,6 +14,7 @@ import {
 } from "@shared/collaboratori";
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
+import { syncCollaboratorAssignment, syncAllCollaboratorAssignments } from "../utils/sync-collaboratori";
 
 /**
  * Controller per la gestione delle operazioni relative al modulo Collaboratori
@@ -118,6 +119,13 @@ export const addEventoCollaboratore = async (req: Request, res: Response) => {
     const [nuovoEvento] = await db.insert(eventiCollaboratori)
       .values(data)
       .returning();
+    
+    // Sincronizziamo l'assegnazione con l'altra tabella (eventCollaborators)
+    await syncFromEventiCollaboratoriToEventCollaborators(
+      data.collaboratoreId,
+      data.eventoId,
+      data.ruolo
+    );
     
     // Recuperiamo i dettagli completi dell'evento per la risposta
     const [eventoCompleto] = await db.select({

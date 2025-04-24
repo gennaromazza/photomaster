@@ -21,6 +21,8 @@ router.use(isAuthenticated);
 
 // Special queries - devono essere prima delle route con parametri dinamici
 router.get("/without-collaborators", getEventsWithoutCollaborators);
+// Alias route per compatibilità con il frontend che usa ancora il nome italiano
+router.get("/senza-collaboratori", getEventsWithoutCollaborators);
 
 // Event details
 router.get("/:id", getEventDetails);

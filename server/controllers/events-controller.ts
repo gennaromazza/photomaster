@@ -574,23 +574,39 @@ export const updateEventEditingTask = async (req: Request, res: Response) => {
 // GET: Retrieve events without collaborators
 export const getEventsWithoutCollaborators = async (req: Request, res: Response) => {
   try {
-    // Get events that don't have any collaborators assigned
-    const eventsWithoutCollaboratorsQuery = db
-      .select({
-        id: events.id,
-        title: events.title,
-      })
-      .from(events)
-      .leftJoin(
-        eventiCollaboratori,
-        eq(events.id, eventiCollaboratori.eventoId)
-      )
-      .where(
-        sql`${eventiCollaboratori.id} IS NULL`
-      );
-
-    const eventsWithoutCollaborators = await eventsWithoutCollaboratorsQuery;
-
+    // Get all confirmed events
+    const confirmedEvents = await db.select({
+      id: events.id,
+      title: events.title,
+      description: events.description,
+      date: events.date,
+      location: events.location,
+      status: events.status,
+      clientId: events.clientId,
+      eventType: events.eventType
+    })
+    .from(events)
+    .where(eq(events.status, "confirmed")) // Only confirmed events
+    .orderBy(desc(events.date));
+    
+    // Get event IDs that have collaborators
+    const eventsWithCollaborators = await db.select({
+      eventId: eventiCollaboratori.eventoId,
+      count: sql<number>`count(*)`.as('count')
+    })
+    .from(eventiCollaboratori)
+    .groupBy(eventiCollaboratori.eventoId);
+    
+    // Create a Set of event IDs with collaborators for faster lookup
+    const eventsWithCollaboratorsSet = new Set(
+      eventsWithCollaborators.map(row => row.eventId)
+    );
+    
+    // Filter events that don't have collaborators
+    const eventsWithoutCollaborators = confirmedEvents.filter(
+      event => !eventsWithCollaboratorsSet.has(event.id)
+    );
+    
     return res.status(200).json(eventsWithoutCollaborators);
   } catch (error) {
     console.error("Error retrieving events without collaborators:", error);

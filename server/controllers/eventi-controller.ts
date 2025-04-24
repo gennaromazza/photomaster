@@ -453,6 +453,44 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
   }
 };
 
+// GET: Recupera i collaboratori associati ad un preventivo
+export const getCollaboratoriPreventivo = async (req: Request, res: Response) => {
+  const { quoteId } = req.params;
+  
+  try {
+    // Recupera l'evento associato al preventivo (dalla tabella events)
+    const [evento] = await db.select().from(events)
+      .where(eq(events.quoteId, Number(quoteId)));
+    
+    if (!evento) {
+      return res.status(404).json({ error: "Nessun evento trovato per questo preventivo" });
+    }
+    
+    // Recupera i collaboratori associati all'evento
+    const collaboratoriEvento = await db.select({
+      id: eventiCollaboratori.id,
+      ruolo: eventiCollaboratori.ruolo,
+      dataAssegnazione: eventiCollaboratori.dataAssegnazione,
+      note: eventiCollaboratori.note,
+      collaboratore: {
+        id: collaborators.id,
+        firstName: collaborators.firstName,
+        lastName: collaborators.lastName,
+        email: collaborators.email,
+        phone: collaborators.phone
+      }
+    })
+    .from(eventiCollaboratori)
+    .innerJoin(collaborators, eq(eventiCollaboratori.collaboratoreId, collaborators.id))
+    .where(eq(eventiCollaboratori.eventoId, evento.id));
+    
+    return res.status(200).json(collaboratoriEvento);
+  } catch (error) {
+    console.error(`Errore recupero collaboratori preventivo ${quoteId}:`, error);
+    return res.status(500).json({ error: "Errore durante il recupero dei collaboratori associati al preventivo" });
+  }
+};
+
 // PATCH: Aggiorna un montaggio
 // GET: Recupera gli eventi senza collaboratori assegnati
 export const getEventiSenzaCollaboratori = async (req: Request, res: Response) => {

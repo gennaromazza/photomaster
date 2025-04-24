@@ -51,6 +51,9 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { getInitials } from "@/lib/utils";
+import { CollaboratoreDashboard } from "@/components/collaboratori/collaboratore-dashboard";
+import { PagamentoCollaboratoreList } from "@/components/collaboratori/pagamenti-collaboratore";
+import { MontaggioCollaboratoreList } from "@/components/collaboratori/montaggi-collaboratore";
 
 const formSchema = insertCollaboratorSchema.extend({});
 
@@ -440,81 +443,19 @@ export default function CollaboratorDetailPage() {
 
                 <TabsContent value="events" className="m-0">
                   <CardContent className="p-6">
-                    <div className="mb-4 flex justify-between items-center">
-                      <h3 className="text-lg font-medium">Eventi Assegnati</h3>
-                      <div className="text-sm text-gray-500">
-                        Totale: {collaboratorEvents.length} evento/i
-                      </div>
-                    </div>
-                    
-                    {isLoadingEvents ? (
-                      <div className="flex justify-center py-8">
-                        <div className="animate-pulse text-gray-500">Caricamento eventi...</div>
-                      </div>
-                    ) : collaboratorEvents.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-8 text-center">
-                        <div className="text-4xl text-gray-300 mb-2">
-                          <i className="ri-calendar-line"></i>
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-1">Nessun evento assegnato</h3>
-                        <p className="text-gray-500 mb-4">Questo collaboratore non è attualmente assegnato a nessun evento</p>
-                      </div>
-                    ) : (
-                      <div className="overflow-hidden border rounded-md">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Evento</TableHead>
-                              <TableHead>Data</TableHead>
-                              <TableHead>Stato</TableHead>
-                              <TableHead>Ruolo</TableHead>
-                              <TableHead className="text-right">Azioni</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {collaboratorEvents.map((event) => {
-                              // Cerca il ruolo del collaboratore per questo specifico evento
-                              const eventCollaborator = { role: "N/A" }; // Placeholder, sarà sostituito con i dati reali quando implementeremo l'API
-                              
-                              return (
-                                <TableRow key={event.id}>
-                                  <TableCell className="font-medium">{event.title}</TableCell>
-                                  <TableCell>
-                                    {event.eventDate ? (
-                                      format(new Date(event.eventDate), "d MMMM yyyy", { locale: it })
-                                    ) : "Data non specificata"}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant={
-                                      event.status === "upcoming" ? "gray" :
-                                      event.status === "in-progress" ? "blue" :
-                                      event.status === "completed" ? "green" : "red"
-                                    }>
-                                      {event.status === "upcoming" ? "Prossimo" :
-                                       event.status === "in-progress" ? "In Corso" :
-                                       event.status === "completed" ? "Completato" : "Annullato"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>{eventCollaborator.role}</TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex justify-end space-x-2">
-                                      <Link href={`/events/${event.id}`}>
-                                        <Button variant="ghost" size="sm" className="h-8 px-2">
-                                          <i className="ri-eye-line"></i>
-                                        </Button>
-                                      </Link>
-                                      <Button variant="ghost" size="sm" className="h-8 px-2 text-red-600 hover:text-red-800 hover:bg-red-50">
-                                        <i className="ri-delete-bin-line"></i>
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
+                    <CollaboratoreDashboard collaboratoreId={collaboratorId} />
+                  </CardContent>
+                </TabsContent>
+                
+                <TabsContent value="payments" className="m-0">
+                  <CardContent className="p-6">
+                    <PagamentoCollaboratoreList collaboratoreId={collaboratorId} />
+                  </CardContent>
+                </TabsContent>
+                
+                <TabsContent value="montages" className="m-0">
+                  <CardContent className="p-6">
+                    <MontaggioCollaboratoreList collaboratoreId={collaboratorId} />
                   </CardContent>
                 </TabsContent>
               </Tabs>

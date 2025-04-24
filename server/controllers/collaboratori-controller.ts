@@ -12,7 +12,7 @@ import {
   insertMontaggioSchema,
   updateMontaggioSchema
 } from "@shared/collaboratori";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { syncCollaboratorAssignment, syncAllCollaboratorAssignments } from "../utils/sync-collaboratori";
 import { syncFromEventiCollaboratoriToEventCollaborators } from "../utils/sync-collaboratori";
@@ -27,82 +27,168 @@ export const getEventiCollaboratore = async (req: Request, res: Response) => {
   try {
     console.log(`Recupero eventi per il collaboratore ID: ${id}`);
     
-    // 1. Recuperiamo gli eventi dalla tabella italiana eventiCollaboratori con dati cliente
-    const eventiItaliani = await db.select({
-      id: eventiCollaboratori.id,
-      collaboratoreId: eventiCollaboratori.collaboratoreId,
-      eventoId: eventiCollaboratori.eventoId,
-      ruolo: eventiCollaboratori.ruolo,
-      dataAssegnazione: eventiCollaboratori.dataAssegnazione,
-      note: eventiCollaboratori.note,
-      titolo: events.title,
-      descrizione: events.description,
-      data: events.date,
-      location: events.location,
-      stato: events.status,
-      clientId: events.clientId,
-      secondClientId: events.secondClientId,
-      clientFirstName: clients.firstName,
-      clientLastName: clients.lastName
-    })
-    .from(eventiCollaboratori)
-    .innerJoin(events, eq(eventiCollaboratori.eventoId, events.id))
-    .leftJoin(clients, eq(events.clientId, clients.id))
-    .where(eq(eventiCollaboratori.collaboratoreId, Number(id)));
+    // Soluzione molto più semplice: recuperiamo gli eventi da entrambe le tabelle in modo separato
+    // e costruiamo manualmente oggetti semplici
     
-    console.log(`Trovati ${eventiItaliani.length} eventi nella tabella italiana`);
+    // 1. Recuperiamo i dati base degli eventi dalla tabella italiana
+    const eventiItalianiIds = await db
+      .select({
+        eventoId: eventiCollaboratori.eventoId
+      })
+      .from(eventiCollaboratori)
+      .where(eq(eventiCollaboratori.collaboratoreId, Number(id)));
     
-    // 2. Recuperiamo gli eventi dalla tabella inglese eventCollaborators con dati cliente
-    const eventiInglesi = await db.select({
-      id: eventCollaborators.id,
-      collaboratoreId: eventCollaborators.collaboratorId,
-      eventoId: eventCollaborators.eventId,
-      ruolo: eventCollaborators.role,
-      dataAssegnazione: eventCollaborators.assignedAt,
-      note: eventCollaborators.notes,
-      titolo: events.title,
-      descrizione: events.description,
-      data: events.date,
-      location: events.location,
-      stato: events.status,
-      clientId: events.clientId,
-      secondClientId: events.secondClientId,
-      clientFirstName: clients.firstName,
-      clientLastName: clients.lastName
-    })
-    .from(eventCollaborators)
-    .innerJoin(events, eq(eventCollaborators.eventId, events.id))
-    .leftJoin(clients, eq(events.clientId, clients.id))
-    .where(eq(eventCollaborators.collaboratorId, Number(id)));
+    // 2. Recuperiamo i dati base degli eventi dalla tabella inglese
+    const eventiInglesiIds = await db
+      .select({
+        eventoId: eventCollaborators.eventId
+      })
+      .from(eventCollaborators)
+      .where(eq(eventCollaborators.collaboratorId, Number(id)));
     
-    console.log(`Trovati ${eventiInglesi.length} eventi nella tabella inglese`);
-    
-    // 3. Combiniamo i risultati, ma evitando duplicati (stesso eventoId)
+    // 3. Combiniamo gli ID e rimuoviamo i duplicati
     const eventoIdsAggiunti = new Set();
-    const eventiCombinati = [];
+    const tuttiGliEventiIds = [];
     
-    // Aggiungiamo prima tutti gli eventi italiani
-    for (const evento of eventiItaliani) {
-      eventoIdsAggiunti.add(evento.eventoId);
-      eventiCombinati.push(evento);
-    }
-    
-    // Poi aggiungiamo gli eventi inglesi che non sono già presenti
-    for (const evento of eventiInglesi) {
+    for (const evento of eventiItalianiIds) {
       if (!eventoIdsAggiunti.has(evento.eventoId)) {
         eventoIdsAggiunti.add(evento.eventoId);
-        eventiCombinati.push(evento);
+        tuttiGliEventiIds.push(evento.eventoId);
       }
     }
     
-    // Ordiniamo per data di assegnazione decrescente
+    for (const evento of eventiInglesiIds) {
+      if (!eventoIdsAggiunti.has(evento.eventoId)) {
+        eventoIdsAggiunti.add(evento.eventoId);
+        tuttiGliEventiIds.push(evento.eventoId);
+      }
+    }
+    
+    console.log(`Trovati ${tuttiGliEventiIds.length} eventi unici per il collaboratore ID: ${id}`);
+    
+    // 4. Se non ci sono eventi, restituiamo un array vuoto
+    if (tuttiGliEventiIds.length === 0) {
+      return res.status(200).json([]);
+    }
+    
+    // 5. Recuperiamo i dettagli di tutti gli eventi dai loro ID
+    // Questa è una singola query che evita problemi di alias
+    const eventiDettagli = await db
+      .select({
+        id: events.id,
+        title: events.title,
+        description: events.description,
+        date: events.date,
+        location: events.location,
+        status: events.status,
+        clientId: events.clientId,
+        clientFirstName: clients.firstName,
+        clientLastName: clients.lastName
+      })
+      .from(events)
+      .leftJoin(clients, eq(events.clientId, clients.id))
+      .where(inArray(events.id, tuttiGliEventiIds));
+      
+    console.log(`Recuperati ${eventiDettagli.length} eventi con dettagli`);
+    
+    // Creiamo un oggetto per mappare facilmente ID eventi -> dettagli
+    const eventiPerID = {};
+    for (const evento of eventiDettagli) {
+      eventiPerID[evento.id] = evento;
+    }
+    
+    // 6. Recuperiamo gli eventi dalla tabella italiana con ruolo e data
+    const eventiItaliani = await db
+      .select({
+        id: eventiCollaboratori.id,
+        collaboratoreId: eventiCollaboratori.collaboratoreId,
+        eventoId: eventiCollaboratori.eventoId,
+        ruolo: eventiCollaboratori.ruolo,
+        dataAssegnazione: eventiCollaboratori.dataAssegnazione,
+        note: eventiCollaboratori.note
+      })
+      .from(eventiCollaboratori)
+      .where(eq(eventiCollaboratori.collaboratoreId, Number(id)));
+    
+    // 7. Recuperiamo ruolo e data per gli eventi inglesi che non sono già stati trovati
+    const eventiInglesi = await db
+      .select({
+        id: eventCollaborators.id,
+        collaboratoreId: eventCollaborators.collaboratorId,
+        eventoId: eventCollaborators.eventId,
+        ruolo: eventCollaborators.role,
+        dataAssegnazione: eventCollaborators.assignedAt,
+        note: eventCollaborators.notes
+      })
+      .from(eventCollaborators)
+      .where(eq(eventCollaborators.collaboratorId, Number(id)));
+    
+    // 8. Combiniamo i risultati
+    const eventiCombinati = [];
+    const eventoIdProcessati = new Set();
+    
+    // Aggiungiamo gli eventi italiani
+    for (const evento of eventiItaliani) {
+      if (eventoIdProcessati.has(evento.eventoId)) continue;
+      
+      const dettagli = eventiPerID[evento.eventoId];
+      if (!dettagli) continue; // Skip se non troviamo i dettagli
+      
+      eventiCombinati.push({
+        id: evento.id,
+        collaboratoreId: evento.collaboratoreId,
+        eventoId: evento.eventoId,
+        ruolo: evento.ruolo,
+        dataAssegnazione: evento.dataAssegnazione,
+        note: evento.note,
+        titolo: dettagli.title,
+        descrizione: dettagli.description,
+        data: dettagli.date,
+        location: dettagli.location,
+        stato: dettagli.status,
+        clientId: dettagli.clientId,
+        clientFirstName: dettagli.clientFirstName,
+        clientLastName: dettagli.clientLastName
+      });
+      
+      eventoIdProcessati.add(evento.eventoId);
+    }
+    
+    // Aggiungiamo gli eventi inglesi che non sono già stati processati
+    for (const evento of eventiInglesi) {
+      if (eventoIdProcessati.has(evento.eventoId)) continue;
+      
+      const dettagli = eventiPerID[evento.eventoId];
+      if (!dettagli) continue; // Skip se non troviamo i dettagli
+      
+      eventiCombinati.push({
+        id: evento.id,
+        collaboratoreId: evento.collaboratoreId,
+        eventoId: evento.eventoId,
+        ruolo: evento.ruolo,
+        dataAssegnazione: evento.dataAssegnazione,
+        note: evento.note,
+        titolo: dettagli.title,
+        descrizione: dettagli.description,
+        data: dettagli.date,
+        location: dettagli.location,
+        stato: dettagli.status,
+        clientId: dettagli.clientId,
+        clientFirstName: dettagli.clientFirstName,
+        clientLastName: dettagli.clientLastName
+      });
+      
+      eventoIdProcessati.add(evento.eventoId);
+    }
+    
+    // 9. Ordiniamo per data di assegnazione decrescente
     eventiCombinati.sort((a, b) => {
       const dateA = a.dataAssegnazione ? new Date(a.dataAssegnazione) : new Date(0);
       const dateB = b.dataAssegnazione ? new Date(b.dataAssegnazione) : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
     
-    console.log(`Restituiti ${eventiCombinati.length} eventi totali`);
+    console.log(`Restituiti ${eventiCombinati.length} eventi combinati totali`);
     
     return res.status(200).json(eventiCombinati);
   } catch (error) {

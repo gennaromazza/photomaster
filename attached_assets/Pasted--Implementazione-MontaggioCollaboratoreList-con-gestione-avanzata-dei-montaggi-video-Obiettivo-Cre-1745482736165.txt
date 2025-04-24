@@ -1,0 +1,127 @@
+ Implementazione MontaggioCollaboratoreList con gestione avanzata dei montaggi video
+
+Obiettivo: Creare un componente React che mostri la coda dei montaggi assegnati ai videomaker, consenta di avviare e completare un montaggio con aggiornamento di stato e saldo, e integri link WhatsApp e notifiche email. UI/UX deve rispettare gli stessi token Tailwind, breakpoints e palette, mobile-first responsive.
+
+1. Posizione file
+client/src/modules/collaboratori/components/MontaggioCollaboratoreList.tsx
+
+2. Hook dati
+Riusa useCollaboratore(id) per recuperare l’array montaggi.
+
+SWR mutation o fetcher.post/patch su:
+
+POST /api/collaboratori/${id}/montaggi
+
+PATCH /api/collaboratori/${id}/montaggi/${montaggioId}
+
+3. Layout & Tailwind
+Header Card: titolo “Coda Montaggi” + badge con count totale
+
+Lista: tabella o <ul> con colonne:
+
+Evento (nome evento)
+
+Data assegnazione (DD/MM/YYYY)
+
+Priorità (icona o badge numerica)
+
+Stato (da_fare, in_corso, completato)
+
+Pulsanti:
+
+Avvia se stato=da_fare
+
+Completa se stato=in_corso
+
+Dettagli naviga a /collaboratori/${id}/dashboard?tab=montaggi
+
+Grid responsivo:
+
+html
+Copia
+Modifica
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  …
+</div>
+4. Azioni “Avvia montaggio” & “Completa montaggio”
+Avvia:
+
+ts
+Copia
+Modifica
+await fetcher.patch(`/api/collaboratori/${id}/montaggi/${montaggioId}`, {
+  stato: 'in_corso',
+  dataPrimoContatto: new Date().toISOString(),
+});
+Completa:
+
+Apri modal “Registra Saldo” (React Hook Form + Zod):
+
+ts
+Copia
+Modifica
+const schema = z.object({
+  saldo: z.number().positive('Deve essere > 0'),
+  note: z.string().optional(),
+});
+onSubmit →
+
+ts
+Copia
+Modifica
+await fetcher.patch(`/api/collaboratori/${id}/montaggi/${montaggioId}`, {
+  stato: 'completato',
+  saldo,
+  note,
+});
+await fetcher.post(`/api/collaboratori/${id}/pagamenti`, {
+  eventoId,
+  tipo: 'montaggio_saldo',
+  importo: saldo,
+  dataPagamento: new Date().toISOString(),
+});
+Al successo: close modal, refresh SWR key, toast “Montaggio completato e saldo registrato”
+
+5. WhatsApp Link & Notifiche
+In ogni riga, icona WhatsApp:
+
+tsx
+Copia
+Modifica
+<a
+  href={`https://wa.me/${collaboratore.contattoWhatsapp}?text=${encodeURIComponent(
+    `Stato montaggio per ${eventoNome}: ${stato}.`
+  )}`}
+  target="_blank" rel="noopener" aria-label="Invia WhatsApp montaggio"
+>
+  <IconBrandWhatsapp size={20}/>
+</a>
+Dopo Completa, invia anche notifica email via SendGrid chiamando /api/notifications/email
+
+6. Accessibilità & Responsività
+Modal full-screen <640px, centrato ≥640px
+
+Focus trap, aria-labelledby, aria-describedby
+
+Label associate a tutti i campi
+
+7. Test
+Unit test (RTL):
+
+Rendering lista per stati diversi
+
+Apertura modal “Registra Saldo”
+
+Validazione Zod su saldo
+
+E2E (Playwright):
+
+Click “Avvia” → verifica cambio stato
+
+Click “Completa” → compila saldo → verifica riga rimossa/aggiornata
+
+Verifica invio email e comparsa toast
+
+Nota: confina tutto in modules/collaboratori/components/MontaggioCollaboratoreList.tsx e modali dedicate (StartMontageModal.tsx, CompleteMontageModal.tsx), senza toccare stili globali.
+
+Buon lavoro!

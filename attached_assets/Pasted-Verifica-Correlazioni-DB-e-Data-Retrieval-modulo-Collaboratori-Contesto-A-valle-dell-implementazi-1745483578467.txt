@@ -1,0 +1,118 @@
+Verifica Correlazioni DB e Data Retrieval modulo “Collaboratori”
+
+Contesto
+A valle dell’implementazione completa del modulo “Collaboratori” (DB, API e UI), vogliamo avviare una fase di verifica focalizzata sulle relazioni di database e sul recupero dati end-to-end, per garantire che ogni livello (schema, controller, endpoint, hook e componenti) restituisca esattamente ciò che serve.
+
+1. Database & Relazioni
+Schema & Migrazioni
+
+Controlla che, dopo npm run db:push o la migrazione manuale, esistano le tabelle:
+
+collaboratori
+
+eventi_collaboratori
+
+pagamenti_collaboratori
+
+montaggi
+
+Verifica i tipi di colonna (UUID, Decimal, DateTime) e i default (now(), @updatedAt).
+
+Foreign Keys & Referential Actions
+
+Ogni FK punti al record corretto e abbia ON DELETE CASCADE (o comportamento previsto).
+
+Testa la cancellazione di un collaboratore e verifica che eventi/pagamenti/montaggi correlati vengano rimossi o protetti, come da spec.
+
+Indice & Performance
+
+Assicurati che ci siano indici sulle colonne di join (collaboratoreId, eventoId).
+
+Verifica la presenza di eventuali indici composti (se previsti) per query frequenti.
+
+2. Controller & Query Logic
+Controlla i controller in server/controllers/collaboratori-controller.ts:
+
+getDashboard(id)
+
+Recupera collaboratore + eventi + pagamenti + montaggi in una sola query (o col include di Drizzle).
+
+getEventi(id), getPagamenti(id), getMontaggi(id)
+
+Ritorna array di oggetti con solo i campi necessari (no over-fetch).
+
+Le mutazioni (POST, PATCH) usano transazioni per operazioni multiple.
+
+Testa error‐handling sul DB (vincoli unici, FK violati) e il corretto res.status(4xx/5xx) con messaggi.
+
+3. API Endpoints
+Per ciascun endpoint, esegui con curl o Postman:
+
+GET /api/collaboratori/:id/dashboard
+
+Verifica shape JSON:
+
+json
+Copia
+Modifica
+{
+  "collaboratore": { "id","nome",…},
+  "eventi": [ { "eventoId","ruolo","dataAssegnazione" } ],
+  "pagamenti": [ { "tipo","importo","dataPagamento" } ],
+  "montaggi": [ { "priorita","stato","dataConsegnaPrevista" } ]
+}
+GET/POST /api/collaboratori/:id/eventi
+
+Testa l’inserimento e il ri‐fetch: l’array eventi in dashboard si aggiorna.
+
+GET/POST /api/collaboratori/:id/pagamenti
+
+Controlla che totaleAcconti e saldoResiduo in PaymentSummary combacino con la somma dei record in DB.
+
+GET/POST/PATCH /api/collaboratori/:id/montaggi
+
+Verifica avanzamento di stato e creazione del record di montaggio_saldo in pagamenti_collaboratori.
+
+4. Frontend Data Retrieval
+Hook useCollaboratore(id)
+
+Controlla che la key SWR (/api/collaboratori/${id}) venga invalidata dopo ogni mutation.
+
+Simula errori di rete e verifica che isError venga settato true.
+
+Componenti
+
+EventoCollaboratoreList: il dropdown eventi carichi solo eventi effettivi; l’onSubmit chiama il POST corretto.
+
+PagamentoCollaboratoreList: i totali in card provengano dai dati API e siano congrui ai record DB.
+
+MontaggioCollaboratoreList:
+
+“Avvia” → PATCH e rifetch → stato in UI.
+
+“Completa” → doppia chiamata (PATCH + POST) e rifetch.
+
+5. UI ↔ DB Correlazioni
+Popola il DB con casi diversi (nessun evento, più pagamenti, montaggi in vari stati) e verifica in UI:
+
+Grafici, badge, filtri restituiscono sempre i numeri esatti.
+
+I link WhatsApp generino esattamente il messaggio con i parametri DB corretti (importo, eventoNome, ecc.).
+
+6. Edge Cases & Performance
+Record null/vuoti: test su campi opzionali (note, saldo?)
+
+Duplicates: invio duplicato per eventoId → 400
+
+Large volumes: simula 100+ montaggi e verifica caricamento/scroll/paginazione
+
+7. Report di Verifica
+Per ognuno dei punti sopra, invia un breve report che includa:
+
+Steps eseguiti (curl/DB query/UI test)
+
+Risultato atteso vs reale
+
+Issue identificate con stack trace o screenshot
+
+Suggerimenti di fix se qualcosa non torna

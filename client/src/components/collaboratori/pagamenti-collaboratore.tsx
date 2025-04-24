@@ -284,7 +284,7 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
                           value={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger aria-label="Seleziona un evento">
                               <SelectValue placeholder="Seleziona un evento" />
                             </SelectTrigger>
                           </FormControl>
@@ -313,7 +313,7 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
                           value={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger aria-label="Seleziona tipo pagamento">
                               <SelectValue placeholder="Seleziona tipo" />
                             </SelectTrigger>
                           </FormControl>
@@ -403,7 +403,7 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
                           value={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger aria-label="Seleziona metodo pagamento">
                               <SelectValue placeholder="Seleziona metodo" />
                             </SelectTrigger>
                           </FormControl>

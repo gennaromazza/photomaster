@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState, useCallback, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -13,17 +13,20 @@ import {
   Clock, 
   Star, 
   Plus, 
-  ArrowRight 
+  ArrowRight,
+  AlertCircle,
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { format, isAfter, parseISO } from "date-fns";
+import { format, isAfter, parseISO, addDays, differenceInHours } from "date-fns";
 import { it } from "date-fns/locale";
 import { apiRequest } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { IconBrandWhatsapp } from "@/components/ui/icons/whatsapp";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Form, 
   FormControl, 
@@ -54,6 +57,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface MontaggioCollaboratoreListProps {
   collaboratoreId: number;
@@ -67,14 +79,18 @@ const completaMontaggioSchema = z.object({
 
 type CompletaMontaggioFormValues = z.infer<typeof completaMontaggioSchema>;
 
+// Numero di elementi per pagina
+const ITEMS_PER_PAGE = 9;
+
 export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollaboratoreListProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [filtroStato, setFiltroStato] = useState<"tutti" | "da_fare" | "in_corso" | "completati">("tutti");
+  const [filtroStato, setFiltroStato] = useState<"tutti" | "da_fare" | "in_corso" | "completati" | "priorita_alta">("tutti");
   const [montaggioSelezionato, setMontaggioSelezionato] = useState<any | null>(null);
   const [isCompletaDialogOpen, setIsCompletaDialogOpen] = useState(false);
   const [isAvviaDialogOpen, setIsAvviaDialogOpen] = useState(false);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  
   // Form per completamento
   const completaForm = useForm<CompletaMontaggioFormValues>({
     resolver: zodResolver(completaMontaggioSchema),
@@ -85,21 +101,24 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
   });
 
   // Query per recuperare il collaboratore
-  const { data: collaboratore } = useQuery({
+  const { data: collaboratore, isLoading: isLoadingCollaboratore } = useQuery({
     queryKey: [`/api/collaborators/${collaboratoreId}`],
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   // Query per recuperare gli eventi del collaboratore
-  const { data: eventi = [] } = useQuery({
+  const { data: eventi = [], isLoading: isLoadingEventi } = useQuery({
     queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`],
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   // Query per recuperare i montaggi
   const { data: montaggi = [], isLoading, error } = useQuery({
     queryKey: [`/api/collaboratori/${collaboratoreId}/montaggi`],
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   // Mutation per avviare un montaggio
@@ -198,29 +217,29 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
   });
 
   // Handler per avviare un montaggio
-  const handleAvviaMontaggio = (montaggio: any) => {
+  const handleAvviaMontaggio = useCallback((montaggio: any) => {
     setMontaggioSelezionato(montaggio);
     setIsAvviaDialogOpen(true);
-  };
+  }, []);
 
   // Handler per confermare l'avvio di un montaggio
-  const confirmAvviaMontaggio = () => {
+  const confirmAvviaMontaggio = useCallback(() => {
     if (!montaggioSelezionato) return;
     avviaMutation.mutate(montaggioSelezionato.id);
-  };
+  }, [montaggioSelezionato, avviaMutation]);
 
   // Handler per completare un montaggio
-  const handleCompletaMontaggio = (montaggio: any) => {
+  const handleCompletaMontaggio = useCallback((montaggio: any) => {
     setMontaggioSelezionato(montaggio);
     setIsCompletaDialogOpen(true);
     // Pre-compila il saldo se disponibile nel montaggio
     if (montaggio.acconto) {
       completaForm.setValue('saldo', Number(montaggio.acconto));
     }
-  };
+  }, [completaForm]);
 
   // Handler per inviare il form di completamento
-  const onSubmitCompletaMontaggio = (values: CompletaMontaggioFormValues) => {
+  const onSubmitCompletaMontaggio = useCallback((values: CompletaMontaggioFormValues) => {
     if (!montaggioSelezionato) return;
     
     completaMutation.mutate({
@@ -228,33 +247,125 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
       saldo: values.saldo,
       note: values.note,
     });
+  }, [montaggioSelezionato, completaMutation]);
+
+  // Gestione del cambio pagina
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+
+  // Filtra i montaggi in base allo stato selezionato (memoized)
+  const filteredMontaggi = useMemo(() => {
+    if (!montaggi?.length) return [];
+    
+    return montaggi.filter((montaggio) => {
+      if (filtroStato === "tutti") return true;
+      
+      if (filtroStato === "priorita_alta") {
+        return montaggio.priorita >= 8 && montaggio.stato !== "completato";
+      }
+      
+      switch (filtroStato) {
+        case "da_fare": return montaggio.stato === "da_fare";
+        case "in_corso": return montaggio.stato === "in_corso";
+        case "completati": return montaggio.stato === "completato";
+        default: return true;
+      }
+    });
+  }, [montaggi, filtroStato]);
+
+  // Calcola le informazioni per la paginazione
+  const paginatedData = useMemo(() => {
+    const totalPages = Math.ceil(filteredMontaggi.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const currentItems = filteredMontaggi.slice(startIndex, endIndex);
+    
+    // Resetta la pagina corrente se è fuori range
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+    
+    return {
+      currentItems,
+      totalPages,
+      currentPage
+    };
+  }, [filteredMontaggi, currentPage]);
+
+  // Calcola i totali per i badge (memoized)
+  const stats = useMemo(() => {
+    if (!montaggi?.length) return { total: 0, pending: 0, priority: 0, inScadenza: 0 };
+    
+    const inScadenzaItems = montaggi.filter(m => {
+      if (m.stato === "completato") return false;
+      const dataConsegna = parseISO(m.dataConsegnaPrevista);
+      const now = new Date();
+      const oreAllaScadenza = differenceInHours(dataConsegna, now);
+      return oreAllaScadenza > 0 && oreAllaScadenza <= 48; // Entro 48 ore
+    });
+    
+    return {
+      total: montaggi.length,
+      pending: montaggi.filter(m => m.stato !== "completato").length,
+      priority: montaggi.filter(m => m.priorita >= 8 && m.stato !== "completato").length,
+      inScadenza: inScadenzaItems.length
+    };
+  }, [montaggi]);
+
+  // Render degli skeleton per il caricamento
+  const renderSkeletons = () => {
+    return Array(6).fill(0).map((_, i) => (
+      <Card key={`skeleton-${i}`} className="overflow-hidden">
+        <CardContent className="p-5">
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-start">
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+            <Skeleton className="h-2 w-full mt-2" />
+            <div className="flex justify-between mt-4">
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    ));
   };
 
-  // Filtra i montaggi in base allo stato selezionato
-  const filteredMontaggi = montaggi ? montaggi.filter((montaggio) => {
-    if (filtroStato === "tutti") return true;
-    
-    switch (filtroStato) {
-      case "da_fare": return montaggio.stato === "da_fare";
-      case "in_corso": return montaggio.stato === "in_corso";
-      case "completati": return montaggio.stato === "completato";
-      default: return true;
-    }
-  }) : [];
-
-  // Calcola i totali per i badge
-  const totalMontaggi = montaggi.length;
-  const pendingMontaggi = montaggi.filter(m => m.stato !== "completato").length;
-  const priorityMontaggi = montaggi.filter(m => m.priorita >= 8 && m.stato !== "completato").length;
-
-  if (isLoading) {
+  // Stato di caricamento
+  if (isLoading && !montaggi.length) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <Card className="mb-8">
+          <CardHeader className="pb-3">
+            <div className="flex justify-between">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+          </CardHeader>
+        </Card>
+        
+        <div className="flex gap-2 mb-6">
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={`btn-${i}`} className="h-9 w-20" />
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {renderSkeletons()}
+        </div>
       </div>
     );
   }
 
+  // Stato di errore
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
@@ -265,7 +376,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
         <Button 
           variant="outline" 
           className="mt-4"
-          onClick={() => window.location.reload()}
+          onClick={() => queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/montaggi`] })}
         >
           Riprova
         </Button>
@@ -280,17 +391,25 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2">
               <CardTitle className="text-lg font-medium">Coda Montaggi</CardTitle>
-              <Badge variant="secondary">{totalMontaggi}</Badge>
+              <Badge variant="secondary" role="status">{stats.total}</Badge>
             </div>
-            <div className="flex gap-2 text-sm">
+            <div className="flex flex-wrap gap-2 text-sm">
               <div className="flex items-center">
-                <Badge variant="outline" className="mr-2">{pendingMontaggi}</Badge>
+                <Badge variant="outline" className="mr-2" role="status">{stats.pending}</Badge>
                 <span className="text-muted-foreground">In attesa</span>
               </div>
-              {priorityMontaggi > 0 && (
+              {stats.priority > 0 && (
                 <div className="flex items-center">
-                  <Badge variant="destructive" className="mr-2">{priorityMontaggi}</Badge>
+                  <Badge variant="destructive" className="mr-2" role="status">{stats.priority}</Badge>
                   <span className="text-muted-foreground">Priorità alta</span>
+                </div>
+              )}
+              {stats.inScadenza > 0 && (
+                <div className="flex items-center">
+                  <Badge variant="warning" className="mr-2 bg-amber-500 hover:bg-amber-600" role="status">
+                    {stats.inScadenza}
+                  </Badge>
+                  <span className="text-muted-foreground">In scadenza</span>
                 </div>
               )}
             </div>
@@ -298,214 +417,372 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
         </CardHeader>
       </Card>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         <Button 
           variant={filtroStato === "tutti" ? "default" : "outline"} 
           size="sm"
-          onClick={() => setFiltroStato("tutti")}
+          onClick={() => {
+            setFiltroStato("tutti");
+            setCurrentPage(1);
+          }}
         >
           Tutti
         </Button>
         <Button 
           variant={filtroStato === "da_fare" ? "default" : "outline"} 
           size="sm"
-          onClick={() => setFiltroStato("da_fare")}
+          onClick={() => {
+            setFiltroStato("da_fare");
+            setCurrentPage(1);
+          }}
         >
           Da fare
         </Button>
         <Button 
           variant={filtroStato === "in_corso" ? "default" : "outline"} 
           size="sm"
-          onClick={() => setFiltroStato("in_corso")}
+          onClick={() => {
+            setFiltroStato("in_corso");
+            setCurrentPage(1);
+          }}
         >
           In corso
         </Button>
         <Button 
           variant={filtroStato === "completati" ? "default" : "outline"} 
           size="sm"
-          onClick={() => setFiltroStato("completati")}
+          onClick={() => {
+            setFiltroStato("completati");
+            setCurrentPage(1);
+          }}
         >
           Completati
         </Button>
+        {stats.priority > 0 && (
+          <Button 
+            variant={filtroStato === "priorita_alta" ? "default" : "outline"} 
+            size="sm"
+            className={filtroStato !== "priorita_alta" ? "bg-rose-100 text-rose-900 border-rose-200 hover:bg-rose-200 hover:text-rose-900" : ""}
+            onClick={() => {
+              setFiltroStato("priorita_alta");
+              setCurrentPage(1);
+            }}
+          >
+            <AlertCircle className="h-4 w-4 mr-1" />
+            Priorità alta
+          </Button>
+        )}
       </div>
       
+      {/* Nessun montaggio */}
       {filteredMontaggi.length === 0 ? (
         <div className="bg-muted/40 rounded-lg p-8 text-center">
           <p className="text-muted-foreground">
-            Nessun montaggio {filtroStato !== "tutti" ? filtroStato.replace('_', ' ') : ""} trovato.
+            Nessun montaggio {filtroStato !== "tutti" ? (
+              filtroStato === "priorita_alta" ? "con priorità alta" : filtroStato.replace('_', ' ')
+            ) : ""} trovato.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredMontaggi.map((montaggio) => {
-            // Calcola la data di consegna
-            const dataConsegna = parseISO(montaggio.dataConsegnaPrevista);
-            const isScaduto = isAfter(new Date(), dataConsegna) && montaggio.stato !== "completato";
-            
-            // Determina i colori e lo stile in base allo stato
-            let progressValue = 0;
-            let statusBadgeVariant: "default" | "secondary" | "outline" | "destructive" = "outline";
-            
-            switch (montaggio.stato) {
-              case "completato":
-                progressValue = 100;
-                statusBadgeVariant = "default";
-                break;
-              case "in_corso":
-                progressValue = 50;
-                statusBadgeVariant = "secondary";
-                break;
-              case "da_fare":
-                progressValue = 0;
-                statusBadgeVariant = isScaduto ? "destructive" : "outline";
-                break;
-            }
+        <>
+          {/* Griglia montaggi */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedData.currentItems.map((montaggio) => {
+              // Calcola la data di consegna
+              const dataConsegna = parseISO(montaggio.dataConsegnaPrevista);
+              const isScaduto = isAfter(new Date(), dataConsegna) && montaggio.stato !== "completato";
+              const isInScadenza = !isScaduto && 
+                                  montaggio.stato !== "completato" && 
+                                  differenceInHours(dataConsegna, new Date()) <= 48;
+              
+              // Determina i colori e lo stile in base allo stato
+              let progressValue = 0;
+              let statusBadgeVariant: "default" | "secondary" | "outline" | "destructive" = "outline";
+              
+              switch (montaggio.stato) {
+                case "completato":
+                  progressValue = 100;
+                  statusBadgeVariant = "default";
+                  break;
+                case "in_corso":
+                  progressValue = 50;
+                  statusBadgeVariant = "secondary";
+                  break;
+                case "da_fare":
+                  progressValue = 0;
+                  statusBadgeVariant = isScaduto ? "destructive" : "outline";
+                  break;
+              }
 
-            // Trova l'evento associato
-            const eventoAssociato = eventi.find(e => e.id === montaggio.eventoId);
-            
-            return (
-              <Card 
-                key={montaggio.id} 
-                className={`overflow-hidden ${isScaduto && montaggio.stato !== "completato" ? 'border-destructive/50' : ''}`}
-              >
-                <CardContent className="p-5">
-                  <div className="flex flex-col mb-4 gap-2">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-lg font-semibold truncate">
-                        {eventoAssociato?.titolo || montaggio.titolo || `Montaggio #${montaggio.id}`}
-                      </h3>
-                      <Badge variant={statusBadgeVariant} className="ml-2">
-                        {montaggio.stato === "completato" 
-                          ? "Completato" 
-                          : montaggio.stato === "in_corso" 
-                            ? "In corso" 
-                            : "Da fare"}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      Consegna: {format(dataConsegna, "dd/MM/yyyy", { locale: it })}
-                      {isScaduto && montaggio.stato !== "completato" && (
-                        <Badge variant="destructive" className="ml-2 text-xs">
-                          Scaduto
+              // Trova l'evento associato
+              const eventoAssociato = eventi.find(e => e.id === montaggio.eventoId);
+              
+              return (
+                <Card 
+                  key={montaggio.id} 
+                  className={cn(
+                    "overflow-hidden",
+                    isScaduto && montaggio.stato !== "completato" ? 'border-destructive/50' : '',
+                    isInScadenza && montaggio.stato !== "completato" ? 'border-amber-400/80' : '',
+                    montaggio.priorita >= 8 && montaggio.stato !== "completato" ? 'ring-1 ring-rose-400' : ''
+                  )}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex flex-col mb-4 gap-2">
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-lg font-semibold truncate">
+                          {eventoAssociato?.titolo || montaggio.titolo || `Montaggio #${montaggio.id}`}
+                        </h3>
+                        <Badge variant={statusBadgeVariant} className="ml-2" role="status" aria-live="polite">
+                          {montaggio.stato === "completato" 
+                            ? "Completato" 
+                            : montaggio.stato === "in_corso" 
+                              ? "In corso" 
+                              : "Da fare"}
                         </Badge>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4 mr-1" aria-hidden="true" />
+                        <span>Consegna: {format(dataConsegna, "dd/MM/yyyy", { locale: it })}</span>
+                        
+                        {isScaduto && montaggio.stato !== "completato" && (
+                          <Badge variant="destructive" className="ml-2 text-xs" aria-live="assertive">
+                            Scaduto
+                          </Badge>
+                        )}
+                        
+                        {isInScadenza && !isScaduto && (
+                          <Badge variant="outline" className="ml-2 text-xs border-amber-400 text-amber-600 bg-amber-50" aria-live="polite">
+                            <Bell className="h-3 w-3 mr-1" aria-hidden="true" />
+                            In scadenza
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center text-sm text-muted-foreground mt-1">
+                        <Star className="w-4 h-4 mr-1" aria-hidden="true" />
+                        <span>Priorità:</span> 
+                        <span className={cn(
+                          "ml-1 font-medium", 
+                          montaggio.priorita >= 8 ? 'text-destructive' : ''
+                        )}>
+                          {montaggio.priorita}/10
+                        </span>
+                      </div>
+
+                      {montaggio.dataPrimoContatto && (
+                        <div className="flex items-center text-sm text-muted-foreground mt-1">
+                          <Clock className="w-4 h-4 mr-1" aria-hidden="true" />
+                          <span>Avviato: {format(parseISO(montaggio.dataPrimoContatto), "dd/MM/yyyy", { locale: it })}</span>
+                        </div>
                       )}
                     </div>
-
-                    <div className="flex items-center text-sm text-muted-foreground mt-1">
-                      <Star className="w-4 h-4 mr-1" />
-                      Priorità: <span className={`ml-1 font-medium ${montaggio.priorita >= 8 ? 'text-destructive' : ''}`}>
-                        {montaggio.priorita}/10
-                      </span>
+                    
+                    <div className="mb-4">
+                      <div className="flex justify-between mb-1 text-sm" role="progressbar" aria-valuenow={progressValue} aria-valuemin={0} aria-valuemax={100}>
+                        <span>Avanzamento</span>
+                        <span>{progressValue}%</span>
+                      </div>
+                      <Progress value={progressValue} className="h-2" />
                     </div>
-
-                    {montaggio.dataPrimoContatto && (
-                      <div className="flex items-center text-sm text-muted-foreground mt-1">
-                        <Clock className="w-4 h-4 mr-1" />
-                        Avviato: {format(parseISO(montaggio.dataPrimoContatto), "dd/MM/yyyy", { locale: it })}
+                    
+                    {montaggio.acconto && (
+                      <div className="mb-3 mt-4 p-2 bg-muted/30 rounded border border-border/50">
+                        <div className="flex justify-between text-sm">
+                          <span>Acconto:</span>
+                          <span className="font-medium">{formatCurrency(Number(montaggio.acconto))}</span>
+                        </div>
+                        {montaggio.saldo && (
+                          <div className="flex justify-between text-sm mt-1">
+                            <span>Saldo:</span>
+                            <span className="font-medium">{formatCurrency(Number(montaggio.saldo))}</span>
+                          </div>
+                        )}
+                        {montaggio.acconto && montaggio.saldo && (
+                          <div className="flex justify-between text-sm mt-1 border-t pt-1">
+                            <span>Totale:</span>
+                            <span className="font-medium">{formatCurrency(Number(montaggio.acconto) + Number(montaggio.saldo))}</span>
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                  
-                  <div className="mb-4">
-                    <div className="flex justify-between mb-1 text-sm">
-                      <span>Avanzamento</span>
-                      <span>{progressValue}%</span>
-                    </div>
-                    <Progress value={progressValue} className="h-2" />
-                  </div>
-                  
-                  {montaggio.acconto && (
-                    <div className="mb-3 mt-4 p-2 bg-muted/30 rounded border border-border/50">
-                      <div className="flex justify-between text-sm">
-                        <span>Acconto:</span>
-                        <span className="font-medium">{formatCurrency(Number(montaggio.acconto))}</span>
-                      </div>
-                      {montaggio.saldo && (
-                        <div className="flex justify-between text-sm mt-1">
-                          <span>Saldo:</span>
-                          <span className="font-medium">{formatCurrency(Number(montaggio.saldo))}</span>
-                        </div>
-                      )}
-                      {montaggio.acconto && montaggio.saldo && (
-                        <div className="flex justify-between text-sm mt-1 border-t pt-1">
-                          <span>Totale:</span>
-                          <span className="font-medium">{formatCurrency(Number(montaggio.acconto) + Number(montaggio.saldo))}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {montaggio.note && (
-                    <div className="mt-3 p-2 bg-muted/30 rounded-md text-sm border border-border/50">
-                      <p className="font-medium mb-1">Note:</p>
-                      <p className="text-muted-foreground text-xs">{montaggio.note}</p>
-                    </div>
-                  )}
-
-                  <div className="mt-4 flex justify-between items-center border-t pt-3">
-                    <div className="flex gap-2">
-                      {collaboratore?.phone && (
-                        <a
-                          href={`https://wa.me/${collaboratore.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                            `Stato montaggio per ${eventoAssociato?.titolo || montaggio.titolo || `Montaggio #${montaggio.id}`}: ${
-                              montaggio.stato === "completato" 
-                                ? "Completato" 
-                                : montaggio.stato === "in_corso" 
-                                  ? "In corso" 
-                                  : "Da fare"
-                            }.`
-                          )}`}
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          aria-label="Invia stato montaggio via WhatsApp"
-                          className="inline-flex items-center justify-center p-1.5 text-green-600 rounded-full hover:bg-green-100 transition-colors"
-                        >
-                          <IconBrandWhatsapp size={20} />
-                        </a>
-                      )}
-                    </div>
                     
-                    <div className="flex gap-2">
-                      {montaggio.stato === "da_fare" && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleAvviaMontaggio(montaggio)}
-                          className="gap-1"
-                        >
-                          <PlayCircle className="h-4 w-4" />
-                          Avvia
-                        </Button>
-                      )}
+                    {montaggio.note && (
+                      <div className="mt-3 p-2 bg-muted/30 rounded-md text-sm border border-border/50">
+                        <p className="font-medium mb-1">Note:</p>
+                        <p className="text-muted-foreground text-xs">{montaggio.note}</p>
+                      </div>
+                    )}
+
+                    <div className="mt-4 flex justify-between items-center border-t pt-3">
+                      <div className="flex gap-2">
+                        {collaboratore?.phone && (
+                          <a
+                            href={`https://wa.me/${collaboratore.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                              `Stato montaggio per ${eventoAssociato?.titolo || montaggio.titolo || `Montaggio #${montaggio.id}`}: ${
+                                montaggio.stato === "completato" 
+                                  ? "Completato" 
+                                  : montaggio.stato === "in_corso" 
+                                    ? "In corso" 
+                                    : "Da fare"
+                              }.`
+                            )}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            aria-label="Invia stato montaggio via WhatsApp"
+                            className="inline-flex items-center justify-center p-1.5 text-green-600 rounded-full hover:bg-green-100 transition-colors"
+                          >
+                            <IconBrandWhatsapp size={20} aria-hidden="true" />
+                            <span className="sr-only">Invia su WhatsApp</span>
+                          </a>
+                        )}
+                      </div>
                       
-                      {montaggio.stato === "in_corso" && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleCompletaMontaggio(montaggio)}
-                          className="gap-1"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                          Completa
-                        </Button>
-                      )}
+                      <div className="flex gap-2">
+                        {montaggio.stato === "da_fare" && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleAvviaMontaggio(montaggio)}
+                            className="gap-1"
+                            disabled={avviaMutation.isPending && avviaMutation.variables === montaggio.id}
+                            aria-busy={avviaMutation.isPending && avviaMutation.variables === montaggio.id}
+                            aria-describedby={`avvia-desc-${montaggio.id}`}
+                          >
+                            {avviaMutation.isPending && avviaMutation.variables === montaggio.id ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <PlayCircle className="h-4 w-4 mr-1" aria-hidden="true" />
+                            )}
+                            Avvia
+                            <span id={`avvia-desc-${montaggio.id}`} className="sr-only">Avvia montaggio per {eventoAssociato?.titolo || montaggio.titolo || `Montaggio #${montaggio.id}`}</span>
+                          </Button>
+                        )}
+                        
+                        {montaggio.stato === "in_corso" && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleCompletaMontaggio(montaggio)}
+                            className="gap-1"
+                            disabled={completaMutation.isPending}
+                            aria-busy={completaMutation.isPending}
+                            aria-describedby={`completa-desc-${montaggio.id}`}
+                          >
+                            {completaMutation.isPending && completaMutation.variables?.montaggioId === montaggio.id ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 mr-1" aria-hidden="true" />
+                            )}
+                            Completa
+                            <span id={`completa-desc-${montaggio.id}`} className="sr-only">Completa montaggio per {eventoAssociato?.titolo || montaggio.titolo || `Montaggio #${montaggio.id}`}</span>
+                          </Button>
+                        )}
+                        
+                        {montaggio.stato === "completato" && (
+                          <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 border-green-200" role="status">
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+                            Completato
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          
+          {/* Paginazione */}
+          {paginatedData.totalPages > 1 && (
+            <Pagination className="mt-8">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    aria-disabled={currentPage === 1}
+                    tabIndex={currentPage === 1 ? -1 : 0}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+                
+                {/* Prima pagina */}
+                {currentPage > 2 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => handlePageChange(1)}>1</PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                {/* Ellipsis se necessario */}
+                {currentPage > 3 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                
+                {/* Pagina precedente se non è la prima */}
+                {currentPage > 1 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => handlePageChange(currentPage - 1)}>
+                      {currentPage - 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                {/* Pagina corrente */}
+                <PaginationItem>
+                  <PaginationLink isActive>{currentPage}</PaginationLink>
+                </PaginationItem>
+                
+                {/* Pagina successiva se non è l'ultima */}
+                {currentPage < paginatedData.totalPages && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => handlePageChange(currentPage + 1)}>
+                      {currentPage + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                {/* Ellipsis se necessario */}
+                {currentPage < paginatedData.totalPages - 2 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                
+                {/* Ultima pagina */}
+                {currentPage < paginatedData.totalPages - 1 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => handlePageChange(paginatedData.totalPages)}>
+                      {paginatedData.totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => handlePageChange(Math.min(paginatedData.totalPages, currentPage + 1))}
+                    aria-disabled={currentPage === paginatedData.totalPages}
+                    tabIndex={currentPage === paginatedData.totalPages ? -1 : 0}
+                    className={currentPage === paginatedData.totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
       )}
       
       {/* Dialog per avviare montaggio */}
       <Dialog open={isAvviaDialogOpen} onOpenChange={setIsAvviaDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          aria-labelledby="avvio-montaggio-titolo"
+          aria-describedby="avvio-montaggio-descrizione"
+          className="sm:max-w-md"
+        >
           <DialogHeader>
-            <DialogTitle>Avvia montaggio</DialogTitle>
-            <DialogDescription>
+            <DialogTitle id="avvio-montaggio-titolo">Avvia montaggio</DialogTitle>
+            <DialogDescription id="avvio-montaggio-descrizione">
               Conferma di voler avviare il lavoro su questo montaggio.
             </DialogDescription>
           </DialogHeader>
@@ -544,8 +821,9 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
             <Button 
               onClick={confirmAvviaMontaggio} 
               disabled={avviaMutation.isPending}
+              aria-busy={avviaMutation.isPending}
             >
-              {avviaMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {avviaMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
               Conferma avvio
             </Button>
           </DialogFooter>
@@ -554,10 +832,14 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
 
       {/* Dialog per completare montaggio */}
       <Dialog open={isCompletaDialogOpen} onOpenChange={setIsCompletaDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          aria-labelledby="completa-montaggio-titolo"
+          aria-describedby="completa-montaggio-descrizione"
+          className="sm:max-w-md"
+        >
           <DialogHeader>
-            <DialogTitle>Completa montaggio</DialogTitle>
-            <DialogDescription>
+            <DialogTitle id="completa-montaggio-titolo">Completa montaggio</DialogTitle>
+            <DialogDescription id="completa-montaggio-descrizione">
               Registra il saldo finale per questo montaggio.
             </DialogDescription>
           </DialogHeader>
@@ -583,18 +865,21 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
                   name="saldo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Importo saldo (€)</FormLabel>
+                      <FormLabel htmlFor="input-saldo">Importo saldo (€)</FormLabel>
                       <FormControl>
                         <Input
+                          id="input-saldo"
                           type="number"
                           step="0.01"
                           min="0.01"
                           placeholder="0.00"
                           {...field}
                           onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                          aria-describedby="saldo-description"
+                          aria-required="true"
                         />
                       </FormControl>
-                      <FormDescription>
+                      <FormDescription id="saldo-description">
                         Inserisci l'importo del saldo da pagare
                       </FormDescription>
                       <FormMessage />
@@ -607,15 +892,17 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
                   name="note"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Note (opzionale)</FormLabel>
+                      <FormLabel htmlFor="input-note">Note (opzionale)</FormLabel>
                       <FormControl>
                         <Textarea
+                          id="input-note"
                           placeholder="Aggiungi note sul lavoro completato"
                           {...field}
                           rows={3}
+                          aria-describedby="note-description"
                         />
                       </FormControl>
-                      <FormDescription>
+                      <FormDescription id="note-description">
                         Aggiungi eventuali dettagli o commenti sul montaggio completato
                       </FormDescription>
                       <FormMessage />
@@ -635,8 +922,9 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
                   <Button
                     type="submit"
                     disabled={completaMutation.isPending}
+                    aria-busy={completaMutation.isPending}
                   >
-                    {completaMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {completaMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
                     Completa e registra saldo
                   </Button>
                 </DialogFooter>

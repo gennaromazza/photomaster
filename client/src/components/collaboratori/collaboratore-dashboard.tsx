@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { EventoCollaboratoreList } from "./eventi-collaboratore";
 import { PagamentoCollaboratoreList } from "./pagamenti-collaboratore";
 import { MontaggioCollaboratoreList } from "./montaggi-collaboratore";
+import { getRoleLabel, getStatusLabel } from "@shared/constants";
 
 
 interface CollaboratoreDashboardProps {
@@ -70,10 +71,10 @@ export function CollaboratoreDashboard({ collaboratoreId }: CollaboratoreDashboa
         )}
         <div>
           <h2 className="text-2xl font-bold">{collaboratore.firstName} {collaboratore.lastName}</h2>
-          <p className="text-muted-foreground">{collaboratore.role}</p>
+          <p className="text-muted-foreground">{getRoleLabel(collaboratore.role)}</p>
           <div className="flex items-center mt-1">
             <Badge variant={collaboratore.status === "available" ? "outline" : "secondary"}>
-              {collaboratore.status === "available" ? "Disponibile" : "Non disponibile"}
+              {getStatusLabel(collaboratore.status)}
             </Badge>
           </div>
         </div>

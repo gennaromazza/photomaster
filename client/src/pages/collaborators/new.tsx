@@ -32,6 +32,7 @@ import { insertCollaboratorSchema } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { COLLABORATOR_ROLES, COLLABORATOR_STATUSES } from "@shared/constants";
 
 const formSchema = insertCollaboratorSchema.extend({});
 
@@ -46,7 +47,7 @@ export default function NewCollaboratorPage() {
       lastName: "",
       email: "",
       phone: "",
-      role: "",
+      role: "fotografo", // Valore predefinito da constants.ts
       status: "available",
       profileImage: "",
     },
@@ -186,9 +187,20 @@ export default function NewCollaboratorPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Ruolo *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Es: Fotografo, Assistente, Videografo" {...field} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger aria-label="Seleziona un ruolo">
+                            <SelectValue placeholder="Seleziona un ruolo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {COLLABORATOR_ROLES.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              {role.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -200,15 +212,18 @@ export default function NewCollaboratorPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Stato</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger aria-label="Seleziona lo stato">
                             <SelectValue placeholder="Seleziona lo stato" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="available">Disponibile</SelectItem>
-                          <SelectItem value="busy">Occupato</SelectItem>
+                          {COLLABORATOR_STATUSES.map((status) => (
+                            <SelectItem key={status.id} value={status.id}>
+                              {status.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

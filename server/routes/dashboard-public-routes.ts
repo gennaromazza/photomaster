@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { db } from "../db";
-import { collaborators, eventiCollaboratori, pagamentiCollaboratori, montaggi } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { collaborators, eventiCollaboratori, pagamentiCollaboratori, montaggi, eventCollaborators, events } from "@shared/schema";
+import { eq, sql, inArray } from "drizzle-orm";
 import { verifyCollaboratorToken, generateCollaboratorToken } from "../utils/token";
 
 const router = Router();
@@ -58,23 +58,107 @@ router.get("/:id/dashboard-public", verifyToken, async (req: Request, res: Respo
       return res.status(404).json({ error: "Collaboratore non trovato" });
     }
     
-    // Recupera gli eventi assegnati al collaboratore
-    const eventi = await db
+    // Recupera gli eventi assegnati al collaboratore (da entrambe le tabelle)
+    // Prima da eventiCollaboratori (modulo nuovo)
+    const eventiModuloNuovo = await db
       .select()
       .from(eventiCollaboratori)
       .where(eq(eventiCollaboratori.collaboratoreId, collaboratorId));
     
+    // Poi da eventCollaborators (tabella originale)
+    const eventiModuloOriginale = await db
+      .select({
+        id: eventCollaborators.id,
+        collaboratoreId: eventCollaborators.collaboratorId,
+        eventoId: eventCollaborators.eventId,
+        ruolo: eventCollaborators.role,
+        dataAssegnazione: sql`NOW()`, // Creiamo una data di assegnazione fittizia
+        note: sql`NULL::text` // Note vuote
+      })
+      .from(eventCollaborators)
+      .where(eq(eventCollaborators.collaboratorId, collaboratorId));
+      
+    // Combiniamo i risultati
+    let eventi = [...eventiModuloNuovo, ...eventiModuloOriginale];
+    
+    // Se abbiamo eventi, recuperiamo i dettagli da eventi.id per arricchire i dati
+    if (eventi.length > 0) {
+      // Estrai tutti gli ID degli eventi
+      const eventIds = eventi.map(e => e.eventoId);
+      
+      // Recupera i dettagli degli eventi
+      const eventiDettagli = await db
+        .select()
+        .from(events)
+        .where(inArray(events.id, eventIds));
+        
+      // Mappa i dettagli degli eventi agli eventi dei collaboratori
+      eventi = eventi.map(evento => {
+        const dettagli = eventiDettagli.find(e => e.id === evento.eventoId);
+        return {
+          ...evento,
+          evento: dettagli || null,
+        };
+      });
+    }
+    
     // Recupera i pagamenti del collaboratore
-    const pagamenti = await db
+    let pagamenti = await db
       .select()
       .from(pagamentiCollaboratori)
       .where(eq(pagamentiCollaboratori.collaboratoreId, collaboratorId));
+      
+    // Se abbiamo pagamenti, recuperiamo i dettagli degli eventi associati
+    if (pagamenti.length > 0) {
+      const eventIds = pagamenti.map(p => p.eventoId);
+      
+      // Recupera i dettagli degli eventi
+      const eventiDettagli = await db
+        .select({
+          id: events.id,
+          title: events.title
+        })
+        .from(events)
+        .where(inArray(events.id, eventIds));
+        
+      // Mappa i dettagli degli eventi ai pagamenti
+      pagamenti = pagamenti.map(pagamento => {
+        const dettagli = eventiDettagli.find(e => e.id === pagamento.eventoId);
+        return {
+          ...pagamento,
+          evento: dettagli || null,
+        };
+      });
+    }
     
     // Recupera i montaggi assegnati al collaboratore
-    const montaggiAssegnati = await db
+    let montaggiAssegnati = await db
       .select()
       .from(montaggi)
       .where(eq(montaggi.collaboratoreId, collaboratorId));
+      
+    // Se abbiamo montaggi, recuperiamo i dettagli degli eventi associati
+    if (montaggiAssegnati.length > 0) {
+      const eventIds = montaggiAssegnati.map(m => m.eventoId);
+      
+      // Recupera i dettagli degli eventi
+      const eventiDettagli = await db
+        .select({
+          id: events.id,
+          title: events.title
+        })
+        .from(events)
+        .where(inArray(events.id, eventIds));
+        
+      // Mappa i dettagli degli eventi ai montaggi
+      montaggiAssegnati = montaggiAssegnati.map(montaggio => {
+        const dettagli = eventiDettagli.find(e => e.id === montaggio.eventoId);
+        return {
+          ...montaggio,
+          evento: dettagli || null,
+        };
+      });
+    }
     
     // Formatta e restituisci i dati
     res.json({

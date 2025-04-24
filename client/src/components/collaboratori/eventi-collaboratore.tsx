@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertTriangle, Calendar, MapPin, Clock, Plus, Info, UserPlus } from "lucide-react";
+import { Loader2, AlertTriangle, Calendar, MapPin, Clock, Plus, Info, UserPlus, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format, isAfter, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Link } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -446,44 +447,54 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredEventi.map((evento) => (
-          <Card key={evento.id} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg font-semibold">{evento.titolo || evento.title}</CardTitle>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {format(new Date(evento.data || evento.eventDate), "PPP", { locale: it })}
+        {filteredEventi.map((evento) => {
+          // Determiniamo l'ID dell'evento per il link
+          const eventoId = evento.eventoId;
+          
+          return (
+            <Link href={`/events/${eventoId}`} key={evento.id}>
+              <Card className="overflow-hidden hover:shadow-md hover:border-primary transition-all cursor-pointer">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg font-semibold group flex items-center">
+                        {evento.titolo || evento.title}
+                        <ExternalLink className="w-4 h-4 ml-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </CardTitle>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        {format(new Date(evento.data || evento.eventDate), "PPP", { locale: it })}
+                      </div>
+                    </div>
+                    <Badge variant="outline">
+                      {evento.ruolo || 'Non specificato'}
+                    </Badge>
                   </div>
-                </div>
-                <Badge variant="outline">
-                  {evento.ruolo || 'Non specificato'}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
-                    {evento.address && (
-                      <p className="text-xs text-muted-foreground">{evento.address}</p>
-                    )}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
+                        {evento.address && (
+                          <p className="text-xs text-muted-foreground">{evento.address}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm">{evento.time || 'Orario non specificato'}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm">{evento.time || 'Orario non specificato'}</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
       </div>
     );
   };
@@ -529,105 +540,116 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {eventiSenzaCollaboratori.map((evento) => (
-          <Card key={evento.id} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg font-semibold">{evento.title}</CardTitle>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {format(new Date(evento.date), "PPP", { locale: it })}
+          <div key={evento.id} className="relative group">
+            <Link href={`/events/${evento.id}`}>
+              <Card className="overflow-hidden hover:shadow-md hover:border-primary transition-all cursor-pointer">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg font-semibold group flex items-center">
+                        {evento.title}
+                        <ExternalLink className="w-4 h-4 ml-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </CardTitle>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        {format(new Date(evento.date), "PPP", { locale: it })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <Popover>
-                  <PopoverTrigger asChild>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
+                        {evento.address && (
+                          <p className="text-xs text-muted-foreground">{evento.address}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm">
+                          {evento.description && evento.description.length > 120
+                            ? `${evento.description.substring(0, 120)}...`
+                            : evento.description || 'Nessuna descrizione disponibile'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            
+            {/* Pulsante Assegna posizionato in alto a destra sulla card */}
+            <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="flex items-center gap-1 bg-white shadow-sm"
+                    disabled={assegnaRapidoMutation.isPending}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>Assegna</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2">
+                  <p className="text-sm mb-2 font-medium">Ruolo per questo evento:</p>
+                  <div className="flex flex-col gap-2">
                     <Button 
                       size="sm" 
-                      variant="outline"
-                      className="flex items-center gap-1"
+                      onClick={() => assegnaRapidoMutation.mutate({ 
+                        eventoId: evento.id, 
+                        ruolo: "fotografo" 
+                      })}
                       disabled={assegnaRapidoMutation.isPending}
                     >
-                      <UserPlus className="h-4 w-4" />
-                      <span>Assegna</span>
+                      {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                      Fotografo
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-2">
-                    <p className="text-sm mb-2 font-medium">Ruolo per questo evento:</p>
-                    <div className="flex flex-col gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => assegnaRapidoMutation.mutate({ 
-                          eventoId: evento.id, 
-                          ruolo: "fotografo" 
-                        })}
-                        disabled={assegnaRapidoMutation.isPending}
-                      >
-                        {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                        Fotografo
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => assegnaRapidoMutation.mutate({ 
-                          eventoId: evento.id, 
-                          ruolo: "videomaker" 
-                        })}
-                        disabled={assegnaRapidoMutation.isPending}
-                      >
-                        {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                        Videomaker
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => assegnaRapidoMutation.mutate({ 
-                          eventoId: evento.id, 
-                          ruolo: "assistente" 
-                        })}
-                        disabled={assegnaRapidoMutation.isPending}
-                      >
-                        {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                        Assistente
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        onClick={() => assegnaRapidoMutation.mutate({ 
-                          eventoId: evento.id, 
-                          ruolo: "grafico" 
-                        })}
-                        disabled={assegnaRapidoMutation.isPending}
-                      >
-                        {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                        Grafico
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
-                    {evento.address && (
-                      <p className="text-xs text-muted-foreground">{evento.address}</p>
-                    )}
+                    <Button 
+                      size="sm" 
+                      onClick={() => assegnaRapidoMutation.mutate({ 
+                        eventoId: evento.id, 
+                        ruolo: "videomaker" 
+                      })}
+                      disabled={assegnaRapidoMutation.isPending}
+                    >
+                      {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                      Videomaker
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => assegnaRapidoMutation.mutate({ 
+                        eventoId: evento.id, 
+                        ruolo: "assistente" 
+                      })}
+                      disabled={assegnaRapidoMutation.isPending}
+                    >
+                      {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                      Assistente
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      onClick={() => assegnaRapidoMutation.mutate({ 
+                        eventoId: evento.id, 
+                        ruolo: "grafico" 
+                      })}
+                      disabled={assegnaRapidoMutation.isPending}
+                    >
+                      {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                      Grafico
+                    </Button>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm">
-                      {evento.description && evento.description.length > 120
-                        ? `${evento.description.substring(0, 120)}...`
-                        : evento.description || 'Nessuna descrizione disponibile'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
         ))}
       </div>
     );

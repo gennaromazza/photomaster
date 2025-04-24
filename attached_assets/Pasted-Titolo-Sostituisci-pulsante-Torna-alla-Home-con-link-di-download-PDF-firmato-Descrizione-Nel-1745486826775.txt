@@ -1,0 +1,100 @@
+Titolo: Sostituisci pulsante “Torna alla Home” con link di download PDF firmato
+
+Descrizione:
+Nel componente React `SignConfirmation` (file `SignConfirmation.tsx`), rimuovere il blocco JSX che renderizza il pulsante “Torna alla Home” e sostituirlo con un link di download per il PDF del modulo firmato.  
+Aggiungere una nuova prop opzionale `signedPdfUrl?: string` all’interfaccia `SignConfirmationProps` e, se definita, mostrare un `<a>` con attributo `download`, mantenendo stile, animazioni e design vintage/country già presenti.
+
+Istruzioni dettagliate:
+
+1. **Modifica l’interfaccia**  
+   Apri `SignConfirmation.tsx` e aggiungi la prop `signedPdfUrl`:
+   ```ts
+   interface SignConfirmationProps {
+     clientName?: string;
+     quoteTitle?: string;
+     clientEmail?: string;
+     signedPdfUrl?: string; // URL assoluto o relativo del PDF firmato
+   }
+Rimuovi il blocco “Home”
+Cerca e cancella questo codice (alla fine del JSX, prima della decorazione in basso):
+
+jsx
+Copia
+Modifica
+<div className="flex justify-center mt-6">
+  <Link href="/">
+    <Button className="bg-[#a28e72] hover:bg-[#8a7760] text-white border border-[#c8b393] shadow-md px-8 py-6 rounded-md font-playfair text-lg tracking-wide transform transition-all duration-300 hover:scale-105">
+      Torna alla Home
+    </Button>
+  </Link>
+</div>
+Import Framer Motion
+Verifica o aggiungi in cima al file:
+
+ts
+Copia
+Modifica
+import { motion } from "framer-motion";
+Definisci le varianti di animazione per il pulsante
+Subito dopo le altre varianti (iconVariants, textVariants, ecc.), incolla:
+
+ts
+Copia
+Modifica
+const buttonVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  }
+};
+Aggiungi il link di download
+Al posto del blocco rimosso, inserisci:
+
+jsx
+Copia
+Modifica
+{signedPdfUrl ? (
+  <motion.div
+    className="flex justify-center mt-6"
+    variants={buttonVariants}
+    initial="hidden"
+    animate="visible"
+  >
+    <a
+      href={signedPdfUrl}
+      download
+      className="bg-[#a28e72] hover:bg-[#8a7760] text-white border border-[#c8b393] shadow-md px-8 py-6 rounded-md font-playfair text-lg tracking-wide block text-center transform transition-all duration-300 hover:scale-105"
+    >
+      Scarica modulo firmato in PDF
+    </a>
+  </motion.div>
+) : null}
+Verifica il flusso dei dati
+Nel punto in cui utilizzi <SignConfirmation />, passa la nuova prop:
+
+jsx
+Copia
+Modifica
+<SignConfirmation
+  clientName="Mario Rossi"
+  quoteTitle="Servizio Matrimoniale"
+  clientEmail="mario@example.com"
+  signedPdfUrl="https://tuo-dominio.com/uploads/contratto-firmato.pdf"
+/>
+Se signedPdfUrl è valido, il pulsante compare e scarica il file.
+
+Se signedPdfUrl è assente, non viene renderizzato nulla.
+
+Test & QA
+
+Controlla console per errori di import.
+
+Verifica che l’animazione del link avvenga correttamente.
+
+Assicurati che lo styling vintage (colori, bordi, font-playfair) sia mantenuto.
+
+Prova con URL diversi (locale e assoluto) e con signedPdfUrl mancante.
+
+Con queste modifiche, il componente mostrerà un link per scaricare il PDF firmato al posto del pulsante “Torna alla Home”, garantendo coerenza stilistica e funzionale.

@@ -457,35 +457,33 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
 // GET: Recupera gli eventi senza collaboratori assegnati
 export const getEventiSenzaCollaboratori = async (req: Request, res: Response) => {
   try {
-    // Recupera tutti gli eventi
-    const eventiCompletati = await db.select({
+    // Ottimizzazione: utilizza una subquery per trovare gli eventi con collaboratori
+    const eventiConCollaboratori = db.select({ id: eventiCollaboratori.eventoId })
+      .from(eventiCollaboratori)
+      .groupBy(eventiCollaboratori.eventoId);
+    
+    // Seleziona tutti gli eventi che non sono nella lista degli eventi con collaboratori
+    const eventiSenzaCollaboratori = await db.select({
       id: events.id,
       title: events.title,
       description: events.description,
       date: events.date,
       location: events.location,
+      address: events.address,
       status: events.status,
+      clientId: events.clientId,
+      eventType: events.eventType,
       createdAt: events.createdAt,
       updatedAt: events.updatedAt
     })
     .from(events)
-    .where(eq(events.status, "completed")) // Solo eventi confermati
+    .where(
+      and(
+        eq(events.status, "completed"), // Solo eventi confermati
+        sql`${events.id} NOT IN (${eventiConCollaboratori.getSQL()})`
+      )
+    )
     .orderBy(desc(events.date));
-    
-    // Per ogni evento, controlla se ha collaboratori assegnati
-    const risultati = await Promise.all(eventiCompletati.map(async (evento) => {
-      const collaboratori = await db.select().from(eventiCollaboratori)
-        .where(eq(eventiCollaboratori.eventoId, evento.id));
-      
-      // Restituisci solo gli eventi senza collaboratori
-      return {
-        ...evento,
-        haCollaboratori: collaboratori.length > 0
-      };
-    }));
-    
-    // Filtra solo gli eventi senza collaboratori
-    const eventiSenzaCollaboratori = risultati.filter(evento => !evento.haCollaboratori);
     
     return res.status(200).json(eventiSenzaCollaboratori);
   } catch (error) {

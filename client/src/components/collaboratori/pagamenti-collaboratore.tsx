@@ -75,6 +75,7 @@ const nuovoPagamentoSchema = z.object({
     required_error: 'Seleziona un metodo di pagamento',
   }),
   note: z.string().optional(),
+  riferimentoEsterno: z.string().optional(),
 });
 
 type NuovoPagamentoFormValues = z.infer<typeof nuovoPagamentoSchema>;
@@ -107,10 +108,20 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
   // Mutation per il nuovo pagamento
   const nuovoPagamentoMutation = useMutation({
     mutationFn: async (values: NuovoPagamentoFormValues) => {
-      const res = await apiRequest("POST", `/api/collaboratori/${collaboratoreId}/pagamenti`, values);
+      // Aggiungi il collaboratoreId ai dati inviati
+      const payload = {
+        ...values,
+        collaboratoreId: Number(collaboratoreId),
+        eventoId: Number(values.eventoId)
+      };
+      
+      console.log("Dati pagamento inviati:", payload);
+      
+      const res = await apiRequest("POST", `/api/collaboratori/${collaboratoreId}/pagamenti`, payload);
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || "Errore durante la registrazione del pagamento");
+        console.error("Errore validazione:", errorData);
+        throw new Error(errorData.error?.map?.((e: any) => e.message).join(", ") || "Errore durante la registrazione del pagamento");
       }
       return await res.json();
     },

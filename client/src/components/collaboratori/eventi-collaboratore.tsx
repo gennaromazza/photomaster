@@ -642,69 +642,224 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
           </TabsList>
           
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredEventi.map((evento) => (
-          <Card key={evento.id} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg font-semibold">{evento.title}</CardTitle>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {format(new Date(evento.eventDate), "PPP", { locale: it })}
-                  </div>
-                </div>
-                <Badge variant="outline">
-                  {evento.ruolo || 'Non specificato'}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
-                    {evento.address && (
-                      <p className="text-xs text-muted-foreground">{evento.address}</p>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Nuovo Evento
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Assegna Evento</DialogTitle>
+                <DialogDescription>
+                  Assegna un evento al collaboratore specificando il ruolo e altre informazioni
+                </DialogDescription>
+              </DialogHeader>
+
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="eventoId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Evento</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          disabled={isLoadingEventi || addEventoMutation.isPending}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona un evento" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {!eventiDisponibili || eventiDisponibili.length === 0 ? (
+                              <div className="p-2 text-center text-sm text-muted-foreground">
+                                Nessun evento disponibile
+                              </div>
+                            ) : (
+                              eventiDisponibili.map((evento: any) => (
+                                <SelectItem key={evento.id} value={evento.id.toString()}>
+                                  {evento.title} ({format(new Date(evento.date), "dd/MM/yyyy")})
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
                     )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="ruolo"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>Ruolo</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex space-x-1"
+                            disabled={addEventoMutation.isPending}
+                          >
+                            <FormItem className="flex items-center space-x-1 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="fotografo" />
+                              </FormControl>
+                              <FormLabel className="font-normal">Fotografo</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-1 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="videomaker" />
+                              </FormControl>
+                              <FormLabel className="font-normal">Videomaker</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-1 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="assistente" />
+                              </FormControl>
+                              <FormLabel className="font-normal">Assistente</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-1 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="grafico" />
+                              </FormControl>
+                              <FormLabel className="font-normal">Grafico</FormLabel>
+                            </FormItem>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="dataAssegnazione"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Data assegnazione</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                disabled={addEventoMutation.isPending}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP", { locale: it })
+                                ) : (
+                                  <span>Seleziona una data</span>
+                                )}
+                                <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Input
+                              type="date"
+                              onChange={(e) => {
+                                field.onChange(e.target.valueAsDate);
+                              }}
+                              value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                              className="w-full"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="note"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Note (opzionale)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Inserisci eventuali note..."
+                            className="resize-none"
+                            {...field}
+                            disabled={addEventoMutation.isPending}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Puoi specificare dettagli aggiuntivi sul ruolo o sull'assegnazione
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsModalOpen(false)}
+                      disabled={addEventoMutation.isPending}
+                    >
+                      Annulla
+                    </Button>
+                    <Button 
+                      type="submit"
+                      disabled={addEventoMutation.isPending}
+                    >
+                      {addEventoMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Assegna Evento
+                    </Button>
                   </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+        
+        <TabsContent value="assegnati" className="mt-0">
+          {activeTab === "assegnati" && (
+            <>
+              {filter !== "tutti" && (
+                <div className="flex gap-2 mb-4">
+                  <Button 
+                    variant={filter === "tutti" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setFilter("tutti")}
+                  >
+                    Tutti
+                  </Button>
+                  <Button 
+                    variant={filter === "futuri" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setFilter("futuri")}
+                  >
+                    Futuri
+                  </Button>
+                  <Button 
+                    variant={filter === "passati" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => setFilter("passati")}
+                  >
+                    Passati
+                  </Button>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <div className="text-sm">
-                    {evento.startTime ? `${evento.startTime} - ${evento.endTime || '?'}` : 'Orario da definire'}
-                  </div>
-                </div>
-                
-                {evento.note && (
-                  <div className="flex items-start gap-2 mt-2">
-                    <Info className="w-4 h-4 text-muted-foreground mt-0.5" />
-                    <p className="text-sm text-muted-foreground">{evento.note}</p>
-                  </div>
-                )}
-                
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <Badge variant="outline">
-                    {evento.eventType || 'Non specificato'}
-                  </Badge>
-                  <Badge variant={
-                    evento.status === 'confirmed' ? 'default' : 
-                    evento.status === 'pending' ? 'secondary' : 
-                    'outline'
-                  }>
-                    {evento.status === 'confirmed' ? 'Confermato' : 
-                     evento.status === 'pending' ? 'In attesa' : 
-                     'Annullato'}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              )}
+              {renderEventiAssegnati()}
+            </>
+          )}
+        </TabsContent>
+        <TabsContent value="disponibili" className="mt-0">
+          {activeTab === "disponibili" && renderEventiDisponibili()}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

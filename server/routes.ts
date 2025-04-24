@@ -3310,6 +3310,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/selection", selectionRouter);
   app.use("/api/clauses", clausesRouter);
   app.use("/api/notifications", notificationsRouter);
+  app.use("/api/events", eventiRouter);
   app.use("/api", collaboratoriRouter);
 
   // Configurazione di multer per l'upload dei file

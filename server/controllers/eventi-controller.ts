@@ -454,6 +454,46 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
 };
 
 // PATCH: Aggiorna un montaggio
+// GET: Recupera gli eventi senza collaboratori assegnati
+export const getEventiSenzaCollaboratori = async (req: Request, res: Response) => {
+  try {
+    // Recupera tutti gli eventi
+    const eventiCompletati = await db.select({
+      id: events.id,
+      title: events.title,
+      description: events.description,
+      date: events.date,
+      location: events.location,
+      status: events.status,
+      createdAt: events.createdAt,
+      updatedAt: events.updatedAt
+    })
+    .from(events)
+    .where(eq(events.status, "completed")) // Solo eventi confermati
+    .orderBy(desc(events.date));
+    
+    // Per ogni evento, controlla se ha collaboratori assegnati
+    const risultati = await Promise.all(eventiCompletati.map(async (evento) => {
+      const collaboratori = await db.select().from(eventiCollaboratori)
+        .where(eq(eventiCollaboratori.eventoId, evento.id));
+      
+      // Restituisci solo gli eventi senza collaboratori
+      return {
+        ...evento,
+        haCollaboratori: collaboratori.length > 0
+      };
+    }));
+    
+    // Filtra solo gli eventi senza collaboratori
+    const eventiSenzaCollaboratori = risultati.filter(evento => !evento.haCollaboratori);
+    
+    return res.status(200).json(eventiSenzaCollaboratori);
+  } catch (error) {
+    console.error("Errore recupero eventi senza collaboratori:", error);
+    return res.status(500).json({ error: "Errore durante il recupero degli eventi senza collaboratori" });
+  }
+};
+
 export const updateMontaggioEvento = async (req: Request, res: Response) => {
   const { id: eventoId, montaggioId } = req.params;
   

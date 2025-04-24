@@ -5,13 +5,17 @@ import {
   addPagamentoEvento,
   getMontaggiEvento,
   addMontaggioEvento,
-  updateMontaggioEvento
+  updateMontaggioEvento,
+  getEventiSenzaCollaboratori
 } from "../controllers/eventi-controller";
 import { csrfProtection } from "../auth";
 
 const router = express.Router();
 
 // Rotte per la gestione evento-centrica
+// GET: Lista eventi senza collaboratori assegnati
+router.get("/senza-collaboratori", getEventiSenzaCollaboratori);
+
 // GET: Dettagli completi dell'evento
 router.get("/:id", getEventoDettaglio);
 

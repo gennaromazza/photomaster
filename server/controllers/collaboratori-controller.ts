@@ -23,9 +23,25 @@ import { z } from "zod";
 export const getEventiCollaboratore = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    const eventi = await db.select().from(eventiCollaboratori)
-      .where(eq(eventiCollaboratori.collaboratoreId, Number(id)))
-      .orderBy(desc(eventiCollaboratori.dataAssegnazione));
+    // Utilizziamo l'approccio event-centric per recuperare gli eventi
+    // Facciamo una query con join per ottenere anche i dettagli dell'evento
+    const eventi = await db.select({
+      id: eventiCollaboratori.id,
+      collaboratoreId: eventiCollaboratori.collaboratoreId,
+      eventoId: eventiCollaboratori.eventoId,
+      ruolo: eventiCollaboratori.ruolo,
+      dataAssegnazione: eventiCollaboratori.dataAssegnazione,
+      note: eventiCollaboratori.note,
+      titolo: events.title,
+      descrizione: events.description,
+      data: events.date,
+      location: events.location,
+      stato: events.status
+    })
+    .from(eventiCollaboratori)
+    .innerJoin(events, eq(eventiCollaboratori.eventoId, events.id))
+    .where(eq(eventiCollaboratori.collaboratoreId, Number(id)))
+    .orderBy(desc(eventiCollaboratori.dataAssegnazione));
     
     return res.status(200).json(eventi);
   } catch (error) {
@@ -45,12 +61,49 @@ export const addEventoCollaboratore = async (req: Request, res: Response) => {
       collaboratoreId: Number(id)
     });
     
+    // Inserimento nel database usando l'approccio event-centric
+    // Prima verifichiamo se l'associazione esiste già
+    const esisteGià = await db.select()
+      .from(eventiCollaboratori)
+      .where(
+        and(
+          eq(eventiCollaboratori.collaboratoreId, Number(id)),
+          eq(eventiCollaboratori.eventoId, data.eventoId)
+        )
+      )
+      .limit(1);
+    
+    if (esisteGià.length > 0) {
+      return res.status(409).json({ 
+        error: "Questo collaboratore è già associato a questo evento",
+        eventoId: data.eventoId
+      });
+    }
+    
     // Inserimento nel database
     const [nuovoEvento] = await db.insert(eventiCollaboratori)
       .values(data)
       .returning();
     
-    return res.status(201).json(nuovoEvento);
+    // Recuperiamo i dettagli completi dell'evento per la risposta
+    const [eventoCompleto] = await db.select({
+      id: eventiCollaboratori.id,
+      collaboratoreId: eventiCollaboratori.collaboratoreId,
+      eventoId: eventiCollaboratori.eventoId,
+      ruolo: eventiCollaboratori.ruolo,
+      dataAssegnazione: eventiCollaboratori.dataAssegnazione,
+      note: eventiCollaboratori.note,
+      titolo: events.title,
+      descrizione: events.description,
+      data: events.date,
+      location: events.location,
+      stato: events.status
+    })
+    .from(eventiCollaboratori)
+    .innerJoin(events, eq(eventiCollaboratori.eventoId, events.id))
+    .where(eq(eventiCollaboratori.id, nuovoEvento.id));
+    
+    return res.status(201).json(eventoCompleto);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });

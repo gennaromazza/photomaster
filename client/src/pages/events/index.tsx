@@ -55,8 +55,12 @@ const EventsPage = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  const { data: events = [], isLoading } = useQuery<EventWithCollab[]>({
+  const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events"],
+    select: (data) => data.map(event => ({
+      ...event,
+      collaborators: event.collaborators || []
+    })),
   });
 
   const { data: clients = [] } = useQuery<Client[]>({

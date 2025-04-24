@@ -164,7 +164,7 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
             </tr>
           </thead>
           <tbody>
-            {eventiSenzaCollaboratori.map((evento) => (
+            {eventiFiltered.map((evento) => (
               <tr key={evento.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-3 px-4">
                   <span className="font-medium">{evento.title}</span>
@@ -264,7 +264,26 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
               </tr>
             ))}
             
-            {eventiSenzaCollaboratori.length === 0 && (
+            {eventiFiltered.length === 0 && eventiSenzaCollaboratori.length > 0 && searchTerm && (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-gray-500">
+                  <div className="flex flex-col items-center">
+                    <Search className="h-8 w-8 text-gray-300 mb-2" />
+                    <p>Nessun evento corrisponde alla ricerca "{searchTerm}"</p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2" 
+                      onClick={() => setSearchTerm("")}
+                    >
+                      Cancella ricerca
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            )}
+            
+            {eventiFiltered.length === 0 && eventiSenzaCollaboratori.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-8 text-center text-gray-500">
                   <div className="flex flex-col items-center">

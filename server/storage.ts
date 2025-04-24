@@ -2,6 +2,7 @@ import { db } from "./db";
 import { eq, and, gt, gte } from "drizzle-orm";
 import crypto from "crypto";
 import postgres from "postgres";
+import { eventiCollaboratori } from "@shared/eventi-schema";
 
 // Creiamo un client PostgreSQL diretto per query SQL manuali
 const connectionString = process.env.DATABASE_URL!;
@@ -254,7 +255,61 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllEvents(): Promise<Event[]> {
-    return await db.select().from(events);
+    // Recupera tutti gli eventi
+    const eventsData = await db.select().from(events);
+    
+    // Recupera i collaboratori per ogni evento
+    const eventsWithCollaborators = await Promise.all(
+      eventsData.map(async (event) => {
+        // Prima prova a recuperare da event_collaborators
+        const eventCollabsData = await db
+          .select({
+            id: eventCollaborators.id,
+            collaborator: {
+              id: collaborators.id,
+              firstName: collaborators.firstName,
+              lastName: collaborators.lastName
+            }
+          })
+          .from(eventCollaborators)
+          .innerJoin(collaborators, eq(eventCollaborators.collaboratorId, collaborators.id))
+          .where(eq(eventCollaborators.eventId, event.id));
+          
+        // Poi prova a recuperare da eventi_collaboratori
+        const eventiCollabsData = await db
+          .select({
+            id: eventiCollaboratori.id,
+            collaborator: {
+              id: collaborators.id,
+              firstName: collaborators.firstName,
+              lastName: collaborators.lastName
+            }
+          })
+          .from(eventiCollaboratori)
+          .innerJoin(collaborators, eq(eventiCollaboratori.collaboratoreId, collaborators.id))
+          .where(eq(eventiCollaboratori.eventoId, event.id));
+          
+        // Unisci i risultati
+        const allCollabs = [
+          ...eventCollabsData.map(ec => ec.collaborator),
+          ...eventiCollabsData.map(ec => ec.collaborator)
+        ];
+        
+        // Elimina duplicati (se un collaboratore appare in entrambe le tabelle)
+        const uniqueCollabs = allCollabs.filter(
+          (collab, index, self) => 
+            index === self.findIndex(c => c.id === collab.id)
+        );
+        
+        // Aggiungi i collaboratori all'evento
+        return {
+          ...event,
+          collaborators: uniqueCollabs
+        };
+      })
+    );
+    
+    return eventsWithCollaborators;
   }
 
   async getEventsByClient(clientId: number): Promise<Event[]> {

@@ -166,11 +166,16 @@ export async function runEventMigration() {
 }
 
 // Se lo script viene eseguito direttamente, avvia la migrazione
-if (require.main === module) {
+// Nota: In ESM, non possiamo usare require.main === module
+// Usiamo un approccio alternativo esportando la funzione principale
+export const executeDirectly = () => {
   runEventMigration()
     .then(() => process.exit(0))
     .catch((err) => {
       console.error("Errore:", err);
       process.exit(1);
     });
-}
+};
+
+// Per mantenere la compatibilità, la funzione principale può essere chiamata 
+// esternamente quando serve eseguire direttamente questo script

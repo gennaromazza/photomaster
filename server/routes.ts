@@ -18,7 +18,8 @@ import searchRouter from "./routes/search";
 import selectionRouter from "./routes/selection";
 import clausesRouter from "./routes/clauses";
 import notificationsRouter from "./routes/notifications";
-import collaboratoriRouter from "./routes/collaboratori-routes";
+import collaboratorsRouter from "./routes/collaborators-routes";
+import collaboratoriRouter from "./routes/collaboratori-routes"; // Manteniamo temporaneamente fino alla migrazione completa
 import eventiRouter from "./routes/eventi-routes";
 import dashboardPublicRouter from "./routes/dashboard-public-routes";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";

@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Collaborator } from "@shared/schema";
 import { getInitials } from "@/lib/utils";
 import { EventiDisponibiliList } from "@/components/collaboratori/eventi-disponibili-list";
+import { COLLABORATOR_ROLES, COLLABORATOR_STATUSES, getRoleLabel, getStatusLabel } from "@shared/constants";
 
 const CollaboratorsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,12 +32,10 @@ const CollaboratorsPage = () => {
     return matchesSearch && matchesStatus && matchesRole;
   });
   
-  // Extract unique roles for filter dropdown
-  const uniqueRoles = Array.from(new Set(collaborators.map(c => c.role)));
-  
+  // Usa i ruoli dalle costanti centralizzate
   const roleOptions = [
     { value: "all", label: "Tutti i ruoli" },
-    ...uniqueRoles.map(role => ({ value: role.toLowerCase(), label: role }))
+    ...COLLABORATOR_ROLES.map(role => ({ value: role.id, label: role.label }))
   ];
   
   const statusOptions = [
@@ -64,8 +63,8 @@ const CollaboratorsPage = () => {
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-2 w-full max-w-md mb-6">
-          <TabsTrigger value="collaboratori">Collaboratori</TabsTrigger>
-          <TabsTrigger value="eventi-disponibili">Eventi Disponibili</TabsTrigger>
+          <TabsTrigger value="collaboratori" aria-label="Collaboratori">Collaboratori</TabsTrigger>
+          <TabsTrigger value="eventi-disponibili" aria-label="Eventi Disponibili">Eventi Disponibili</TabsTrigger>
         </TabsList>
         
         <TabsContent value="collaboratori">

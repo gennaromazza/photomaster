@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollaboratoreDashboard } from "./collaboratore-dashboard";
 import { NuovoCollaboratoreForm } from "./nuovo-collaboratore-form";
 import { EventiDisponibiliList } from "./eventi-disponibili-list";
+import { getRoleLabel } from "@shared/constants";
 import {
   Dialog,
   DialogContent,
@@ -94,8 +95,8 @@ export function CollaboratoriList() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-2 mb-6">
-          <TabsTrigger value="collaboratori">Tutti i Collaboratori</TabsTrigger>
-          <TabsTrigger value="eventi-disponibili">Eventi Disponibili</TabsTrigger>
+          <TabsTrigger value="collaboratori" aria-label="Tutti i Collaboratori">Tutti i Collaboratori</TabsTrigger>
+          <TabsTrigger value="eventi-disponibili" aria-label="Eventi Disponibili">Eventi Disponibili</TabsTrigger>
         </TabsList>
         
         <TabsContent value="collaboratori">
@@ -131,7 +132,7 @@ export function CollaboratoriList() {
                           {collaboratore.firstName} {collaboratore.lastName}
                         </h3>
                         <Badge variant="outline" className="mb-2">
-                          {collaboratore.role}
+                          {getRoleLabel(collaboratore.role)}
                         </Badge>
                         <div className="flex flex-col gap-2 text-sm text-muted-foreground mt-2">
                           <div className="flex items-center gap-2">

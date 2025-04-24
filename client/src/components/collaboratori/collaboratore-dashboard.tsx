@@ -82,10 +82,10 @@ export function CollaboratoreDashboard({ collaboratoreId }: CollaboratoreDashboa
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-4 mb-6">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="eventi">Eventi Assegnati</TabsTrigger>
-          <TabsTrigger value="pagamenti">Pagamenti</TabsTrigger>
-          <TabsTrigger value="montaggi">Montaggi</TabsTrigger>
+          <TabsTrigger value="dashboard" aria-label="Dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="eventi" aria-label="Eventi Assegnati">Eventi Assegnati</TabsTrigger>
+          <TabsTrigger value="pagamenti" aria-label="Pagamenti">Pagamenti</TabsTrigger>
+          <TabsTrigger value="montaggi" aria-label="Montaggi">Montaggi</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard" className="space-y-6">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { z } from "zod";
@@ -62,7 +62,7 @@ export default function CollaboratorDetailPage() {
   const collaboratorId = parseInt(id);
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("details");
+  // Non abbiamo più bisogno di gestire un activeTab in questa pagina
 
   // Fetch collaborator data
   const {
@@ -97,7 +97,7 @@ export default function CollaboratorDetailPage() {
   });
 
   // Set form values when collaborator data loads
-  useState(() => {
+  useEffect(() => {
     if (collaborator) {
       form.reset({
         firstName: collaborator.firstName,
@@ -109,7 +109,7 @@ export default function CollaboratorDetailPage() {
         profileImage: collaborator.profileImage,
       });
     }
-  });
+  }, [collaborator, form]);
 
   // Update collaborator mutation
   const updateCollaboratorMutation = useMutation({
@@ -302,165 +302,146 @@ export default function CollaboratorDetailPage() {
           </Card>
         </div>
 
-        {/* Colonna destra con tab e form */}
+        {/* Colonna destra con dashboard collaboratore */}
         <div className="lg:col-span-2">
           <Card>
-            <CardHeader className="px-6 pb-0">
-              <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid grid-cols-4">
-                  <TabsTrigger value="details">Dettagli</TabsTrigger>
-                  <TabsTrigger value="events">Eventi</TabsTrigger>
-                  <TabsTrigger value="payments">Pagamenti</TabsTrigger>
-                  <TabsTrigger value="montages">Montaggi</TabsTrigger>
-                </TabsList>
-                <TabsContent value="details" className="m-0 mt-6">
-                  <CardContent className="p-0">
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                          <FormField
-                            control={form.control}
-                            name="firstName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Nome</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Nome" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="lastName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Cognome</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Cognome" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                  <Input type="email" placeholder="Email" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Telefono</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Telefono" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="role"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Ruolo</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="Es: Fotografo, Assistente, Videografo" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="status"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Stato</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleziona lo stato" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="available">Disponibile</SelectItem>
-                                    <SelectItem value="busy">Occupato</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="profileImage"
-                            render={({ field }) => (
-                              <FormItem className="col-span-2">
-                                <FormLabel>Immagine Profilo (URL)</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="URL immagine profilo" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <div className="flex justify-end">
-                          <Button 
-                            type="submit" 
-                            disabled={updateCollaboratorMutation.isPending}
-                          >
-                            {updateCollaboratorMutation.isPending && (
-                              <i className="ri-loader-4-line animate-spin mr-2"></i>
-                            )}
-                            Salva Modifiche
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  </CardContent>
-                </TabsContent>
-
-                <TabsContent value="events" className="m-0">
-                  <CardContent className="p-6">
-                    <CollaboratoreDashboard collaboratoreId={collaboratorId} />
-                  </CardContent>
-                </TabsContent>
-                
-                <TabsContent value="payments" className="m-0">
-                  <CardContent className="p-6">
-                    <PagamentoCollaboratoreList collaboratoreId={collaboratorId} />
-                  </CardContent>
-                </TabsContent>
-                
-                <TabsContent value="montages" className="m-0">
-                  <CardContent className="p-6">
-                    <MontaggioCollaboratoreList collaboratoreId={collaboratorId} />
-                  </CardContent>
-                </TabsContent>
-              </Tabs>
+            <CardHeader className="pb-2">
+              <h3 className="text-xl font-semibold mb-2">Gestione Collaboratore</h3>
+              <p className="text-muted-foreground text-sm">Aggiorna i dati anagrafici del collaboratore</p>
             </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Nome" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cognome</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Cognome" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="Email" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Telefono</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Telefono" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="role"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ruolo</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Es: Fotografo, Assistente, Videografo" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Stato</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleziona lo stato" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="available">Disponibile</SelectItem>
+                                <SelectItem value="busy">Occupato</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="profileImage"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel>Immagine Profilo (URL)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="URL immagine profilo" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button 
+                        type="submit" 
+                        disabled={updateCollaboratorMutation.isPending}
+                      >
+                        {updateCollaboratorMutation.isPending && (
+                          <i className="ri-loader-4-line animate-spin mr-2"></i>
+                        )}
+                        Salva Modifiche
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </div>
+            </CardContent>
           </Card>
+          
+          {/* Dashboard completa del collaboratore (include Eventi, Pagamenti, Montaggi) */}
+          <div className="mt-8">
+            <CollaboratoreDashboard collaboratoreId={collaboratorId} />
+          </div>
         </div>
       </div>
     </div>

@@ -1,0 +1,1464 @@
+{
+  "endpoints": {
+    "/api/upload/image": {
+      "path": "/api/upload/image",
+      "methods": [
+        "POST",
+        "DELETE"
+      ],
+      "handlers": [
+        "upload.single"
+      ],
+      "backend_files": {
+        "server/upload.ts": [
+          91,
+          114
+        ]
+      },
+      "frontend_uses": {
+        "client/src/pages/services/index.tsx": [
+          292
+        ],
+        "client/src/pages/bundles/index.tsx": [
+          420
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/register": {
+      "path": "/api/register",
+      "methods": [
+        "POST"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          267
+        ]
+      },
+      "frontend_uses": {
+        "client/src/hooks/use-auth.tsx": [
+          174
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/login": {
+      "path": "/api/login",
+      "methods": [
+        "POST"
+      ],
+      "handlers": [],
+      "backend_files": {
+        "server/auth.ts": [
+          334
+        ]
+      },
+      "frontend_uses": {
+        "client/src/hooks/use-auth.tsx": [
+          143
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/token/verify": {
+      "path": "/api/token/verify",
+      "methods": [
+        "POST"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          364
+        ]
+      },
+      "frontend_uses": {
+        "client/src/hooks/use-auth.tsx": [
+          121
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/logout": {
+      "path": "/api/logout",
+      "methods": [
+        "POST"
+      ],
+      "handlers": [],
+      "backend_files": {
+        "server/auth.ts": [
+          406
+        ]
+      },
+      "frontend_uses": {
+        "client/src/components/settings/account-settings.tsx": [
+          115
+        ],
+        "client/src/hooks/use-auth.tsx": [
+          213
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/forgot-password": {
+      "path": "/api/forgot-password",
+      "methods": [
+        "POST"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          414
+        ]
+      },
+      "frontend_uses": {
+        "client/src/pages/forgot-password.tsx": [
+          45
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/reset-password": {
+      "path": "/api/reset-password",
+      "methods": [
+        "POST"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          456
+        ]
+      },
+      "frontend_uses": {
+        "client/src/pages/reset-password.tsx": [
+          60
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/auth/google": {
+      "path": "/api/auth/google",
+      "methods": [
+        "GET"
+      ],
+      "handlers": [
+        "passport.authenticate"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          498
+        ]
+      },
+      "frontend_uses": {},
+      "translation_mapping": {}
+    },
+    "/api/auth/google/callback": {
+      "path": "/api/auth/google/callback",
+      "methods": [
+        "GET"
+      ],
+      "handlers": [],
+      "backend_files": {
+        "server/auth.ts": [
+          508
+        ]
+      },
+      "frontend_uses": {},
+      "translation_mapping": {}
+    },
+    "/api/csrf-token": {
+      "path": "/api/csrf-token",
+      "methods": [
+        "GET"
+      ],
+      "handlers": [],
+      "backend_files": {
+        "server/auth.ts": [
+          523
+        ]
+      },
+      "frontend_uses": {
+        "client/src/lib/queryClient.ts": [
+          39
+        ],
+        "client/src/pages/quotes/index.tsx": [
+          83
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/user": {
+      "path": "/api/user",
+      "methods": [
+        "GET"
+      ],
+      "handlers": [],
+      "backend_files": {
+        "server/auth.ts": [
+          528
+        ]
+      },
+      "frontend_uses": {
+        "client/src/components/settings/account-settings.tsx": [
+          40,
+          72
+        ],
+        "client/src/hooks/use-auth.tsx": [
+          58,
+          133,
+          156,
+          185,
+          223,
+          233
+        ],
+        "client/src/pages/dashboard.tsx": [
+          24
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/users/{id}": {
+      "path": "/api/users/{id}",
+      "methods": [
+        "PUT"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          605
+        ]
+      },
+      "frontend_uses": {},
+      "translation_mapping": {}
+    },
+    "/api/users/{id}/password": {
+      "path": "/api/users/{id}/password",
+      "methods": [
+        "PUT"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          668
+        ]
+      },
+      "frontend_uses": {},
+      "translation_mapping": {}
+    },
+    "/api/users/{id}/approve": {
+      "path": "/api/users/{id}/approve",
+      "methods": [
+        "PATCH"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          719
+        ]
+      },
+      "frontend_uses": {},
+      "translation_mapping": {}
+    },
+    "/api/users/{id}/disable": {
+      "path": "/api/users/{id}/disable",
+      "methods": [
+        "PATCH"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          761
+        ]
+      },
+      "frontend_uses": {},
+      "translation_mapping": {}
+    },
+    "/api/users": {
+      "path": "/api/users",
+      "methods": [
+        "GET"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          808
+        ]
+      },
+      "frontend_uses": {},
+      "translation_mapping": {}
+    },
+    "/api/users/pending": {
+      "path": "/api/users/pending",
+      "methods": [
+        "GET"
+      ],
+      "handlers": [
+        "async"
+      ],
+      "backend_files": {
+        "server/auth.ts": [
+          836
+        ]
+      },
+      "frontend_uses": {},
+      "translation_mapping": {}
+    },
+    "/api/clients/upload": {
+      "path": "/api/clients/upload",
+      "methods": [
+        "POST"
+      ],
+      "handlers": [
+        "isAuthenticated"
+      ],
+      "backend_files": {
+        "server/routes.ts": [
+          3331
+        ]
+      },
+      "frontend_uses": {
+        "client/src/pages/clients/index.tsx": [
+          120
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/clients/import": {
+      "path": "/api/clients/import",
+      "methods": [
+        "POST"
+      ],
+      "handlers": [
+        "isAuthenticated"
+      ],
+      "backend_files": {
+        "server/routes.ts": [
+          3332
+        ]
+      },
+      "frontend_uses": {
+        "client/src/pages/clients/index.tsx": [
+          148
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/clients/direct-import": {
+      "path": "/api/clients/direct-import",
+      "methods": [
+        "POST"
+      ],
+      "handlers": [
+        "isAuthenticated"
+      ],
+      "backend_files": {
+        "server/routes.ts": [
+          3333
+        ]
+      },
+      "frontend_uses": {
+        "client/src/pages/clients/index.tsx": [
+          284
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/clients/export": {
+      "path": "/api/clients/export",
+      "methods": [
+        "GET"
+      ],
+      "handlers": [
+        "isAuthenticated"
+      ],
+      "backend_files": {
+        "server/routes.ts": [
+          3334
+        ]
+      },
+      "frontend_uses": {
+        "client/src/pages/clients/index.tsx": [
+          324
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/google/callback": {
+      "path": "/api/google/callback",
+      "methods": [
+        "GET"
+      ],
+      "handlers": [
+        "googleAuthCallback"
+      ],
+      "backend_files": {
+        "server/routes.ts": [
+          3342
+        ]
+      },
+      "frontend_uses": {},
+      "translation_mapping": {}
+    },
+    "/api/notifications": {
+      "path": "/api/notifications",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/layout/notifications.tsx": [
+          30,
+          33,
+          61,
+          73
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/notifications/read-all": {
+      "path": "/api/notifications/read-all",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/layout/notifications.tsx": [
+          70
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/settings": {
+      "path": "/api/settings",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/layout/header.tsx": [
+          40
+        ],
+        "client/src/components/galleries/gallery-card-footer.tsx": [
+          11,
+          13
+        ],
+        "client/src/pages/quotes/public/[token].tsx": [
+          46
+        ],
+        "client/src/pages/settings/index.tsx": [
+          33,
+          56,
+          60
+        ],
+        "client/src/pages/bundles/detail/[id].tsx": [
+          860,
+          862
+        ],
+        "client/src/config/companyProfile.ts": [
+          15
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/tasks/uncompleted": {
+      "path": "/api/tasks/uncompleted",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/dashboard/task-section.tsx": [
+          17,
+          26
+        ],
+        "client/src/pages/tasks/new.tsx": [
+          73
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/collaborators": {
+      "path": "/api/collaborators",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/dashboard/team-section.tsx": [
+          10
+        ],
+        "client/src/components/events/event-collaborators.tsx": [
+          51
+        ],
+        "client/src/components/collaboratori/nuovo-collaboratore-form.tsx": [
+          67,
+          76
+        ],
+        "client/src/components/collaboratori/eventi-disponibili-list.tsx": [
+          34
+        ],
+        "client/src/components/collaboratori/collaboratori-list.tsx": [
+          58,
+          76
+        ],
+        "client/src/pages/calendar.tsx": [
+          52
+        ],
+        "client/src/pages/dashboard.tsx": [
+          40
+        ],
+        "client/src/pages/collaborators/new.tsx": [
+          58,
+          66
+        ],
+        "client/src/pages/collaborators/index.tsx": [
+          25,
+          42
+        ],
+        "client/src/pages/collaborators/[id].tsx": [
+          128,
+          153
+        ],
+        "client/src/pages/quotes/new-redesign.tsx": [
+          165
+        ],
+        "client/src/pages/quotes/new.tsx": [
+          137
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/events": {
+      "path": "/api/events",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/dashboard/events-section.tsx": [
+          12
+        ],
+        "client/src/components/dashboard/calendar-section.tsx": [
+          23
+        ],
+        "client/src/components/dashboard/event-categories-chart.tsx": [
+          26
+        ],
+        "client/src/components/events/event-collaborators.tsx": [
+          45,
+          65,
+          91
+        ],
+        "client/src/components/calendar/create-event-form.tsx": [
+          133,
+          143
+        ],
+        "client/src/components/calendar/create-appointment-form.tsx": [
+          217,
+          229
+        ],
+        "client/src/components/settings/google-calendar-integration.tsx": [
+          37,
+          59
+        ],
+        "client/src/components/collaboratori/collaboratori-list.tsx": [
+          75
+        ],
+        "client/src/components/collaboratori/eventi-collaboratore.tsx": [
+          104
+        ],
+        "client/src/pages/calendar.tsx": [
+          44
+        ],
+        "client/src/pages/dashboard.tsx": [
+          28
+        ],
+        "client/src/pages/clients/[id].tsx": [
+          36
+        ],
+        "client/src/pages/events/new.tsx": [
+          88,
+          92
+        ],
+        "client/src/pages/events/index.tsx": [
+          59,
+          84,
+          103
+        ],
+        "client/src/pages/tasks/index.tsx": [
+          28
+        ],
+        "client/src/pages/tasks/new.tsx": [
+          33
+        ],
+        "client/src/pages/collaborators/index.tsx": [
+          41
+        ],
+        "client/src/pages/contracts/index.tsx": [
+          25
+        ],
+        "client/src/pages/quotes/new-redesign.tsx": [
+          150
+        ],
+        "client/src/pages/quotes/index.tsx": [
+          43
+        ],
+        "client/src/pages/quotes/new.tsx": [
+          122,
+          440
+        ],
+        "client/src/pages/quotes/public/[token].tsx": [
+          326
+        ],
+        "client/src/pages/galleries/new.tsx": [
+          22
+        ],
+        "client/src/pages/galleries/[id]/index.tsx": [
+          82
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/contracts": {
+      "path": "/api/contracts",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/dashboard/contracts-section.tsx": [
+          11
+        ],
+        "client/src/pages/dashboard.tsx": [
+          36
+        ],
+        "client/src/pages/contracts/index.tsx": [
+          17
+        ],
+        "client/src/pages/contracts/view.tsx": [
+          46
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/quotes": {
+      "path": "/api/quotes",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/dashboard/quotes-status-detail.tsx": [
+          15
+        ],
+        "client/src/components/calendar/create-appointment-form.tsx": [
+          121
+        ],
+        "client/src/components/quotes/quote-info.tsx": [
+          22
+        ],
+        "client/src/components/quotes/financial-summary-fixed.tsx": [
+          202,
+          251,
+          355,
+          391,
+          439,
+          475,
+          516
+        ],
+        "client/src/components/quotes/modules/module-manager.tsx": [
+          177
+        ],
+        "client/src/pages/calendar.tsx": [
+          56
+        ],
+        "client/src/pages/dashboard.tsx": [
+          45
+        ],
+        "client/src/pages/quotes/new-quote.tsx": [
+          96
+        ],
+        "client/src/pages/quotes/new-redesign.tsx": [
+          170,
+          176,
+          395,
+          403,
+          427,
+          428,
+          453,
+          471
+        ],
+        "client/src/pages/quotes/index.tsx": [
+          35
+        ],
+        "client/src/pages/quotes/[id].tsx": [
+          63,
+          130
+        ],
+        "client/src/pages/quotes/new.tsx": [
+          410,
+          439
+        ],
+        "client/src/pages/quotes/detail/[id].tsx": [
+          144,
+          181,
+          214,
+          266,
+          317,
+          831,
+          933
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/service-categories": {
+      "path": "/api/service-categories",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/dashboard/event-categories-chart.tsx": [
+          30
+        ],
+        "client/src/hooks/use-clauses.ts": [
+          21
+        ],
+        "client/src/pages/quotes/new-redesign.tsx": [
+          155
+        ],
+        "client/src/pages/quotes/new.tsx": [
+          127
+        ],
+        "client/src/pages/settings/categories.tsx": [
+          72,
+          98,
+          108,
+          132,
+          156,
+          174
+        ],
+        "client/src/pages/services/index.tsx": [
+          124,
+          126
+        ],
+        "client/src/pages/bundles/index.tsx": [
+          129,
+          131
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/tasks": {
+      "path": "/api/tasks",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/events/event-tasks.tsx": [
+          39,
+          59
+        ],
+        "client/src/pages/dashboard.tsx": [
+          32
+        ],
+        "client/src/pages/tasks/index.tsx": [
+          24,
+          37
+        ],
+        "client/src/pages/tasks/new.tsx": [
+          67,
+          72
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/collaborators/available": {
+      "path": "/api/collaborators/available",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/events/collaborators-card.tsx": [
+          60
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/clients": {
+      "path": "/api/clients",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/events/event-info.tsx": [
+          21
+        ],
+        "client/src/components/quotes/quote-info.tsx": [
+          28,
+          34
+        ],
+        "client/src/components/clients/client-info.tsx": [
+          20
+        ],
+        "client/src/pages/calendar.tsx": [
+          48
+        ],
+        "client/src/pages/clients/new.tsx": [
+          42,
+          46
+        ],
+        "client/src/pages/clients/index.tsx": [
+          82,
+          104,
+          156,
+          297
+        ],
+        "client/src/pages/clients/[id].tsx": [
+          53
+        ],
+        "client/src/pages/clients/edit/[id].tsx": [
+          67
+        ],
+        "client/src/pages/events/new.tsx": [
+          69
+        ],
+        "client/src/pages/events/index.tsx": [
+          67
+        ],
+        "client/src/pages/contracts/index.tsx": [
+          21
+        ],
+        "client/src/pages/quotes/new-quote.tsx": [
+          91
+        ],
+        "client/src/pages/quotes/new-redesign.tsx": [
+          145,
+          329,
+          333,
+          362,
+          366
+        ],
+        "client/src/pages/quotes/index.tsx": [
+          39
+        ],
+        "client/src/pages/quotes/new.tsx": [
+          115,
+          361,
+          365
+        ],
+        "client/src/pages/quotes/detail/[id].tsx": [
+          150,
+          156
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/services": {
+      "path": "/api/services",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/services/service-items-manager.tsx": [
+          72
+        ],
+        "client/src/components/quotes/fixed-module.tsx": [
+          56
+        ],
+        "client/src/components/quotes/variable-module.tsx": [
+          97
+        ],
+        "client/src/components/quotes/modules/fixed-module-editor.tsx": [
+          129
+        ],
+        "client/src/components/quotes/modules/variable-module-editor.tsx": [
+          162
+        ],
+        "client/src/hooks/useAvailableItems.ts": [
+          23
+        ],
+        "client/src/pages/services/index.tsx": [
+          114,
+          116,
+          155,
+          158,
+          181,
+          204
+        ],
+        "client/src/pages/bundles/index.tsx": [
+          119,
+          121
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/service-items": {
+      "path": "/api/service-items",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/services/service-items-manager.tsx": [
+          78,
+          104,
+          108,
+          131
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/service-bundles": {
+      "path": "/api/service-bundles",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/quotes/fixed-module.tsx": [
+          67
+        ],
+        "client/src/components/quotes/variable-module.tsx": [
+          106
+        ],
+        "client/src/hooks/useAvailableItems.ts": [
+          30
+        ],
+        "client/src/pages/bundles/index.tsx": [
+          109,
+          111,
+          162,
+          177,
+          209,
+          233
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/products": {
+      "path": "/api/products",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/quotes/modules/fixed-module-editor.tsx": [
+          134
+        ],
+        "client/src/components/quotes/modules/variable-module-editor.tsx": [
+          167
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/google/status": {
+      "path": "/api/google/status",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/settings/google-calendar-integration.tsx": [
+          19,
+          21
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/google/sync-all": {
+      "path": "/api/google/sync-all",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/settings/google-calendar-integration.tsx": [
+          29
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/google/import": {
+      "path": "/api/google/import",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/settings/google-calendar-integration.tsx": [
+          51
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/google/auth": {
+      "path": "/api/google/auth",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/settings/google-calendar-integration.tsx": [
+          73
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/gallery/galleries": {
+      "path": "/api/gallery/galleries",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/galleries/gallery-card.tsx": [
+          57
+        ],
+        "client/src/components/galleries/gallery-list-table.tsx": [
+          58
+        ],
+        "client/src/components/galleries/gallery-cleanup.tsx": [
+          56
+        ],
+        "client/src/components/galleries/gallery-settings.tsx": [
+          117
+        ],
+        "client/src/components/galleries/video-list.tsx": [
+          60
+        ],
+        "client/src/components/galleries/video-form.tsx": [
+          76,
+          161
+        ],
+        "client/src/components/galleries/video-manager.tsx": [
+          32,
+          42,
+          79,
+          143
+        ],
+        "client/src/pages/galleries/new.tsx": [
+          77
+        ],
+        "client/src/pages/galleries/index.tsx": [
+          233,
+          255,
+          257
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/gallery/cleanup": {
+      "path": "/api/gallery/cleanup",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/galleries/gallery-cleanup.tsx": [
+          37
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/selection/sessions": {
+      "path": "/api/selection/sessions",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/selection-system/admin/SelectionsDashboard.tsx": [
+          212
+        ],
+        "client/src/components/selection-system/admin/SessionsList.tsx": [
+          126
+        ],
+        "client/src/components/selection-system/shared/PhotoSelector.tsx": [
+          53
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/selection/photo": {
+      "path": "/api/selection/photo",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/selection-system/client/CommentSystem.tsx": [
+          61,
+          80,
+          102
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/selection/comments": {
+      "path": "/api/selection/comments",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/selection-system/client/CommentSystem.tsx": [
+          69
+        ],
+        "client/src/pages/selection/session.tsx": [
+          333
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/selection/sessions/key": {
+      "path": "/api/selection/sessions/key",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/selection-system/shared/PhotoSelector.tsx": [
+          62
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/events/senza-collaboratori": {
+      "path": "/api/events/senza-collaboratori",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/collaboratori/eventi-disponibili-list.tsx": [
+          28,
+          76,
+          108
+        ],
+        "client/src/components/collaboratori/collaboratori-list.tsx": [
+          77
+        ],
+        "client/src/components/collaboratori/eventi-collaboratore.tsx": [
+          111,
+          584
+        ],
+        "client/src/pages/collaborators/index.tsx": [
+          43
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/collaboratori/sincronizza-assegnazioni": {
+      "path": "/api/collaboratori/sincronizza-assegnazioni",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/components/collaboratori/collaboratori-list.tsx": [
+          65
+        ],
+        "client/src/pages/collaborators/index.tsx": [
+          31
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/clauses": {
+      "path": "/api/clauses",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/hooks/use-clauses.ts": [
+          15,
+          34,
+          43,
+          70,
+          96
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/event-types": {
+      "path": "/api/event-types",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/hooks/use-clauses.ts": [
+          27
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/service-categories/active": {
+      "path": "/api/service-categories/active",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/events/new.tsx": [
+          52
+        ],
+        "client/src/pages/events/index.tsx": [
+          181
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/tasks/event": {
+      "path": "/api/tasks/event",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/tasks/new.tsx": [
+          77
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/lead-sources": {
+      "path": "/api/lead-sources",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/quotes/new-redesign.tsx": [
+          160
+        ],
+        "client/src/pages/quotes/new.tsx": [
+          132
+        ],
+        "client/src/pages/settings/origins.tsx": [
+          72,
+          98,
+          108,
+          132,
+          156,
+          174
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/clauses/quote": {
+      "path": "/api/clauses/quote",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/quotes/new.tsx": [
+          445
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/quotes/share": {
+      "path": "/api/quotes/share",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/quotes/public/[token].tsx": [
+          133
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/quotes/modules": {
+      "path": "/api/quotes/modules",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/quotes/public/[token].tsx": [
+          169
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/settings/email-usage": {
+      "path": "/api/settings/email-usage",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/settings/resource-limits.tsx": [
+          26
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/settings/storage-usage": {
+      "path": "/api/settings/storage-usage",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/settings/resource-limits.tsx": [
+          32
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/service-bundle-items": {
+      "path": "/api/service-bundle-items",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/bundles/index.tsx": [
+          167
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/bundle-leads": {
+      "path": "/api/bundle-leads",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/bundles/detail/[id].tsx": [
+          877
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/finance/stats": {
+      "path": "/api/finance/stats",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/dashboard/finances.tsx": [
+          21
+        ],
+        "client/src/pages/dashboard/finances/index.tsx": [
+          29
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/finance/transactions": {
+      "path": "/api/finance/transactions",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/dashboard/finances.tsx": [
+          30
+        ],
+        "client/src/pages/dashboard/finances/index.tsx": [
+          52
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/finance/scheduled-payments": {
+      "path": "/api/finance/scheduled-payments",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/dashboard/finances/index.tsx": [
+          60
+        ],
+        "client/src/pages/dashboard/finances/scheduled.tsx": [
+          80
+        ]
+      },
+      "translation_mapping": {}
+    },
+    "/api/gallery/chapters": {
+      "path": "/api/gallery/chapters",
+      "methods": [],
+      "handlers": [],
+      "backend_files": {},
+      "frontend_uses": {
+        "client/src/pages/galleries/[id]/chapters/new.tsx": [
+          23
+        ]
+      },
+      "translation_mapping": {}
+    }
+  },
+  "translation_mappings": {
+    "/api/collaboratori": "/api/collaborators",
+    "/api/collaboratori/": "/api/collaborators/",
+    "/api/collaboratori/{id}/eventi": "/api/collaborators/{id}/events",
+    "/api/collaboratori/{id}/pagamenti": "/api/collaborators/{id}/payments",
+    "/api/collaboratori/{id}/montaggi": "/api/collaborators/{id}/editing",
+    "/api/collaboratori/{id}/dashboard": "/api/collaborators/{id}/dashboard",
+    "/api/eventi": "/api/events",
+    "/api/eventi/": "/api/events/",
+    "/api/eventi/senza-collaboratori": "/api/events/without-collaborators",
+    "/api/pagamenti": "/api/payments",
+    "/api/pagamenti/": "/api/payments/"
+  },
+  "inconsistencies": {
+    "unused_endpoints": [
+      "/api/auth/google",
+      "/api/auth/google/callback",
+      "/api/users/{id}",
+      "/api/users/{id}/password",
+      "/api/users/{id}/approve",
+      "/api/users/{id}/disable",
+      "/api/users",
+      "/api/users/pending",
+      "/api/google/callback"
+    ],
+    "undefined_endpoints": [
+      "/api/notifications",
+      "/api/notifications/read-all",
+      "/api/settings",
+      "/api/tasks/uncompleted",
+      "/api/collaborators",
+      "/api/events",
+      "/api/contracts",
+      "/api/quotes",
+      "/api/service-categories",
+      "/api/tasks",
+      "/api/collaborators/available",
+      "/api/clients",
+      "/api/services",
+      "/api/service-items",
+      "/api/service-bundles",
+      "/api/products",
+      "/api/google/status",
+      "/api/google/sync-all",
+      "/api/google/import",
+      "/api/google/auth",
+      "/api/gallery/galleries",
+      "/api/gallery/cleanup",
+      "/api/selection/sessions",
+      "/api/selection/photo",
+      "/api/selection/comments",
+      "/api/selection/sessions/key",
+      "/api/events/senza-collaboratori",
+      "/api/collaboratori/sincronizza-assegnazioni",
+      "/api/clauses",
+      "/api/event-types",
+      "/api/service-categories/active",
+      "/api/tasks/event",
+      "/api/lead-sources",
+      "/api/clauses/quote",
+      "/api/quotes/share",
+      "/api/quotes/modules",
+      "/api/settings/email-usage",
+      "/api/settings/storage-usage",
+      "/api/service-bundle-items",
+      "/api/bundle-leads",
+      "/api/finance/stats",
+      "/api/finance/transactions",
+      "/api/finance/scheduled-payments",
+      "/api/gallery/chapters"
+    ],
+    "italian_english_conflicts": [],
+    "method_mismatches": []
+  },
+  "stats": {
+    "total_endpoints": 66,
+    "backend_defined": 22,
+    "frontend_used": 57,
+    "unused_endpoints": 9,
+    "undefined_endpoints": 44,
+    "italian_english_conflicts": 0
+  }
+}

@@ -458,7 +458,7 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
 export const getEventiSenzaCollaboratori = async (req: Request, res: Response) => {
   try {
     // Recupera tutti gli eventi confermati
-    const eventiCompletati = await db.select({
+    const eventiConfermati = await db.select({
       id: events.id,
       title: events.title,
       description: events.description,
@@ -472,7 +472,7 @@ export const getEventiSenzaCollaboratori = async (req: Request, res: Response) =
       updatedAt: events.updatedAt
     })
     .from(events)
-    .where(eq(events.status, "completed")) // Solo eventi confermati
+    .where(eq(events.status, "confirmed")) // Solo eventi confermati
     .orderBy(desc(events.date));
     
     // Ottieni gli ID degli eventi con collaboratori
@@ -489,7 +489,7 @@ export const getEventiSenzaCollaboratori = async (req: Request, res: Response) =
     );
     
     // Filtra gli eventi che non hanno collaboratori
-    const eventiSenzaCollaboratori = eventiCompletati.filter(
+    const eventiSenzaCollaboratori = eventiConfermati.filter(
       evento => !eventiConCollaboratoriSet.has(evento.id)
     );
     

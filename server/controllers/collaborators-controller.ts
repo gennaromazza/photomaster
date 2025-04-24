@@ -1,18 +1,8 @@
-/**
- * Controller unificato per la gestione dei collaboratori
- * Standardizzato in inglese per mantenere coerenza nel codebase
- */
-
 import { Request, Response } from "express";
 import { db } from "../db";
-import { eq, desc, and, inArray, count, sql } from "drizzle-orm";
-import { z } from "zod";
-
-// Import dello schema unificato
+import { collaborators, events, eventCollaborators, clients } from "@shared/schema";
 import { 
-  collaborators, 
-  eventCollaborators, 
-  collaboratorPayments, 
+  collaboratorPayments,
   collaboratorEditing,
   insertEventCollaboratorSchema,
   insertCollaboratorPaymentSchema,
@@ -21,513 +11,642 @@ import {
   PaymentType,
   EditingStatus
 } from "@shared/collaborators-schema";
-
-// Import relazioni con altre tabelle
-import { events, clients } from "@shared/schema";
-
-/**
- * Ottiene tutti i collaboratori
- */
-export const getAllCollaborators = async (req: Request, res: Response) => {
-  try {
-    const collaboratorsList = await db
-      .select()
-      .from(collaborators)
-      .orderBy(collaborators.firstName, collaborators.lastName);
-      
-    return res.status(200).json(collaboratorsList);
-  } catch (error) {
-    console.error("Errore durante il recupero dei collaboratori:", error);
-    return res.status(500).json({ error: "Errore durante il recupero dei collaboratori" });
-  }
-};
+import { eq, desc, and, inArray } from "drizzle-orm";
+import { z } from "zod";
 
 /**
- * Ottiene un singolo collaboratore per ID
+ * Controller standardizzato in inglese per la gestione delle operazioni relative al modulo Collaboratori
  */
-export const getCollaborator = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const [collaborator] = await db
-      .select()
-      .from(collaborators)
-      .where(eq(collaborators.id, Number(id)))
-      .limit(1);
-      
-    if (!collaborator) {
-      return res.status(404).json({ error: "Collaboratore non trovato" });
-    }
-    
-    return res.status(200).json(collaborator);
-  } catch (error) {
-    console.error(`Errore durante il recupero del collaboratore ${id}:`, error);
-    return res.status(500).json({ error: "Errore durante il recupero del collaboratore" });
-  }
-};
 
-/**
- * Crea un nuovo collaboratore
- */
-export const createCollaborator = async (req: Request, res: Response) => {
-  try {
-    const collaboratorData = req.body;
-    
-    const [collaborator] = await db
-      .insert(collaborators)
-      .values(collaboratorData)
-      .returning();
-      
-    return res.status(201).json(collaborator);
-  } catch (error) {
-    console.error("Errore durante la creazione del collaboratore:", error);
-    return res.status(500).json({ error: "Errore durante la creazione del collaboratore" });
-  }
-};
-
-/**
- * Aggiorna un collaboratore esistente
- */
-export const updateCollaborator = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const collaboratorData = req.body;
-    
-    const [updatedCollaborator] = await db
-      .update(collaborators)
-      .set(collaboratorData)
-      .where(eq(collaborators.id, Number(id)))
-      .returning();
-      
-    if (!updatedCollaborator) {
-      return res.status(404).json({ error: "Collaboratore non trovato" });
-    }
-    
-    return res.status(200).json(updatedCollaborator);
-  } catch (error) {
-    console.error(`Errore durante l'aggiornamento del collaboratore ${id}:`, error);
-    return res.status(500).json({ error: "Errore durante l'aggiornamento del collaboratore" });
-  }
-};
-
-/**
- * Elimina un collaboratore
- */
-export const deleteCollaborator = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const [deletedCollaborator] = await db
-      .delete(collaborators)
-      .where(eq(collaborators.id, Number(id)))
-      .returning();
-      
-    if (!deletedCollaborator) {
-      return res.status(404).json({ error: "Collaboratore non trovato" });
-    }
-    
-    return res.status(200).json({ message: "Collaboratore eliminato con successo" });
-  } catch (error) {
-    console.error(`Errore durante l'eliminazione del collaboratore ${id}:`, error);
-    return res.status(500).json({ error: "Errore durante l'eliminazione del collaboratore" });
-  }
-};
-
-/**
- * Ottiene tutti gli eventi di un collaboratore
- */
+// GET: Lista di eventi di un collaboratore
 export const getCollaboratorEvents = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    // Recuperiamo gli ID degli eventi a cui il collaboratore è associato
-    const eventRecords = await db
+    console.log(`Recupero eventi per il collaboratore ID: ${id}`);
+    
+    // Recupera tutti gli eventi del collaboratore
+    const assignedEventIds = await db
       .select({
         eventId: eventCollaborators.eventId
       })
       .from(eventCollaborators)
       .where(eq(eventCollaborators.collaboratorId, Number(id)));
     
-    // Se non ci sono eventi, restituiamo un array vuoto
-    if (eventRecords.length === 0) {
+    // Se non ci sono eventi, restituisce un array vuoto
+    if (assignedEventIds.length === 0) {
       return res.status(200).json([]);
     }
     
-    // Estraiamo gli ID degli eventi
-    const eventIds = eventRecords.map(record => record.eventId);
+    // Estrai gli ID degli eventi
+    const eventIds = assignedEventIds.map(record => record.eventId);
+    console.log(`Trovati ${eventIds.length} eventi unici per il collaboratore ID: ${id}`);
     
-    // Recuperiamo i dettagli degli eventi
-    const eventsWithDetails = await db
+    // Recupera i dettagli degli eventi
+    const eventsDetails = await db
       .select({
-        // Dati dell'evento
         id: events.id,
         title: events.title,
         description: events.description,
         date: events.date,
         location: events.location,
         status: events.status,
-        // Dati del cliente
         clientId: events.clientId,
         clientFirstName: clients.firstName,
-        clientLastName: clients.lastName,
-        // Dati dell'assegnazione
-        assignmentId: eventCollaborators.id,
+        clientLastName: clients.lastName
+      })
+      .from(events)
+      .leftJoin(clients, eq(events.clientId, clients.id))
+      .where(inArray(events.id, eventIds));
+      
+    console.log(`Recuperati ${eventsDetails.length} eventi con dettagli`);
+    
+    // Crea una mappa degli eventi per ID per un accesso rapido
+    const eventsById = {};
+    for (const event of eventsDetails) {
+      eventsById[event.id] = event;
+    }
+    
+    // Recupera i ruoli e le note per ogni evento
+    const eventAssignments = await db
+      .select({
+        id: eventCollaborators.id,
+        collaboratorId: eventCollaborators.collaboratorId,
+        eventId: eventCollaborators.eventId,
         role: eventCollaborators.role,
         assignedAt: eventCollaborators.assignedAt,
         notes: eventCollaborators.notes
       })
-      .from(events)
-      .leftJoin(clients, eq(events.clientId, clients.id))
-      .innerJoin(
-        eventCollaborators, 
-        and(
-          eq(eventCollaborators.eventId, events.id),
-          eq(eventCollaborators.collaboratorId, Number(id))
-        )
-      )
-      .where(inArray(events.id, eventIds))
-      .orderBy(desc(events.date));
+      .from(eventCollaborators)
+      .where(eq(eventCollaborators.collaboratorId, Number(id)));
     
-    return res.status(200).json(eventsWithDetails);
+    // Combina i dettagli degli eventi con le assegnazioni
+    const combinedEvents = eventAssignments.map(assignment => {
+      const eventDetails = eventsById[assignment.eventId];
+      if (!eventDetails) return null;
+      
+      return {
+        id: assignment.id,
+        collaboratoreId: assignment.collaboratorId, // Mantiene retrocompatibilità
+        eventoId: assignment.eventId, // Mantiene retrocompatibilità
+        ruolo: assignment.role, // Mantiene retrocompatibilità
+        dataAssegnazione: assignment.assignedAt, // Mantiene retrocompatibilità
+        note: assignment.notes, // Mantiene retrocompatibilità
+        titolo: eventDetails.title, // Mantiene retrocompatibilità
+        descrizione: eventDetails.description, // Mantiene retrocompatibilità
+        data: eventDetails.date, // Mantiene retrocompatibilità
+        location: eventDetails.location,
+        stato: eventDetails.status, // Mantiene retrocompatibilità
+        clientId: eventDetails.clientId,
+        clientFirstName: eventDetails.clientFirstName,
+        clientLastName: eventDetails.clientLastName,
+        // Aggiungi campi in inglese per compatibilità futura
+        collaboratorId: assignment.collaboratorId,
+        eventId: assignment.eventId,
+        role: assignment.role,
+        assignedAt: assignment.assignedAt,
+        notes: assignment.notes,
+        title: eventDetails.title,
+        description: eventDetails.description,
+        eventDate: eventDetails.date,
+        status: eventDetails.status
+      };
+    }).filter(Boolean);
+    
+    // Ordina per data di assegnazione decrescente
+    combinedEvents.sort((a, b) => {
+      const dateA = a.assignedAt ? new Date(a.assignedAt) : new Date(0);
+      const dateB = b.assignedAt ? new Date(b.assignedAt) : new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    console.log(`Restituiti ${combinedEvents.length} eventi combinati totali`);
+    
+    return res.status(200).json(combinedEvents);
   } catch (error) {
-    console.error(`Errore durante il recupero degli eventi del collaboratore ${id}:`, error);
+    console.error(`Errore recupero eventi del collaboratore ${id}:`, error);
     return res.status(500).json({ error: "Errore durante il recupero degli eventi del collaboratore" });
   }
 };
 
-/**
- * Assegna un evento a un collaboratore
- */
-export const assignEventToCollaborator = async (req: Request, res: Response) => {
+// POST: Aggiunta di un nuovo evento a un collaboratore
+export const addCollaboratorEvent = async (req: Request, res: Response) => {
   const { id } = req.params;
+  
   try {
-    // Validazione dati
-    const validatedData = insertEventCollaboratorSchema.parse(req.body);
+    // Debug dei dati ricevuti
+    console.log("Dati ricevuti nel controller addCollaboratorEvent:", {
+      body: req.body,
+      id: id
+    });
     
-    // Verifica che i campi essenziali siano presenti
-    if (!validatedData.eventId || !validatedData.role) {
-      return res.status(400).json({ error: "Dati mancanti. Richiesti: eventId, role" });
+    // Prepara i dati per l'inserimento - adatta i nomi dei campi in italiano a quelli in inglese
+    const requestData = {
+      collaboratorId: Number(id),
+      eventId: req.body.eventoId || req.body.eventId,
+      role: req.body.ruolo || req.body.role,
+      assignedAt: new Date(),
+      notes: req.body.note || req.body.notes
+    };
+    
+    // Validazione input con dati già convertiti
+    const data = insertEventCollaboratorSchema.parse(requestData);
+    
+    // Verifica se l'associazione esiste già
+    const existingAssignment = await db
+      .select()
+      .from(eventCollaborators)
+      .where(
+        and(
+          eq(eventCollaborators.collaboratorId, data.collaboratorId),
+          eq(eventCollaborators.eventId, data.eventId)
+        )
+      )
+      .limit(1);
+      
+    if (existingAssignment.length > 0) {
+      return res.status(409).json({ 
+        error: "Questo collaboratore è già associato a questo evento",
+        eventId: data.eventId
+      });
     }
     
-    // Inserisci l'assegnazione
-    const [assignment] = await db.insert(eventCollaborators)
-      .values({
-        collaboratorId: Number(id),
-        eventId: validatedData.eventId,
-        role: validatedData.role,
-        assignedAt: validatedData.assignedAt || new Date(),
-        notes: validatedData.notes
-      })
+    // Inserimento nel database
+    const [newAssignment] = await db
+      .insert(eventCollaborators)
+      .values(data)
       .returning();
     
-    return res.status(201).json(assignment);
+    // Recupera i dettagli completi dell'evento per la risposta
+    const [eventDetails] = await db
+      .select({
+        id: eventCollaborators.id,
+        collaboratorId: eventCollaborators.collaboratorId,
+        eventId: eventCollaborators.eventId,
+        role: eventCollaborators.role,
+        assignedAt: eventCollaborators.assignedAt,
+        notes: eventCollaborators.notes,
+        title: events.title,
+        description: events.description,
+        date: events.date,
+        location: events.location,
+        status: events.status
+      })
+      .from(eventCollaborators)
+      .innerJoin(events, eq(eventCollaborators.eventId, events.id))
+      .where(eq(eventCollaborators.id, newAssignment.id));
+    
+    // Formatta la risposta con campi sia in italiano che in inglese per retrocompatibilità
+    const response = {
+      ...eventDetails,
+      // Campi in italiano per retrocompatibilità
+      collaboratoreId: eventDetails.collaboratorId,
+      eventoId: eventDetails.eventId,
+      ruolo: eventDetails.role,
+      dataAssegnazione: eventDetails.assignedAt,
+      note: eventDetails.notes,
+      titolo: eventDetails.title,
+      descrizione: eventDetails.description,
+      data: eventDetails.date,
+      stato: eventDetails.status
+    };
+    
+    return res.status(201).json(response);
   } catch (error) {
-    console.error(`Errore durante l'assegnazione dell'evento al collaboratore ${id}:`, error);
-    return res.status(500).json({ error: "Errore durante l'assegnazione dell'evento al collaboratore" });
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    
+    console.error(`Errore aggiunta evento al collaboratore ${id}:`, error);
+    return res.status(500).json({ error: "Errore durante l'aggiunta dell'evento al collaboratore" });
   }
 };
 
-/**
- * Ottiene tutti i pagamenti di un collaboratore
- */
+// GET: Lista di pagamenti di un collaboratore
 export const getCollaboratorPayments = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    // Recuperiamo i pagamenti con i dettagli degli eventi associati
     const payments = await db
-      .select({
-        // Dati del pagamento
-        id: collaboratorPayments.id,
-        collaboratorId: collaboratorPayments.collaboratorId,
-        eventId: collaboratorPayments.eventId,
-        type: collaboratorPayments.type,
-        amount: collaboratorPayments.amount,
-        paymentDate: collaboratorPayments.paymentDate,
-        paymentMethod: collaboratorPayments.paymentMethod,
-        notes: collaboratorPayments.notes,
-        externalReference: collaboratorPayments.externalReference,
-        createdAt: collaboratorPayments.createdAt,
-        // Dati dell'evento
-        eventTitle: events.title,
-        eventDate: events.date
-      })
+      .select()
       .from(collaboratorPayments)
-      .leftJoin(events, eq(collaboratorPayments.eventId, events.id))
       .where(eq(collaboratorPayments.collaboratorId, Number(id)))
       .orderBy(desc(collaboratorPayments.paymentDate));
     
-    return res.status(200).json(payments);
+    // Formatta la risposta con campi sia in italiano che in inglese per retrocompatibilità
+    const formattedPayments = payments.map(payment => ({
+      ...payment,
+      // Campi in italiano per retrocompatibilità
+      collaboratoreId: payment.collaboratorId,
+      eventoId: payment.eventId,
+      tipo: payment.type,
+      importo: payment.amount,
+      dataPagamento: payment.paymentDate,
+      metodoPagamento: payment.paymentMethod,
+      note: payment.notes,
+      riferimentoEsterno: payment.externalReference,
+      createdAt: payment.createdAt,
+      updatedAt: payment.updatedAt
+    }));
+    
+    return res.status(200).json(formattedPayments);
   } catch (error) {
-    console.error(`Errore durante il recupero dei pagamenti del collaboratore ${id}:`, error);
+    console.error(`Errore recupero pagamenti del collaboratore ${id}:`, error);
     return res.status(500).json({ error: "Errore durante il recupero dei pagamenti del collaboratore" });
   }
 };
 
-/**
- * Aggiunge un pagamento a un collaboratore
- */
+// POST: Registrazione di un nuovo pagamento
 export const addCollaboratorPayment = async (req: Request, res: Response) => {
   const { id } = req.params;
+  
   try {
-    // Validazione dati
-    const validatedData = insertCollaboratorPaymentSchema.parse(req.body);
+    // Prepara i dati per l'inserimento - adatta i nomi dei campi in italiano a quelli in inglese
+    const requestData = {
+      collaboratorId: Number(id),
+      eventId: req.body.eventoId || req.body.eventId,
+      type: req.body.tipo || req.body.type,
+      amount: req.body.importo || req.body.amount,
+      paymentDate: req.body.dataPagamento || req.body.paymentDate || new Date(),
+      paymentMethod: req.body.metodoPagamento || req.body.paymentMethod,
+      notes: req.body.note || req.body.notes,
+      externalReference: req.body.riferimentoEsterno || req.body.externalReference
+    };
     
-    // Verifica che i campi essenziali siano presenti
-    if (!validatedData.eventId || !validatedData.type || !validatedData.amount) {
-      return res.status(400).json({ error: "Dati mancanti. Richiesti: eventId, type, amount" });
-    }
+    // Validazione input
+    const data = insertCollaboratorPaymentSchema.parse(requestData);
     
-    // Inserisci il pagamento
-    const [payment] = await db.insert(collaboratorPayments)
-      .values({
-        collaboratorId: Number(id),
-        eventId: validatedData.eventId,
-        type: validatedData.type,
-        amount: validatedData.amount,
-        paymentDate: validatedData.paymentDate || new Date(),
-        paymentMethod: validatedData.paymentMethod,
-        notes: validatedData.notes,
-        externalReference: validatedData.externalReference,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
+    // Inserimento nel database
+    const [newPayment] = await db
+      .insert(collaboratorPayments)
+      .values(data)
       .returning();
     
-    return res.status(201).json(payment);
+    // Formatta la risposta con campi sia in italiano che in inglese per retrocompatibilità
+    const response = {
+      ...newPayment,
+      // Campi in italiano per retrocompatibilità
+      collaboratoreId: newPayment.collaboratorId,
+      eventoId: newPayment.eventId,
+      tipo: newPayment.type,
+      importo: newPayment.amount,
+      dataPagamento: newPayment.paymentDate,
+      metodoPagamento: newPayment.paymentMethod,
+      note: newPayment.notes,
+      riferimentoEsterno: newPayment.externalReference
+    };
+    
+    return res.status(201).json(response);
   } catch (error) {
-    console.error(`Errore durante l'aggiunta del pagamento al collaboratore ${id}:`, error);
-    return res.status(500).json({ error: "Errore durante l'aggiunta del pagamento al collaboratore" });
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    
+    console.error(`Errore aggiunta pagamento al collaboratore ${id}:`, error);
+    return res.status(500).json({ error: "Errore durante la registrazione del pagamento" });
   }
 };
 
-/**
- * Ottiene tutti i montaggi di un collaboratore
- */
+// GET: Lista di montaggi di un collaboratore
 export const getCollaboratorEditing = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    // Recuperiamo i montaggi con i dettagli degli eventi associati
-    const editing = await db
-      .select({
-        // Dati del montaggio
-        id: collaboratorEditing.id,
-        collaboratorId: collaboratorEditing.collaboratorId,
-        eventId: collaboratorEditing.eventId,
-        advance: collaboratorEditing.advance,
-        balance: collaboratorEditing.balance,
-        firstContactDate: collaboratorEditing.firstContactDate,
-        priority: collaboratorEditing.priority,
-        expectedDeliveryDate: collaboratorEditing.expectedDeliveryDate,
-        status: collaboratorEditing.status,
-        notes: collaboratorEditing.notes,
-        createdAt: collaboratorEditing.createdAt,
-        updatedAt: collaboratorEditing.updatedAt,
-        // Dati dell'evento
-        eventTitle: events.title,
-        eventDate: events.date
-      })
+    const editingList = await db
+      .select()
       .from(collaboratorEditing)
-      .leftJoin(events, eq(collaboratorEditing.eventId, events.id))
       .where(eq(collaboratorEditing.collaboratorId, Number(id)))
-      .orderBy(desc(collaboratorEditing.expectedDeliveryDate));
+      .orderBy(desc(collaboratorEditing.priority));
     
-    return res.status(200).json(editing);
+    // Formatta la risposta con campi sia in italiano che in inglese per retrocompatibilità
+    const formattedEditingList = editingList.map(editing => ({
+      ...editing,
+      // Campi in italiano per retrocompatibilità
+      collaboratoreId: editing.collaboratorId,
+      eventoId: editing.eventId,
+      acconto: editing.advance,
+      saldo: editing.balance,
+      dataPrimoContatto: editing.firstContactDate,
+      priorita: editing.priority,
+      dataConsegnaPrevista: editing.expectedDeliveryDate,
+      stato: editing.status,
+      note: editing.notes
+    }));
+    
+    return res.status(200).json(formattedEditingList);
   } catch (error) {
-    console.error(`Errore durante il recupero dei montaggi del collaboratore ${id}:`, error);
+    console.error(`Errore recupero montaggi del collaboratore ${id}:`, error);
     return res.status(500).json({ error: "Errore durante il recupero dei montaggi del collaboratore" });
   }
 };
 
-/**
- * Aggiunge un montaggio a un collaboratore
- */
+// POST: Creazione di un nuovo montaggio (con opzione per registrare acconto)
 export const addCollaboratorEditing = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const collaboratorId = Number(id);
+  
   try {
-    // Validazione dati
-    const validatedData = insertCollaboratorEditingSchema.parse(req.body);
+    // Prepara i dati per l'inserimento - adatta i nomi dei campi in italiano a quelli in inglese
+    const requestData = {
+      collaboratorId,
+      eventId: req.body.eventoId || req.body.eventId,
+      advance: req.body.acconto || req.body.advance || 0,
+      balance: req.body.saldo || req.body.balance,
+      firstContactDate: req.body.dataPrimoContatto || req.body.firstContactDate,
+      priority: req.body.priorita || req.body.priority || 0,
+      expectedDeliveryDate: req.body.dataConsegnaPrevista || req.body.expectedDeliveryDate || new Date(),
+      status: req.body.stato || req.body.status || EditingStatus.TO_DO,
+      notes: req.body.note || req.body.notes
+    };
     
-    // Verifica che i campi essenziali siano presenti
-    if (!validatedData.eventId || !validatedData.advance || !validatedData.expectedDeliveryDate) {
-      return res.status(400).json({ error: "Dati mancanti. Richiesti: eventId, advance, expectedDeliveryDate" });
+    // Validazione input del montaggio
+    const data = insertCollaboratorEditingSchema.parse(requestData);
+    
+    // Verifica se è stato richiesto anche il pagamento di un acconto
+    const registerAdvance = req.body.registraAcconto === true || req.body.registerAdvance === true;
+    let paymentData;
+    
+    if (registerAdvance && (req.body.pagamento || req.body.payment)) {
+      const payment = req.body.pagamento || req.body.payment;
+      
+      // Prepara i dati per l'inserimento del pagamento
+      const paymentRequestData = {
+        collaboratorId,
+        eventId: data.eventId,
+        type: PaymentType.EDITING_ADVANCE,
+        amount: payment.importo || payment.amount,
+        paymentDate: payment.dataPagamento || payment.paymentDate || new Date(),
+        paymentMethod: payment.metodoPagamento || payment.paymentMethod,
+        notes: payment.note || payment.notes,
+        externalReference: payment.riferimentoEsterno || payment.externalReference
+      };
+      
+      // Validazione dati pagamento acconto
+      paymentData = insertCollaboratorPaymentSchema.parse(paymentRequestData);
     }
     
-    // Inserisci il montaggio
-    const [editing] = await db.insert(collaboratorEditing)
-      .values({
-        collaboratorId: Number(id),
-        eventId: validatedData.eventId,
-        advance: validatedData.advance,
-        balance: validatedData.balance,
-        firstContactDate: validatedData.firstContactDate,
-        priority: validatedData.priority,
-        expectedDeliveryDate: validatedData.expectedDeliveryDate,
-        status: validatedData.status || EditingStatus.TO_DO,
-        notes: validatedData.notes,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      })
-      .returning();
-    
-    return res.status(201).json(editing);
+    // Usa una transazione per garantire che entrambe le operazioni abbiano successo o falliscano insieme
+    return await db.transaction(async (tx) => {
+      // Inserimento del montaggio nel database
+      const [newEditing] = await tx
+        .insert(collaboratorEditing)
+        .values(data)
+        .returning();
+      
+      // Se richiesto, inserisci anche il pagamento dell'acconto
+      if (registerAdvance && paymentData) {
+        await tx
+          .insert(collaboratorPayments)
+          .values(paymentData);
+      }
+      
+      // Formatta la risposta con campi sia in italiano che in inglese per retrocompatibilità
+      const response = {
+        ...newEditing,
+        // Campi in italiano per retrocompatibilità
+        collaboratoreId: newEditing.collaboratorId,
+        eventoId: newEditing.eventId,
+        acconto: newEditing.advance,
+        saldo: newEditing.balance,
+        dataPrimoContatto: newEditing.firstContactDate,
+        priorita: newEditing.priority,
+        dataConsegnaPrevista: newEditing.expectedDeliveryDate,
+        stato: newEditing.status,
+        note: newEditing.notes
+      };
+      
+      return res.status(201).json(response);
+    });
   } catch (error) {
-    console.error(`Errore durante l'aggiunta del montaggio al collaboratore ${id}:`, error);
-    return res.status(500).json({ error: "Errore durante l'aggiunta del montaggio al collaboratore" });
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    
+    console.error(`Errore creazione montaggio per il collaboratore ${id}:`, error);
+    return res.status(500).json({ error: "Errore durante la creazione del montaggio" });
   }
 };
 
-/**
- * Aggiorna un montaggio
- */
+// PATCH: Aggiornamento stato montaggio (con opzione per registrare saldo)
 export const updateCollaboratorEditing = async (req: Request, res: Response) => {
   const { id, editingId } = req.params;
+  const collaboratorId = Number(id);
+  const editingIdNum = Number(editingId);
+  
   try {
-    // Validazione dati
-    const validatedData = updateCollaboratorEditingSchema.parse(req.body);
+    // Prepara i dati per l'aggiornamento - adatta i nomi dei campi in italiano a quelli in inglese
+    const requestData = {
+      advance: req.body.acconto !== undefined ? req.body.acconto : req.body.advance,
+      balance: req.body.saldo !== undefined ? req.body.saldo : req.body.balance,
+      firstContactDate: req.body.dataPrimoContatto || req.body.firstContactDate,
+      priority: req.body.priorita !== undefined ? req.body.priorita : req.body.priority,
+      expectedDeliveryDate: req.body.dataConsegnaPrevista || req.body.expectedDeliveryDate,
+      status: req.body.stato || req.body.status,
+      notes: req.body.note || req.body.notes
+    };
     
-    // Aggiorna il montaggio
-    const [editing] = await db.update(collaboratorEditing)
-      .set({
-        ...validatedData,
-        updatedAt: new Date()
-      })
-      .where(
-        and(
-          eq(collaboratorEditing.id, Number(editingId)),
-          eq(collaboratorEditing.collaboratorId, Number(id))
-        )
-      )
-      .returning();
+    // Filtriamo i campi undefined
+    const filteredData = Object.fromEntries(
+      Object.entries(requestData).filter(([_, v]) => v !== undefined)
+    );
     
-    if (!editing) {
-      return res.status(404).json({ error: "Montaggio non trovato" });
+    // Validazione input
+    const data = updateCollaboratorEditingSchema.parse(filteredData);
+    
+    // Verifica se è stato richiesto anche il pagamento di un saldo al completamento
+    const registerBalance = (req.body.registraSaldo === true || req.body.registerBalance === true) && 
+                           (data.status === EditingStatus.COMPLETED);
+    let paymentData;
+    
+    if (registerBalance && (req.body.pagamento || req.body.payment)) {
+      const payment = req.body.pagamento || req.body.payment;
+      const eventId = req.body.eventoId || req.body.eventId;
+      
+      // Prepara i dati per l'inserimento del pagamento saldo
+      const paymentRequestData = {
+        collaboratorId,
+        eventId: eventId,
+        type: PaymentType.EDITING_BALANCE,
+        amount: payment.importo || payment.amount,
+        paymentDate: payment.dataPagamento || payment.paymentDate || new Date(),
+        paymentMethod: payment.metodoPagamento || payment.paymentMethod,
+        notes: payment.note || payment.notes,
+        externalReference: payment.riferimentoEsterno || payment.externalReference
+      };
+      
+      // Validazione dati pagamento saldo
+      paymentData = insertCollaboratorPaymentSchema.parse(paymentRequestData);
     }
     
-    return res.status(200).json(editing);
+    // Usa una transazione per garantire che entrambe le operazioni abbiano successo o falliscano insieme
+    return await db.transaction(async (tx) => {
+      // Aggiornamento nel database
+      const [updatedEditing] = await tx
+        .update(collaboratorEditing)
+        .set(data)
+        .where(eq(collaboratorEditing.id, editingIdNum))
+        .returning();
+      
+      // Se richiesto, inserisci anche il pagamento del saldo
+      if (registerBalance && paymentData) {
+        await tx
+          .insert(collaboratorPayments)
+          .values(paymentData);
+      }
+      
+      // Formatta la risposta con campi sia in italiano che in inglese per retrocompatibilità
+      const response = {
+        ...updatedEditing,
+        // Campi in italiano per retrocompatibilità
+        collaboratoreId: updatedEditing.collaboratorId,
+        eventoId: updatedEditing.eventId,
+        acconto: updatedEditing.advance,
+        saldo: updatedEditing.balance,
+        dataPrimoContatto: updatedEditing.firstContactDate,
+        priorita: updatedEditing.priority,
+        dataConsegnaPrevista: updatedEditing.expectedDeliveryDate,
+        stato: updatedEditing.status,
+        note: updatedEditing.notes
+      };
+      
+      return res.status(200).json(response);
+    });
   } catch (error) {
-    console.error(`Errore durante l'aggiornamento del montaggio ${editingId}:`, error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    
+    console.error(`Errore aggiornamento montaggio ${editingId} per il collaboratore ${id}:`, error);
     return res.status(500).json({ error: "Errore durante l'aggiornamento del montaggio" });
   }
 };
 
-/**
- * Ottiene i dati per la dashboard di un collaboratore
- */
+// GET: Dashboard collaboratore (statistiche)
 export const getCollaboratorDashboard = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const collaboratorId = Number(id);
+  
   try {
-    const collaboratorId = Number(id);
-    
-    // Recupera il collaboratore
+    // Recupera il collaboratore per i dati di base
     const [collaborator] = await db
       .select()
       .from(collaborators)
-      .where(eq(collaborators.id, collaboratorId))
-      .limit(1);
-      
+      .where(eq(collaborators.id, collaboratorId));
+    
     if (!collaborator) {
       return res.status(404).json({ error: "Collaboratore non trovato" });
     }
     
-    // Recupera gli eventi (ultimi 5)
-    const recentEvents = await db
+    // Recupera eventi assegnati
+    const assignedEvents = await db
       .select({
-        // Dati dell'evento
-        id: events.id,
-        title: events.title,
-        date: events.date,
-        location: events.location,
-        status: events.status,
-        // Dati del cliente
-        clientFirstName: clients.firstName,
-        clientLastName: clients.lastName,
-        // Dati dell'assegnazione
-        role: eventCollaborators.role
+        id: eventCollaborators.id,
+        eventId: eventCollaborators.eventId,
+        role: eventCollaborators.role,
+        assignedAt: eventCollaborators.assignedAt
       })
-      .from(events)
-      .leftJoin(clients, eq(events.clientId, clients.id))
-      .innerJoin(
-        eventCollaborators, 
-        and(
-          eq(eventCollaborators.eventId, events.id),
-          eq(eventCollaborators.collaboratorId, collaboratorId)
-        )
-      )
-      .orderBy(desc(events.date))
-      .limit(5);
-    
-    // Recupera i pagamenti (ultimi 5)
-    const payments = await db
-      .select({
-        id: collaboratorPayments.id,
-        eventId: collaboratorPayments.eventId,
-        type: collaboratorPayments.type,
-        amount: collaboratorPayments.amount,
-        paymentDate: collaboratorPayments.paymentDate,
-        eventTitle: events.title
-      })
-      .from(collaboratorPayments)
-      .leftJoin(events, eq(collaboratorPayments.eventId, events.id))
-      .where(eq(collaboratorPayments.collaboratorId, collaboratorId))
-      .orderBy(desc(collaboratorPayments.paymentDate))
-      .limit(5);
-    
-    // Recupera i montaggi (ultimi 5)
-    const editing = await db
-      .select({
-        id: collaboratorEditing.id,
-        eventId: collaboratorEditing.eventId,
-        advance: collaboratorEditing.advance,
-        balance: collaboratorEditing.balance,
-        expectedDeliveryDate: collaboratorEditing.expectedDeliveryDate,
-        status: collaboratorEditing.status,
-        eventTitle: events.title
-      })
-      .from(collaboratorEditing)
-      .leftJoin(events, eq(collaboratorEditing.eventId, events.id))
-      .where(eq(collaboratorEditing.collaboratorId, collaboratorId))
-      .orderBy(desc(collaboratorEditing.expectedDeliveryDate))
-      .limit(5);
-    
-    // Calcola statistiche
-    // Totale eventi
-    const { count: totalEvents } = await db
-      .select({ count: count() })
       .from(eventCollaborators)
       .where(eq(eventCollaborators.collaboratorId, collaboratorId))
-      .then(rows => rows[0] || { count: 0 });
+      .orderBy(desc(eventCollaborators.assignedAt));
     
-    // Totale pagamenti
-    const { sum: totalPayments } = await db
-      .select({ sum: sql`COALESCE(SUM(${collaboratorPayments.amount}), 0)` })
+    // Conta eventi totali e per ruolo
+    const totalEvents = assignedEvents.length;
+    
+    const roleCount = {};
+    for (const event of assignedEvents) {
+      roleCount[event.role] = (roleCount[event.role] || 0) + 1;
+    }
+    
+    // Recupera informazioni sui pagamenti
+    const payments = await db
+      .select()
       .from(collaboratorPayments)
-      .where(eq(collaboratorPayments.collaboratorId, collaboratorId))
-      .then(rows => rows[0] || { sum: 0 });
+      .where(eq(collaboratorPayments.collaboratorId, collaboratorId));
     
-    // Montaggi da completare
-    const { count: pendingEditing } = await db
-      .select({ count: count() })
+    // Calcola pagamenti totali e per tipo
+    let totalPayments = 0;
+    const paymentsByType = {};
+    
+    for (const payment of payments) {
+      const amount = typeof payment.amount === 'string' 
+        ? parseFloat(payment.amount) 
+        : Number(payment.amount);
+      
+      totalPayments += amount;
+      paymentsByType[payment.type] = (paymentsByType[payment.type] || 0) + amount;
+    }
+    
+    // Recupera informazioni sui montaggi
+    const editingJobs = await db
+      .select()
       .from(collaboratorEditing)
-      .where(
-        and(
-          eq(collaboratorEditing.collaboratorId, collaboratorId),
-          eq(collaboratorEditing.status, EditingStatus.TO_DO)
-        )
-      )
-      .then(rows => rows[0] || { count: 0 });
+      .where(eq(collaboratorEditing.collaboratorId, collaboratorId));
     
-    return res.status(200).json({
-      collaborator,
-      statistics: {
-        totalEvents,
-        totalPayments,
-        pendingEditing
+    // Conta montaggi per stato
+    const editingByStatus = {};
+    for (const job of editingJobs) {
+      editingByStatus[job.status] = (editingByStatus[job.status] || 0) + 1;
+    }
+    
+    // Costruisci la dashboard
+    const dashboard = {
+      // Info collaboratore
+      collaborator: {
+        id: collaborator.id,
+        firstName: collaborator.firstName,
+        lastName: collaborator.lastName,
+        role: collaborator.role,
+        status: collaborator.status,
+        // Campi in italiano per retrocompatibilità
+        nome: collaborator.firstName,
+        cognome: collaborator.lastName,
+        ruolo: collaborator.role,
+        stato: collaborator.status
       },
-      recentData: {
-        events: recentEvents,
-        payments,
-        editing
+      // Statistiche eventi
+      events: {
+        total: totalEvents,
+        byRole: roleCount,
+        recent: assignedEvents.slice(0, 5).map(event => ({
+          id: event.id,
+          eventId: event.eventId,
+          role: event.role,
+          assignedAt: event.assignedAt,
+          // Campi in italiano per retrocompatibilità
+          eventoId: event.eventId,
+          ruolo: event.role,
+          dataAssegnazione: event.assignedAt
+        })),
+        // Campi in italiano per retrocompatibilità
+        totale: totalEvents,
+        perRuolo: roleCount,
+        recenti: assignedEvents.slice(0, 5).map(event => ({
+          id: event.id,
+          eventoId: event.eventId,
+          ruolo: event.role,
+          dataAssegnazione: event.assignedAt
+        }))
+      },
+      // Statistiche pagamenti
+      payments: {
+        total: totalPayments,
+        byType: paymentsByType,
+        count: payments.length,
+        // Campi in italiano per retrocompatibilità
+        totale: totalPayments,
+        perTipo: paymentsByType,
+        conteggio: payments.length
+      },
+      // Statistiche montaggi
+      editing: {
+        total: editingJobs.length,
+        byStatus: editingByStatus,
+        // Campi in italiano per retrocompatibilità
+        totale: editingJobs.length,
+        perStato: editingByStatus
       }
-    });
+    };
+    
+    return res.status(200).json(dashboard);
   } catch (error) {
-    console.error(`Errore durante il recupero della dashboard del collaboratore ${id}:`, error);
+    console.error(`Errore recupero dashboard del collaboratore ${id}:`, error);
     return res.status(500).json({ error: "Errore durante il recupero della dashboard del collaboratore" });
   }
 };

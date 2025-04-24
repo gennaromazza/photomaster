@@ -143,18 +143,23 @@ class ProjectAnalyzer:
             for pattern in route_patterns:
                 matches = re.finditer(pattern, line)
                 for match in matches:
-                    if len(match.groups()) == 2:
-                        if match.group(1) == 'use':
+                    groups = match.groups()
+                    if len(groups) == 1:
+                        # This could be app.use('/path') pattern which has only one group
+                        path = groups[0]
+                        method = "use"
+                    elif len(groups) == 2:
+                        if groups[0] == 'use':
                             # This is a router mounting point
-                            path = match.group(1)
+                            path = groups[1]
                             method = "use"
                         else:
-                            method = match.group(1)
-                            path = match.group(2)
+                            method = groups[0]
+                            path = groups[1]
                     else:
-                        # This is router.route('/path').method()
-                        path = match.group(1)
-                        method = match.group(2)
+                        # Somehow we got here with an unexpected number of groups
+                        console.print(f"[yellow]Warning: Unexpected match pattern with {len(groups)} groups: {match.group(0)}[/yellow]")
+                        continue
                     
                     # Extract any parameter names in the path
                     params = re.findall(r':([a-zA-Z0-9_]+)', path)

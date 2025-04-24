@@ -80,12 +80,19 @@ export default function DashboardCollaboratorePublic() {
   // Estrai i parametri dall'URL
   useEffect(() => {
     const tokenFromUrl = searchParams.get("token");
-    const idFromUrl = window.location.pathname.split("/").filter(Boolean).pop();
+    // Ottieni l'ID dal percorso URL - /collaboratori/:id/dashboard-public
+    const pathParts = window.location.pathname.split("/").filter(Boolean);
+    const idFromUrl = pathParts.length >= 2 ? pathParts[1] : null;
+    
+    console.log("Path parts:", pathParts);
+    console.log("ID from URL:", idFromUrl);
+    console.log("Token from URL:", tokenFromUrl);
     
     if (tokenFromUrl && idFromUrl) {
       setToken(tokenFromUrl);
       setCollaboratoreId(parseInt(idFromUrl, 10));
     } else {
+      console.error("Parametri mancanti:", { token: tokenFromUrl, id: idFromUrl });
       // Reindirizza a una pagina di errore o alla homepage se mancano parametri necessari
       navigate("/error?message=Parametri+mancanti");
     }

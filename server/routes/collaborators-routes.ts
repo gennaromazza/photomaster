@@ -67,4 +67,20 @@ router.post("/collaborators/migrate-data", csrfProtection, async (req, res) => {
   }
 });
 
+// Eseguiamo la migrazione con script anziché via API
+// per evitare le complicazioni del CSRF
+
+// Migrazione dei dati da eseguire dalla console
+export async function runMigration() {
+  try {
+    console.log("Inizio migrazione dei dati collaboratori...");
+    await migrateAllCollaboratoriData();
+    console.log("Migrazione dati collaboratori completata con successo");
+    return true;
+  } catch (error) {
+    console.error("Errore durante la migrazione dei dati collaboratori:", error);
+    return false;
+  }
+}
+
 export default router;

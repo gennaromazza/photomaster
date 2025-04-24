@@ -12,6 +12,7 @@ import { syncAllCollaboratorAssignments } from "./utils/sync-collaboratori";
 import { syncAllEventData } from "./utils/migrate-eventi-data";
 import { runMigration } from "./utils/run-migration";
 import { createItalianTables } from "./utils/create-italian-tables";
+import { updateEventCollaboratorsTable } from "./utils/update-event-collaborators";
 import { setupUploadRoutes } from "./upload";
 import bundleLeadsRouter from "./routes/bundle-leads";
 import settingsRouter from "./routes/settings";
@@ -71,6 +72,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log("✅ Tabelle italiane create o verificate con successo");
   } catch (error) {
     console.error("❌ Errore nella creazione delle tabelle italiane:", error);
+  }
+  
+  // Aggiorna la tabella event_collaborators con le colonne mancanti
+  try {
+    await updateEventCollaboratorsTable();
+    console.log("✅ Tabella event_collaborators aggiornata con successo");
+  } catch (error) {
+    console.error("❌ Errore nell'aggiornamento della tabella event_collaborators:", error);
   }
 
   // Setup API routes

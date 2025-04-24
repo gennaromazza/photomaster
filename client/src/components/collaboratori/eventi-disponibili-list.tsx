@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertTriangle, Calendar, MapPin, Info, UserPlus } from "lucide-react";
+import { Loader2, AlertTriangle, Calendar, MapPin, Info, UserPlus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -21,6 +21,7 @@ interface EventiDisponibiliListProps {
 
 export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliListProps = {}) {
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
   
   // Recupera la lista degli eventi senza collaboratori
   const { data: eventiSenzaCollaboratori, isLoading: eventiLoading, error: eventiError } = useQuery({
@@ -34,6 +35,20 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
     staleTime: 5 * 60 * 1000, // 5 minuti
     enabled: !collaboratoreId, // Esegui la query solo se non è specificato un ID collaboratore
   });
+  
+  // Filtra gli eventi in base al termine di ricerca
+  const eventiFiltered = useMemo(() => {
+    if (!eventiSenzaCollaboratori) return [];
+    if (!searchTerm.trim()) return eventiSenzaCollaboratori;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return eventiSenzaCollaboratori.filter(evento => 
+      (evento.title && evento.title.toLowerCase().includes(searchLower)) || 
+      (evento.description && evento.description.toLowerCase().includes(searchLower)) ||
+      (evento.location && evento.location.toLowerCase().includes(searchLower)) ||
+      (evento.eventType && evento.eventType.toLowerCase().includes(searchLower))
+    );
+  }, [eventiSenzaCollaboratori, searchTerm]);
   
   const isLoading = eventiLoading || (collaboratoriLoading && !collaboratoreId);
   const error = eventiError || (collaboratoriError && !collaboratoreId);
@@ -115,9 +130,25 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
         <h3 className="text-gray-500 text-base">Eventi che non hanno ancora collaboratori assegnati</h3>
       </div>
       
-      {/* Titolo sezione principale */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Eventi disponibili per l'assegnazione</h3>
+      {/* Titolo sezione principale e campo di ricerca */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Eventi disponibili per l'assegnazione</h3>
+        <div className="relative w-1/3">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <input 
+            type="text" 
+            placeholder="Cerca eventi..." 
+            className="w-full pl-9 pr-4 py-2 rounded-md border border-input bg-transparent text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {searchTerm && (
+            <X 
+              className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground" 
+              onClick={() => setSearchTerm("")}
+            />
+          )}
+        </div>
       </div>
 
       {/* Visualizzazione tabellare (stile Preventivi) */}

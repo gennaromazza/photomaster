@@ -101,24 +101,51 @@ export default function DashboardCollaboratorePublic() {
     isLoading,
     error,
   } = useQuery<DashboardData>({
-    queryKey: [`/api/collaboratori/${collaboratoreId}/dashboard-public`],
+    queryKey: [`/api/dashboard-collaboratore-public`],
     queryFn: async () => {
       if (!collaboratoreId || !token) return null;
       
-      const res = await fetch(
-        `/api/collaboratori/${collaboratoreId}/dashboard-public?token=${token}`,
-        {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
+      // Proviamo con il formato nuovo con parametri di query
+      console.log("Tentativo di connessione alla dashboard collaboratore:", {
+        id: collaboratoreId,
+        token: token?.substring(0, 10) + "..." // Per sicurezza mostriamo solo i primi caratteri
+      });
+      
+      try {
+        // Prova prima con il nuovo percorso
+        const res = await fetch(
+          `/api/dashboard-collaboratore-public?id=${collaboratoreId}&token=${token}`,
+          {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
+          }
+        );
+        
+        if (!res.ok) {
+          // Se non funziona, prova con il percorso vecchio
+          console.log("API nuovo formato non trovata, provo con il formato vecchio...");
+          const oldFormatRes = await fetch(
+            `/api/collaboratori/${collaboratoreId}/dashboard-public?token=${token}`,
+            {
+              headers: {
+                "Authorization": `Bearer ${token}`,
+              },
+            }
+          );
+          
+          if (!oldFormatRes.ok) {
+            throw new Error(`Errore di autenticazione: ${oldFormatRes.status}`);
+          }
+          
+          return await oldFormatRes.json();
         }
-      );
-      
-      if (!res.ok) {
-        throw new Error(`Errore di autenticazione: ${res.status}`);
+        
+        return await res.json();
+      } catch (error) {
+        console.error("Errore durante il recupero dei dati della dashboard:", error);
+        throw new Error(`Errore durante il recupero dei dati: ${error.message}`);
       }
-      
-      return await res.json();
     },
     enabled: !!collaboratoreId && !!token,
   });

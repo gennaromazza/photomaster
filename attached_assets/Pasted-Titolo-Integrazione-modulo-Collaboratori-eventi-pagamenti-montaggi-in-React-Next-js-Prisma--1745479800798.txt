@@ -1,0 +1,144 @@
+Titolo: Integrazione modulo “Collaboratori” (eventi, pagamenti, montaggi) in React/Next.js + Prisma
+
+Contesto
+Dobbiamo aggiungere un sotto-sistema isolato per la gestione dei collaboratori (fotografi, videomaker, ecc.) senza toccare i componenti esistenti tranne il layout generale. UI e UX devono rimanere identiche al resto della webapp (stessi token Tailwind, breakpoints, font e palette colori) e garantire piena responsività su mobile/tablet/desktop.
+
+### 1. Database & ORM (Prisma)
+
+1. Aggiornare schema.prisma:
+
+model Collaboratore {
+  id                String   @id @default(uuid())
+  nome              String
+  ruolo             String
+  contattoWhatsapp  String
+  eventi            EventoCollaboratore[]
+  pagamenti         PagamentoCollaboratore[]
+  montaggi          Montaggio[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model EventoCollaboratore {
+  id               String   @id @default(uuid())
+  collaboratore    Collaboratore @relation(fields: [collaboratoreId], references: [id])
+  collaboratoreId  String
+  eventoId         String
+  ruolo            String
+  dataAssegnazione DateTime
+}
+
+model PagamentoCollaboratore {
+  id               String   @id @default(uuid())
+  collaboratore   Collaboratore @relation(fields: [collaboratoreId], references: [id])
+  collaboratoreId String
+  eventoId        String
+  tipo            String   // “acconto”, “saldo”, “montaggio_acconto”, “montaggio_saldo”
+  importo         Decimal
+  dataPagamento   DateTime @default(now())
+}
+
+model Montaggio {
+  id                     String   @id @default(uuid())
+  collaboratore         Collaboratore @relation(fields: [collaboratoreId], references: [id])
+  collaboratoreId       String
+  eventoId              String
+  acconto               Decimal
+  saldo                 Decimal?
+  dataPrimoContatto     DateTime?
+  priorita              Int
+  dataConsegnaPrevista  DateTime
+  stato                 String   // enum “da_fare” | “in_corso” | “completato”
+  note                  String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+2. Esegui migration:
+npx prisma migrate dev --name add_collaboratori_module
+
+### 2. Backend API (Next.js API routes o Express)
+
+Route base: /api/collaboratori/*
+
+Implementare CRUD:
+- GET /api/collaboratori → lista collaboratori
+- GET /api/collaboratori/:id → dettaglio, includendo eventi, pagamenti, montaggi
+- POST /api/collaboratori → creazione collaboratore
+- PATCH /api/collaboratori/:id → aggiornamento anagrafica
+- Events
+  - GET /api/collaboratori/:id/events
+- Pagamenti
+  - GET /api/collaboratori/:id/payments
+  - POST /api/collaboratori/:id/payments  
+    Payload: { eventoId, tipo, importo, dataPagamento? }
+- Montaggi
+  - GET /api/collaboratori/:id/montaggi
+  - POST /api/collaboratori/:id/montaggi  
+    Payload: { eventoId, acconto, priorita, dataConsegnaPrevista }
+  - PATCH /api/collaboratori/:id/montaggi/:montaggioId  
+    Payload: { stato?, dataPrimoContatto?, saldo?, note? }
+
+Validare tutti i payload con Zod o Joi, loggare le chiamate critiche.
+
+### 3. Frontend (React + Next.js)
+
+1. Struttura cartelle:
+
+client/src/modules/collaboratori/
+├── components/
+│   ├── CollaboratoreCard.tsx
+│   ├── EventList.tsx
+│   ├── PaymentSummary.tsx
+│   ├── MontageQueue.tsx
+│   └── Notifications.tsx
+├── hooks/
+│   └── useCollaboratore.ts
+├── pages/
+│   ├── index.tsx          // /collaboratori
+│   ├── [id].tsx           // /collaboratori/:id
+│   └── [id]/dashboard.tsx // /collaboratori/:id/dashboard
+└── styles/                // override specifici se serve
+
+2. Dynamic import & lazy loading:
+import dynamic from 'next/dynamic';
+const Dashboard = dynamic(() => import('../modules/collaboratori/pages/[id]/dashboard'), { ssr: false });
+
+3. Hook dati (useCollaboratore.ts):
+import useSWR from 'swr';
+export function useCollaboratore(id: string) {
+  const { data, error } = useSWR(`/api/collaboratori/${id}`, fetcher);
+  return { collaboratore: data, isLoading: !error && !data, isError: error };
+}
+
+4. UI Components
+- Usare gli stessi componenti di layout e token Tailwind
+- PaymentSummary: mostra totale acconti, saldo residuo, bottone “Registra pagamento”
+- MontageQueue: lista con badge stato, filtro “Scadenze” e bottoni “Inizia” / “Completa”
+- Notifications: toast per feedback API
+
+5. Invio notifiche
+- WhatsApp.me:
+<a href="https://wa.me/{contatto}?text={messaggio}" target="_blank">Invia WhatsApp</a>
+- SendGrid: chiamata a /api/notifications/email dopo ogni evento rilevante
+
+6. Responsive & Accessibilità
+- Classi Tailwind sm:, md:, lg:
+- ARIA labels su bottoni e form
+
+### 4. Testing
+
+- Unit tests con Jest + React Testing Library per hook e validazioni
+- E2E con Playwright: flusso completo collaboratore → evento → pagamento → montaggio
+
+### 5. Deliverable & Checklist
+
+- [ ] Prisma migration + validazione modelli
+- [ ] API routes con Swagger
+- [ ] Nuove pagine e componenti in modules/collaboratori
+- [ ] Styling conforme e mobile-first
+- [ ] Integrazione SendGrid + WhatsApp link
+- [ ] Copertura test ≥ 80% + E2E
+- [ ] Documentazione API e README nel modulo
+
+Nota: lavorare esclusivamente in `modules/collaboratori` e `routes/collaboratori`, non modificare componenti globali.

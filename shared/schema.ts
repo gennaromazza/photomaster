@@ -223,9 +223,15 @@ export const insertCollaboratorSchema = createInsertSchema(collaborators).pick({
 export type InsertCollaborator = z.infer<typeof insertCollaboratorSchema>;
 export type Collaborator = typeof collaborators.$inferSelect;
 
+// Le relazioni di base per i collaboratori
 export const collaboratorsRelations = relations(collaborators, ({ many }) => ({
   eventCollaborators: many(eventCollaborators),
 }));
+
+// Importiamo il modulo collaboratori avanzato
+export * from "./collaboratori";
+
+// Le relazioni verranno registrate in index.ts per evitare riferimenti circolari
 
 // Event Collaborator Schema (join table)
 export const eventCollaborators = pgTable("event_collaborators", {

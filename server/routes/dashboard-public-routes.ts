@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { db } from "../db";
 import { collaborators, eventiCollaboratori, pagamentiCollaboratori, montaggi } from "@shared/schema";
 import { eq } from "drizzle-orm";
-import { verifyCollaboratorToken } from "../utils/token";
+import { verifyCollaboratorToken, generateCollaboratorToken } from "../utils/token";
 
 const router = Router();
 
@@ -118,7 +118,6 @@ router.post("/:id/generate-dashboard-token", async (req: Request, res: Response)
     }
     
     // Genera un nuovo token
-    const { generateCollaboratorToken } = require("../utils/token");
     const newToken = generateCollaboratorToken(collaboratorId);
     
     // Salva il token nel database

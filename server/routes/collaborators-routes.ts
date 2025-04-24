@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { csrfProtection } from "../middleware/csrf-protection";
+import { csrfProtection } from "../auth";
 import { 
   getAllCollaborators,
   getCollaborator,

@@ -3370,6 +3370,11 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/selection", selectionRouter);
   app.use("/api/clauses", isAuthenticated, clausesRouter);
   app.use("/api/notifications", isAuthenticated, notificationsRouter);
+  
+  // Nuova rotta standardizzata per i collaboratori (versione inglese)
+  app.use("/api/collaborators", isAuthenticated, collaboratorsRouter);
+  
+  // Manteniamo temporaneamente le vecchie rotte per retrocompatibilità
   app.use("/api/collaboratori", isAuthenticated, collaboratoriRouter);
   app.use("/api/eventi", isAuthenticated, eventiRouter);
 

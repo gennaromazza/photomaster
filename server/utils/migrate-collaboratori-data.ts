@@ -8,7 +8,7 @@ import {
   eventiCollaboratori, 
   pagamentiCollaboratori, 
   montaggi 
-} from "@shared/collaboratori";
+} from "@shared/schema";
 import { 
   eventCollaborators, 
   collaboratorPayments, 

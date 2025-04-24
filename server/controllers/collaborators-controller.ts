@@ -5,7 +5,7 @@
 
 import { Request, Response } from "express";
 import { db } from "../db";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, count, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Import dello schema unificato
@@ -427,7 +427,7 @@ export const getCollaboratorDashboard = async (req: Request, res: Response) => {
     }
     
     // Recupera gli eventi (ultimi 5)
-    const events = await db
+    const recentEvents = await db
       .select({
         // Dati dell'evento
         id: events.id,
@@ -521,7 +521,7 @@ export const getCollaboratorDashboard = async (req: Request, res: Response) => {
         pendingEditing
       },
       recentData: {
-        events,
+        events: recentEvents,
         payments,
         editing
       }

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { EventoCollaboratoreList } from "./eventi-collaboratore";
 import { PagamentoCollaboratoreList } from "./pagamenti-collaboratore";
 import { MontaggioCollaboratoreList } from "./montaggi-collaboratore";
+import { EventiDisponibiliList } from "./eventi-disponibili-list";
 
 interface CollaboratoreDashboardProps {
   collaboratoreId: number;
@@ -79,9 +80,10 @@ export function CollaboratoreDashboard({ collaboratoreId }: CollaboratoreDashboa
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-4 mb-6">
+        <TabsList className="grid grid-cols-5 mb-6">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="eventi">Eventi</TabsTrigger>
+          <TabsTrigger value="eventi">Eventi Assegnati</TabsTrigger>
+          <TabsTrigger value="eventi-disponibili">Eventi Disponibili</TabsTrigger>
           <TabsTrigger value="pagamenti">Pagamenti</TabsTrigger>
           <TabsTrigger value="montaggi">Montaggi</TabsTrigger>
         </TabsList>

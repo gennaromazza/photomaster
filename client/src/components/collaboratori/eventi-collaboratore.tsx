@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertTriangle, Calendar, MapPin, Clock, Plus, Info } from "lucide-react";
+import { Loader2, AlertTriangle, Calendar, MapPin, Clock, Plus, Info, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format, isAfter, parseISO } from "date-fns";
@@ -37,6 +37,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -66,6 +72,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   const { toast } = useToast();
   const [filter, setFilter] = useState<"tutti" | "passati" | "futuri">("tutti");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"assegnati" | "disponibili">("assegnati");
 
   // Recupera la lista degli eventi assegnati al collaboratore
   const { data: eventi, isLoading, error } = useQuery({
@@ -78,6 +85,13 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
     queryKey: ["/api/events"],
     staleTime: 5 * 60 * 1000,
     enabled: isModalOpen, // Carica solo quando il modal è aperto
+  });
+  
+  // Recupera la lista degli eventi senza collaboratori
+  const { data: eventiSenzaCollaboratori, isLoading: isLoadingEventiSenza, error: errorEventiSenza } = useQuery({
+    queryKey: ["/api/events/senza-collaboratori"],
+    staleTime: 5 * 60 * 1000, // 5 minuti
+    enabled: activeTab === "disponibili", // Carica solo quando la tab "disponibili" è attiva
   });
 
   // Filtra gli eventi in base alla tab selezionata (tutti, passati, futuri)
@@ -124,6 +138,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
       });
       queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`] });
       queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/dashboard`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/events/senza-collaboratori`] });
       setIsModalOpen(false);
       form.reset();
     },
@@ -134,6 +149,40 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
         variant: "destructive",
       });
       console.error("Errore durante l'assegnazione dell'evento:", error);
+    },
+  });
+  
+  // Mutation per l'assegnazione rapida di un evento dalla lista eventi senza collaboratori
+  const assegnaRapidoMutation = useMutation({
+    mutationFn: async ({ eventoId, ruolo }: { eventoId: number, ruolo: string }) => {
+      const response = await apiRequest(
+        "POST", 
+        `/api/collaboratori/${collaboratoreId}/eventi`,
+        {
+          eventoId,
+          ruolo,
+          dataAssegnazione: new Date(),
+          note: "Assegnazione rapida dalla dashboard"
+        }
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Evento assegnato",
+        description: "L'evento è stato assegnato con successo al collaboratore.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/dashboard`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/events/senza-collaboratori`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore durante l'assegnazione dell'evento.",
+        variant: "destructive",
+      });
+      console.error("Errore durante l'assegnazione rapida dell'evento:", error);
     },
   });
 
@@ -381,24 +430,218 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
     </div>
   );
 
-  // Mostro un messaggio se non ci sono eventi
-  if (filteredEventi.length === 0) {
-    return (
-      <div className="space-y-4">
-        {toolbarContent}
-        
+  // Renderizza il contenuto della scheda "Eventi Assegnati"
+  const renderEventiAssegnati = () => {
+    if (filteredEventi.length === 0) {
+      return (
         <div className="bg-muted/40 rounded-lg p-8 text-center">
           <p className="text-muted-foreground">
             Nessun evento {filter !== "tutti" ? filter : ""} trovato per questo collaboratore.
           </p>
         </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {filteredEventi.map((evento) => (
+          <Card key={evento.id} className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-lg font-semibold">{evento.titolo || evento.title}</CardTitle>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    {format(new Date(evento.data || evento.eventDate), "PPP", { locale: it })}
+                  </div>
+                </div>
+                <Badge variant="outline">
+                  {evento.ruolo || 'Non specificato'}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
+                    {evento.address && (
+                      <p className="text-xs text-muted-foreground">{evento.address}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm">{evento.time || 'Orario non specificato'}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
-  }
+  };
 
+  // Renderizza il contenuto della scheda "Eventi Disponibili"
+  const renderEventiDisponibili = () => {
+    if (isLoadingEventiSenza) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    if (errorEventiSenza) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64">
+          <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+          <p className="text-lg text-muted-foreground">
+            Si è verificato un errore durante il caricamento degli eventi
+          </p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/events/senza-collaboratori"] })}
+          >
+            Riprova
+          </Button>
+        </div>
+      );
+    }
+
+    if (!eventiSenzaCollaboratori || eventiSenzaCollaboratori.length === 0) {
+      return (
+        <div className="bg-muted/40 rounded-lg p-8 text-center">
+          <p className="text-muted-foreground">
+            Nessun evento senza collaboratori trovato.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {eventiSenzaCollaboratori.map((evento) => (
+          <Card key={evento.id} className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-lg font-semibold">{evento.title}</CardTitle>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    {format(new Date(evento.date), "PPP", { locale: it })}
+                  </div>
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="flex items-center gap-1"
+                      disabled={assegnaRapidoMutation.isPending}
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      <span>Assegna</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2">
+                    <p className="text-sm mb-2 font-medium">Ruolo per questo evento:</p>
+                    <div className="flex flex-col gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={() => assegnaRapidoMutation.mutate({ 
+                          eventoId: evento.id, 
+                          ruolo: "fotografo" 
+                        })}
+                        disabled={assegnaRapidoMutation.isPending}
+                      >
+                        {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                        Fotografo
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => assegnaRapidoMutation.mutate({ 
+                          eventoId: evento.id, 
+                          ruolo: "videomaker" 
+                        })}
+                        disabled={assegnaRapidoMutation.isPending}
+                      >
+                        {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                        Videomaker
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => assegnaRapidoMutation.mutate({ 
+                          eventoId: evento.id, 
+                          ruolo: "assistente" 
+                        })}
+                        disabled={assegnaRapidoMutation.isPending}
+                      >
+                        {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                        Assistente
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => assegnaRapidoMutation.mutate({ 
+                          eventoId: evento.id, 
+                          ruolo: "grafico" 
+                        })}
+                        disabled={assegnaRapidoMutation.isPending}
+                      >
+                        {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                        Grafico
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
+                    {evento.address && (
+                      <p className="text-xs text-muted-foreground">{evento.address}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm">
+                      {evento.description && evento.description.length > 120
+                        ? `${evento.description.substring(0, 120)}...`
+                        : evento.description || 'Nessuna descrizione disponibile'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  // Struttura principale con tabs
   return (
     <div className="space-y-4">
-      {toolbarContent}
+      <Tabs defaultValue="assegnati" className="w-full" onValueChange={(value) => setActiveTab(value as "assegnati" | "disponibili")}>
+        <div className="flex items-center justify-between mb-4">
+          <TabsList>
+            <TabsTrigger value="assegnati">Eventi Assegnati</TabsTrigger>
+            <TabsTrigger value="disponibili">Eventi Disponibili</TabsTrigger>
+          </TabsList>
+          
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredEventi.map((evento) => (

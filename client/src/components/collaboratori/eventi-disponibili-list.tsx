@@ -14,14 +14,28 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export function EventiDisponibiliList() {
+interface EventiDisponibiliListProps {
+  collaboratoreId?: number;
+}
+
+export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliListProps = {}) {
   const { toast } = useToast();
   
   // Recupera la lista degli eventi senza collaboratori
-  const { data: eventiSenzaCollaboratori, isLoading, error } = useQuery({
+  const { data: eventiSenzaCollaboratori, isLoading: eventiLoading, error: eventiError } = useQuery({
     queryKey: ["/api/events/senza-collaboratori"],
     staleTime: 5 * 60 * 1000, // 5 minuti
   });
+  
+  // Recupera la lista dei collaboratori (solo se non è specificato un ID collaboratore)
+  const { data: collaboratori, isLoading: collaboratoriLoading, error: collaboratoriError } = useQuery({
+    queryKey: ["/api/collaborators"],
+    staleTime: 5 * 60 * 1000, // 5 minuti
+    enabled: !collaboratoreId, // Esegui la query solo se non è specificato un ID collaboratore
+  });
+  
+  const isLoading = eventiLoading || (collaboratoriLoading && !collaboratoreId);
+  const error = eventiError || (collaboratoriError && !collaboratoreId);
 
   // Mutation per l'assegnazione rapida di un evento dalla lista eventi senza collaboratori
   const assegnaRapidoMutation = useMutation({
@@ -147,18 +161,23 @@ export function EventiDisponibiliList() {
                     <PopoverContent>
                       <div className="space-y-4">
                         <h4 className="font-medium">Seleziona collaboratore e ruolo</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-sm font-medium">Collaboratore</label>
-                            <select 
-                              className="w-full p-2 border rounded mt-1"
-                              id="collaboratore-select"
-                            >
-                              <option value="">Seleziona...</option>
-                              {/* Questa lista deve essere popolata dinamicamente */}
-                              <option value="1">Vincenzo Migliaccio</option>
-                            </select>
-                          </div>
+                        <div className={`grid ${collaboratoreId ? "grid-cols-1" : "grid-cols-2"} gap-2`}>
+                          {!collaboratoreId && (
+                            <div>
+                              <label className="text-sm font-medium">Collaboratore</label>
+                              <select 
+                                className="w-full p-2 border rounded mt-1"
+                                id="collaboratore-select"
+                              >
+                                <option value="">Seleziona...</option>
+                                {collaboratori && collaboratori.map((collab) => (
+                                  <option key={collab.id} value={collab.id}>
+                                    {collab.firstName} {collab.lastName}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                           <div>
                             <label className="text-sm font-medium">Ruolo</label>
                             <select 
@@ -176,20 +195,23 @@ export function EventiDisponibiliList() {
                         <Button 
                           className="w-full"
                           onClick={() => {
-                            const collaboratoreId = (document.getElementById('collaboratore-select') as HTMLSelectElement).value;
+                            // Se abbiamo un ID collaboratore specificato lo usiamo, altrimenti prendiamo quello selezionato
+                            const selectedCollaboratoreId = collaboratoreId || (document.getElementById('collaboratore-select') as HTMLSelectElement)?.value;
                             const ruolo = (document.getElementById('ruolo-select') as HTMLSelectElement).value;
                             
-                            if (!collaboratoreId || !ruolo) {
+                            if (!selectedCollaboratoreId || !ruolo) {
                               toast({
                                 title: "Selezione incompleta",
-                                description: "Seleziona sia il collaboratore che il ruolo",
+                                description: collaboratoreId 
+                                  ? "Seleziona un ruolo" 
+                                  : "Seleziona sia il collaboratore che il ruolo",
                                 variant: "destructive",
                               });
                               return;
                             }
                             
                             assegnaRapidoMutation.mutate({
-                              collaboratoreId: parseInt(collaboratoreId),
+                              collaboratoreId: typeof selectedCollaboratoreId === 'string' ? parseInt(selectedCollaboratoreId) : selectedCollaboratoreId,
                               eventoId: evento.id,
                               ruolo
                             });

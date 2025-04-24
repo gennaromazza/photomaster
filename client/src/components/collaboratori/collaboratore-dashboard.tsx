@@ -246,6 +246,10 @@ export function CollaboratoreDashboard({ collaboratoreId }: CollaboratoreDashboa
           <EventoCollaboratoreList collaboratoreId={collaboratoreId} />
         </TabsContent>
         
+        <TabsContent value="eventi-disponibili">
+          <EventiDisponibiliList collaboratoreId={collaboratoreId} />
+        </TabsContent>
+        
         <TabsContent value="pagamenti">
           <PagamentoCollaboratoreList collaboratoreId={collaboratoreId} />
         </TabsContent>

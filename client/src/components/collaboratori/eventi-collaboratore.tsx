@@ -604,119 +604,121 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {eventiSenzaCollaboratori.map((evento) => (
-          <div key={evento.id} className="relative group">
-            <Link href={`/events/${evento.id}`}>
-              <Card className="overflow-hidden hover:shadow-md hover:border-primary transition-all cursor-pointer">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg font-semibold group flex items-center">
-                        {evento.title}
-                        <ExternalLink className="w-4 h-4 ml-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </CardTitle>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        {format(new Date(evento.date), "PPP", { locale: it })}
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
-                        {evento.address && (
-                          <p className="text-xs text-muted-foreground">{evento.address}</p>
-                        )}
-                      </div>
-                    </div>
-                    
+      <div className="overflow-hidden border rounded-md shadow">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Titolo</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Luogo</TableHead>
+              <TableHead>Dettagli</TableHead>
+              <TableHead>Assegna</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {eventiSenzaCollaboratori.map((evento) => {
+              const clienteInfo = evento.clientFirstName && evento.clientLastName 
+                ? `${evento.clientFirstName} ${evento.clientLastName}` 
+                : 'Cliente non specificato';
+              
+              return (
+                <TableRow key={evento.id} className="hover:bg-muted/50 cursor-default">
+                  <TableCell>
+                    <div className="font-medium">{evento.title}</div>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-2">
-                      <Info className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm">
-                          {evento.description && evento.description.length > 120
-                            ? `${evento.description.substring(0, 120)}...`
-                            : evento.description || 'Nessuna descrizione disponibile'}
-                        </p>
-                      </div>
+                      <Users className="h-4 w-4 text-primary/60" />
+                      <div>{clienteInfo}</div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-            
-            {/* Pulsante Assegna posizionato in alto a destra sulla card */}
-            <div className="absolute top-3 right-3 z-10" onClick={(e) => e.stopPropagation()}>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="flex items-center gap-1 bg-white shadow-sm"
-                    disabled={assegnaRapidoMutation.isPending}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    <span>Assegna</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-2">
-                  <p className="text-sm mb-2 font-medium">Ruolo per questo evento:</p>
-                  <div className="flex flex-col gap-2">
-                    <Button 
-                      size="sm" 
-                      onClick={() => assegnaRapidoMutation.mutate({ 
-                        eventoId: evento.id, 
-                        ruolo: "fotografo" 
-                      })}
-                      disabled={assegnaRapidoMutation.isPending}
-                    >
-                      {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                      Fotografo
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4 text-primary/60" />
+                      <span>{format(new Date(evento.date), "dd/MM/yyyy", { locale: it })}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4 text-primary/60" />
+                      <span>{evento.location || 'N/D'}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm" asChild className="h-8 px-2">
+                      <Link href={`/events/${evento.id}`}>
+                        <Info className="h-3.5 w-3.5 mr-1" />
+                        <span>Dettagli</span>
+                      </Link>
                     </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => assegnaRapidoMutation.mutate({ 
-                        eventoId: evento.id, 
-                        ruolo: "videomaker" 
-                      })}
-                      disabled={assegnaRapidoMutation.isPending}
-                    >
-                      {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                      Videomaker
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => assegnaRapidoMutation.mutate({ 
-                        eventoId: evento.id, 
-                        ruolo: "assistente" 
-                      })}
-                      disabled={assegnaRapidoMutation.isPending}
-                    >
-                      {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                      Assistente
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      onClick={() => assegnaRapidoMutation.mutate({ 
-                        eventoId: evento.id, 
-                        ruolo: "grafico" 
-                      })}
-                      disabled={assegnaRapidoMutation.isPending}
-                    >
-                      {assegnaRapidoMutation.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                      Grafico
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-        ))}
+                  </TableCell>
+                  <TableCell>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="flex items-center gap-1"
+                          disabled={assegnaRapidoMutation.isPending}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          <span>Assegna</span>
+                          {assegnaRapidoMutation.isPending && <Loader2 className="h-3 w-3 ml-1 animate-spin" />}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2">
+                        <p className="text-sm mb-2 font-medium">Seleziona ruolo:</p>
+                        <div className="flex flex-col gap-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => assegnaRapidoMutation.mutate({ 
+                              eventoId: evento.id, 
+                              ruolo: "fotografo" 
+                            })}
+                            disabled={assegnaRapidoMutation.isPending}
+                          >
+                            Fotografo
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => assegnaRapidoMutation.mutate({ 
+                              eventoId: evento.id, 
+                              ruolo: "videomaker" 
+                            })}
+                            disabled={assegnaRapidoMutation.isPending}
+                          >
+                            Videomaker
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => assegnaRapidoMutation.mutate({ 
+                              eventoId: evento.id, 
+                              ruolo: "assistente" 
+                            })}
+                            disabled={assegnaRapidoMutation.isPending}
+                          >
+                            Assistente
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => assegnaRapidoMutation.mutate({ 
+                              eventoId: evento.id, 
+                              ruolo: "grafico" 
+                            })}
+                            disabled={assegnaRapidoMutation.isPending}
+                          >
+                            Grafico
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
     );
   };

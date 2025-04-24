@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Settings } from "@shared/schema";
 import { z } from "zod";
 import { GoogleCalendarIntegration } from "@/components/settings/google-calendar-integration";
+import { AccountSettings } from "@/components/settings/account-settings";
 
 const generalSettingsSchema = z.object({
   companyName: z.string().min(1, "Il nome dell'azienda è obbligatorio"),
@@ -775,46 +776,7 @@ Studio {studio_nome}`}
         </TabsContent>
         
         <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>Il tuo Account</CardTitle>
-              <CardDescription>
-                Gestisci le impostazioni del tuo account.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-medium">
-                  MR
-                </div>
-                <div>
-                  <h3 className="font-medium">Marco Rossi</h3>
-                  <p className="text-sm text-gray-500">admin@example.com</p>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" className="mt-2" defaultValue="admin@example.com" />
-              </div>
-              
-              <div>
-                <Label htmlFor="password">Nuova Password</Label>
-                <Input id="password" type="password" className="mt-2" />
-              </div>
-              
-              <div>
-                <Label htmlFor="confirm-password">Conferma Password</Label>
-                <Input id="confirm-password" type="password" className="mt-2" />
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                Esci
-              </Button>
-              <Button>Aggiorna Account</Button>
-            </CardFooter>
-          </Card>
+          <AccountSettings />
         </TabsContent>
       </Tabs>
     </div>

@@ -114,9 +114,13 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   });
 
   // Filtra gli eventi in base alla tab selezionata (tutti, passati, futuri)
-  const filteredEventi = eventi ? eventi.filter((evento) => {
-    const dataEvento = new Date(evento.eventDate);
+  const filteredEventi = Array.isArray(eventi) ? eventi.filter((evento) => {
+    // Usa il campo data o eventDate in base a quale è disponibile (compatibilità fra italiano e inglese)
+    const dataEvento = new Date(evento.eventDate || evento.data);
     const oggi = new Date();
+    
+    // Debug per capire quali dati abbiamo
+    console.log("Evento:", evento);
     
     if (filter === "passati") {
       return dataEvento < oggi;

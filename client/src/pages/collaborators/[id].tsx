@@ -475,9 +475,8 @@ export default function CollaboratorDetailPage() {
                     </div>
                   </form>
                 </Form>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
           
           {/* Dashboard completa del collaboratore (include Eventi, Pagamenti, Montaggi) */}
           <Card className="mt-6">

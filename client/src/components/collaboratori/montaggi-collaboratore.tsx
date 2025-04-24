@@ -114,24 +114,75 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
     placeholderData: keepPreviousData,
   });
 
-  // Query per recuperare i montaggi
-  const { data: montaggi = [], isLoading, error } = useQuery({
-    queryKey: [`/api/collaboratori/${collaboratoreId}/montaggi`],
-    staleTime: 5 * 60 * 1000,
-    placeholderData: keepPreviousData,
-  });
+  // Query per recuperare i montaggi - Approccio Event-Centric
+  // Primo recuperiamo gli eventi per questo collaboratore
+  // Poi per ogni evento recuperiamo i montaggi associati
+  const [montaggi, setMontaggi] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Recupera i montaggi per ogni evento del collaboratore
+  const fetchAllMontaggi = useCallback(async () => {
+    if (!eventi || eventi.length === 0) return;
+    
+    setIsLoading(true);
+    try {
+      // Per ogni evento, recupera i montaggi
+      const montaggiPromises = eventi.map(evento => 
+        fetch(`/api/eventi/${evento.id}/montaggi`)
+          .then(res => res.json())
+          .then(data => data.map(montaggio => ({
+            ...montaggio,
+            eventoTitle: evento.title,
+            eventoData: evento.date
+          })))
+      );
+      
+      const allMontaggi = await Promise.all(montaggiPromises);
+      // Appiattisci l'array di array
+      const montaggiFlatList = allMontaggi.flat();
+      
+      // Filtra solo i montaggi di questo collaboratore
+      const montaggiCollaboratore = montaggiFlatList.filter(
+        m => m.collaboratore?.id === Number(collaboratoreId)
+      );
+      
+      setMontaggi(montaggiCollaboratore);
+      setError(null);
+    } catch (err) {
+      console.error("Errore nel recupero dei montaggi:", err);
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [eventi, collaboratoreId]);
+  
+  // Esegui fetchAllMontaggi quando cambia eventi
+  React.useEffect(() => {
+    if (eventi && eventi.length > 0) {
+      fetchAllMontaggi();
+    }
+  }, [eventi, fetchAllMontaggi]);
 
-  // Mutation per avviare un montaggio
+  // Mutation per avviare un montaggio - Approccio Event-Centric
   const avviaMutation = useMutation({
     mutationFn: async (montaggioId: number) => {
+      // Prima recuperiamo il montaggio per ottenere l'eventoId
+      const montaggio = montaggi.find(m => m.id === montaggioId);
+      if (!montaggio) {
+        throw new Error("Montaggio non trovato");
+      }
+      
+      // Poi aggiorniamo il montaggio tramite il nuovo endpoint evento-centrico
       const response = await apiRequest(
         "PATCH", 
-        `/api/collaboratori/${collaboratoreId}/montaggi/${montaggioId}`,
+        `/api/eventi/${montaggio.eventoId}/montaggi/${montaggioId}`,
         { 
           stato: "in_corso",
           dataPrimoContatto: new Date().toISOString(),
         }
       );
+      
       return response.json();
     },
     onSuccess: () => {
@@ -139,8 +190,11 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
         title: "Montaggio avviato",
         description: "Il montaggio è stato avviato con successo.",
       });
-      // Invalida la cache per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/montaggi`] });
+      
+      // Ricarichiamo i montaggi dopo l'operazione
+      fetchAllMontaggi();
+      
+      // Invalida la cache della dashboard
       queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/dashboard`] });
       setIsAvviaDialogOpen(false);
     },
@@ -153,16 +207,26 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
     },
   });
 
-  // Mutation per completare un montaggio
+  // Mutation per completare un montaggio - Approccio Event-Centric
   const completaMutation = useMutation({
     mutationFn: async ({ montaggioId, saldo, note }: { montaggioId: number; saldo: number; note?: string }) => {
-      // Prima aggiorniamo lo stato del montaggio
+      // Prima recuperiamo il montaggio per ottenere l'eventoId
+      const montaggio = montaggi.find(m => m.id === montaggioId);
+      if (!montaggio) {
+        throw new Error("Montaggio non trovato");
+      }
+      
+      const eventoId = montaggio.eventoId;
+      if (!eventoId) throw new Error("ID evento non trovato");
+      
+      // Poi aggiorniamo lo stato del montaggio tramite il nuovo endpoint evento-centrico
       const montaggioResponse = await apiRequest(
         "PATCH", 
-        `/api/collaboratori/${collaboratoreId}/montaggi/${montaggioId}`,
+        `/api/eventi/${eventoId}/montaggi/${montaggioId}`,
         { 
           stato: "completato",
-          saldo,
+          saldoImporto: saldo,
+          dataConsegnaEffettiva: new Date().toISOString(),
           note,
         }
       );
@@ -171,15 +235,12 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
         throw new Error("Errore nell'aggiornamento del montaggio");
       }
 
-      // Poi registriamo il pagamento
-      const eventoId = montaggi.find(m => m.id === montaggioId)?.eventoId;
-      if (!eventoId) throw new Error("ID evento non trovato");
-
+      // Poi registriamo il pagamento tramite il nuovo endpoint evento-centrico
       const pagamentoResponse = await apiRequest(
         "POST",
-        `/api/collaboratori/${collaboratoreId}/pagamenti`,
+        `/api/eventi/${eventoId}/pagamenti`,
         {
-          eventoId,
+          collaboratoreId: Number(collaboratoreId),
           tipo: "montaggio_saldo",
           importo: saldo,
           dataPagamento: new Date().toISOString(),
@@ -199,10 +260,14 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
         title: "Montaggio completato",
         description: "Il montaggio è stato completato e il saldo registrato.",
       });
-      // Invalida la cache per aggiornare i dati
-      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/montaggi`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/pagamenti`] });
+      
+      // Ricarichiamo i montaggi dopo l'operazione
+      fetchAllMontaggi();
+      
+      // Invalidiamo la cache della dashboard
       queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/dashboard`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/pagamenti`] });
+      
       setIsCompletaDialogOpen(false);
       completaForm.reset();
       setMontaggioSelezionato(null);
@@ -376,7 +441,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
         <Button 
           variant="outline" 
           className="mt-4"
-          onClick={() => queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/montaggi`] })}
+          onClick={fetchAllMontaggi}
         >
           Riprova
         </Button>

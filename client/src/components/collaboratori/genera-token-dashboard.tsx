@@ -105,13 +105,13 @@ export function GeneraTokenDashboard({ collaboratoreId }: GeneraTokenDashboardPr
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Questo link scade dopo 30 giorni. Per rinnovarlo, genera un nuovo token.
+              Questo link è permanente. Il collaboratore potrà accedervi sempre.
             </p>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground mb-4">
             Genera un token per consentire al collaboratore di accedere alla propria dashboard pubblica.
-            Il token è valido per 30 giorni.
+            Il token è permanente e non scade.
           </p>
         )}
       </CardContent>

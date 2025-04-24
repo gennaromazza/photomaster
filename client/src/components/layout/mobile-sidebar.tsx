@@ -26,6 +26,7 @@ import {
   X,
   Euro,
   Camera,
+  Briefcase,
 } from "lucide-react";
 
 export interface MobileSidebarProps {
@@ -132,6 +133,14 @@ export default function MobileSidebar({
               icon={<Camera className="h-4 w-4" />}
               label="Gallerie Foto"
               isActive={isActive("/galleries")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/collaborators"
+              icon={<Briefcase className="h-4 w-4" />}
+              label="Collaboratori"
+              isActive={isActive("/collaborators")}
               onClick={onClose}
             />
           </nav>

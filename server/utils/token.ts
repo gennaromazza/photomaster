@@ -8,10 +8,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'studiomaster_collaboratori_dashboa
  * Genera un token JWT per l'accesso alla dashboard pubblica del collaboratore
  * 
  * @param collaboratorId - ID del collaboratore
- * @param expiresIn - Durata di validità del token (default: 30 giorni)
+ * @param expiresIn - Durata di validità del token (default: null, token senza scadenza)
  * @returns Token JWT firmato
  */
-export function generateCollaboratorToken(collaboratorId: number, expiresIn: string = '30d'): string {
+export function generateCollaboratorToken(collaboratorId: number, expiresIn: string | null = null): string {
+  const tokenOptions = expiresIn ? { expiresIn } : {};
+  
   return jwt.sign(
     { 
       collaboratorId, 
@@ -19,7 +21,7 @@ export function generateCollaboratorToken(collaboratorId: number, expiresIn: str
       timestamp: Date.now()
     }, 
     JWT_SECRET, 
-    { expiresIn }
+    tokenOptions
   );
 }
 

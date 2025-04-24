@@ -430,6 +430,8 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
     </div>
   );
 
+  // Funzione per mostrare informazioni eliminata perché duplicata di renderEventiDisponibili
+
   // Renderizza il contenuto della scheda "Eventi Assegnati"
   const renderEventiAssegnati = () => {
     if (filteredEventi.length === 0) {

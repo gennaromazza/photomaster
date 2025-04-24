@@ -24,9 +24,10 @@ import { syncCollaboratorAssignment, syncAllCollaboratorAssignments } from "../u
 export const getEventiCollaboratore = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    // Utilizziamo l'approccio event-centric per recuperare gli eventi
-    // Facciamo una query con join per ottenere anche i dettagli dell'evento
-    const eventi = await db.select({
+    console.log(`Recupero eventi per il collaboratore ID: ${id}`);
+    
+    // 1. Recuperiamo gli eventi dalla tabella italiana eventiCollaboratori
+    const eventiItaliani = await db.select({
       id: eventiCollaboratori.id,
       collaboratoreId: eventiCollaboratori.collaboratoreId,
       eventoId: eventiCollaboratori.eventoId,
@@ -41,10 +42,58 @@ export const getEventiCollaboratore = async (req: Request, res: Response) => {
     })
     .from(eventiCollaboratori)
     .innerJoin(events, eq(eventiCollaboratori.eventoId, events.id))
-    .where(eq(eventiCollaboratori.collaboratoreId, Number(id)))
-    .orderBy(desc(eventiCollaboratori.dataAssegnazione));
+    .where(eq(eventiCollaboratori.collaboratoreId, Number(id)));
     
-    return res.status(200).json(eventi);
+    console.log(`Trovati ${eventiItaliani.length} eventi nella tabella italiana`);
+    
+    // 2. Recuperiamo gli eventi dalla tabella inglese eventCollaborators
+    const eventiInglesi = await db.select({
+      id: eventCollaborators.id,
+      collaboratoreId: eventCollaborators.collaboratorId,
+      eventoId: eventCollaborators.eventId,
+      ruolo: eventCollaborators.role,
+      dataAssegnazione: eventCollaborators.assignedAt,
+      note: eventCollaborators.notes,
+      titolo: events.title,
+      descrizione: events.description,
+      data: events.date,
+      location: events.location,
+      stato: events.status
+    })
+    .from(eventCollaborators)
+    .innerJoin(events, eq(eventCollaborators.eventId, events.id))
+    .where(eq(eventCollaborators.collaboratorId, Number(id)));
+    
+    console.log(`Trovati ${eventiInglesi.length} eventi nella tabella inglese`);
+    
+    // 3. Combiniamo i risultati, ma evitando duplicati (stesso eventoId)
+    const eventoIdsAggiunti = new Set();
+    const eventiCombinati = [];
+    
+    // Aggiungiamo prima tutti gli eventi italiani
+    for (const evento of eventiItaliani) {
+      eventoIdsAggiunti.add(evento.eventoId);
+      eventiCombinati.push(evento);
+    }
+    
+    // Poi aggiungiamo gli eventi inglesi che non sono già presenti
+    for (const evento of eventiInglesi) {
+      if (!eventoIdsAggiunti.has(evento.eventoId)) {
+        eventoIdsAggiunti.add(evento.eventoId);
+        eventiCombinati.push(evento);
+      }
+    }
+    
+    // Ordiniamo per data di assegnazione decrescente
+    eventiCombinati.sort((a, b) => {
+      const dateA = a.dataAssegnazione ? new Date(a.dataAssegnazione) : new Date(0);
+      const dateB = b.dataAssegnazione ? new Date(b.dataAssegnazione) : new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    console.log(`Restituiti ${eventiCombinati.length} eventi totali`);
+    
+    return res.status(200).json(eventiCombinati);
   } catch (error) {
     console.error(`Errore recupero eventi del collaboratore ${id}:`, error);
     return res.status(500).json({ error: "Errore durante il recupero degli eventi del collaboratore" });

@@ -7,7 +7,7 @@ import {
   addMontaggioEvento,
   updateMontaggioEvento
 } from "../controllers/eventi-controller";
-import { csrfProtection } from "../csrf";
+import { csrfProtection } from "../auth";
 
 const router = express.Router();
 

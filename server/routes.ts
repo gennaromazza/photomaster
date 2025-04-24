@@ -3354,6 +3354,18 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
   app.use("/api", apiRouter);
 
+  // Modulo routes
+  app.use("/api/bundle-leads", isAuthenticated, bundleLeadsRouter);
+  app.use("/api/settings", isAuthenticated, settingsRouter);
+  app.use("/api/gallery", isAuthenticated, galleryRouter);
+  app.use("/api/finance", isAuthenticated, financeRouter);
+  app.use("/api/search", isAuthenticated, searchRouter);
+  app.use("/api/selection", selectionRouter);
+  app.use("/api/clauses", isAuthenticated, clausesRouter);
+  app.use("/api/notifications", isAuthenticated, notificationsRouter);
+  app.use("/api/collaboratori", isAuthenticated, collaboratoriRouter);
+  app.use("/api/eventi", isAuthenticated, eventiRouter);
+
   // Setup upload routes
   setupUploadRoutes(app);
 

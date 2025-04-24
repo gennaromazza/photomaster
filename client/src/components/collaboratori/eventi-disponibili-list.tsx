@@ -186,10 +186,11 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
                               id="ruolo-select"
                             >
                               <option value="">Seleziona...</option>
-                              <option value="fotografo">Fotografo</option>
-                              <option value="videomaker">Videomaker</option>
-                              <option value="assistente">Assistente</option>
-                              <option value="grafico">Grafico</option>
+                              {COLLABORATOR_ROLES.map((role) => (
+                                <option key={role.id} value={role.id}>
+                                  {role.label}
+                                </option>
+                              ))}
                             </select>
                           </div>
                         </div>

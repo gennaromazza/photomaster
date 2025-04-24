@@ -3314,6 +3314,8 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/events", eventiRouter);
   app.use("/api", collaboratoriRouter);
   app.use("/api/collaboratori", dashboardPublicRouter);
+  // Aggiungi anche una rotta per il nuovo formato dell'URL
+  app.use("/api", dashboardPublicRouter);
 
   // Configurazione di multer per l'upload dei file
   const upload = multer({

@@ -1,0 +1,47 @@
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of &lt;a&gt;.
+    at a
+    at a
+    at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8e3d1ff2:205:18
+    at div
+    at div
+    at _c9 (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at CollaboratorsPage (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/pages/collaborators/index.tsx:29:41)
+    at main
+    at div
+    at div
+    at Layout (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/components/layout/layout.tsx?t=1745482102671:22:34)
+    at Route (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8e3d1ff2:191:16)
+    at ProtectedRoute (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/lib/protected-route.tsx?t=1745482102671:24:3)
+    at Switch (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8e3d1ff2:247:17)
+    at Router
+    at AuthProvider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/hooks/use-auth.tsx:26:32)
+    at QueryClientProvider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=8e3d1ff2:2805:3)
+    at App
+at a
+at a
+at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8e3d1ff2:205:18
+at div
+at div
+at _c9 (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/components/ui/card.tsx:114:12)
+at div
+at _c (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/components/ui/card.tsx:20:11)
+at div
+at CollaboratorsPage (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/pages/collaborators/index.tsx:29:41)
+at main
+at div
+at div
+at Layout (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/components/layout/layout.tsx?t=1745482102671:22:34)
+at Route (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8e3d1ff2:191:16)
+at ProtectedRoute (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/lib/protected-route.tsx?t=1745482102671:24:3)
+at Switch (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8e3d1ff2:247:17)
+at Router
+at AuthProvider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/src/hooks/use-auth.tsx:26:32)
+at QueryClientProvider (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=8e3d1ff2:2805:3)
+at App
+at t.value (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://2d7130a7-0c98-4965-bf11-4c0e774669d5-00-3rg1xzqw5memy.kirk.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

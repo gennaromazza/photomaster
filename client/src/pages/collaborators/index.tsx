@@ -128,7 +128,7 @@ const CollaboratorsPage = () => {
             <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {filteredCollaborators.map((collaborator) => (
                 <Link key={collaborator.id} href={`/collaborators/${collaborator.id}`}>
-                  <a className="block p-4 border rounded-lg hover:border-primary hover:shadow-sm transition-all">
+                  <div className="block p-4 border rounded-lg hover:border-primary hover:shadow-sm transition-all cursor-pointer">
                     <div className="flex items-center">
                       {collaborator.profileImage ? (
                         <img 
@@ -162,7 +162,7 @@ const CollaboratorsPage = () => {
                         {collaborator.status === "available" ? "Disponibile" : "Occupato"}
                       </Badge>
                     </div>
-                  </a>
+                  </div>
                 </Link>
               ))}
             </div>

@@ -18,6 +18,7 @@ import selectionRouter from "./routes/selection";
 import clausesRouter from "./routes/clauses";
 import notificationsRouter from "./routes/notifications";
 import collaboratoriRouter from "./routes/collaboratori-routes";
+import eventiRouter from "./routes/eventi-routes";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
 import multer from "multer";
 import { tmpdir } from "os";

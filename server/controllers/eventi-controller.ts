@@ -1,0 +1,562 @@
+import { Request, Response } from "express";
+import { db } from "../db";
+import { 
+  pagamentiEvento, 
+  montaggiEvento, 
+  eventiCollaboratori,
+  insertPagamentoEventoSchema,
+  insertMontaggioEventoSchema,
+  updateMontaggioEventoSchema,
+  TipoPagamentoEvento,
+  StatoMontaggioEvento,
+  TipoMontaggioEvento
+} from "@shared/eventi-schema";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
+import { z } from "zod";
+import { events } from "@shared/schema";
+import { collaborators } from "@shared/schema";
+
+/**
+ * Controller per la gestione evento-centrica di:
+ * - Collaboratori associati all'evento
+ * - Pagamenti legati all'evento
+ * - Montaggi legati all'evento
+ */
+
+// GET: Recupera i dettagli di un evento con collaboratori, pagamenti e montaggi
+export const getEventoDettaglio = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  try {
+    // Recupera i dettagli dell'evento
+    const [evento] = await db.select().from(events)
+      .where(eq(events.id, Number(id)));
+    
+    if (!evento) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    // Recupera i collaboratori associati
+    const collaboratoriEvento = await db.select({
+      id: eventiCollaboratori.id,
+      ruolo: eventiCollaboratori.ruolo,
+      dataAssegnazione: eventiCollaboratori.dataAssegnazione,
+      note: eventiCollaboratori.note,
+      collaboratore: {
+        id: collaborators.id,
+        firstName: collaborators.firstName,
+        lastName: collaborators.lastName,
+        email: collaborators.email,
+        phone: collaborators.phone
+      }
+    })
+    .from(eventiCollaboratori)
+    .innerJoin(collaborators, eq(eventiCollaboratori.collaboratoreId, collaborators.id))
+    .where(eq(eventiCollaboratori.eventoId, Number(id)));
+    
+    // Recupera i pagamenti legati all'evento
+    const pagamentiEventoData = await db.select({
+      id: pagamentiEvento.id,
+      tipo: pagamentiEvento.tipo,
+      importo: pagamentiEvento.importo,
+      dataPagamento: pagamentiEvento.dataPagamento,
+      metodoPagamento: pagamentiEvento.metodoPagamento,
+      riferimentoEsterno: pagamentiEvento.riferimentoEsterno,
+      note: pagamentiEvento.note,
+      createdAt: pagamentiEvento.createdAt,
+      updatedAt: pagamentiEvento.updatedAt,
+      collaboratore: {
+        id: collaborators.id,
+        firstName: collaborators.firstName,
+        lastName: collaborators.lastName
+      }
+    })
+    .from(pagamentiEvento)
+    .leftJoin(collaborators, eq(pagamentiEvento.collaboratoreId, collaborators.id))
+    .where(eq(pagamentiEvento.eventoId, Number(id)))
+    .orderBy(desc(pagamentiEvento.dataPagamento));
+    
+    // Recupera i montaggi legati all'evento
+    const montaggiEventoData = await db.select({
+      id: montaggiEvento.id,
+      tipoMontaggio: montaggiEvento.tipoMontaggio,
+      accontoImporto: montaggiEvento.accontoImporto,
+      accontoPagato: montaggiEvento.accontoPagato,
+      accontoDataPagamento: montaggiEvento.accontoDataPagamento,
+      saldoImporto: montaggiEvento.saldoImporto,
+      saldoPagato: montaggiEvento.saldoPagato,
+      saldoDataPagamento: montaggiEvento.saldoDataPagamento,
+      dataPrimoContatto: montaggiEvento.dataPrimoContatto,
+      priorita: montaggiEvento.priorita,
+      dataConsegnaPrevista: montaggiEvento.dataConsegnaPrevista,
+      dataConsegnaEffettiva: montaggiEvento.dataConsegnaEffettiva,
+      stato: montaggiEvento.stato,
+      note: montaggiEvento.note,
+      createdAt: montaggiEvento.createdAt,
+      updatedAt: montaggiEvento.updatedAt,
+      collaboratore: {
+        id: collaborators.id,
+        firstName: collaborators.firstName,
+        lastName: collaborators.lastName
+      }
+    })
+    .from(montaggiEvento)
+    .innerJoin(collaborators, eq(montaggiEvento.collaboratoreId, collaborators.id))
+    .where(eq(montaggiEvento.eventoId, Number(id)))
+    .orderBy(asc(montaggiEvento.dataConsegnaPrevista));
+    
+    // Calcola statistiche di pagamento
+    // Incassi cliente
+    const pagamentiCliente = pagamentiEventoData.filter(p => 
+      p.tipo === TipoPagamentoEvento.CLIENTE_ACCONTO || 
+      p.tipo === TipoPagamentoEvento.CLIENTE_SALDO || 
+      p.tipo === TipoPagamentoEvento.CLIENTE_EXTRA
+    );
+    const totaleIncassi = pagamentiCliente.reduce((acc, p) => acc + Number(p.importo), 0);
+    
+    // Pagamenti collaboratori
+    const pagamentiCollaboratori = pagamentiEventoData.filter(p => 
+      p.tipo === TipoPagamentoEvento.COLLABORATORE_ACCONTO || 
+      p.tipo === TipoPagamentoEvento.COLLABORATORE_SALDO
+    );
+    const totalePagamentiCollaboratori = pagamentiCollaboratori.reduce((acc, p) => acc + Number(p.importo), 0);
+    
+    // Pagamenti montaggi
+    const pagamentiMontaggi = pagamentiEventoData.filter(p => 
+      p.tipo === TipoPagamentoEvento.MONTAGGIO_ACCONTO || 
+      p.tipo === TipoPagamentoEvento.MONTAGGIO_SALDO
+    );
+    const totalePagamentiMontaggi = pagamentiMontaggi.reduce((acc, p) => acc + Number(p.importo), 0);
+    
+    // Pagamenti fornitori e altro
+    const altriPagamenti = pagamentiEventoData.filter(p => 
+      p.tipo === TipoPagamentoEvento.FORNITORE || 
+      p.tipo === TipoPagamentoEvento.ALTRO
+    );
+    const totaleAltriPagamenti = altriPagamenti.reduce((acc, p) => acc + Number(p.importo), 0);
+    
+    // Calcola margine
+    const margineLordo = totaleIncassi - totalePagamentiCollaboratori - totalePagamentiMontaggi - totaleAltriPagamenti;
+    
+    // Prepara i dati completi
+    const eventoCompleto = {
+      ...evento,
+      collaboratori: collaboratoriEvento,
+      pagamenti: pagamentiEventoData,
+      montaggi: montaggiEventoData,
+      statistiche: {
+        totaleIncassi,
+        totalePagamentiCollaboratori,
+        totalePagamentiMontaggi,
+        totaleAltriPagamenti,
+        margineLordo
+      }
+    };
+    
+    return res.status(200).json(eventoCompleto);
+  } catch (error) {
+    console.error(`Errore recupero dettagli evento ${id}:`, error);
+    return res.status(500).json({ error: "Errore durante il recupero dei dettagli dell'evento" });
+  }
+};
+
+// PAGAMENTI EVENTO
+// ----------------
+
+// GET: Recupera tutti i pagamenti di un evento
+export const getPagamentiEvento = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  try {
+    const pagamentiList = await db.select({
+      id: pagamentiEvento.id,
+      tipo: pagamentiEvento.tipo,
+      importo: pagamentiEvento.importo,
+      dataPagamento: pagamentiEvento.dataPagamento,
+      metodoPagamento: pagamentiEvento.metodoPagamento,
+      riferimentoEsterno: pagamentiEvento.riferimentoEsterno,
+      note: pagamentiEvento.note,
+      createdAt: pagamentiEvento.createdAt,
+      updatedAt: pagamentiEvento.updatedAt,
+      collaboratore: {
+        id: collaborators.id,
+        firstName: collaborators.firstName,
+        lastName: collaborators.lastName
+      }
+    })
+    .from(pagamentiEvento)
+    .leftJoin(collaborators, eq(pagamentiEvento.collaboratoreId, collaborators.id))
+    .where(eq(pagamentiEvento.eventoId, Number(id)))
+    .orderBy(desc(pagamentiEvento.dataPagamento));
+    
+    return res.status(200).json(pagamentiList);
+  } catch (error) {
+    console.error(`Errore recupero pagamenti evento ${id}:`, error);
+    return res.status(500).json({ error: "Errore durante il recupero dei pagamenti dell'evento" });
+  }
+};
+
+// POST: Registra un nuovo pagamento per un evento
+export const addPagamentoEvento = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  try {
+    // Verifica che l'evento esista
+    const [evento] = await db.select().from(events)
+      .where(eq(events.id, Number(id)));
+    
+    if (!evento) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    // Validazione input
+    const data = insertPagamentoEventoSchema.parse({
+      ...req.body,
+      eventoId: Number(id)
+    });
+    
+    // Inserisci il pagamento
+    const [nuovoPagamento] = await db.insert(pagamentiEvento)
+      .values(data)
+      .returning();
+    
+    // Se il pagamento è relativo a un montaggio, aggiorna lo stato del montaggio
+    if (
+      data.tipo === TipoPagamentoEvento.MONTAGGIO_ACCONTO || 
+      data.tipo === TipoPagamentoEvento.MONTAGGIO_SALDO
+    ) {
+      // Recupera il montaggio associato al collaboratore per questo evento
+      const [montaggio] = await db.select().from(montaggiEvento)
+        .where(
+          and(
+            eq(montaggiEvento.eventoId, Number(id)),
+            eq(montaggiEvento.collaboratoreId, data.collaboratoreId)
+          )
+        );
+      
+      if (montaggio) {
+        // Aggiorna lo stato di pagamento del montaggio
+        if (data.tipo === TipoPagamentoEvento.MONTAGGIO_ACCONTO) {
+          await db.update(montaggiEvento)
+            .set({ 
+              accontoPagato: true,
+              accontoDataPagamento: data.dataPagamento
+            })
+            .where(eq(montaggiEvento.id, montaggio.id));
+        } else if (data.tipo === TipoPagamentoEvento.MONTAGGIO_SALDO) {
+          await db.update(montaggiEvento)
+            .set({ 
+              saldoPagato: true,
+              saldoDataPagamento: data.dataPagamento
+            })
+            .where(eq(montaggiEvento.id, montaggio.id));
+        }
+      }
+    }
+    
+    // Recupera i dettagli completi del pagamento con i dati del collaboratore
+    let pagamentoCompleto;
+    if (data.collaboratoreId) {
+      const [result] = await db.select({
+        id: pagamentiEvento.id,
+        tipo: pagamentiEvento.tipo,
+        importo: pagamentiEvento.importo,
+        dataPagamento: pagamentiEvento.dataPagamento,
+        metodoPagamento: pagamentiEvento.metodoPagamento,
+        riferimentoEsterno: pagamentiEvento.riferimentoEsterno,
+        note: pagamentiEvento.note,
+        createdAt: pagamentiEvento.createdAt,
+        updatedAt: pagamentiEvento.updatedAt,
+        collaboratore: {
+          id: collaborators.id,
+          firstName: collaborators.firstName,
+          lastName: collaborators.lastName
+        }
+      })
+      .from(pagamentiEvento)
+      .leftJoin(collaborators, eq(pagamentiEvento.collaboratoreId, collaborators.id))
+      .where(eq(pagamentiEvento.id, nuovoPagamento.id));
+      
+      pagamentoCompleto = result;
+    } else {
+      pagamentoCompleto = nuovoPagamento;
+    }
+    
+    return res.status(201).json(pagamentoCompleto);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    
+    console.error(`Errore aggiunta pagamento all'evento ${id}:`, error);
+    return res.status(500).json({ error: "Errore durante la registrazione del pagamento" });
+  }
+};
+
+// MONTAGGI EVENTO
+// --------------
+
+// GET: Recupera tutti i montaggi di un evento
+export const getMontaggiEvento = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  try {
+    const montaggiList = await db.select({
+      id: montaggiEvento.id,
+      tipoMontaggio: montaggiEvento.tipoMontaggio,
+      accontoImporto: montaggiEvento.accontoImporto,
+      accontoPagato: montaggiEvento.accontoPagato,
+      accontoDataPagamento: montaggiEvento.accontoDataPagamento,
+      saldoImporto: montaggiEvento.saldoImporto,
+      saldoPagato: montaggiEvento.saldoPagato,
+      saldoDataPagamento: montaggiEvento.saldoDataPagamento,
+      dataPrimoContatto: montaggiEvento.dataPrimoContatto,
+      priorita: montaggiEvento.priorita,
+      dataConsegnaPrevista: montaggiEvento.dataConsegnaPrevista,
+      dataConsegnaEffettiva: montaggiEvento.dataConsegnaEffettiva,
+      stato: montaggiEvento.stato,
+      note: montaggiEvento.note,
+      createdAt: montaggiEvento.createdAt,
+      updatedAt: montaggiEvento.updatedAt,
+      collaboratore: {
+        id: collaborators.id,
+        firstName: collaborators.firstName,
+        lastName: collaborators.lastName,
+        email: collaborators.email,
+        phone: collaborators.phone
+      }
+    })
+    .from(montaggiEvento)
+    .innerJoin(collaborators, eq(montaggiEvento.collaboratoreId, collaborators.id))
+    .where(eq(montaggiEvento.eventoId, Number(id)))
+    .orderBy(asc(montaggiEvento.dataConsegnaPrevista));
+    
+    return res.status(200).json(montaggiList);
+  } catch (error) {
+    console.error(`Errore recupero montaggi evento ${id}:`, error);
+    return res.status(500).json({ error: "Errore durante il recupero dei montaggi dell'evento" });
+  }
+};
+
+// POST: Registra un nuovo montaggio per un evento
+export const addMontaggioEvento = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  try {
+    // Verifica che l'evento esista
+    const [evento] = await db.select().from(events)
+      .where(eq(events.id, Number(id)));
+    
+    if (!evento) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    // Validazione input
+    const data = insertMontaggioEventoSchema.parse({
+      ...req.body,
+      eventoId: Number(id)
+    });
+    
+    // Verifica che non esista già un montaggio dello stesso tipo per questo collaboratore e evento
+    const [montaggioEsistente] = await db.select().from(montaggiEvento)
+      .where(
+        and(
+          eq(montaggiEvento.eventoId, Number(id)),
+          eq(montaggiEvento.collaboratoreId, data.collaboratoreId),
+          eq(montaggiEvento.tipoMontaggio, data.tipoMontaggio)
+        )
+      );
+    
+    if (montaggioEsistente) {
+      return res.status(400).json({ 
+        error: `Esiste già un montaggio di tipo ${data.tipoMontaggio} per questo collaboratore e evento` 
+      });
+    }
+    
+    // Inserisci il montaggio
+    let montaggioData = { ...data };
+    
+    // Gestione dell'eventuale pagamento associato al montaggio
+    let pagamentoAcconto = null;
+    if (req.body.pagamentoAcconto && data.accontoImporto && data.accontoImporto > 0) {
+      const dataPagamento = new Date();
+      
+      // Crea un nuovo record di pagamento per l'acconto
+      [pagamentoAcconto] = await db.insert(pagamentiEvento)
+        .values({
+          eventoId: Number(id),
+          collaboratoreId: data.collaboratoreId,
+          tipo: TipoPagamentoEvento.MONTAGGIO_ACCONTO,
+          importo: data.accontoImporto,
+          dataPagamento,
+          metodoPagamento: req.body.metodoPagamento || "bonifico",
+          note: `Acconto montaggio ${data.tipoMontaggio}`,
+          riferimentoEsterno: req.body.riferimentoEsterno
+        })
+        .returning();
+      
+      // Aggiorna i campi del montaggio per riflettere il pagamento dell'acconto
+      montaggioData = {
+        ...montaggioData,
+        accontoPagato: true,
+        accontoDataPagamento: dataPagamento
+      };
+    }
+    
+    // Inserisci il montaggio
+    const [nuovoMontaggio] = await db.insert(montaggiEvento)
+      .values(montaggioData)
+      .returning();
+    
+    // Recupera i dettagli completi del montaggio con i dati del collaboratore
+    const [montaggioCompleto] = await db.select({
+      id: montaggiEvento.id,
+      tipoMontaggio: montaggiEvento.tipoMontaggio,
+      accontoImporto: montaggiEvento.accontoImporto,
+      accontoPagato: montaggiEvento.accontoPagato,
+      accontoDataPagamento: montaggiEvento.accontoDataPagamento,
+      saldoImporto: montaggiEvento.saldoImporto,
+      saldoPagato: montaggiEvento.saldoPagato,
+      saldoDataPagamento: montaggiEvento.saldoDataPagamento,
+      dataPrimoContatto: montaggiEvento.dataPrimoContatto,
+      priorita: montaggiEvento.priorita,
+      dataConsegnaPrevista: montaggiEvento.dataConsegnaPrevista,
+      dataConsegnaEffettiva: montaggiEvento.dataConsegnaEffettiva,
+      stato: montaggiEvento.stato,
+      note: montaggiEvento.note,
+      createdAt: montaggiEvento.createdAt,
+      updatedAt: montaggiEvento.updatedAt,
+      collaboratore: {
+        id: collaborators.id,
+        firstName: collaborators.firstName,
+        lastName: collaborators.lastName
+      }
+    })
+    .from(montaggiEvento)
+    .innerJoin(collaborators, eq(montaggiEvento.collaboratoreId, collaborators.id))
+    .where(eq(montaggiEvento.id, nuovoMontaggio.id));
+    
+    // Aggiungi il pagamento se presente
+    const risultato = {
+      ...montaggioCompleto,
+      pagamentoAcconto: pagamentoAcconto
+    };
+    
+    return res.status(201).json(risultato);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    
+    console.error(`Errore aggiunta montaggio all'evento ${id}:`, error);
+    return res.status(500).json({ error: "Errore durante la registrazione del montaggio" });
+  }
+};
+
+// PATCH: Aggiorna un montaggio
+export const updateMontaggioEvento = async (req: Request, res: Response) => {
+  const { id: eventoId, montaggioId } = req.params;
+  
+  try {
+    // Verifica che il montaggio esista
+    const [montaggio] = await db.select().from(montaggiEvento)
+      .where(
+        and(
+          eq(montaggiEvento.id, Number(montaggioId)),
+          eq(montaggiEvento.eventoId, Number(eventoId))
+        )
+      );
+    
+    if (!montaggio) {
+      return res.status(404).json({ error: "Montaggio non trovato" });
+    }
+    
+    // Validazione input
+    const data = updateMontaggioEventoSchema.parse(req.body);
+    
+    // Esegui l'aggiornamento in una transazione se c'è anche un pagamento di saldo
+    let montaggioAggiornato;
+    let pagamentoSaldo = null;
+    
+    if (req.body.pagamentoSaldo && montaggio.saldoImporto && montaggio.saldoImporto > 0) {
+      await db.transaction(async (tx) => {
+        // Aggiorna il montaggio
+        [montaggioAggiornato] = await tx.update(montaggiEvento)
+          .set({
+            ...data,
+            saldoPagato: true,
+            saldoDataPagamento: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(montaggiEvento.id, Number(montaggioId)))
+          .returning();
+        
+        // Crea un nuovo record di pagamento per il saldo
+        [pagamentoSaldo] = await tx.insert(pagamentiEvento)
+          .values({
+            eventoId: Number(eventoId),
+            collaboratoreId: montaggio.collaboratoreId,
+            tipo: TipoPagamentoEvento.MONTAGGIO_SALDO,
+            importo: montaggio.saldoImporto,
+            dataPagamento: new Date(),
+            metodoPagamento: req.body.metodoPagamento || "bonifico",
+            note: `Saldo montaggio ${montaggio.tipoMontaggio}`,
+            riferimentoEsterno: req.body.riferimentoEsterno
+          })
+          .returning();
+      });
+    } else {
+      // Aggiorna solo il montaggio
+      [montaggioAggiornato] = await db.update(montaggiEvento)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(eq(montaggiEvento.id, Number(montaggioId)))
+        .returning();
+    }
+    
+    // Recupera i dettagli completi del montaggio aggiornato
+    const [montaggioCompleto] = await db.select({
+      id: montaggiEvento.id,
+      tipoMontaggio: montaggiEvento.tipoMontaggio,
+      accontoImporto: montaggiEvento.accontoImporto,
+      accontoPagato: montaggiEvento.accontoPagato,
+      accontoDataPagamento: montaggiEvento.accontoDataPagamento,
+      saldoImporto: montaggiEvento.saldoImporto,
+      saldoPagato: montaggiEvento.saldoPagato,
+      saldoDataPagamento: montaggiEvento.saldoDataPagamento,
+      dataPrimoContatto: montaggiEvento.dataPrimoContatto,
+      priorita: montaggiEvento.priorita,
+      dataConsegnaPrevista: montaggiEvento.dataConsegnaPrevista,
+      dataConsegnaEffettiva: montaggiEvento.dataConsegnaEffettiva,
+      stato: montaggiEvento.stato,
+      note: montaggiEvento.note,
+      createdAt: montaggiEvento.createdAt,
+      updatedAt: montaggiEvento.updatedAt,
+      collaboratore: {
+        id: collaborators.id,
+        firstName: collaborators.firstName,
+        lastName: collaborators.lastName
+      }
+    })
+    .from(montaggiEvento)
+    .innerJoin(collaborators, eq(montaggiEvento.collaboratoreId, collaborators.id))
+    .where(eq(montaggiEvento.id, Number(montaggioId)));
+    
+    // Aggiungi il pagamento se presente
+    const risultato = {
+      ...montaggioCompleto,
+      pagamentoSaldo: pagamentoSaldo
+    };
+    
+    return res.status(200).json(risultato);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    
+    console.error(`Errore aggiornamento montaggio ${montaggioId} dell'evento ${eventoId}:`, error);
+    return res.status(500).json({ error: "Errore durante l'aggiornamento del montaggio" });
+  }
+};

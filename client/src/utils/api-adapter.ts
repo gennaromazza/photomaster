@@ -3,7 +3,10 @@
  * Fornisce funzioni di utilità per adattare le chiamate API durante la fase di migrazione
  */
 
-import { apiRequest, QueryFn, queryClient } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+
+// Definizione dell'interfaccia QueryFn 
+export type QueryFn = (context: { signal?: AbortSignal }) => Promise<any>;
 
 type ApiAdapterOptions = {
   useTranslatedEndpoints?: boolean;
@@ -26,21 +29,42 @@ const ENDPOINT_MAPPING = {
   '/api/collaboratori/{id}/pagamenti': '/api/collaborators/{id}/payments',
   '/api/collaboratori/{id}/montaggi': '/api/collaborators/{id}/editing',
   '/api/collaboratori/{id}/dashboard': '/api/collaborators/{id}/dashboard',
+  '/api/collaboratori/sincronizza-assegnazioni': '/api/collaborators/sync-assignments',
   
   // Eventi
   '/api/eventi': '/api/events',
   '/api/eventi/': '/api/events/',
   '/api/eventi/senza-collaboratori': '/api/events/without-collaborators',
+  '/api/eventi/{id}': '/api/events/{id}',
+  '/api/eventi/{id}/collaboratori': '/api/events/{id}/collaborators',
   
   // Pagamenti
   '/api/pagamenti': '/api/payments',
   '/api/pagamenti/': '/api/payments/',
+  '/api/pagamenti/{id}': '/api/payments/{id}',
+  
+  // Gallerie e foto
+  '/api/galleria': '/api/gallery',
+  '/api/galleria/': '/api/gallery/',
+  '/api/selezione': '/api/selection',
+  '/api/selezione/foto': '/api/selection/photo',
+  '/api/selezione/commenti': '/api/selection/comments',
+  '/api/selezione/sessioni': '/api/selection/sessions',
+  
+  // Altri endpoint
+  '/api/notifiche': '/api/notifications',
+  '/api/impostazioni': '/api/settings',
+  '/api/preventivi': '/api/quotes',
+  '/api/contratti': '/api/contracts',
+  '/api/clienti': '/api/clients',
+  '/api/attivita': '/api/tasks',
+  '/api/clausole': '/api/clauses',
 };
 
 /**
  * Mappa i nomi dei campi italiani ai corrispondenti campi inglesi
  */
-const FIELD_MAPPING_IT_TO_EN = {
+const FIELD_MAPPING_IT_TO_EN: Record<string, string> = {
   // Collaboratori
   'collaboratoreId': 'collaboratorId',
   'eventoId': 'eventId',
@@ -61,13 +85,32 @@ const FIELD_MAPPING_IT_TO_EN = {
   'dataPrimoContatto': 'firstContactDate',
   'priorita': 'priority',
   'dataConsegnaPrevista': 'expectedDeliveryDate',
-  'stato': 'status',
+  'statoMontaggio': 'editingStatus',
   
   // Eventi
   'titolo': 'title',
   'descrizione': 'description',
   'data': 'date',
-  'luogo': 'location'
+  'luogo': 'location',
+  
+  // Clienti
+  'nome': 'name',
+  'cognome': 'surname',
+  'telefono': 'phone',
+  'email': 'email',
+  'indirizzo': 'address',
+  'citta': 'city',
+  'provincia': 'province',
+  'cap': 'zipCode',
+  
+  // Quote e Contratti
+  'scadenza': 'expiry',
+  'stato': 'status',
+  'dataCreazione': 'createdAt',
+  'dataAggiornamento': 'updatedAt',
+  'dataFirma': 'signDate',
+  'condizioni': 'terms',
+  'scontistica': 'discounts'
 };
 
 /**

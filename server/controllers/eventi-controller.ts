@@ -464,12 +464,9 @@ export const getEventiSenzaCollaboratori = async (req: Request, res: Response) =
       description: events.description,
       date: events.date,
       location: events.location,
-      address: events.address,
       status: events.status,
       clientId: events.clientId,
-      eventType: events.eventType,
-      createdAt: events.createdAt,
-      updatedAt: events.updatedAt
+      eventType: events.eventType
     })
     .from(events)
     .where(eq(events.status, "confirmed")) // Solo eventi confermati

@@ -11,6 +11,7 @@ import {
 import { syncAllCollaboratorAssignments } from "./utils/sync-collaboratori";
 import { syncAllEventData } from "./utils/migrate-eventi-data";
 import { runMigration } from "./utils/run-migration";
+import { createItalianTables } from "./utils/create-italian-tables";
 import { setupUploadRoutes } from "./upload";
 import bundleLeadsRouter from "./routes/bundle-leads";
 import settingsRouter from "./routes/settings";
@@ -63,6 +64,14 @@ import { fromZodError } from "zod-validation-error";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
+
+  // Crea le tabelle italiane temporanee necessarie per la migrazione
+  try {
+    await createItalianTables();
+    console.log("✅ Tabelle italiane create o verificate con successo");
+  } catch (error) {
+    console.error("❌ Errore nella creazione delle tabelle italiane:", error);
+  }
 
   // Setup API routes
   const apiRouter = express.Router();

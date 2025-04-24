@@ -304,9 +304,11 @@ export default function CollaboratorDetailPage() {
           <Card>
             <CardHeader className="px-6 pb-0">
               <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid grid-cols-2">
+                <TabsList className="grid grid-cols-4">
                   <TabsTrigger value="details">Dettagli</TabsTrigger>
-                  <TabsTrigger value="events">Eventi Assegnati</TabsTrigger>
+                  <TabsTrigger value="events">Eventi</TabsTrigger>
+                  <TabsTrigger value="payments">Pagamenti</TabsTrigger>
+                  <TabsTrigger value="montages">Montaggi</TabsTrigger>
                 </TabsList>
                 <TabsContent value="details" className="m-0 mt-6">
                   <CardContent className="p-0">

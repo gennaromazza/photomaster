@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
-import { db } from "../db";
+// Non usare l'import di db dall'esterno, ma usare l'istanza locale che conosce lo schema aggiornato
+// import { db } from "../db";
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { pool } from "../db";
 import { 
   pagamentiEvento, 
   montaggiEvento, 
@@ -13,8 +16,11 @@ import {
 } from "@shared/eventi-schema";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { z } from "zod";
-import { events } from "@shared/schema";
-import { collaborators } from "@shared/schema";
+import * as schema from "@shared/schema";
+import { events, collaborators, eventCollaborators } from "@shared/schema";
+
+// Crea un'istanza locale del db che conosce lo schema più recente
+const db = drizzle({ client: pool, schema });
 
 /**
  * Controller for event-centric management of:

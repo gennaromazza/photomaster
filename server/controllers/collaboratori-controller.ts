@@ -43,8 +43,7 @@ export const getEventiCollaboratore = async (req: Request, res: Response) => {
       clientId: events.clientId,
       secondClientId: events.secondClientId,
       clientFirstName: clients.firstName,
-      clientLastName: clients.lastName,
-      clienteQuoteId: events.quoteId
+      clientLastName: clients.lastName
     })
     .from(eventiCollaboratori)
     .innerJoin(events, eq(eventiCollaboratori.eventoId, events.id))
@@ -69,8 +68,7 @@ export const getEventiCollaboratore = async (req: Request, res: Response) => {
       clientId: events.clientId,
       secondClientId: events.secondClientId,
       clientFirstName: clients.firstName,
-      clientLastName: clients.lastName,
-      clienteQuoteId: events.quoteId
+      clientLastName: clients.lastName
     })
     .from(eventCollaborators)
     .innerJoin(events, eq(eventCollaborators.eventId, events.id))

@@ -208,6 +208,7 @@ export const collaborators = pgTable("collaborators", {
   role: text("role").notNull(),
   profileImage: text("profile_image"),
   status: text("status").default("available").notNull(),
+  dashboardToken: text("dashboard_token"), // Token JWT per accesso dashboard pubblica
 });
 
 export const insertCollaboratorSchema = createInsertSchema(collaborators).pick({
@@ -218,6 +219,7 @@ export const insertCollaboratorSchema = createInsertSchema(collaborators).pick({
   role: true,
   profileImage: true,
   status: true,
+  dashboardToken: true,
 });
 
 export type InsertCollaborator = z.infer<typeof insertCollaboratorSchema>;

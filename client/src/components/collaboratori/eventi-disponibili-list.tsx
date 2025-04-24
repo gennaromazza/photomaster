@@ -110,53 +110,54 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">Eventi disponibili per l'assegnazione</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Eventi Senza Collaboratori</h2>
+        <h3 className="text-gray-500 text-base">Eventi che non hanno ancora collaboratori assegnati</h3>
+      </div>
+      
+      {/* Titolo sezione principale */}
+      <div>
+        <h3 className="text-lg font-medium mb-4">Eventi disponibili per l'assegnazione</h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {eventiSenzaCollaboratori.map((evento) => (
-          <Card key={evento.id} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg font-semibold">{evento.title}</CardTitle>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {format(new Date(evento.date), "PPP", { locale: it })}
+      {/* Visualizzazione tabellare (stile Preventivi) */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-3 px-4 font-medium text-gray-500">Titolo</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-500">Data</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-500">Luogo</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-500">Tipo</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-500">Azioni</th>
+            </tr>
+          </thead>
+          <tbody>
+            {eventiSenzaCollaboratori.map((evento) => (
+              <tr key={evento.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="py-3 px-4">
+                  <span className="font-medium">{evento.title}</span>
+                </td>
+                <td className="py-3 px-4 text-gray-600">
+                  {format(new Date(evento.date), "dd/MM/yyyy", { locale: it })}
+                  <div className="text-xs text-gray-400">
+                    {format(new Date(evento.date), "EEEE", { locale: it })}
                   </div>
-                </div>
-                <Badge variant="outline" className="bg-primary/10">
-                  {evento.eventType}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm">
-                      {evento.description && evento.description.length > 100
-                        ? `${evento.description.substring(0, 100)}...`
-                        : evento.description || 'Nessuna descrizione disponibile'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex justify-end mt-2">
+                </td>
+                <td className="py-3 px-4 text-gray-600">
+                  {evento.location || <span className="text-gray-400">Non specificato</span>}
+                </td>
+                <td className="py-3 px-4">
+                  <Badge variant="outline" className="bg-primary/10">
+                    {evento.eventType}
+                  </Badge>
+                </td>
+                <td className="py-3 px-4">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full">
+                      <Button variant="outline" size="sm" className="ml-auto">
                         <UserPlus className="h-4 w-4 mr-2" />
-                        Assegna collaboratore
+                        Assegna
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent>
@@ -168,7 +169,7 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
                               <label className="text-sm font-medium">Collaboratore</label>
                               <select 
                                 className="w-full p-2 border rounded mt-1"
-                                id="collaboratore-select"
+                                id={`collaboratore-select-${evento.id}`}
                               >
                                 <option value="">Seleziona...</option>
                                 {collaboratori && collaboratori.map((collab) => (
@@ -183,7 +184,7 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
                             <label className="text-sm font-medium">Ruolo</label>
                             <select 
                               className="w-full p-2 border rounded mt-1"
-                              id="ruolo-select"
+                              id={`ruolo-select-${evento.id}`}
                             >
                               <option value="">Seleziona...</option>
                               {COLLABORATOR_ROLES.map((role) => (
@@ -198,8 +199,9 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
                           className="w-full"
                           onClick={() => {
                             // Se abbiamo un ID collaboratore specificato lo usiamo, altrimenti prendiamo quello selezionato
-                            const selectedCollaboratoreId = collaboratoreId || (document.getElementById('collaboratore-select') as HTMLSelectElement)?.value;
-                            const ruolo = (document.getElementById('ruolo-select') as HTMLSelectElement).value;
+                            const selectedCollaboratoreId = collaboratoreId || 
+                              (document.getElementById(`collaboratore-select-${evento.id}`) as HTMLSelectElement)?.value;
+                            const ruolo = (document.getElementById(`ruolo-select-${evento.id}`) as HTMLSelectElement).value;
                             
                             if (!selectedCollaboratoreId || !ruolo) {
                               toast({
@@ -227,11 +229,22 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
                       </div>
                     </PopoverContent>
                   </Popover>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                </td>
+              </tr>
+            ))}
+            
+            {eventiSenzaCollaboratori.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-gray-500">
+                  <div className="flex flex-col items-center">
+                    <Calendar className="h-8 w-8 text-gray-300 mb-2" />
+                    <p>Tutti gli eventi hanno già collaboratori assegnati.</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

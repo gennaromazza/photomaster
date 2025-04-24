@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { collaborators, events } from "@shared/schema";
+import { collaborators, events, eventCollaborators } from "@shared/schema";
 import { 
   eventiCollaboratori, 
   pagamentiCollaboratori, 

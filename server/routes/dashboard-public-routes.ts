@@ -129,7 +129,7 @@ router.post("/:id/generate-dashboard-token", async (req: Request, res: Response)
     // Restituisci il nuovo token
     res.json({ 
       token: newToken,
-      dashboardUrl: `${req.protocol}://${req.get('host')}/collaboratori/${collaboratorId}/dashboard-public?token=${newToken}`
+      dashboardUrl: `${req.protocol}://${req.get('host')}/dashboard-collaboratore-public?id=${collaboratorId}&token=${newToken}`
     });
   } catch (error) {
     console.error("Errore durante la generazione del token:", error);

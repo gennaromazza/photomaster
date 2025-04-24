@@ -122,7 +122,7 @@ function Router() {
       <Route path="/public/galleries/:slug" component={PublicGalleryPage} />
       <Route path="/selection" component={SelectionPage} />
       <Route path="/selection/session/:key/:galleryId" component={SelectionSessionPage} />
-      <Route path="/collaboratori/:id/dashboard-public" component={DashboardCollaboratorePublic} />
+      <Route path="/dashboard-collaboratore-public" component={DashboardCollaboratorePublic} />
       <Route component={NotFound} />
     </Switch>
   );

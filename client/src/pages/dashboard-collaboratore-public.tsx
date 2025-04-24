@@ -80,13 +80,10 @@ export default function DashboardCollaboratorePublic() {
   // Estrai i parametri dall'URL
   useEffect(() => {
     const tokenFromUrl = searchParams.get("token");
-    // Ottieni l'ID dal percorso URL - /collaboratori/:id/dashboard-public
-    const pathParts = window.location.pathname.split("/").filter(Boolean);
-    const idFromUrl = pathParts.length >= 2 ? pathParts[1] : null;
+    const idFromUrl = searchParams.get("id");
     
-    console.log("Path parts:", pathParts);
-    console.log("ID from URL:", idFromUrl);
     console.log("Token from URL:", tokenFromUrl);
+    console.log("ID from URL:", idFromUrl);
     
     if (tokenFromUrl && idFromUrl) {
       setToken(tokenFromUrl);

@@ -8,7 +8,7 @@ import {
   updateEventEditingTask,
   getEventsWithoutCollaborators
 } from "../controllers/events-controller";
-import { isAuthenticated } from "../middleware/auth";
+import { isAuthenticated } from "../auth";
 
 /**
  * Router for the standardized English version of events API endpoints
@@ -18,6 +18,9 @@ const router = Router();
 
 // Apply authentication middleware to all routes
 router.use(isAuthenticated);
+
+// Special queries - devono essere prima delle route con parametri dinamici
+router.get("/without-collaborators", getEventsWithoutCollaborators);
 
 // Event details
 router.get("/:id", getEventDetails);
@@ -30,8 +33,5 @@ router.post("/:id/payments", addEventPayment);
 router.get("/:id/editing", getEventEditingTasks);
 router.post("/:id/editing", addEventEditingTask);
 router.patch("/:id/editing/:taskId", updateEventEditingTask);
-
-// Special queries
-router.get("/without-collaborators", getEventsWithoutCollaborators);
 
 export default router;

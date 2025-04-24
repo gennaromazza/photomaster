@@ -21,6 +21,7 @@ import notificationsRouter from "./routes/notifications";
 import collaboratorsRouter from "./routes/collaborators-routes";
 import collaboratoriRouter from "./routes/collaboratori-routes"; // Manteniamo temporaneamente fino alla migrazione completa
 import eventiRouter from "./routes/eventi-routes";
+import eventsRouter from "./routes/events-routes"; // English standardized version
 import dashboardPublicRouter from "./routes/dashboard-public-routes";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
 import multer from "multer";
@@ -3313,8 +3314,10 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/selection", selectionRouter);
   app.use("/api/clauses", clausesRouter);
   app.use("/api/notifications", notificationsRouter);
-  app.use("/api/events", eventiRouter);
+  app.use("/api/eventi", eventiRouter); // Italian endpoint (legacy)
+  app.use("/api/events", eventsRouter); // English standardized endpoint
   app.use("/api", collaboratoriRouter);
+  app.use("/api/collaborators", collaboratorsRouter);
   app.use("/api/collaboratori", dashboardPublicRouter);
   // Aggiungi anche una rotta per il nuovo formato dell'URL
   app.use("/api", dashboardPublicRouter);
@@ -3377,6 +3380,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Manteniamo temporaneamente le vecchie rotte per retrocompatibilità
   app.use("/api/collaboratori", isAuthenticated, collaboratoriRouter);
   app.use("/api/eventi", isAuthenticated, eventiRouter);
+  
+  // Aggiungi la nuova rotta standardizzata per gli eventi in inglese
+  app.use("/api/events", isAuthenticated, eventsRouter);
 
   // Setup upload routes
   setupUploadRoutes(app);

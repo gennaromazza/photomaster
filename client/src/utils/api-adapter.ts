@@ -37,6 +37,8 @@ const ENDPOINT_MAPPING = {
   '/api/eventi/senza-collaboratori': '/api/events/without-collaborators',
   '/api/eventi/{id}': '/api/events/{id}',
   '/api/eventi/{id}/collaboratori': '/api/events/{id}/collaborators',
+  '/api/eventi/{id}/pagamenti': '/api/events/{id}/payments',
+  '/api/eventi/{id}/montaggi': '/api/events/{id}/editing',
   
   // Pagamenti
   '/api/pagamenti': '/api/payments',

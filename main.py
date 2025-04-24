@@ -34,13 +34,9 @@ def analyze(
     
     analyzer = ProjectAnalyzer(project_path)
     
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-    ) as progress:
-        progress_task = progress.add_task("[cyan]Analyzing project...", total=None)
-        results = analyzer.analyze_project()
-        progress.update(progress_task, completed=True)
+    console.print("[cyan]Analyzing project...[/cyan]")
+    results = analyzer.analyze_project()
+    console.print("[green]Analysis completed![/green]")
     
     # Save results to JSON file
     with open(output_file, 'w') as f:

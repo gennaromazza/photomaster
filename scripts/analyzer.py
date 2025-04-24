@@ -70,38 +70,26 @@ class ProjectAnalyzer:
         
     def analyze_project(self):
         """Main method to analyze the entire project"""
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        ) as progress:
-            main_task = progress.add_task("[green]Analyzing project...", total=5)
-            
-            # Step 1: Collect all relevant files
-            files_task = progress.add_task("[cyan]Collecting files...", total=100)
-            typescript_files = self._collect_typescript_files(progress, files_task)
-            progress.update(main_task, advance=1)
-            
-            # Step 2: Extract API endpoints defined in the server
-            api_task = progress.add_task("[cyan]Extracting API endpoints...", total=len(typescript_files))
-            self._extract_api_endpoints(typescript_files, progress, api_task)
-            progress.update(main_task, advance=1)
-            
-            # Step 3: Extract function definitions
-            func_task = progress.add_task("[cyan]Extracting function definitions...", total=len(typescript_files))
-            self._extract_functions(typescript_files, progress, func_task)
-            progress.update(main_task, advance=1)
-            
-            # Step 4: Extract API usages in client code
-            usage_task = progress.add_task("[cyan]Analyzing API usages...", total=len(typescript_files))
-            self._analyze_api_usages(typescript_files, progress, usage_task)
-            progress.update(main_task, advance=1)
-            
-            # Step 5: Analyze code for issues
-            issues_task = progress.add_task("[cyan]Detecting code issues...", total=len(typescript_files))
-            self._detect_code_issues(typescript_files, progress, issues_task)
-            progress.update(main_task, advance=1)
+        console = Console()
+        console.print("[green]Step 1: Collecting files...[/green]")
+        typescript_files = self._collect_typescript_files()
+        console.print(f"Found {len(typescript_files)} TypeScript/JavaScript files")
+        
+        console.print("[green]Step 2: Extracting API endpoints...[/green]")
+        self._extract_api_endpoints(typescript_files)
+        console.print(f"Found {len(self.endpoints)} API endpoints")
+        
+        console.print("[green]Step 3: Extracting function definitions...[/green]")
+        self._extract_functions(typescript_files)
+        console.print(f"Found {len(self.functions)} functions")
+        
+        console.print("[green]Step 4: Analyzing API usages...[/green]")
+        self._analyze_api_usages(typescript_files)
+        console.print(f"Found API usages in {len(self.api_usages)} endpoints")
+        
+        console.print("[green]Step 5: Detecting code issues...[/green]")
+        self._detect_code_issues(typescript_files)
+        console.print(f"Found {len(self.issues)} potential code issues")
         
         # Build relationships
         self._build_relationships()
@@ -114,11 +102,9 @@ class ProjectAnalyzer:
             "italian_to_english": self.italian_to_english_endpoints
         }
     
-    def _collect_typescript_files(self, progress: Progress, task_id: TaskID) -> List[str]:
+    def _collect_typescript_files(self) -> List[str]:
         """Collect all TypeScript/JavaScript files in the project"""
         typescript_files = []
-        total_dirs = sum(1 for _ in self.project_root.glob("**/"))
-        scanned = 0
         
         for root, dirs, files in os.walk(self.project_root):
             # Skip node_modules and other unnecessary directories
@@ -128,17 +114,13 @@ class ProjectAnalyzer:
                 if file.endswith(('.ts', '.tsx', '.js', '.jsx')):
                     typescript_files.append(os.path.join(root, file))
             
-            scanned += 1
-            progress.update(task_id, completed=min(100, int(scanned / total_dirs * 100)))
-            
         return typescript_files
     
-    def _extract_api_endpoints(self, files: List[str], progress: Progress, task_id: TaskID):
+    def _extract_api_endpoints(self, files: List[str]):
         """Extract API endpoints defined in route files"""
         for file_path in files:
             if "routes" in file_path or "controllers" in file_path:
                 self._extract_endpoints_from_file(file_path)
-            progress.update(task_id, advance=1)
     
     def _extract_endpoints_from_file(self, file_path: str):
         """Extract API endpoints from a single file"""
@@ -227,11 +209,10 @@ class ProjectAnalyzer:
         
         return list(set(params))  # Remove duplicates
     
-    def _extract_functions(self, files: List[str], progress: Progress, task_id: TaskID):
+    def _extract_functions(self, files: List[str]):
         """Extract functions defined in the project"""
         for file_path in files:
             self._extract_functions_from_file(file_path)
-            progress.update(task_id, advance=1)
     
     def _extract_functions_from_file(self, file_path: str):
         """Extract function definitions from a single file"""
@@ -295,12 +276,11 @@ class ProjectAnalyzer:
                     in_function_body = True
                     brace_count = line[match.end():].count("{") - line[match.end():].count("}")
     
-    def _analyze_api_usages(self, files: List[str], progress: Progress, task_id: TaskID):
+    def _analyze_api_usages(self, files: List[str]):
         """Analyze API usages in client code"""
         for file_path in files:
             if "client" in file_path:
                 self._extract_api_usages_from_file(file_path)
-            progress.update(task_id, advance=1)
     
     def _extract_api_usages_from_file(self, file_path: str):
         """Extract API usage patterns from a single file"""
@@ -367,11 +347,10 @@ class ProjectAnalyzer:
                             if file_path not in self.endpoints[endpoint_key].sources:
                                 self.endpoints[endpoint_key].sources.append(file_path)
     
-    def _detect_code_issues(self, files: List[str], progress: Progress, task_id: TaskID):
+    def _detect_code_issues(self, files: List[str]):
         """Detect various code issues"""
         for file_path in files:
             self._analyze_file_for_issues(file_path)
-            progress.update(task_id, advance=1)
     
     def _analyze_file_for_issues(self, file_path: str):
         """Analyze a single file for code issues"""

@@ -457,13 +457,8 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
 // GET: Recupera gli eventi senza collaboratori assegnati
 export const getEventiSenzaCollaboratori = async (req: Request, res: Response) => {
   try {
-    // Ottimizzazione: utilizza una subquery per trovare gli eventi con collaboratori
-    const eventiConCollaboratori = db.select({ id: eventiCollaboratori.eventoId })
-      .from(eventiCollaboratori)
-      .groupBy(eventiCollaboratori.eventoId);
-    
-    // Seleziona tutti gli eventi che non sono nella lista degli eventi con collaboratori
-    const eventiSenzaCollaboratori = await db.select({
+    // Recupera tutti gli eventi confermati
+    const eventiCompletati = await db.select({
       id: events.id,
       title: events.title,
       description: events.description,
@@ -477,13 +472,26 @@ export const getEventiSenzaCollaboratori = async (req: Request, res: Response) =
       updatedAt: events.updatedAt
     })
     .from(events)
-    .where(
-      and(
-        eq(events.status, "completed"), // Solo eventi confermati
-        sql`${events.id} NOT IN (${eventiConCollaboratori.getSQL()})`
-      )
-    )
+    .where(eq(events.status, "completed")) // Solo eventi confermati
     .orderBy(desc(events.date));
+    
+    // Ottieni gli ID degli eventi con collaboratori
+    const collaboratoriPerEvento = await db.select({
+      eventoId: eventiCollaboratori.eventoId,
+      count: sql<number>`count(*)`.as('count')
+    })
+    .from(eventiCollaboratori)
+    .groupBy(eventiCollaboratori.eventoId);
+    
+    // Crea un Set di eventi con collaboratori per una ricerca veloce
+    const eventiConCollaboratoriSet = new Set(
+      collaboratoriPerEvento.map(row => row.eventoId)
+    );
+    
+    // Filtra gli eventi che non hanno collaboratori
+    const eventiSenzaCollaboratori = eventiCompletati.filter(
+      evento => !eventiConCollaboratoriSet.has(evento.id)
+    );
     
     return res.status(200).json(eventiSenzaCollaboratori);
   } catch (error) {

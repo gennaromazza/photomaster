@@ -59,16 +59,21 @@ export const insertEventoCollaboratoreSchema = createInsertSchema(eventiCollabor
   note: true,
 });
 
-export const insertPagamentoCollaboratoreSchema = createInsertSchema(pagamentiCollaboratori).pick({
-  collaboratoreId: true,
-  eventoId: true,
-  tipo: true,
-  importo: true,
-  dataPagamento: true,
-  metodoPagamento: true,
-  note: true,
-  riferimentoEsterno: true,
-});
+export const insertPagamentoCollaboratoreSchema = createInsertSchema(pagamentiCollaboratori)
+  .pick({
+    collaboratoreId: true,
+    eventoId: true,
+    tipo: true,
+    importo: true,
+    dataPagamento: true,
+    metodoPagamento: true,
+    note: true,
+    riferimentoEsterno: true,
+  })
+  .refine(data => Number(data.importo) > 0, {
+    message: "L'importo deve essere maggiore di zero",
+    path: ["importo"]
+  });
 
 export const insertMontaggioSchema = createInsertSchema(montaggi).pick({
   collaboratoreId: true,

@@ -118,23 +118,47 @@ export const getMontaggiCollaboratore = async (req: Request, res: Response) => {
   }
 };
 
-// POST: Creazione di un nuovo montaggio
+// POST: Creazione di un nuovo montaggio (con opzione per registrare acconto)
 export const addMontaggioCollaboratore = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const collaboratoreId = Number(id);
   
   try {
-    // Validazione input
+    // Validazione input del montaggio
     const data = insertMontaggioSchema.parse({
       ...req.body,
-      collaboratoreId: Number(id)
+      collaboratoreId
     });
     
-    // Inserimento nel database
-    const [nuovoMontaggio] = await db.insert(montaggi)
-      .values(data)
-      .returning();
+    // Verifica se è stato richiesto anche il pagamento di un acconto
+    const registraAcconto = req.body.registraAcconto === true;
+    let pagamentoData;
     
-    return res.status(201).json(nuovoMontaggio);
+    if (registraAcconto && req.body.pagamento) {
+      // Validazione dati pagamento acconto
+      pagamentoData = insertPagamentoCollaboratoreSchema.parse({
+        ...req.body.pagamento,
+        collaboratoreId,
+        eventoId: data.eventoId,
+        tipo: TipoPagamento.MONTAGGIO_ACCONTO
+      });
+    }
+    
+    // Usa una transazione per garantire che entrambe le operazioni abbiano successo o falliscano insieme
+    return await db.transaction(async (tx) => {
+      // Inserimento del montaggio nel database
+      const [nuovoMontaggio] = await tx.insert(montaggi)
+        .values(data)
+        .returning();
+      
+      // Se richiesto, inserisci anche il pagamento dell'acconto
+      if (registraAcconto && pagamentoData) {
+        await tx.insert(pagamentiCollaboratori)
+          .values(pagamentoData);
+      }
+      
+      return res.status(201).json(nuovoMontaggio);
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
@@ -145,36 +169,65 @@ export const addMontaggioCollaboratore = async (req: Request, res: Response) => 
   }
 };
 
-// PATCH: Aggiornamento stato montaggio
+// PATCH: Aggiornamento stato montaggio (con opzione per registrare saldo)
 export const updateMontaggioCollaboratore = async (req: Request, res: Response) => {
   const { id, montaggioId } = req.params;
+  const collaboratoreId = Number(id);
+  const montaggioIdNum = Number(montaggioId);
   
   try {
     // Validazione input
     const data = updateMontaggioSchema.parse(req.body);
     
-    // Aggiornamento nel database
-    const [montaggioAggiornato] = await db.update(montaggi)
-      .set({
-        ...data,
-        updatedAt: new Date()
-      })
-      .where(
-        and(
-          eq(montaggi.id, Number(montaggioId)),
-          eq(montaggi.collaboratoreId, Number(id))
-        )
-      )
-      .returning();
+    // Verifica se è stato richiesto anche il pagamento di un saldo al completamento
+    const registraSaldo = req.body.registraSaldo === true && data.stato === StatoMontaggio.COMPLETATO;
+    let pagamentoData;
     
-    if (!montaggioAggiornato) {
-      return res.status(404).json({ error: "Montaggio non trovato" });
+    if (registraSaldo && req.body.pagamento) {
+      // Validazione dati pagamento saldo
+      pagamentoData = insertPagamentoCollaboratoreSchema.parse({
+        ...req.body.pagamento,
+        collaboratoreId,
+        eventoId: req.body.eventoId, // Deve essere incluso nella richiesta
+        tipo: TipoPagamento.MONTAGGIO_SALDO
+      });
     }
     
-    return res.status(200).json(montaggioAggiornato);
+    // Usa una transazione per garantire che entrambe le operazioni abbiano successo o falliscano insieme
+    return await db.transaction(async (tx) => {
+      // Aggiornamento nel database
+      const [montaggioAggiornato] = await tx.update(montaggi)
+        .set({
+          ...data,
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(montaggi.id, montaggioIdNum),
+            eq(montaggi.collaboratoreId, collaboratoreId)
+          )
+        )
+        .returning();
+      
+      if (!montaggioAggiornato) {
+        throw new Error("Montaggio non trovato");
+      }
+      
+      // Se richiesto, inserisci anche il pagamento del saldo
+      if (registraSaldo && pagamentoData) {
+        await tx.insert(pagamentiCollaboratori)
+          .values(pagamentoData);
+      }
+      
+      return res.status(200).json(montaggioAggiornato);
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
+    }
+    
+    if (error instanceof Error && error.message === "Montaggio non trovato") {
+      return res.status(404).json({ error: "Montaggio non trovato" });
     }
     
     console.error(`Errore aggiornamento montaggio ${montaggioId} del collaboratore ${id}:`, error);
@@ -198,11 +251,19 @@ export const getDashboardCollaboratore = async (req: Request, res: Response) => 
     
     // Recupera tutti i montaggi
     const listaMontaggi = await db.select().from(montaggi)
-      .where(eq(montaggi.collaboratoreId, collaboratoreId));
+      .where(eq(montaggi.collaboratoreId, collaboratoreId))
+      .catch(error => {
+        console.error(`Errore DB recupero montaggi: ${error.message}`);
+        throw new Error("Errore database durante il recupero dei montaggi");
+      });
     
     // Recupera tutti i pagamenti
     const listaPagamenti = await db.select().from(pagamentiCollaboratori)
-      .where(eq(pagamentiCollaboratori.collaboratoreId, collaboratoreId));
+      .where(eq(pagamentiCollaboratori.collaboratoreId, collaboratoreId))
+      .catch(error => {
+        console.error(`Errore DB recupero pagamenti: ${error.message}`);
+        throw new Error("Errore database durante il recupero dei pagamenti");
+      });
     
     // Calcola statistiche
     const montaggiPendenti = listaMontaggi.filter(m => m.stato !== StatoMontaggio.COMPLETATO).length;

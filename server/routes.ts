@@ -19,6 +19,7 @@ import clausesRouter from "./routes/clauses";
 import notificationsRouter from "./routes/notifications";
 import collaboratoriRouter from "./routes/collaboratori-routes";
 import eventiRouter from "./routes/eventi-routes";
+import dashboardPublicRouter from "./routes/dashboard-public-routes";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
 import multer from "multer";
 import { tmpdir } from "os";
@@ -3312,6 +3313,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/events", eventiRouter);
   app.use("/api", collaboratoriRouter);
+  app.use("/api/collaboratori", dashboardPublicRouter);
 
   // Configurazione di multer per l'upload dei file
   const upload = multer({

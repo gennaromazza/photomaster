@@ -158,7 +158,7 @@ const CollaboratorsPage = () => {
                               {collaborator.firstName} {collaborator.lastName}
                             </h3>
                             <div className="flex items-center mt-1 text-sm text-gray-500">
-                              <i className="ri-camera-line mr-1"></i> {collaborator.role}
+                              <i className="ri-camera-line mr-1"></i> {getRoleLabel(collaborator.role)}
                             </div>
                             {collaborator.email && (
                               <div className="flex items-center mt-0.5 text-sm text-gray-500">
@@ -169,7 +169,7 @@ const CollaboratorsPage = () => {
                         </div>
                         <div className="mt-4 flex justify-end">
                           <Badge variant={collaborator.status === "available" ? "green" : "red"}>
-                            {collaborator.status === "available" ? "Disponibile" : "Occupato"}
+                            {getStatusLabel(collaborator.status)}
                           </Badge>
                         </div>
                       </div>

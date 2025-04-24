@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import { COLLABORATOR_ROLES, COLLABORATOR_STATUSES, CollaboratorRole, CollaboratorStatus } from "@shared/constants";
 import {
   Form,
   FormControl,
@@ -25,14 +26,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Costruiamo un enum dai valori delle costanti
+const roleEnum = z.enum(COLLABORATOR_ROLES.map(r => r.id) as [string, ...string[]]);
+const statusEnum = z.enum(COLLABORATOR_STATUSES.map(s => s.id) as [string, ...string[]]);
+
 const nuovoCollaboratoreSchema = z.object({
   firstName: z.string().min(2, "Il nome deve contenere almeno 2 caratteri"),
   lastName: z.string().min(2, "Il cognome deve contenere almeno 2 caratteri"),
   email: z.string().email("Email non valida"),
   phone: z.string().min(6, "Numero di telefono non valido"),
-  role: z.string().min(2, "Il ruolo è obbligatorio"),
+  role: roleEnum,
   profileImage: z.string().optional(),
-  status: z.enum(["available", "unavailable"]),
+  status: statusEnum,
 });
 
 export type NuovoCollaboratoreFormValues = z.infer<typeof nuovoCollaboratoreSchema>;
@@ -51,7 +56,7 @@ export function NuovoCollaboratoreForm({ onSuccess }: NuovoCollaboratoreFormProp
       lastName: "",
       email: "",
       phone: "",
-      role: "",
+      role: "fotografo", // Valore predefinito da constants.ts
       profileImage: "",
       status: "available",
     },
@@ -153,9 +158,20 @@ export function NuovoCollaboratoreForm({ onSuccess }: NuovoCollaboratoreFormProp
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Ruolo</FormLabel>
-                <FormControl>
-                  <Input placeholder="Es. Fotografo, Videomaker, Grafico" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger aria-label="Seleziona ruolo">
+                      <SelectValue placeholder="Seleziona ruolo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {COLLABORATOR_ROLES.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -168,13 +184,16 @@ export function NuovoCollaboratoreForm({ onSuccess }: NuovoCollaboratoreFormProp
                 <FormLabel>Stato</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="Seleziona stato">
                       <SelectValue placeholder="Seleziona stato" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="available">Disponibile</SelectItem>
-                    <SelectItem value="unavailable">Non disponibile</SelectItem>
+                    {COLLABORATOR_STATUSES.map((status) => (
+                      <SelectItem key={status.id} value={status.id}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

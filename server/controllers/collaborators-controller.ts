@@ -267,20 +267,29 @@ export const addCollaboratorPayment = async (req: Request, res: Response) => {
   const { id } = req.params;
   
   try {
+    // Log per debug
+    console.log("Dati pagamento ricevuti:", req.body);
+    
     // Prepara i dati per l'inserimento - adatta i nomi dei campi in italiano a quelli in inglese
     const requestData = {
       collaboratorId: Number(id),
-      eventId: req.body.eventoId || req.body.eventId,
+      eventId: req.body.eventoId || req.body.eventId ? Number(req.body.eventoId || req.body.eventId) : undefined,
       type: req.body.tipo || req.body.type,
-      amount: req.body.importo || req.body.amount,
-      paymentDate: req.body.dataPagamento || req.body.paymentDate || new Date(),
+      amount: req.body.importo || req.body.amount ? Number(req.body.importo || req.body.amount) : undefined,
+      paymentDate: req.body.dataPagamento || req.body.paymentDate ? new Date(req.body.dataPagamento || req.body.paymentDate) : new Date(),
       paymentMethod: req.body.metodoPagamento || req.body.paymentMethod,
       notes: req.body.note || req.body.notes,
       externalReference: req.body.riferimentoEsterno || req.body.externalReference
     };
     
+    // Log dati trasformati
+    console.log("Dati pagamento trasformati:", requestData);
+    
     // Validazione input
     const data = insertCollaboratorPaymentSchema.parse(requestData);
+    
+    // Log dati validati
+    console.log("Dati pagamento validati:", data);
     
     // Inserimento nel database
     const [newPayment] = await db

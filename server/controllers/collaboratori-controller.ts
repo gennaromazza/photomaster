@@ -322,11 +322,23 @@ export const addPagamentoCollaboratore = async (req: Request, res: Response) => 
   const { id } = req.params;
   
   try {
-    // Validazione input
-    const data = insertPagamentoCollaboratoreSchema.parse({
+    // Log per debug
+    console.log("Dati pagamento ricevuti:", req.body);
+    
+    // Prepara i dati con la conversione appropriata dei tipi
+    const transformedData = {
       ...req.body,
-      collaboratoreId: Number(id)
-    });
+      collaboratoreId: Number(id),
+      eventoId: req.body.eventoId ? Number(req.body.eventoId) : undefined,
+      importo: req.body.importo ? Number(req.body.importo) : undefined,
+      dataPagamento: req.body.dataPagamento ? new Date(req.body.dataPagamento) : new Date()
+    };
+    
+    // Validazione input
+    const data = insertPagamentoCollaboratoreSchema.parse(transformedData);
+    
+    // Log dei dati dopo la trasformazione
+    console.log("Dati pagamento validati:", data);
     
     // Inserimento nel database
     const [nuovoPagamento] = await db.insert(pagamentiCollaboratori)
@@ -336,6 +348,7 @@ export const addPagamentoCollaboratore = async (req: Request, res: Response) => 
     return res.status(201).json(nuovoPagamento);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error("Errore di validazione:", error.errors);
       return res.status(400).json({ error: error.errors });
     }
     

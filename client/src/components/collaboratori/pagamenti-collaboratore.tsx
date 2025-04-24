@@ -89,9 +89,19 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
 
   // Query per ottenere i pagamenti del collaboratore
   const { data: pagamenti = [], isLoading, error } = useQuery({
-    queryKey: [`/api/collaboratori/${collaboratoreId}/pagamenti`],
+    queryKey: [`/api/collaborators/${collaboratoreId}/payments`],
     staleTime: 5 * 60 * 1000, // 5 minuti
   });
+
+  // Fallback alla vecchia API in italiano se quella in inglese fallisce
+  const { data: pagamentiItaliani = [] } = useQuery({
+    queryKey: [`/api/collaboratori/${collaboratoreId}/pagamenti`],
+    staleTime: 5 * 60 * 1000, // 5 minuti
+    enabled: pagamenti.length === 0 && !isLoading && !error,
+  });
+
+  // Combina i risultati delle due API
+  const pagamentiCombinati = pagamenti.length > 0 ? pagamenti : pagamentiItaliani;
 
   // Query per ottenere i dettagli del collaboratore
   const { data: collaboratore } = useQuery({
@@ -101,9 +111,19 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
 
   // Query per ottenere gli eventi del collaboratore
   const { data: eventi = [] } = useQuery({
-    queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`],
+    queryKey: [`/api/collaborators/${collaboratoreId}/events`],
     staleTime: 5 * 60 * 1000, // 5 minuti
   });
+
+  // Fallback alla vecchia API in italiano
+  const { data: eventiItaliani = [] } = useQuery({
+    queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`],
+    staleTime: 5 * 60 * 1000, // 5 minuti
+    enabled: eventi.length === 0,
+  });
+
+  // Combina i risultati delle due API
+  const eventiCombinati = eventi.length > 0 ? eventi : eventiItaliani;
 
   // Mutation per il nuovo pagamento
   const nuovoPagamentoMutation = useMutation({
@@ -112,18 +132,44 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
       const payload = {
         ...values,
         collaboratoreId: Number(collaboratoreId),
-        eventoId: Number(values.eventoId)
+        collaboratorId: Number(collaboratoreId), // Versione inglese
+        eventoId: Number(values.eventoId),
+        eventId: Number(values.eventoId), // Versione inglese
+        tipo: values.tipo, // Italiano
+        type: values.tipo, // Inglese
+        importo: Number(values.importo), // Italiano
+        amount: Number(values.importo), // Inglese
+        dataPagamento: values.dataPagamento, // Italiano
+        paymentDate: values.dataPagamento, // Inglese
+        metodoPagamento: values.metodoPagamento, // Italiano
+        paymentMethod: values.metodoPagamento, // Inglese
+        note: values.note, // Italiano
+        notes: values.note, // Inglese
+        riferimentoEsterno: values.riferimentoEsterno, // Italiano
+        externalReference: values.riferimentoEsterno, // Inglese
       };
       
       console.log("Dati pagamento inviati:", payload);
       
-      const res = await apiRequest("POST", `/api/collaboratori/${collaboratoreId}/pagamenti`, payload);
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.error("Errore validazione:", errorData);
-        throw new Error(errorData.error?.map?.((e: any) => e.message).join(", ") || "Errore durante la registrazione del pagamento");
+      // Prova prima con l'API in inglese
+      try {
+        const res = await apiRequest("POST", `/api/collaborators/${collaboratoreId}/payments`, payload);
+        if (res.ok) {
+          return await res.json();
+        }
+        // Se fallisce, prova con l'API in italiano
+        console.log("API inglese fallita, tentativo con API italiana");
+        const resIt = await apiRequest("POST", `/api/collaboratori/${collaboratoreId}/pagamenti`, payload);
+        if (!resIt.ok) {
+          const errorData = await resIt.json();
+          console.error("Errore validazione:", errorData);
+          throw new Error(errorData.error?.map?.((e: any) => e.message).join(", ") || "Errore durante la registrazione del pagamento");
+        }
+        return await resIt.json();
+      } catch (error) {
+        console.error("Errore durante la richiesta:", error);
+        throw error;
       }
-      return await res.json();
     },
     onSuccess: () => {
       toast({
@@ -131,9 +177,11 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
         description: "Il pagamento è stato registrato con successo",
       });
       setModalOpen(false);
-      // Invalida la cache per aggiornare i dati
+      // Invalida la cache per aggiornare i dati - entrambe le versioni inglese e italiana
       queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/pagamenti`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/collaborators/${collaboratoreId}/payments`] });
       queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/dashboard`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/collaborators/${collaboratoreId}/dashboard`] });
     },
     onError: (error: any) => {
       toast({
@@ -165,17 +213,22 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
   }, [modalOpen, form]);
 
   // Filtra i pagamenti in base alla ricerca e al periodo selezionato
-  const filteredPagamenti = pagamenti ? pagamenti.filter((pagamento) => {
+  const filteredPagamenti = pagamentiCombinati ? pagamentiCombinati.filter((pagamento) => {
+    // Normalizza i campi a seconda che siano in italiano o inglese
+    const note = pagamento.note || pagamento.notes;
+    const tipo = pagamento.tipo || pagamento.type;
+    const metodoPagamento = pagamento.metodoPagamento || pagamento.paymentMethod;
+    
     const matchesSearch = 
-      (pagamento.note && pagamento.note.toLowerCase().includes(search.toLowerCase())) ||
-      (pagamento.tipo && pagamento.tipo.toLowerCase().includes(search.toLowerCase())) ||
-      (pagamento.metodoPagamento && pagamento.metodoPagamento.toLowerCase().includes(search.toLowerCase()));
+      (note && note.toLowerCase().includes(search.toLowerCase())) ||
+      (tipo && tipo.toLowerCase().includes(search.toLowerCase())) ||
+      (metodoPagamento && metodoPagamento.toLowerCase().includes(search.toLowerCase()));
     
     if (!matchesSearch) return false;
     
     // Filtra per periodo
     if (periodoSelezionato !== "tutti") {
-      const dataPagamento = new Date(pagamento.dataPagamento);
+      const dataPagamento = new Date(pagamento.dataPagamento || pagamento.paymentDate);
       const oggi = new Date();
       
       switch (periodoSelezionato) {
@@ -195,16 +248,31 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
   }) : [];
 
   // Calcola il totale dei pagamenti filtrati
-  const totalePagamenti = filteredPagamenti.reduce((acc, pagamento) => acc + Number(pagamento.importo), 0);
+  const totalePagamenti = filteredPagamenti.reduce((acc, pagamento) => {
+    const importo = pagamento.importo || pagamento.amount;
+    return acc + Number(importo);
+  }, 0);
 
   // Calcola totali per tipo di pagamento
   const totaleAcconti = filteredPagamenti
-    .filter(p => p.tipo.endsWith('_acconto') || p.tipo === 'acconto')
-    .reduce((acc, p) => acc + Number(p.importo), 0);
+    .filter(p => {
+      const tipo = p.tipo || p.type;
+      return tipo && (tipo.endsWith('_acconto') || tipo === 'acconto');
+    })
+    .reduce((acc, p) => {
+      const importo = p.importo || p.amount;
+      return acc + Number(importo);
+    }, 0);
   
   const totaleSaldi = filteredPagamenti
-    .filter(p => p.tipo.endsWith('_saldo') || p.tipo === 'saldo')
-    .reduce((acc, p) => acc + Number(p.importo), 0);
+    .filter(p => {
+      const tipo = p.tipo || p.type;
+      return tipo && (tipo.endsWith('_saldo') || tipo === 'saldo');
+    })
+    .reduce((acc, p) => {
+      const importo = p.importo || p.amount;
+      return acc + Number(importo);
+    }, 0);
 
   // Handler per il submit del form
   const onSubmit = (values: NuovoPagamentoFormValues) => {

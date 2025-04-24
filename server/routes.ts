@@ -8,6 +8,7 @@ import {
   sendQuoteSignedConfirmation,
   sendEmail
 } from "./email";
+import { syncAllCollaboratorAssignments } from "./utils/sync-collaboratori";
 import { setupUploadRoutes } from "./upload";
 import bundleLeadsRouter from "./routes/bundle-leads";
 import settingsRouter from "./routes/settings";

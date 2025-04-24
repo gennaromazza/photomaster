@@ -10,6 +10,7 @@ import {
   getDashboardCollaboratore
 } from "../controllers/collaboratori-controller";
 import { csrfProtection } from "../auth";
+import { syncAllCollaboratorAssignments } from "../utils/sync-collaboratori";
 
 const router = Router();
 
@@ -32,5 +33,24 @@ router.patch("/collaboratori/:id/montaggi/:montaggioId", csrfProtection, updateM
 
 // Dashboard collaboratore (statistiche)
 router.get("/collaboratori/:id/dashboard", getDashboardCollaboratore);
+
+// Sincronizzazione assegnazioni collaboratori tra le tabelle
+router.post("/collaboratori/sincronizza-assegnazioni", csrfProtection, async (req, res) => {
+  try {
+    // Esegue la sincronizzazione completa
+    await syncAllCollaboratorAssignments();
+    
+    return res.status(200).json({
+      success: true,
+      message: "Sincronizzazione completata con successo"
+    });
+  } catch (error) {
+    console.error("Errore durante la sincronizzazione delle assegnazioni:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Errore durante la sincronizzazione delle assegnazioni"
+    });
+  }
+});
 
 export default router;

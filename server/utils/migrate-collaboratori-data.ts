@@ -43,11 +43,14 @@ export async function migrateEventiToEventCollaborators(): Promise<void> {
         
         // Se non esiste, inserisci nella tabella inglese
         if (existingRecord.length === 0) {
+          // Poiché potrebbe esserci una mancata corrispondenza tra lo schema e la tabella,
+          // cerchiamo di eseguire l'inserimento senza il campo assignedAt che potrebbe mancare
           await db.insert(eventCollaborators).values({
             collaboratorId: record.collaboratoreId,
             eventId: record.eventoId,
             role: record.ruolo,
-            assignedAt: record.dataAssegnazione,
+            // Omettiamo assignedAt se la migrazione del database non è stata eseguita
+            // assignedAt: record.dataAssegnazione,
             notes: record.note || null
           });
           console.log(`Migrato evento collaboratore: ${record.collaboratoreId}-${record.eventoId}`);

@@ -1,4 +1,6 @@
 import { migrateAllCollaboratoriData } from "./migrate-collaboratori-data";
+import { fileURLToPath } from 'url';
+import path from 'path';
 
 /**
  * Esegue la migrazione dei dati dai vecchi schemi in italiano a quelli nuovi in inglese.
@@ -17,7 +19,12 @@ export async function runMigration() {
 }
 
 // Esegui la migrazione se questo file viene eseguito direttamente
-if (require.main === module) {
+// In ES modules dobbiamo determinare il file corrente in modo diverso da require.main === module
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentFileName = path.basename(currentFilePath);
+
+// Se stiamo eseguendo questo file direttamente (non importandolo)
+if (process.argv[1] === currentFilePath) {
   console.log("Avvio migrazione dati collaboratori dal runner...");
   runMigration()
     .then(success => {

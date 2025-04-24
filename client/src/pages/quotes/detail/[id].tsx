@@ -9,6 +9,7 @@ import { SecondClientForm } from "@/components/quotes/second-client-form";
 import { EventDetailsForm } from "@/components/quotes/event-details-form";
 import { FinancialSummaryWrapper } from "@/components/quotes/financial-summary-wrapper";
 import { ShareInfoSigned } from "@/components/quotes/share-info-signed";
+import { CollaboratoriQuote } from "@/components/quotes/collaboratori-quote";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -1078,6 +1079,16 @@ export default function QuoteDetailPage() {
 
           {/* Colonna laterale - 4/12 */}
           <div className="lg:col-span-4 space-y-4 sm:space-y-6">
+            {/* Collaboratori assegnati */}
+            {(quote?.status === "approved" || quote?.status === "confermato") && (
+              <CollaboratoriQuote 
+                quoteId={Number(id)} 
+                title={quote.title || ""}
+                date={quote.eventDate ? new Date(quote.eventDate) : new Date()}
+                location={quote.location || ""}
+              />
+            )}
+            
             {/* Scheda di condivisione/firma */}
             <Card className="mb-4">
               <CardHeader className="pb-2">

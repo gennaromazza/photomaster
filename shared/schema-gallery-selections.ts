@@ -26,6 +26,7 @@ export const gallerySelectionSettings = pgTable("gallery_selection_settings", {
   allowComments: boolean("allow_comments").default(true).notNull(),
   expiresAt: timestamp("expires_at", { mode: 'date' }),
   customMessage: text("custom_message"),
+  instructions: text("instructions"),
   createdAt: timestamp("created_at", { mode: 'timestamp' }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: 'timestamp' }).defaultNow().notNull()
 });
@@ -36,7 +37,8 @@ export const insertGallerySelectionSettingsSchema = createInsertSchema(gallerySe
   maxSelections: true,
   allowComments: true,
   expiresAt: true,
-  customMessage: true
+  customMessage: true,
+  instructions: true
 });
 
 export type InsertGallerySelectionSettings = z.infer<typeof insertGallerySelectionSettingsSchema>;

@@ -33,9 +33,8 @@ export async function migrateEventiToEventCollaborators(): Promise<void> {
         // Verifica se esiste già nella tabella inglese usando SQL raw
         const { rows: existingRecord } = await db.execute(
           `SELECT id FROM event_collaborators 
-           WHERE collaborator_id = $1 AND event_id = $2 
-           LIMIT 1`,
-          [record.collaboratoreId, record.eventoId]
+           WHERE collaborator_id = ${record.collaboratoreId} AND event_id = ${record.eventoId} 
+           LIMIT 1`
         );
         
         // Se non esiste, inserisci nella tabella inglese
@@ -43,8 +42,7 @@ export async function migrateEventiToEventCollaborators(): Promise<void> {
           // Utilizziamo SQL raw per inserire i dati senza coinvolgere le definizioni dello schema Drizzle
           await db.execute(
             `INSERT INTO event_collaborators (collaborator_id, event_id, role) 
-             VALUES ($1, $2, $3)`,
-            [record.collaboratoreId, record.eventoId, record.ruolo]
+             VALUES (${record.collaboratoreId}, ${record.eventoId}, '${record.ruolo}')`
           );
           console.log(`Migrato evento collaboratore: ${record.collaboratoreId}-${record.eventoId}`);
         } else {
@@ -102,9 +100,9 @@ export async function migratePagamentiToCollaboratorPayments(): Promise<void> {
         // Verifica se esiste già nella tabella inglese usando SQL raw
         const { rows: existingRecord } = await db.execute(
           `SELECT id FROM collaborator_payments 
-           WHERE collaborator_id = $1 AND event_id = $2 AND payment_date = $3
-           LIMIT 1`,
-          [record.collaboratoreId, record.eventoId, record.dataPagamento]
+           WHERE collaborator_id = ${record.collaboratoreId} AND event_id = ${record.eventoId} 
+             AND payment_date = '${record.dataPagamento.toISOString()}'
+           LIMIT 1`
         );
         
         // Se non esiste, inserisci nella tabella inglese
@@ -169,16 +167,12 @@ export async function migrateMontaggiToCollaboratorEditing(): Promise<void> {
     // Migra ogni record
     for (const record of records) {
       try {
-        // Verifica se esiste già nella tabella inglese
-        const existingRecord = await db.select()
-          .from(collaboratorEditing)
-          .where(
-            and(
-              eq(collaboratorEditing.collaboratorId, record.collaboratoreId),
-              eq(collaboratorEditing.eventId, record.eventoId)
-            )
-          )
-          .limit(1);
+        // Verifica se esiste già nella tabella inglese usando SQL raw
+        const { rows: existingRecord } = await db.execute(
+          `SELECT id FROM collaborator_editing 
+           WHERE collaborator_id = ${record.collaboratoreId} AND event_id = ${record.eventoId} 
+           LIMIT 1`
+        );
         
         // Se non esiste, inserisci nella tabella inglese
         if (existingRecord.length === 0) {

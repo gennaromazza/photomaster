@@ -3375,6 +3375,16 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Setup upload routes
   setupUploadRoutes(app);
 
+  // Sincronizza tutte le assegnazioni dei collaboratori all'avvio del server
+  try {
+    console.log("Avvio sincronizzazione delle assegnazioni collaboratori...");
+    syncAllCollaboratorAssignments()
+      .then(() => console.log("Sincronizzazione assegnazioni collaboratori completata con successo"))
+      .catch(err => console.error("Errore durante la sincronizzazione iniziale delle assegnazioni:", err));
+  } catch (error) {
+    console.error("Errore nell'avvio della sincronizzazione:", error);
+  }
+
   const httpServer = createServer(app);
 
   return httpServer;

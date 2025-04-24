@@ -6,20 +6,50 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Collaborator } from "@shared/schema";
 import { getInitials } from "@/lib/utils";
 import { EventiDisponibiliList } from "@/components/collaboratori/eventi-disponibili-list";
 import { COLLABORATOR_ROLES, COLLABORATOR_STATUSES, getRoleLabel, getStatusLabel } from "@shared/constants";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const CollaboratorsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<string>("collaboratori");
+  const { toast } = useToast();
   
   const { data: collaborators = [], isLoading } = useQuery<Collaborator[]>({
     queryKey: ["/api/collaborators"],
+  });
+  
+  // Mutation per sincronizzare le assegnazioni dei collaboratori
+  const sincronizzaAssegnazioniMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/collaboratori/sincronizza-assegnazioni");
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Sincronizzazione completata",
+        description: "Le assegnazioni dei collaboratori sono state sincronizzate con successo",
+        variant: "green"
+      });
+      // Invalidiamo le query pertinenti per ricaricare i dati
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collaborators"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events/senza-collaboratori"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore di sincronizzazione",
+        description: "Si è verificato un errore durante la sincronizzazione delle assegnazioni",
+        variant: "destructive"
+      });
+      console.error("Errore sincronizzazione:", error);
+    }
   });
   
   const filteredCollaborators = collaborators.filter(collaborator => {
@@ -52,6 +82,15 @@ const CollaboratorsPage = () => {
           <p className="mt-1 text-gray-500">Gestisci il tuo team di collaboratori</p>
         </div>
         <div className="mt-4 lg:mt-0 flex space-x-3">
+          <Button 
+            variant="outline"
+            className="inline-flex items-center"
+            onClick={() => sincronizzaAssegnazioniMutation.mutate()}
+            disabled={sincronizzaAssegnazioniMutation.isPending}
+          >
+            <i className="ri-refresh-line mr-2"></i>
+            {sincronizzaAssegnazioniMutation.isPending ? "Sincronizzazione..." : "Sincronizza Assegnazioni"}
+          </Button>
           <Link href="/collaborators/new">
             <Button className="inline-flex items-center">
               <i className="ri-user-add-line mr-2"></i>

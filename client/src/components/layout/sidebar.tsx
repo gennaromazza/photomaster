@@ -135,6 +135,13 @@ export default function Sidebar() {
           text="Gallerie Foto"
           isActive={isActive("/galleries")}
         />
+        
+        <SidebarLink
+          href="/collaborators"
+          icon={<Briefcase className="h-4 w-4" />}
+          text="Collaboratori"
+          isActive={isActive("/collaborators")}
+        />
       </div>
       
       <div className="mt-auto p-4">

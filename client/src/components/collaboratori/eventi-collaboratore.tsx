@@ -11,6 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { format, isAfter, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { 
+  adaptedApiRequest, 
+  adaptedQueryFn, 
+  invalidateBothQueries 
+} from "@/utils/api-adapter";
 import { Link } from "wouter";
 import {
   Table,
@@ -91,6 +96,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   const { data: eventi, isLoading, error } = useQuery({
     queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`],
     staleTime: 5 * 60 * 1000, // 5 minuti
+    queryFn: ({ signal }) => adaptedQueryFn(`/api/collaboratori/${collaboratoreId}/eventi`)({ signal }),
   });
 
   // Recupera la lista di tutti gli eventi disponibili per l'assegnazione
@@ -134,7 +140,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   // Mutation per l'aggiunta di un nuovo evento al collaboratore
   const addEventoMutation = useMutation({
     mutationFn: async (data: EventoCollaboratoreFormValues) => {
-      const response = await apiRequest(
+      const response = await adaptedApiRequest(
         "POST", 
         `/api/collaboratori/${collaboratoreId}/eventi`,
         {
@@ -149,9 +155,10 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
         title: "Evento assegnato",
         description: "L'evento è stato assegnato con successo al collaboratore.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/dashboard`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/events/senza-collaboratori`] });
+      // Invalida entrambe le versioni delle query (italiana e inglese)
+      invalidateBothQueries(`/api/collaboratori/${collaboratoreId}/eventi`);
+      invalidateBothQueries(`/api/collaboratori/${collaboratoreId}/dashboard`);
+      invalidateBothQueries(`/api/events/senza-collaboratori`);
       setIsModalOpen(false);
       form.reset();
     },
@@ -168,7 +175,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   // Mutation per l'assegnazione rapida di un evento dalla lista eventi senza collaboratori
   const assegnaRapidoMutation = useMutation({
     mutationFn: async ({ eventoId, ruolo }: { eventoId: number, ruolo: string }) => {
-      const response = await apiRequest(
+      const response = await adaptedApiRequest(
         "POST", 
         `/api/collaboratori/${collaboratoreId}/eventi`,
         {
@@ -185,9 +192,10 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
         title: "Evento assegnato",
         description: "L'evento è stato assegnato con successo al collaboratore.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/dashboard`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/events/senza-collaboratori`] });
+      // Invalida entrambe le versioni delle query (italiana e inglese)
+      invalidateBothQueries(`/api/collaboratori/${collaboratoreId}/eventi`);
+      invalidateBothQueries(`/api/collaboratori/${collaboratoreId}/dashboard`);
+      invalidateBothQueries(`/api/events/senza-collaboratori`);
     },
     onError: (error) => {
       toast({

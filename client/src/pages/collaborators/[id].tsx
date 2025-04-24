@@ -55,6 +55,7 @@ import { getInitials } from "@/lib/utils";
 import { CollaboratoreDashboard } from "@/components/collaboratori/collaboratore-dashboard";
 import { PagamentoCollaboratoreList } from "@/components/collaboratori/pagamenti-collaboratore";
 import { MontaggioCollaboratoreList } from "@/components/collaboratori/montaggi-collaboratore";
+import { GeneraTokenDashboard } from "@/components/collaboratori/genera-token-dashboard";
 
 const formSchema = insertCollaboratorSchema.extend({});
 
@@ -452,6 +453,11 @@ export default function CollaboratorDetailPage() {
               </div>
             </CardContent>
           </Card>
+          
+          {/* Sezione per generare il token di accesso alla dashboard pubblica */}
+          <div className="mt-8 mb-8">
+            <GeneraTokenDashboard collaboratoreId={collaboratorId} />
+          </div>
           
           {/* Dashboard completa del collaboratore (include Eventi, Pagamenti, Montaggi) */}
           <div className="mt-8">

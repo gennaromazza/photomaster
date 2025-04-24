@@ -69,6 +69,9 @@ import PublicGalleryPage from "@/pages/public/galleries/[slug]";
 import NewChapterPage from "@/pages/galleries/[id]/chapters/new";
 import EditChapterPage from "@/pages/galleries/[id]/chapters/[chapterId]";
 
+// Importa la dashboard pubblica del collaboratore
+import DashboardCollaboratorePublic from "@/pages/dashboard-collaboratore-public";
+
 
 function Router() {
   return (

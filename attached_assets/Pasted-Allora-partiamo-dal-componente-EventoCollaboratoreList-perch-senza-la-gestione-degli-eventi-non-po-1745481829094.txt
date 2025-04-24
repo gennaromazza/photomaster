@@ -1,0 +1,92 @@
+Allora partiamo dal componente EventoCollaboratoreList, perché senza la gestione degli eventi non possiamo procedere a pagamenti e montaggi. Ecco il prompt tecnico da girare al team Replit:
+
+Titolo: Implementazione EventoCollaboratoreList con lista ed inserimento via modal
+
+Obiettivo: Creare il componente React che mostra la lista degli eventi assegnati a un collaboratore e permette di aggiungerne di nuovi tramite un form in modal. UI/UX deve seguire esattamente gli stili Tailwind, breakpoints e palette esistenti, con mobile-first responsive design.
+
+1. Posizione file
+client/src/modules/collaboratori/components/EventoCollaboratoreList.tsx
+
+2. Hook dati
+Riusa o crea useCollaboratore(id) per recuperare dal server l’array eventi già popolato.
+
+Per il POST, usa SWR mutation o fetcher.post('/api/collaboratori/${id}/eventi', {...}).
+
+3. Layout & Tailwind
+Container: card con titolo “Eventi assegnati” e bottone + Nuovo Evento in alto a destra.
+
+Lista: tabella o <ul> responsive con colonne:
+
+Data evento (DD/MM/YYYY)
+
+Titolo evento (es. “Matrimonio Rossi”)
+
+Ruolo (fotografo/videomaker)
+
+Pulsante Dettagli che apre un drawer o naviga a /collaboratori/${id}/dashboard?tab=eventi
+
+Usa classi Tailwind grid-cols-1 sm:grid-cols-2 md:grid-cols-4 per adattare su mobile/tablet/desktop.
+
+4. Modal “Nuovo Evento”
+Trigger: bottone + Nuovo Evento
+
+Form (usare React Hook Form + Zod):
+
+ts
+Copia
+Modifica
+const schema = z.object({
+  eventoId: z.string().uuid(),
+  ruolo: z.enum(['fotografo','videomaker','assistente']).default('fotografo'),
+  dataAssegnazione: z.date().min(new Date(), 'Data non valida'),
+  note: z.string().optional(),
+});
+Campi:
+
+Select evento (popolato da /api/eventi in dropdown)
+
+Radio o select per ruolo
+
+Datepicker per dataAssegnazione
+
+Textarea per note
+
+Azioni:
+
+onSubmit validato → POST /api/collaboratori/${id}/eventi
+
+In caso di successo:
+
+chiudi modal
+
+rinfresca SWR key di useCollaboratore(id)
+
+mostra toast “Evento assegnato con successo”
+
+In caso di errore: toast con errore dal server.
+
+5. Accessibilità & Responsività
+Modal full-screen su viewport < 640px, dialog box centrata su > 640px.
+
+Focus trap all’interno della modal.
+
+Label aria-label su tutti i campi.
+
+Bottone chiudi aria-label="Chiudi".
+
+6. Test
+Unit test con React Testing Library per:
+
+Rendering lista vuota/ottieni errori
+
+Apertura/chiusura modal
+
+Validazione Zod su date passate o campo vuoto.
+
+E2E (Playwright):
+
+Apri pagina dettaglio collaboratore → clicca “+ Nuovo Evento” → seleziona evento, ruolo, data → invia → verifica comparsa in lista.
+
+Nota: non toccare componenti o stili globali: tutto va confinato in
+client/src/modules/collaboratori/components/EventoCollaboratoreList.tsx
+e in eventuali sottocomponenti NewEventoModal.tsx.

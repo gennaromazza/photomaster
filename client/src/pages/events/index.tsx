@@ -40,6 +40,11 @@ import {
   Clock,
 } from "lucide-react";
 
+// Extended Event type with collaborators
+type EventWithCollab = Event & {
+  collaborators: { id: number; firstName: string; lastName: string }[];
+};
+
 const EventsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -50,14 +55,14 @@ const EventsPage = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  const { data: events = [], isLoading } = useQuery<Event[]>({
+  const { data: events = [], isLoading } = useQuery<EventWithCollab[]>({
     queryKey: ["/api/events"],
   });
 
   const { data: clients = [] } = useQuery<Client[]>({
     queryKey: ["/api/clients"],
   });
-  
+
   // Mutation per eliminare un evento
   const deleteEventMutation = useMutation({
     mutationFn: async (eventId: number) => {
@@ -85,7 +90,7 @@ const EventsPage = () => {
       });
     },
   });
-  
+
   // Funzione per gestire l'eliminazione dell'evento
   const handleDeleteEvent = async () => {
     if (!eventToDelete) return;
@@ -171,7 +176,7 @@ const EventsPage = () => {
   const { data: serviceCategories = [] } = useQuery({
     queryKey: ['/api/service-categories/active'],
   });
-  
+
   // Convertiamo le categorie al formato richiesto per il select e aggiungiamo l'opzione "Tutti i tipi"
   const eventTypes = [
     { value: "all", label: "Tutti i tipi" },
@@ -315,6 +320,7 @@ const EventsPage = () => {
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Data</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Location</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Stato</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Collaboratori</th> {/* Added Collaborators column */}
                     <th className="text-right py-3 px-4 font-medium text-gray-500"></th>
                   </tr>
                 </thead>
@@ -370,6 +376,13 @@ const EventsPage = () => {
                         <Badge variant={getStatusBadge(event.status)}>
                           {getStatusText(event.status)}
                         </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-gray-700"> {/* Added Collaborators cell */}
+                        {event.collaborators.length > 0
+                          ? event.collaborators
+                              .map(c => `${c.firstName} ${c.lastName}`)
+                              .join(", ")
+                          : "-"}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <DropdownMenu>

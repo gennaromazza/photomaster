@@ -241,12 +241,16 @@ export const eventCollaborators = pgTable("event_collaborators", {
   eventId: integer("event_id").notNull(),
   collaboratorId: integer("collaborator_id").notNull(),
   role: text("role").notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  notes: text("notes"),
 });
 
 export const insertEventCollaboratorSchema = createInsertSchema(eventCollaborators).pick({
   eventId: true,
   collaboratorId: true,
   role: true,
+  assignedAt: true,
+  notes: true,
 });
 
 export type InsertEventCollaborator = z.infer<typeof insertEventCollaboratorSchema>;

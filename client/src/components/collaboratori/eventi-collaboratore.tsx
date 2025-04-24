@@ -457,56 +457,98 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
       );
     }
 
+    // Visualizzazione a lista invece che a card
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredEventi.map((evento) => {
-          // Determiniamo l'ID dell'evento per il link
-          const eventoId = evento.eventoId;
-          
-          return (
-            <Link href={`/events/${eventoId}`} key={evento.id}>
-              <Card className="overflow-hidden hover:shadow-md hover:border-primary transition-all cursor-pointer">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg font-semibold group flex items-center">
-                        {evento.titolo || evento.title}
-                        <ExternalLink className="w-4 h-4 ml-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </CardTitle>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        {format(new Date(evento.data || evento.eventDate), "PPP", { locale: it })}
+      <div className="overflow-hidden border rounded-md shadow">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Titolo</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Luogo</TableHead>
+              <TableHead>Ruolo</TableHead>
+              <TableHead>Azioni</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredEventi.map((evento) => {
+              // Determiniamo l'ID dell'evento per il link
+              const eventoId = evento.eventoId;
+              const clienteQuoteId = evento.clienteQuoteId; // ID per il preventivo
+              
+              return (
+                <TableRow key={evento.id} className="hover:bg-muted/50 cursor-default">
+                  <TableCell>
+                    <div className="font-medium">{evento.titolo || evento.title}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-primary/60" />
+                      <div>
+                        {evento.clientFirstName && evento.clientLastName ? 
+                          `${evento.clientFirstName} ${evento.clientLastName}` : 
+                          'Cliente non specificato'}
                       </div>
                     </div>
-                    <Badge variant="outline">
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4 text-primary/60" />
+                      <span>{format(new Date(evento.data || evento.eventDate), "dd/MM/yyyy", { locale: it })}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4 text-primary/60" />
+                      <span>{evento.location || 'N/D'}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="capitalize">
                       {evento.ruolo || 'Non specificato'}
                     </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium">{evento.location || 'Luogo non specificato'}</p>
-                        {evento.address && (
-                          <p className="text-xs text-muted-foreground">{evento.address}</p>
-                        )}
-                      </div>
-                    </div>
-                    
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm">{evento.time || 'Orario non specificato'}</p>
-                      </div>
+                      <Button variant="outline" size="sm" asChild className="h-8 px-2">
+                        <Link href={`/events/${eventoId}`}>
+                          <Calendar className="h-3.5 w-3.5 mr-1" />
+                          <span>Evento</span>
+                        </Link>
+                      </Button>
+                      
+                      {clienteQuoteId && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 px-2">
+                              <FileText className="h-3.5 w-3.5 mr-1" />
+                              <span>Preventivo</span>
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-6xl h-[90vh]">
+                            <DialogHeader>
+                              <DialogTitle className="text-xl">Dettaglio Preventivo</DialogTitle>
+                              <DialogDescription>
+                                Visualizzazione dettagliata del preventivo associato all'evento
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="h-full overflow-y-auto -mx-6 px-6">
+                              <iframe 
+                                src={`/quotes/detail/${clienteQuoteId}`} 
+                                className="w-full h-[calc(90vh-120px)] border-0"
+                              />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
     );
   };

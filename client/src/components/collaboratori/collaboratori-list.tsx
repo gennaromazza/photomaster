@@ -6,8 +6,10 @@ import { Loader2, Plus, Search, Mail, Phone, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollaboratoreDashboard } from "./collaboratore-dashboard";
 import { NuovoCollaboratoreForm } from "./nuovo-collaboratore-form";
+import { EventiDisponibiliList } from "./eventi-disponibili-list";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +63,8 @@ export function CollaboratoriList() {
     );
   }
 
+  const [activeTab, setActiveTab] = useState("collaboratori");
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -88,57 +92,70 @@ export function CollaboratoriList() {
         </div>
       </div>
 
-      {filteredCollaboratori?.length === 0 ? (
-        <div className="bg-muted/40 rounded-lg p-8 text-center">
-          <p className="text-muted-foreground">
-            Nessun collaboratore trovato. Prova a modificare i parametri di ricerca.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCollaboratori?.map((collaboratore) => (
-            <Card 
-              key={collaboratore.id} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setSelectedCollaboratoreId(collaboratore.id)}
-            >
-              <CardContent className="p-6">
-                <div className="flex gap-4">
-                  {collaboratore.profileImage ? (
-                    <img 
-                      src={collaboratore.profileImage} 
-                      alt={`${collaboratore.firstName} ${collaboratore.lastName}`}
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-xl font-semibold">
-                      {collaboratore.firstName.charAt(0)}{collaboratore.lastName.charAt(0)}
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1">
-                      {collaboratore.firstName} {collaboratore.lastName}
-                    </h3>
-                    <Badge variant="outline" className="mb-2">
-                      {collaboratore.role}
-                    </Badge>
-                    <div className="flex flex-col gap-2 text-sm text-muted-foreground mt-2">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        {collaboratore.email}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-2 mb-6">
+          <TabsTrigger value="collaboratori">Tutti i Collaboratori</TabsTrigger>
+          <TabsTrigger value="eventi-disponibili">Eventi Disponibili</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="collaboratori">
+          {filteredCollaboratori?.length === 0 ? (
+            <div className="bg-muted/40 rounded-lg p-8 text-center">
+              <p className="text-muted-foreground">
+                Nessun collaboratore trovato. Prova a modificare i parametri di ricerca.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCollaboratori?.map((collaboratore) => (
+                <Card 
+                  key={collaboratore.id} 
+                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setSelectedCollaboratoreId(collaboratore.id)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex gap-4">
+                      {collaboratore.profileImage ? (
+                        <img 
+                          src={collaboratore.profileImage} 
+                          alt={`${collaboratore.firstName} ${collaboratore.lastName}`}
+                          className="w-16 h-16 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-xl font-semibold">
+                          {collaboratore.firstName.charAt(0)}{collaboratore.lastName.charAt(0)}
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-1">
+                          {collaboratore.firstName} {collaboratore.lastName}
+                        </h3>
+                        <Badge variant="outline" className="mb-2">
+                          {collaboratore.role}
+                        </Badge>
+                        <div className="flex flex-col gap-2 text-sm text-muted-foreground mt-2">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            {collaboratore.email}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            {collaboratore.phone}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        {collaboratore.phone}
-                      </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="eventi-disponibili">
+          <EventiDisponibiliList />
+        </TabsContent>
+      </Tabs>
 
       {/* Dialog per visualizzare dettagli collaboratore */}
       <Dialog 

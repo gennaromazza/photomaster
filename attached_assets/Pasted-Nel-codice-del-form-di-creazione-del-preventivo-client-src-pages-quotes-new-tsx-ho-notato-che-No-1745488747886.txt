@@ -1,0 +1,46 @@
+Nel codice del form di creazione del preventivo (client/src/pages/quotes/new.tsx) ho notato che:
+
+Non c’è nessun campo “Categoria” nel form, sebbene lo schema insertQuoteSchema preveda il campo categoryId (riga 852 di server/storage.ts) e il form abbia un valore categoryId nel resolver Zod, non c’è nessun FormField/Select che permetta all’utente di impostarlo (mentre per eventi importati da localStorage o da API si fa solo form.setValue("categoryId", eventData.categoryId) nelle righe 199–283).
+
+Non viene mai invocato né il servizio di associazione automatica delle clausole né la visualizzazione delle clausole associate. Esiste un endpoint backend dedicato:
+
+ts
+Copia
+Modifica
+// server/routes/clauses.ts
+router.post('/quote/:quoteId/associate', clausesController.associateClausesToQuote);
+router.get('/quote/:quoteId', clausesController.getQuoteClauses);
+ma in NewQuotePage non ci sono né:
+
+una chiamata apiRequest("/api/clauses/quote/${quoteId}/associate") subito dopo la creazione del preventivo,
+
+né un useQuery che vada a recuperare le clausole con GET /api/clauses/quote/:quoteId e le mostri in pagina (ad es. usando il componente ClausesManagement importabile da @/components/clauses/ClausesManagement.tsx).
+
+La logica di assegnazione automatica lato server non è inserita in storage.createQuote: il metodo inserisce il record in tabella quotes (r. 847–860), ma non esegue alcuna query che leghi le clausole (quoteClauses) basate su categoryId o eventType.
+
+Cosa fare per ripristinare la sezione “Clausole” nel form di creazione
+Aggiungere il campo Categoria al form
+
+Recupera la lista di categorie attive da GET /api/service-categories/active (es. con un useQuery in React).
+
+Inserisci un FormField/Select legato a categoryId in new.tsx, subito dopo il titolo o i campi data/luogo.
+
+Associare automaticamente tutte le clausole di quella categoria non appena il preventivo viene creato
+
+Dopo che la chiamata a apiRequest("/api/quotes", insertData) restituisce il nuovo quote.id, fai una POST a /api/clauses/quote/${quoteId}/associate.
+
+In backend, associateClausesToQuote (in clauses-controller.ts) legge le clausole collegate alla categoria (serviceCategories) e le inserisce in quoteClauses.
+
+Mostrare le clausole associate
+
+Inserisci in new.tsx (o nella pagina di dettaglio) un componente come:
+
+tsx
+Copia
+Modifica
+import ClausesManagement from "@/components/clauses/ClausesManagement";
+...
+{quoteId && <ClausesManagement quoteId={quoteId} />}
+Oppure implementa tu un piccolo elenco con useQuery(["/api/clauses/quote", quoteId], ...) e visualizza titolo e testo di ciascuna clausola.
+
+In questo modo, non solo la categoria verrà impostata correttamente, ma al salvataggio del preventivo le clausole saranno agganciate in automatico e visibili direttamente nella UI di creazione/modifica.

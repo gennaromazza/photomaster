@@ -601,6 +601,94 @@ export function setupAuth(app: Express) {
     }
   });
   
+  // Aggiorna le informazioni dell'utente
+  app.put("/api/users/:id", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Non autenticato" });
+      }
+      
+      const currentUser = req.user as SelectUser;
+      const userId = parseInt(req.params.id);
+      
+      // Verifica che l'utente stia aggiornando il proprio profilo o sia un admin
+      if (currentUser.id !== userId && currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Non autorizzato" });
+      }
+      
+      // Schema per validare i dati di aggiornamento (evita campi non consentiti)
+      const updateUserSchema = z.object({
+        fullName: z.string().min(3).optional(),
+        email: z.string().email().optional(),
+        profileImage: z.string().optional(),
+      });
+      
+      const result = updateUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ errors: result.error.format() });
+      }
+      
+      // Se si aggiorna l'email, verifica che non sia già in uso da altri
+      if (req.body.email) {
+        const existingUser = await storage.getUserByEmail(req.body.email);
+        if (existingUser && existingUser.id !== userId) {
+          return res.status(400).json({ message: "Email già in uso" });
+        }
+      }
+      
+      // Aggiorna l'utente
+      const updatedUser = await storage.updateUser(userId, result.data);
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Errore durante l'aggiornamento dell'utente" });
+      }
+      
+      // Ometti la password nella risposta
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Aggiorna la password dell'utente
+  app.put("/api/users/:id/password", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Non autenticato" });
+      }
+      
+      const currentUser = req.user as SelectUser;
+      const userId = parseInt(req.params.id);
+      
+      // Verifica che l'utente stia aggiornando la propria password o sia un admin
+      if (currentUser.id !== userId && currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Non autorizzato" });
+      }
+      
+      const { password } = req.body;
+      
+      // Validazione della password
+      if (!password || password.length < 6) {
+        return res.status(400).json({ message: "La password deve contenere almeno 6 caratteri" });
+      }
+      
+      // Hash della nuova password
+      const hashedPassword = await hashPassword(password);
+      
+      // Aggiorna la password
+      const updatedUser = await storage.updateUser(userId, { password: hashedPassword });
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Errore durante l'aggiornamento della password" });
+      }
+      
+      res.json({ message: "Password aggiornata con successo" });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
   // Approvazione di un utente (solo per admin)
   app.patch("/api/users/:id/approve", async (req, res, next) => {
     try {

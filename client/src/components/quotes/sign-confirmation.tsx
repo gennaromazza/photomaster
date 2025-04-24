@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { 
@@ -19,9 +20,10 @@ interface SignConfirmationProps {
   clientName?: string;
   quoteTitle?: string;
   clientEmail?: string;
+  signedPdfUrl?: string;
 }
 
-const SignConfirmation = ({ clientName, quoteTitle, clientEmail }: SignConfirmationProps) => {
+const SignConfirmation = ({ clientName, quoteTitle, clientEmail, signedPdfUrl }: SignConfirmationProps) => {
   const { toast } = useToast();
   const [activeConfetti, setActiveConfetti] = useState(false);
   
@@ -96,6 +98,16 @@ const SignConfirmation = ({ clientName, quoteTitle, clientEmail }: SignConfirmat
         bounce: 0.4
       }
     })
+  };
+
+  // Animazione per il pulsante
+  const buttonVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" }
+    }
   };
 
   return (
@@ -220,6 +232,24 @@ const SignConfirmation = ({ clientName, quoteTitle, clientEmail }: SignConfirmat
               </motion.div>
             </div>
             
+            {/* Link per scaricare il PDF */}
+            {signedPdfUrl && (
+              <motion.div
+                className="flex justify-center mt-6"
+                variants={buttonVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <a
+                  href={signedPdfUrl}
+                  download
+                  className="bg-[#a28e72] hover:bg-[#8a7760] text-white border border-[#c8b393] shadow-md px-8 py-6 rounded-md font-playfair text-lg tracking-wide block text-center transform transition-all duration-300 hover:scale-105"
+                >
+                  Scarica modulo firmato in PDF
+                </a>
+              </motion.div>
+            )}
+            
             {/* Effetto coriandoli più elegante e dorato */}
             {activeConfetti && (
               <div className="absolute inset-0 pointer-events-none">
@@ -275,15 +305,6 @@ const SignConfirmation = ({ clientName, quoteTitle, clientEmail }: SignConfirmat
                 })}
               </div>
             )}
-            
-            {/* Pulsante per tornare alla home in stile country vintage */}
-            <div className="flex justify-center mt-6">
-              <Link href="/">
-                <Button className="bg-[#a28e72] hover:bg-[#8a7760] text-white border border-[#c8b393] shadow-md px-8 py-6 rounded-md font-playfair text-lg tracking-wide transform transition-all duration-300 hover:scale-105">
-                  Torna alla Home
-                </Button>
-              </Link>
-            </div>
             
             {/* Decorazione vintage in basso */}
             <div className="absolute bottom-0 left-0 w-full h-8 opacity-10 transform rotate-180">

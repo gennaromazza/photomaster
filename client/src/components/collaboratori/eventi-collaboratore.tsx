@@ -2,13 +2,25 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertTriangle, Calendar, MapPin, Clock, Plus, Info, UserPlus, ExternalLink } from "lucide-react";
+import { 
+  Loader2, AlertTriangle, Calendar, MapPin, Clock, Plus, Info, UserPlus, 
+  ExternalLink, FileText, Users, FileSignature, ChevronRight 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format, isAfter, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,

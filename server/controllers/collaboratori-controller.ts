@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { collaborators, events, eventCollaborators } from "@shared/schema";
+import { collaborators, events, eventCollaborators, clients } from "@shared/schema";
 import { 
   eventiCollaboratori, 
   pagamentiCollaboratori, 
@@ -15,6 +15,7 @@ import {
 import { eq, desc, and } from "drizzle-orm";
 import { z } from "zod";
 import { syncCollaboratorAssignment, syncAllCollaboratorAssignments } from "../utils/sync-collaboratori";
+import { syncFromEventiCollaboratoriToEventCollaborators } from "../utils/sync-collaboratori";
 
 /**
  * Controller per la gestione delle operazioni relative al modulo Collaboratori
@@ -26,7 +27,7 @@ export const getEventiCollaboratore = async (req: Request, res: Response) => {
   try {
     console.log(`Recupero eventi per il collaboratore ID: ${id}`);
     
-    // 1. Recuperiamo gli eventi dalla tabella italiana eventiCollaboratori
+    // 1. Recuperiamo gli eventi dalla tabella italiana eventiCollaboratori con dati cliente
     const eventiItaliani = await db.select({
       id: eventiCollaboratori.id,
       collaboratoreId: eventiCollaboratori.collaboratoreId,
@@ -38,15 +39,21 @@ export const getEventiCollaboratore = async (req: Request, res: Response) => {
       descrizione: events.description,
       data: events.date,
       location: events.location,
-      stato: events.status
+      stato: events.status,
+      clientId: events.clientId,
+      secondClientId: events.secondClientId,
+      clientFirstName: clients.firstName,
+      clientLastName: clients.lastName,
+      clienteQuoteId: events.quoteId
     })
     .from(eventiCollaboratori)
     .innerJoin(events, eq(eventiCollaboratori.eventoId, events.id))
+    .leftJoin(clients, eq(events.clientId, clients.id))
     .where(eq(eventiCollaboratori.collaboratoreId, Number(id)));
     
     console.log(`Trovati ${eventiItaliani.length} eventi nella tabella italiana`);
     
-    // 2. Recuperiamo gli eventi dalla tabella inglese eventCollaborators
+    // 2. Recuperiamo gli eventi dalla tabella inglese eventCollaborators con dati cliente
     const eventiInglesi = await db.select({
       id: eventCollaborators.id,
       collaboratoreId: eventCollaborators.collaboratorId,
@@ -58,10 +65,16 @@ export const getEventiCollaboratore = async (req: Request, res: Response) => {
       descrizione: events.description,
       data: events.date,
       location: events.location,
-      stato: events.status
+      stato: events.status,
+      clientId: events.clientId,
+      secondClientId: events.secondClientId,
+      clientFirstName: clients.firstName,
+      clientLastName: clients.lastName,
+      clienteQuoteId: events.quoteId
     })
     .from(eventCollaborators)
     .innerJoin(events, eq(eventCollaborators.eventId, events.id))
+    .leftJoin(clients, eq(events.clientId, clients.id))
     .where(eq(eventCollaborators.collaboratorId, Number(id)));
     
     console.log(`Trovati ${eventiInglesi.length} eventi nella tabella inglese`);

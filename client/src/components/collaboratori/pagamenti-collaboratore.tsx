@@ -2,7 +2,20 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, AlertTriangle, FileText, Calendar, LucideEuro, Plus, Send } from "lucide-react";
+import { 
+  Loader2, 
+  AlertTriangle, 
+  FileText, 
+  Calendar, 
+  LucideEuro, 
+  Plus, 
+  Send, 
+  Search,
+  ChevronRight,
+  FileCheck,
+  User,
+  Tag
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
@@ -42,6 +55,8 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PagamentoCollaboratoreListProps {
   collaboratoreId: number;
@@ -275,30 +290,225 @@ export function PagamentoCollaboratoreList({ collaboratoreId }: PagamentoCollabo
                   <FormField
                     control={form.control}
                     name="eventoId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Evento</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value} 
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger aria-label="Seleziona un evento">
-                              <SelectValue placeholder="Seleziona un evento" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {eventi.map((evento) => (
-                              <SelectItem key={evento.id} value={evento.id.toString()}>
-                                {evento.titolo || `Evento #${evento.id}`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const [selectionModalOpen, setSelectionModalOpen] = useState(false);
+                      const [eventoFilter, setEventoFilter] = useState("");
+                      const [activeTab, setActiveTab] = useState<"eventi" | "preventivi">("eventi");
+                      
+                      // Query per ottenere tutti gli eventi disponibili
+                      const { data: tuttiEventi = [] } = useQuery({
+                        queryKey: [`/api/events`],
+                        staleTime: 5 * 60 * 1000,
+                      });
+                      
+                      // Query per ottenere tutti i preventivi disponibili
+                      const { data: tuttiPreventivi = [] } = useQuery({
+                        queryKey: [`/api/quotes`],
+                        staleTime: 5 * 60 * 1000,
+                      });
+                      
+                      // Filtra eventi/preventivi
+                      const filteredEventi = tuttiEventi.filter((ev: any) => 
+                        ev.title?.toLowerCase().includes(eventoFilter.toLowerCase()) ||
+                        ev.id?.toString().includes(eventoFilter)
+                      );
+                      
+                      const filteredPreventivi = tuttiPreventivi.filter((prev: any) => 
+                        prev.title?.toLowerCase().includes(eventoFilter.toLowerCase()) ||
+                        prev.id?.toString().includes(eventoFilter)
+                      );
+                      
+                      // Evento selezionato da mostrare
+                      const selectedEvento = field.value 
+                        ? tuttiEventi.find((ev: any) => ev.id.toString() === field.value) 
+                        : null;
+                        
+                      return (
+                        <FormItem className="space-y-1.5">
+                          <FormLabel>Evento/Preventivo</FormLabel>
+                          <Dialog open={selectionModalOpen} onOpenChange={setSelectionModalOpen}>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full text-left justify-start font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                onClick={() => setSelectionModalOpen(true)}
+                                type="button"
+                              >
+                                {selectedEvento ? (
+                                  <div className="flex items-center gap-2 text-left overflow-hidden">
+                                    <FileText className="h-4 w-4 shrink-0 opacity-50" />
+                                    <span className="truncate">
+                                      {selectedEvento.title || `ID: ${selectedEvento.id}`}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span>Seleziona evento o preventivo</span>
+                                )}
+                              </Button>
+                            </FormControl>
+                            
+                            <DialogContent className="sm:max-w-[700px]">
+                              <DialogHeader>
+                                <DialogTitle>Seleziona Evento o Preventivo</DialogTitle>
+                                <DialogDescription>
+                                  Cerca e seleziona l'evento o il preventivo a cui associare questo pagamento
+                                </DialogDescription>
+                              </DialogHeader>
+                              
+                              <div className="space-y-4 mt-2">
+                                <div className="relative">
+                                  <Input
+                                    placeholder="Cerca per titolo o ID..."
+                                    value={eventoFilter}
+                                    onChange={(e) => setEventoFilter(e.target.value)}
+                                    className="w-full pl-10"
+                                  />
+                                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    <Search className="h-4 w-4" />
+                                  </div>
+                                </div>
+                                
+                                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "eventi" | "preventivi")}>
+                                  <TabsList className="grid grid-cols-2 w-full mb-4">
+                                    <TabsTrigger value="eventi" className="flex items-center gap-2">
+                                      <Calendar className="h-4 w-4" />
+                                      Eventi
+                                    </TabsTrigger>
+                                    <TabsTrigger value="preventivi" className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4" />
+                                      Preventivi
+                                    </TabsTrigger>
+                                  </TabsList>
+                                  
+                                  <TabsContent value="eventi" className="p-0">
+                                    <div className="border rounded-md">
+                                      <ScrollArea className="h-[300px]">
+                                        {filteredEventi.length === 0 ? (
+                                          <div className="p-6 text-center text-muted-foreground">
+                                            Nessun evento trovato
+                                          </div>
+                                        ) : (
+                                          <div className="divide-y">
+                                            {filteredEventi.map((evento: any) => (
+                                              <div 
+                                                key={evento.id}
+                                                className={cn(
+                                                  "flex items-center justify-between p-4 hover:bg-muted/40 cursor-pointer transition-colors",
+                                                  field.value === evento.id.toString() && "bg-muted"
+                                                )}
+                                                onClick={() => {
+                                                  field.onChange(evento.id.toString());
+                                                  setSelectionModalOpen(false);
+                                                }}
+                                              >
+                                                <div className="flex flex-col gap-1">
+                                                  <div className="font-medium flex items-center gap-2">
+                                                    {evento.title || `Evento #${evento.id}`}
+                                                    <Badge variant="outline" className="ml-2 text-xs">
+                                                      ID: {evento.id}
+                                                    </Badge>
+                                                  </div>
+                                                  <div className="text-sm text-muted-foreground flex items-center gap-4">
+                                                    <div className="flex items-center gap-1">
+                                                      <User className="h-3 w-3" />
+                                                      {evento.clientName || "Cliente non specificato"}
+                                                    </div>
+                                                    {evento.date && (
+                                                      <div className="flex items-center gap-1">
+                                                        <CalendarIcon className="h-3 w-3" />
+                                                        {format(new Date(evento.date), "dd/MM/yyyy", { locale: it })}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </ScrollArea>
+                                    </div>
+                                  </TabsContent>
+                                  
+                                  <TabsContent value="preventivi" className="p-0">
+                                    <div className="border rounded-md">
+                                      <ScrollArea className="h-[300px]">
+                                        {filteredPreventivi.length === 0 ? (
+                                          <div className="p-6 text-center text-muted-foreground">
+                                            Nessun preventivo trovato
+                                          </div>
+                                        ) : (
+                                          <div className="divide-y">
+                                            {filteredPreventivi.map((preventivo: any) => (
+                                              <div 
+                                                key={preventivo.id}
+                                                className={cn(
+                                                  "flex items-center justify-between p-4 hover:bg-muted/40 cursor-pointer transition-colors",
+                                                  field.value === preventivo.id.toString() && "bg-muted"
+                                                )}
+                                                onClick={() => {
+                                                  field.onChange(preventivo.id.toString());
+                                                  setSelectionModalOpen(false);
+                                                }}
+                                              >
+                                                <div className="flex flex-col gap-1">
+                                                  <div className="font-medium flex items-center gap-2">
+                                                    {preventivo.title || `Preventivo #${preventivo.id}`}
+                                                    <Badge variant="outline" className="ml-2 text-xs">
+                                                      ID: {preventivo.id}
+                                                    </Badge>
+                                                  </div>
+                                                  <div className="text-sm text-muted-foreground flex items-center gap-4">
+                                                    <div className="flex items-center gap-1">
+                                                      <User className="h-3 w-3" />
+                                                      {preventivo.clientName || "Cliente non specificato"}
+                                                    </div>
+                                                    {preventivo.status && (
+                                                      <div className="flex items-center gap-1">
+                                                        <FileCheck className="h-3 w-3" />
+                                                        {preventivo.status === 'pending' ? 'In attesa' : 
+                                                         preventivo.status === 'approved' ? 'Approvato' : 
+                                                         preventivo.status === 'rejected' ? 'Rifiutato' : 
+                                                         preventivo.status}
+                                                      </div>
+                                                    )}
+                                                    {preventivo.total && (
+                                                      <div className="flex items-center gap-1">
+                                                        <Tag className="h-3 w-3" />
+                                                        {formatCurrency(Number(preventivo.total))}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </ScrollArea>
+                                    </div>
+                                  </TabsContent>
+                                </Tabs>
+                              </div>
+                              
+                              <DialogFooter>
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => setSelectionModalOpen(false)}
+                                  type="button"
+                                >
+                                  Annulla
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
 
                   <FormField

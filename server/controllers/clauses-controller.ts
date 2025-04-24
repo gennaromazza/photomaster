@@ -328,10 +328,19 @@ export class ClausesController {
         return res.status(404).json({ error: "Preventivo non trovato" });
       }
       
-      // Clausole da associare
-      const clauseIds = req.body.clauseIds as number[];
+      // Clausole da associare (automatiche se non specificate)
+      let clauseIds: number[];
+      if (!req.body.clauseIds) {
+        // assegna tutte le clausole collegate alla stessa categoria dell'evento
+        const autoClauses = await db.query.contractClauses.findMany({
+          where: eq(contractClauses.categoryId, quote.categoryId)
+        });
+        clauseIds = autoClauses.map(c => c.id);
+      } else {
+        clauseIds = req.body.clauseIds as number[];
+      }
       if (!Array.isArray(clauseIds) || clauseIds.length === 0) {
-        return res.status(400).json({ error: "Devi specificare almeno una clausola da associare" });
+        return res.status(400).json({ error: "Nessuna clausola trovata per questa categoria" });
       }
       
       // Verifica che le clausole esistano

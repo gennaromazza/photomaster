@@ -121,12 +121,12 @@ export default function NewQuotePage() {
   const { data: events = [], isLoading: isLoadingEvents } = useQuery<any[]>({
     queryKey: ["/api/events"],
   });
-  
+
   // Query per ottenere le categorie di servizi
   const { data: categories = [], isLoading: isLoadingCategories } = useQuery<any[]>({
     queryKey: ["/api/service-categories"],
   });
-  
+
   // Query per ottenere le fonti di lead
   const { data: leadSources = [], isLoading: isLoadingLeadSources } = useQuery<any[]>({
     queryKey: ["/api/lead-sources"],
@@ -139,7 +139,7 @@ export default function NewQuotePage() {
 
   // Variabili per i controlli selezionati
   const [assignPhotographers, setAssignPhotographers] = useState(false);
-  
+
   // Form per il preventivo
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteFormSchema),
@@ -158,6 +158,7 @@ export default function NewQuotePage() {
       eventEndTime: "",
       location: "",
       assignedCollaborators: [],
+      categoryId: undefined // Added default value
     },
   });
 
@@ -178,7 +179,7 @@ export default function NewQuotePage() {
   const fromEventId = new URLSearchParams(location.split("?")[1] || "").get("fromEventId");
   console.log("URL location:", location);
   console.log("fromEventId:", fromEventId);
-  
+
   // Carica i dati dell'evento dal localStorage e dall'API come fallback
   useEffect(() => {
     // Prima prova a caricare i dati dal localStorage
@@ -187,7 +188,7 @@ export default function NewQuotePage() {
       if (savedEventData) {
         const eventData = JSON.parse(savedEventData);
         console.log("Dati evento recuperati da localStorage:", eventData);
-        
+
         // Mappa completa e dettagliata dei campi evento → preventivo
         // Questa mappatura garantisce che tutti i campi pertinenti vengano trasferiti
         form.setValue("title", eventData.title || "");
@@ -201,20 +202,20 @@ export default function NewQuotePage() {
         form.setValue("categoryId", eventData.categoryId);
         form.setValue("leadSourceId", eventData.leadSourceId);
         form.setValue("status", eventData.status || "draft");
-        
+
         // Titolo del preventivo più descrittivo basato sull'evento
         const titoloPreventivo = eventData.title 
           ? `Preventivo ${eventData.eventType ? eventData.eventType + ' - ' : ''}${eventData.title}` 
           : form.getValues("title");
         form.setValue("title", titoloPreventivo);
-        
+
         // Imposta il timestamp delle ore se disponibile
         if (eventData.date) {
           const date = new Date(eventData.date);
           const hours = String(date.getHours()).padStart(2, '0');
           const minutes = String(date.getMinutes()).padStart(2, '0');
           form.setValue("eventTime", `${hours}:${minutes}`);
-          
+
           // Se c'è una data di fine o durata, calcola l'orario di fine
           if (eventData.endDate) {
             const endDate = new Date(eventData.endDate);
@@ -229,14 +230,14 @@ export default function NewQuotePage() {
             form.setValue("eventEndTime", `${endHours}:${endMinutes}`);
           }
         }
-        
+
         // Forza l'aggiornamento dei valori nel form
         Object.keys(form.getValues()).forEach(key => {
           form.trigger(key as any);
         });
-        
+
         console.log("Valori impostati nel form:", form.getValues());
-        
+
         // Rimuovi i dati dal localStorage dopo l'uso
         localStorage.removeItem('eventForQuote');
         return;
@@ -244,7 +245,7 @@ export default function NewQuotePage() {
     } catch (error) {
       console.error("Errore nel recupero dati da localStorage:", error);
     }
-    
+
     // Fallback: prova a caricare i dati dall'API se disponibile l'ID nell'URL
     if (fromEventId) {
       const eventId = parseInt(fromEventId);
@@ -253,7 +254,7 @@ export default function NewQuotePage() {
       }
     }
   }, [form]);
-  
+
   // Funzione per recuperare i dati dell'evento dall'API e popolare il form
   const fetchEventDataFromApi = async (eventId: number) => {
     try {
@@ -261,14 +262,14 @@ export default function NewQuotePage() {
       if (!response.ok) throw new Error('Errore nel recupero dati evento');
       const event = await response.json();
       console.log("Dati evento recuperati da API:", event);
-      
+
       return populateFormWithEventData(event);
     } catch (error) {
       console.error("Errore nel caricamento dati evento dall'API:", error);
       return false;
     }
   };
-  
+
   // Funzione unificata per popolare il form con i dati di un evento
   const populateFormWithEventData = (event: any) => {
     try {
@@ -284,20 +285,20 @@ export default function NewQuotePage() {
       form.setValue("categoryId", event.categoryId);
       form.setValue("leadSourceId", event.leadSourceId);
       form.setValue("status", event.status || "draft");
-      
+
       // Titolo del preventivo più descrittivo basato sull'evento
       const titoloPreventivo = event.title 
         ? `Preventivo ${event.eventType ? event.eventType + ' - ' : ''}${event.title}` 
         : form.getValues("title");
       form.setValue("title", titoloPreventivo);
-      
+
       // Imposta il timestamp delle ore se disponibile
       if (event.date) {
         const date = new Date(event.date);
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
         form.setValue("eventTime", `${hours}:${minutes}`);
-        
+
         // Se c'è una data di fine o durata, calcola l'orario di fine
         if (event.endDate) {
           const endDate = new Date(event.endDate);
@@ -312,14 +313,14 @@ export default function NewQuotePage() {
           form.setValue("eventEndTime", `${endHours}:${endMinutes}`);
         }
       }
-      
+
       // Forza l'aggiornamento dei valori nel form
       Object.keys(form.getValues()).forEach(key => {
         form.trigger(key as any);
       });
-      
+
       console.log("Valori impostati nel form:", form.getValues());
-      
+
       return true;
     } catch (error) {
       console.error("Errore nella compilazione dei dati:", error);
@@ -349,7 +350,7 @@ export default function NewQuotePage() {
     const subtotal = form.watch("subtotal") || 0;
     const tax = form.watch("tax") || 0;
     const discount = form.watch("discount") || 0;
-    
+
     const total = subtotal + (subtotal * tax / 100) - discount;
     form.setValue("total", total);
   }, [form.watch("subtotal"), form.watch("tax"), form.watch("discount")]);
@@ -388,7 +389,7 @@ export default function NewQuotePage() {
       const savedEventData = localStorage.getItem('eventForQuote');
       let convertAndDelete = false;
       let eventId = null;
-      
+
       if (savedEventData) {
         try {
           const parsedData = JSON.parse(savedEventData);
@@ -398,22 +399,22 @@ export default function NewQuotePage() {
           console.error("Errore nel parsing dei dati dell'evento:", e);
         }
       }
-      
+
       // Aggiungi l'informazione nel body della richiesta
       const requestData = {
         ...data,
         _convertAndDelete: convertAndDelete,
         _originalEventId: eventId
       };
-      
+
       const res = await apiRequest("POST", "/api/quotes", requestData);
       return res.json();
     },
-    onSuccess: (newQuote) => {
+    onSuccess: async (newQuote) => {
       // Controlla se è stata effettuata una conversione per mostrare feedback adeguato
       const savedEventData = localStorage.getItem('eventForQuote');
       let wasConverted = false;
-      
+
       if (savedEventData) {
         try {
           const parsedData = JSON.parse(savedEventData);
@@ -421,11 +422,11 @@ export default function NewQuotePage() {
         } catch (e) {
           console.error("Errore nel parsing dei dati dell'evento:", e);
         }
-        
+
         // Rimuovi i dati dal localStorage dopo l'uso
         localStorage.removeItem('eventForQuote');
       }
-      
+
       // Mostra toast con messaggio appropriato
       toast({
         title: wasConverted ? "Evento convertito" : "Preventivo creato",
@@ -433,11 +434,24 @@ export default function NewQuotePage() {
           ? "L'evento è stato convertito con successo in preventivo" 
           : "Il preventivo è stato creato con successo",
       });
-      
+
       // Aggiorna sia la lista preventivi che la lista eventi
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      
+
+      // Associa automaticamente le clausole
+      try {
+        await apiRequest(`/api/clauses/quote/${newQuote.id}/associate`, { method: "POST" });
+        queryClient.invalidateQueries(["/api/clauses/quote", newQuote.id]);
+      } catch (error) {
+        console.error("Errore nell'associazione automatica delle clausole:", error);
+        toast({
+          title: "Errore",
+          description: "Si è verificato un errore durante l'associazione delle clausole.",
+          variant: "destructive",
+        });
+      }
+
       // Reindirizza l'utente alla pagina di dettaglio del preventivo
       console.log("Preventivo creato con successo, ID:", newQuote.id);
       setLocation(`/quotes/detail/${newQuote.id}`);
@@ -467,7 +481,7 @@ export default function NewQuotePage() {
         <div className="mb-6">
           <h1 className="text-3xl font-playfair font-bold">Nuovo Preventivo</h1>
           <p className="text-muted-foreground">Crea un nuovo preventivo per un cliente</p>
-          
+
           {events.length > 0 && (
             <div className="mt-4">
               <Popover>
@@ -726,7 +740,7 @@ export default function NewQuotePage() {
                       )}
                     />
                   </div>
-                  
+
                   <FormField
                     control={form.control}
                     name="eventId"
@@ -811,6 +825,30 @@ export default function NewQuotePage() {
                     )}
                   />
                 </div>
+
+                {/* Added Category Selection */}
+                <FormField
+                  control={form.control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoria Servizio</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona una categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((category: any) => (
+                            <SelectItem key={category.id} value={category.id.toString()}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}

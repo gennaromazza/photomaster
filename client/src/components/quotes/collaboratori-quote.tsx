@@ -30,7 +30,7 @@ interface CollaboratoriQuoteProps {
 
 export function CollaboratoriQuote({ quoteId, title, date, location }: CollaboratoriQuoteProps) {
   const { data: collaboratori, isLoading, error } = useQuery({
-    queryKey: [`/api/events/preventivo/${quoteId}/collaboratori`],
+    queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
     enabled: !!quoteId
   });
 

@@ -203,116 +203,141 @@ export default function CollaboratorDetailPage() {
   }
 
   return (
-    <div className="lg:px-8 px-4 mt-6 lg:mt-8 pb-16">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-        <div className="flex items-center">
-          <Link href="/collaborators">
-            <Button variant="ghost" size="icon" className="mr-2 h-8 w-8">
-              <i className="ri-arrow-left-line"></i>
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-900">
-              {collaborator.firstName} {collaborator.lastName}
-            </h1>
-            <div className="flex items-center mt-1 text-gray-500">
-              <Badge 
-                variant={collaborator.status === "available" ? "green" : "red"}
-                className="mr-2"
-              >
-                {getStatusLabel(collaborator.status)}
-              </Badge>
-              <span>{getRoleLabel(collaborator.role)}</span>
+    <div className="container py-6 pb-16">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-6 mb-8">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <Link href="/collaborators">
+              <Button variant="outline" size="icon" className="h-10 w-10 rounded-full shrink-0">
+                <i className="ri-arrow-left-line"></i>
+              </Button>
+            </Link>
+            
+            {collaborator.profileImage ? (
+              <img
+                src={collaborator.profileImage}
+                alt={`${collaborator.firstName} ${collaborator.lastName}`}
+                className="w-14 h-14 rounded-full object-cover border-2 border-background shadow-sm"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-medium border-2 border-background shadow-sm">
+                {getInitials(collaborator.firstName, collaborator.lastName)}
+              </div>
+            )}
+            
+            <div>
+              <h1 className="text-2xl font-bold mb-1">
+                {collaborator.firstName} {collaborator.lastName}
+              </h1>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20">
+                  {getRoleLabel(collaborator.role)}
+                </Badge>
+                <Badge 
+                  variant={collaborator.status === "available" ? "default" : "secondary"}
+                >
+                  {getStatusLabel(collaborator.status)}
+                </Badge>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="mt-4 lg:mt-0 flex space-x-3">
-          <Button variant="outline" onClick={handleDelete} className="text-red-600 border-red-200 hover:bg-red-50">
-            <i className="ri-delete-bin-line mr-2"></i>
-            Elimina
-          </Button>
+          
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" asChild>
+              <a href={`mailto:${collaborator.email}`}>
+                <i className="ri-mail-line mr-2"></i>
+                Email
+              </a>
+            </Button>
+            
+            {collaborator.phone && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={`tel:${collaborator.phone}`}>
+                  <i className="ri-phone-line mr-2"></i>
+                  Chiama
+                </a>
+              </Button>
+            )}
+            
+            <Button variant="destructive" size="sm" onClick={handleDelete}>
+              <i className="ri-delete-bin-line mr-2"></i>
+              Elimina
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Colonna sinistra con info collaboratore */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informazioni Collaboratore</CardTitle>
-              <CardDescription>Dettagli e contatti del collaboratore</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center mb-6">
-                {collaborator.profileImage ? (
-                  <img
-                    src={collaborator.profileImage}
-                    alt={`${collaborator.firstName} ${collaborator.lastName}`}
-                    className="w-24 h-24 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <span className="text-2xl font-medium">
-                      {getInitials(collaborator.firstName, collaborator.lastName)}
-                    </span>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Sidebar con info e strumenti collaboratore */}
+        <div>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <i className="ri-user-settings-line text-primary"></i>
+                  Profilo Collaboratore
+                </CardTitle>
+                <CardDescription>Informazioni di contatto e stato</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-[1fr_auto] gap-2 items-center pb-3 border-b">
+                    <div className="text-muted-foreground text-sm">Email</div>
+                    <div className="text-sm font-medium">{collaborator.email}</div>
                   </div>
-                )}
-                <h3 className="mt-4 font-medium text-lg">
-                  {collaborator.firstName} {collaborator.lastName}
-                </h3>
-                <p className="text-gray-500">{getRoleLabel(collaborator.role)}</p>
-              </div>
-
-              <div className="space-y-4">
-                {collaborator.email && (
-                  <div>
-                    <Label className="text-xs text-gray-500">Email</Label>
-                    <div className="flex items-center mt-1">
-                      <i className="ri-mail-line mr-2 text-gray-400"></i>
-                      <a href={`mailto:${collaborator.email}`} className="text-primary hover:underline">
-                        {collaborator.email}
-                      </a>
+                  
+                  {collaborator.phone && (
+                    <div className="grid grid-cols-[1fr_auto] gap-2 items-center pb-3 border-b">
+                      <div className="text-muted-foreground text-sm">Telefono</div>
+                      <div className="text-sm font-medium">{collaborator.phone}</div>
                     </div>
+                  )}
+                  
+                  <div className="grid grid-cols-[1fr_auto] gap-2 items-center pb-3 border-b">
+                    <div className="text-muted-foreground text-sm">Ruolo</div>
+                    <div className="text-sm font-medium">{getRoleLabel(collaborator.role)}</div>
                   </div>
-                )}
-
-                {collaborator.phone && (
-                  <div>
-                    <Label className="text-xs text-gray-500">Telefono</Label>
-                    <div className="flex items-center mt-1">
-                      <i className="ri-phone-line mr-2 text-gray-400"></i>
-                      <a href={`tel:${collaborator.phone}`} className="text-primary hover:underline">
-                        {collaborator.phone}
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <Label className="text-xs text-gray-500">Stato</Label>
-                  <div className="flex items-center mt-1">
-                    <i className={`ri-checkbox-circle-line mr-2 ${
-                      collaborator.status === "available" ? "text-green-500" : "text-red-500"
-                    }`}></i>
-                    <span>
+                  
+                  <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                    <div className="text-muted-foreground text-sm">Stato</div>
+                    <Badge variant={collaborator.status === "available" ? "default" : "secondary"}>
                       {getStatusLabel(collaborator.status)}
-                    </span>
+                    </Badge>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+            
+            {/* Sezione per generare il token dashboard */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <i className="ri-shield-keyhole-line text-primary"></i>
+                  Dashboard Pubblica
+                </CardTitle>
+                <CardDescription>
+                  Gestisci l'accesso alla dashboard pubblica
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <GeneraTokenDashboard collaboratoreId={collaboratorId} />
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Colonna destra con dashboard collaboratore */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader className="pb-2">
-              <h3 className="text-xl font-semibold mb-2">Gestione Collaboratore</h3>
-              <p className="text-muted-foreground text-sm">Aggiorna i dati anagrafici del collaboratore</p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
+        {/* Scheda principale con form e dashboard */}
+        <div className="xl:col-span-2">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <i className="ri-edit-line text-primary"></i>
+                  Modifica Dati Collaboratore
+                </CardTitle>
+                <CardDescription>Aggiorna le informazioni anagrafiche</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -454,15 +479,19 @@ export default function CollaboratorDetailPage() {
             </CardContent>
           </Card>
           
-          {/* Sezione per generare il token di accesso alla dashboard pubblica */}
-          <div className="mt-8 mb-8">
-            <GeneraTokenDashboard collaboratoreId={collaboratorId} />
-          </div>
-          
           {/* Dashboard completa del collaboratore (include Eventi, Pagamenti, Montaggi) */}
-          <div className="mt-8">
-            <CollaboratoreDashboard collaboratoreId={collaboratorId} />
-          </div>
+          <Card className="mt-6">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <i className="ri-dashboard-line text-primary"></i>
+                Dashboard Collaboratore
+              </CardTitle>
+              <CardDescription>Gestisci eventi, pagamenti e montaggi</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CollaboratoreDashboard collaboratoreId={collaboratorId} />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

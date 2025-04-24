@@ -4,6 +4,7 @@ import { useParams, useLocation } from "wouter";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { COLLABORATOR_ROLES, COLLABORATOR_STATUSES, getRoleLabel, getStatusLabel } from "@shared/constants";
 import { 
   Card, 
   CardContent, 
@@ -218,9 +219,9 @@ export default function CollaboratorDetailPage() {
                 variant={collaborator.status === "available" ? "green" : "red"}
                 className="mr-2"
               >
-                {collaborator.status === "available" ? "Disponibile" : "Occupato"}
+                {getStatusLabel(collaborator.status)}
               </Badge>
-              <span>{collaborator.role}</span>
+              <span>{getRoleLabel(collaborator.role)}</span>
             </div>
           </div>
         </div>
@@ -258,7 +259,7 @@ export default function CollaboratorDetailPage() {
                 <h3 className="mt-4 font-medium text-lg">
                   {collaborator.firstName} {collaborator.lastName}
                 </h3>
-                <p className="text-gray-500">{collaborator.role}</p>
+                <p className="text-gray-500">{getRoleLabel(collaborator.role)}</p>
               </div>
 
               <div className="space-y-4">
@@ -293,7 +294,7 @@ export default function CollaboratorDetailPage() {
                       collaborator.status === "available" ? "text-green-500" : "text-red-500"
                     }`}></i>
                     <span>
-                      {collaborator.status === "available" ? "Disponibile" : "Occupato"}
+                      {getStatusLabel(collaborator.status)}
                     </span>
                   </div>
                 </div>
@@ -376,9 +377,20 @@ export default function CollaboratorDetailPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Ruolo</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Es: Fotografo, Assistente, Videografo" {...field} />
-                            </FormControl>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger aria-label="Seleziona ruolo">
+                                  <SelectValue placeholder="Seleziona ruolo" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {COLLABORATOR_ROLES.map((role) => (
+                                  <SelectItem key={role.id} value={role.id}>
+                                    {role.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -392,13 +404,16 @@ export default function CollaboratorDetailPage() {
                             <FormLabel>Stato</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger aria-label="Seleziona stato">
                                   <SelectValue placeholder="Seleziona lo stato" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="available">Disponibile</SelectItem>
-                                <SelectItem value="busy">Occupato</SelectItem>
+                                {COLLABORATOR_STATUSES.map((status) => (
+                                  <SelectItem key={status.id} value={status.id}>
+                                    {status.label}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />

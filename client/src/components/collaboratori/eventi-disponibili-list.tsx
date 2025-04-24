@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { COLLABORATOR_ROLES, getRoleLabel } from "@shared/constants";
 import {
   Popover,
   PopoverContent,

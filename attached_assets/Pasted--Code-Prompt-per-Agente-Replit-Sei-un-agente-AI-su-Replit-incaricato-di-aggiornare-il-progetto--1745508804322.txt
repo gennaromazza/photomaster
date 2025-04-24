@@ -1,0 +1,50 @@
+# Code Prompt per Agente Replit
+
+Sei un agente AI su Replit incaricato di aggiornare il progetto **StudioMaster** per mostrare i collaboratori assegnati a ciascun evento. Segui questi passaggi:
+
+1. **Verifica lo schema**  
+   - Controlla in `shared/schema.ts` che esistano le tabelle `collaborators` e `event_collaborators` con le corrette relazioni.
+2. **Backend: modifica `getAllEvents`**  
+   - File: `server/storage.ts`  
+   - Sostituisci l’implementazione di `getAllEvents()` con questa versione che esegue un `LEFT JOIN` su `event_collaborators` e `collaborators`, raggruppando i risultati in un array `collaborators` dentro ogni evento.
+3. **Frontend: aggiorna la tabella eventi**  
+   - File: `client/src/pages/EventsPage.tsx`  
+   - Estendi il tipo della query (`useQuery`) a `EventWithCollab[]`.  
+   - Aggiungi una colonna `<th>` “Collaboratori” e nelle righe un `<td>` che concatena `event.collaborators.map(c => c.firstName + ' ' + c.lastName)`.
+4. **Test**  
+   - Avvia il server e l’app client, verifica che nella pagina Eventi compaia la nuova colonna con i nomi dei collaboratori.
+
+---
+
+## Codice da applicare
+
+```ts
+// === server/storage.ts ===
+// Import aggiuntivi
+import { collaborators, eventCollaborators, events } from "@shared/schema";
+import { eq } from "drizzle-orm";
+
+// Sostituisci getAllEvents con:
+async getAllEvents(): Promise<(Event & { collaborators: Collaborator[] })[]> {
+  const rows = await db
+    .select({
+      event: events,
+      collabId: eventCollaborators.collaboratorId,
+      firstName: collaborators.firstName,
+      lastName: collaborators.lastName,
+    })
+    .from(events)
+    .leftJoin(eventCollaborators, eq(eventCollaborators.eventId, events.id))
+    .leftJoin(collaborators, eq(collaborators.id, eventCollaborators.collaboratorId));
+
+  const map = new Map<number, (Event & { collaborators: Collaborator[] })>();
+  for (const { event, collabId, firstName, lastName } of rows) {
+    if (!map.has(event.id)) {
+      map.set(event.id, { ...event, collaborators: [] });
+    }
+    if (collabId !== null) {
+      map.get(event.id)!.collaborators.push({ id: collabId, firstName, lastName });
+    }
+  }
+  return Array.from(map.values());
+}

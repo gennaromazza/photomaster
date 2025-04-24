@@ -47,8 +47,8 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
         {
           eventoId,
           ruolo,
-          dataAssegnazione: new Date().toISOString(),
           note: "Assegnazione rapida dalla lista eventi disponibili"
+          // Rimuoviamo dataAssegnazione perché la gestiremo lato server con il valore di default
         }
       );
       return response.json();

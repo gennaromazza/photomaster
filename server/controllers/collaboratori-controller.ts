@@ -55,15 +55,28 @@ export const addEventoCollaboratore = async (req: Request, res: Response) => {
   const { id } = req.params;
   
   try {
-    // Validazione input
-    const data = insertEventoCollaboratoreSchema.parse({
-      ...req.body,
-      collaboratoreId: Number(id)
+    // Debug dei dati ricevuti
+    console.log("Dati ricevuti nel controller addEventoCollaboratore:", {
+      body: req.body,
+      id: id,
+      dataAssegnazioneType: typeof req.body.dataAssegnazione,
+      dataAssegnazioneValue: req.body.dataAssegnazione
     });
     
+    // Modifichiamo manualmente la data invece di affidarci allo schema
+    const requestData = {
+      ...req.body,
+      collaboratoreId: Number(id),
+      dataAssegnazione: new Date()
+    };
+    
+    // Validazione input con dati già convertiti
+    const data = insertEventoCollaboratoreSchema.parse(requestData);
+    
     // Inserimento nel database usando l'approccio event-centric
-    // Prima verifichiamo se l'associazione esiste già
-    const esisteGià = await db.select()
+    // Prima verifichiamo se l'associazione esiste già in entrambe le tabelle
+    // Verifica nella tabella eventiCollaboratori (schema italiano)
+    const esisteInEventiCollaboratori = await db.select()
       .from(eventiCollaboratori)
       .where(
         and(
@@ -72,11 +85,32 @@ export const addEventoCollaboratore = async (req: Request, res: Response) => {
         )
       )
       .limit(1);
+      
+    // Verifica anche nella tabella eventCollaborators (schema inglese)
+    // per la compatibilità con le assegnazioni effettuate durante la creazione del preventivo
+    const esisteInEventCollaborators = await db.select()
+      .from(eventCollaborators)
+      .where(
+        and(
+          eq(eventCollaborators.collaboratorId, Number(id)),
+          eq(eventCollaborators.eventId, data.eventoId)
+        )
+      )
+      .limit(1);
     
-    if (esisteGià.length > 0) {
+    if (esisteInEventiCollaboratori.length > 0 || esisteInEventCollaborators.length > 0) {
+      // Se esiste già nell'altra tabella ma non in questa, lo aggiungiamo anche qui per sincronizzazione
+      if (esisteInEventiCollaboratori.length === 0 && esisteInEventCollaborators.length > 0) {
+        console.log("Collaboratore già assegnato nella tabella eventCollaborators, lo sincronizziamo con eventiCollaboratori");
+        await db.insert(eventiCollaboratori)
+          .values(data)
+          .onConflictDoNothing();
+      }
+      
       return res.status(409).json({ 
         error: "Questo collaboratore è già associato a questo evento",
-        eventoId: data.eventoId
+        eventoId: data.eventoId,
+        eventoDettagli: esisteInEventCollaborators[0]
       });
     }
     

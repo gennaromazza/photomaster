@@ -604,7 +604,20 @@ export function setupAuth(app: Express) {
   // Aggiorna le informazioni dell'utente
   app.put("/api/users/:id", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) {
+      // In modalità sviluppo, usa l'utente mock
+      if (process.env.NODE_ENV === 'development') {
+        console.log("DEBUG: Usando utente mock per aggiornamento profilo in ambiente di sviluppo");
+        const mockUser = {
+          id: 1,
+          username: "ImageStudio",
+          fullName: "Gennaro Mazzacane",
+          email: "gennaro.mazzacane@gmail.com",
+          role: "admin",
+          status: "active",
+          profileImage: "",
+        };
+        req.user = mockUser as Express.User;
+      } else if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Non autenticato" });
       }
       
@@ -654,7 +667,20 @@ export function setupAuth(app: Express) {
   // Aggiorna la password dell'utente
   app.put("/api/users/:id/password", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) {
+      // In modalità sviluppo, usa l'utente mock
+      if (process.env.NODE_ENV === 'development') {
+        console.log("DEBUG: Usando utente mock per aggiornamento password in ambiente di sviluppo");
+        const mockUser = {
+          id: 1,
+          username: "ImageStudio",
+          fullName: "Gennaro Mazzacane",
+          email: "gennaro.mazzacane@gmail.com",
+          role: "admin",
+          status: "active",
+          profileImage: "",
+        };
+        req.user = mockUser as Express.User;
+      } else if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "Non autenticato" });
       }
       

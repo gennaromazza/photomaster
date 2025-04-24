@@ -30,29 +30,22 @@ export async function migrateEventiToEventCollaborators(): Promise<void> {
     // Migra ogni record
     for (const record of records) {
       try {
-        // Verifica se esiste già nella tabella inglese
-        const existingRecord = await db.select()
-          .from(eventCollaborators)
-          .where(
-            and(
-              eq(eventCollaborators.collaboratorId, record.collaboratoreId),
-              eq(eventCollaborators.eventId, record.eventoId)
-            )
-          )
-          .limit(1);
+        // Verifica se esiste già nella tabella inglese usando SQL raw
+        const { rows: existingRecord } = await db.execute(
+          `SELECT id FROM event_collaborators 
+           WHERE collaborator_id = $1 AND event_id = $2 
+           LIMIT 1`,
+          [record.collaboratoreId, record.eventoId]
+        );
         
         // Se non esiste, inserisci nella tabella inglese
         if (existingRecord.length === 0) {
-          // Poiché potrebbe esserci una mancata corrispondenza tra lo schema e la tabella,
-          // cerchiamo di eseguire l'inserimento senza il campo assignedAt che potrebbe mancare
-          await db.insert(eventCollaborators).values({
-            collaboratorId: record.collaboratoreId,
-            eventId: record.eventoId,
-            role: record.ruolo,
-            // Omettiamo assignedAt se la migrazione del database non è stata eseguita
-            // assignedAt: record.dataAssegnazione,
-            notes: record.note || null
-          });
+          // Utilizziamo SQL raw per inserire i dati senza coinvolgere le definizioni dello schema Drizzle
+          await db.execute(
+            `INSERT INTO event_collaborators (collaborator_id, event_id, role) 
+             VALUES ($1, $2, $3)`,
+            [record.collaboratoreId, record.eventoId, record.ruolo]
+          );
           console.log(`Migrato evento collaboratore: ${record.collaboratoreId}-${record.eventoId}`);
         } else {
           console.log(`Record già esistente: ${record.collaboratoreId}-${record.eventoId}`);
@@ -106,32 +99,36 @@ export async function migratePagamentiToCollaboratorPayments(): Promise<void> {
     // Migra ogni record
     for (const record of records) {
       try {
-        // Verifica se esiste già nella tabella inglese
-        const existingRecord = await db.select()
-          .from(collaboratorPayments)
-          .where(
-            and(
-              eq(collaboratorPayments.collaboratorId, record.collaboratoreId),
-              eq(collaboratorPayments.eventId, record.eventoId),
-              eq(collaboratorPayments.paymentDate, record.dataPagamento)
-            )
-          )
-          .limit(1);
+        // Verifica se esiste già nella tabella inglese usando SQL raw
+        const { rows: existingRecord } = await db.execute(
+          `SELECT id FROM collaborator_payments 
+           WHERE collaborator_id = $1 AND event_id = $2 AND payment_date = $3
+           LIMIT 1`,
+          [record.collaboratoreId, record.eventoId, record.dataPagamento]
+        );
         
         // Se non esiste, inserisci nella tabella inglese
         if (existingRecord.length === 0) {
-          await db.insert(collaboratorPayments).values({
-            collaboratorId: record.collaboratoreId,
-            eventId: record.eventoId,
-            type: mapTipoPagamento(record.tipo),
-            amount: record.importo,
-            paymentDate: record.dataPagamento,
-            paymentMethod: mapMetodoPagamento(record.metodoPagamento),
-            notes: record.note || null,
-            externalReference: record.riferimentoEsterno || null,
-            createdAt: record.createdAt,
-            updatedAt: record.updatedAt
-          });
+          // Utilizziamo SQL raw per evitare errori con campi mancanti nella tabella
+          await db.execute(
+            `INSERT INTO collaborator_payments (
+              collaborator_id, event_id, type, amount, payment_date, 
+              payment_method, notes, external_reference, created_at, updated_at
+            ) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [
+              record.collaboratoreId, 
+              record.eventoId,
+              mapTipoPagamento(record.tipo),
+              record.importo,
+              record.dataPagamento,
+              mapMetodoPagamento(record.metodoPagamento),
+              record.note || null,
+              record.riferimentoEsterno || null,
+              record.createdAt,
+              record.updatedAt
+            ]
+          );
           console.log(`Migrato pagamento collaboratore: ${record.id}`);
         } else {
           console.log(`Pagamento già esistente: ${record.id}`);
@@ -185,19 +182,27 @@ export async function migrateMontaggiToCollaboratorEditing(): Promise<void> {
         
         // Se non esiste, inserisci nella tabella inglese
         if (existingRecord.length === 0) {
-          await db.insert(collaboratorEditing).values({
-            collaboratorId: record.collaboratoreId,
-            eventId: record.eventoId,
-            advance: record.acconto,
-            balance: record.saldo,
-            firstContactDate: record.dataPrimoContatto,
-            priority: record.priorita,
-            expectedDeliveryDate: record.dataConsegnaPrevista,
-            status: mapStato(record.stato),
-            notes: record.note || null,
-            createdAt: record.createdAt,
-            updatedAt: record.updatedAt
-          });
+          // Utilizziamo SQL raw per evitare errori con campi mancanti nella tabella
+          await db.execute(
+            `INSERT INTO collaborator_editing (
+              collaborator_id, event_id, advance, balance, first_contact_date,
+              priority, expected_delivery_date, status, notes, created_at, updated_at
+            ) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [
+              record.collaboratoreId,
+              record.eventoId,
+              record.acconto,
+              record.saldo,
+              record.dataPrimoContatto,
+              record.priorita,
+              record.dataConsegnaPrevista,
+              mapStato(record.stato),
+              record.note || null,
+              record.createdAt,
+              record.updatedAt
+            ]
+          );
           console.log(`Migrato montaggio collaboratore: ${record.id}`);
         } else {
           console.log(`Montaggio già esistente: ${record.id}`);

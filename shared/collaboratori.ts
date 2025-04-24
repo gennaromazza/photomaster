@@ -51,13 +51,18 @@ export const montaggi = pgTable("montaggi", {
 });
 
 // Schemas per inserts e updates
-export const insertEventoCollaboratoreSchema = createInsertSchema(eventiCollaboratori).pick({
-  collaboratoreId: true,
-  eventoId: true,
-  ruolo: true,
-  dataAssegnazione: true,
-  note: true,
-});
+export const insertEventoCollaboratoreSchema = createInsertSchema(eventiCollaboratori)
+  .pick({
+    collaboratoreId: true,
+    eventoId: true,
+    ruolo: true,
+    dataAssegnazione: true,
+    note: true,
+  })
+  .transform((data) => ({
+    ...data,
+    dataAssegnazione: data.dataAssegnazione ? new Date(data.dataAssegnazione) : new Date(),
+  }));
 
 export const insertPagamentoCollaboratoreSchema = createInsertSchema(pagamentiCollaboratori)
   .pick({
@@ -70,26 +75,45 @@ export const insertPagamentoCollaboratoreSchema = createInsertSchema(pagamentiCo
     note: true,
     riferimentoEsterno: true,
   })
+  .transform((data) => ({
+    ...data,
+    dataPagamento: data.dataPagamento ? new Date(data.dataPagamento) : new Date(),
+    importo: typeof data.importo === 'string' ? parseFloat(data.importo) : data.importo,
+  }))
   .refine(data => Number(data.importo) > 0, {
     message: "L'importo deve essere maggiore di zero",
     path: ["importo"]
   });
 
-export const insertMontaggioSchema = createInsertSchema(montaggi).pick({
-  collaboratoreId: true,
-  eventoId: true,
-  acconto: true,
-  priorita: true,
-  dataConsegnaPrevista: true,
-  stato: true,
-  note: true,
-});
+export const insertMontaggioSchema = createInsertSchema(montaggi)
+  .pick({
+    collaboratoreId: true,
+    eventoId: true,
+    acconto: true,
+    priorita: true,
+    dataConsegnaPrevista: true,
+    stato: true,
+    note: true,
+  })
+  .transform((data) => ({
+    ...data,
+    dataConsegnaPrevista: data.dataConsegnaPrevista ? new Date(data.dataConsegnaPrevista) : new Date(),
+    dataPrimoContatto: data.dataPrimoContatto ? new Date(data.dataPrimoContatto) : undefined,
+    acconto: typeof data.acconto === 'string' ? parseFloat(data.acconto) : data.acconto,
+    saldo: data.saldo ? (typeof data.saldo === 'string' ? parseFloat(data.saldo) : data.saldo) : undefined
+  }));
 
-export const updateMontaggioSchema = insertMontaggioSchema.partial().extend({
-  saldo: z.number().optional(),
-  dataPrimoContatto: z.date().optional(),
-  stato: z.enum(["da_fare", "in_corso", "completato"]).optional(),
-});
+export const updateMontaggioSchema = createInsertSchema(montaggi)
+  .partial()
+  .extend({
+    saldo: z.union([z.number(), z.string()]).optional().transform(val => 
+      val ? (typeof val === 'string' ? parseFloat(val) : val) : undefined
+    ),
+    dataPrimoContatto: z.union([z.date(), z.string()]).optional().transform(val => 
+      val ? (val instanceof Date ? val : new Date(val)) : undefined
+    ),
+    stato: z.enum(["da_fare", "in_corso", "completato", "in_revisione", "approvato"]).optional(),
+  });
 
 // Definizione dei tipi TypeScript
 export type EventoCollaboratore = typeof eventiCollaboratori.$inferSelect;

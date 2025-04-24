@@ -47,7 +47,7 @@ export function EventiDisponibiliList({ collaboratoreId }: EventiDisponibiliList
         {
           eventoId,
           ruolo,
-          dataAssegnazione: new Date(),
+          dataAssegnazione: new Date().toISOString(),
           note: "Assegnazione rapida dalla lista eventi disponibili"
         }
       );

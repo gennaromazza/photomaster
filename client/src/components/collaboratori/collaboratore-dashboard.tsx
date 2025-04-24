@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { CalendarClock, FileText, LucideEuro, CheckSquare, FileCheck, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { EventoCollaboratoreList } from "./eventi-collaboratore";
+import { PagamentoCollaboratoreList } from "./pagamenti-collaboratore";
+import { MontaggioCollaboratoreList } from "./montaggi-collaboratore";
 
 interface CollaboratoreDashboardProps {
   collaboratoreId: number;
@@ -238,21 +241,15 @@ export function CollaboratoreDashboard({ collaboratoreId }: CollaboratoreDashboa
         </TabsContent>
         
         <TabsContent value="eventi">
-          <p className="text-muted-foreground py-4">
-            Lista degli eventi assegnati al collaboratore. (Da implementare)
-          </p>
+          <EventoCollaboratoreList collaboratoreId={collaboratoreId} />
         </TabsContent>
         
         <TabsContent value="pagamenti">
-          <p className="text-muted-foreground py-4">
-            Lista dei pagamenti del collaboratore. (Da implementare)
-          </p>
+          <PagamentoCollaboratoreList collaboratoreId={collaboratoreId} />
         </TabsContent>
         
         <TabsContent value="montaggi">
-          <p className="text-muted-foreground py-4">
-            Lista dei montaggi assegnati al collaboratore. (Da implementare)
-          </p>
+          <MontaggioCollaboratoreList collaboratoreId={collaboratoreId} />
         </TabsContent>
       </Tabs>
     </div>

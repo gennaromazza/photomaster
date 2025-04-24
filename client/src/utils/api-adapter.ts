@@ -3,9 +3,8 @@
  * Fornisce funzioni di utilità per adattare le chiamate API durante la fase di migrazione
  */
 
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { queryClient } from "@/lib/queryClient";
 
-// Definizione dell'interfaccia QueryFn 
 export type QueryFn = (context: { signal?: AbortSignal }) => Promise<any>;
 
 type ApiAdapterOptions = {
@@ -21,107 +20,113 @@ const DEFAULT_OPTIONS: ApiAdapterOptions = {
 /**
  * Mappa gli endpoint italiani ai corrispondenti endpoint inglesi
  */
-const ENDPOINT_MAPPING = {
-  // Collaboratori
-  '/api/collaboratori': '/api/collaborators',
-  '/api/collaboratori/': '/api/collaborators/',
-  '/api/collaboratori/{id}/eventi': '/api/collaborators/{id}/events',
-  '/api/collaboratori/{id}/pagamenti': '/api/collaborators/{id}/payments',
-  '/api/collaboratori/{id}/montaggi': '/api/collaborators/{id}/editing',
-  '/api/collaboratori/{id}/dashboard': '/api/collaborators/{id}/dashboard',
-  '/api/collaboratori/sincronizza-assegnazioni': '/api/collaborators/sync-assignments',
+const ENDPOINT_MAPPINGS: Record<string, string> = {
+  // Mappatura collaboratori
+  "/api/collaboratori": "/api/collaborators",
+  "/api/collaboratori/dashboard": "/api/collaborators/dashboard",
+  "/api/collaboratori/:id": "/api/collaborators/:id",
+  "/api/collaboratori/:id/eventi": "/api/collaborators/:id/events",
+  "/api/collaboratori/:id/pagamenti": "/api/collaborators/:id/payments",
+  "/api/collaboratori/:id/montaggi": "/api/collaborators/:id/editing",
   
-  // Eventi
-  '/api/eventi': '/api/events',
-  '/api/eventi/': '/api/events/',
-  '/api/eventi/senza-collaboratori': '/api/events/without-collaborators',
-  '/api/eventi/{id}': '/api/events/{id}',
-  '/api/eventi/{id}/collaboratori': '/api/events/{id}/collaborators',
-  '/api/eventi/{id}/pagamenti': '/api/events/{id}/payments',
-  '/api/eventi/{id}/montaggi': '/api/events/{id}/editing',
+  // Mappatura eventi
+  "/api/eventi": "/api/events",
+  "/api/eventi/:id": "/api/events/:id",
+  "/api/eventi/prossimi": "/api/events/upcoming",
+  "/api/eventi/cliente/:clienteId": "/api/events/client/:clientId",
+  "/api/eventi/:id/collaboratori": "/api/events/:id/collaborators",
+  "/api/eventi/:id/pagamenti": "/api/events/:id/payments",
+  "/api/eventi/:id/montaggi": "/api/events/:id/editing",
   
-  // Pagamenti
-  '/api/pagamenti': '/api/payments',
-  '/api/pagamenti/': '/api/payments/',
-  '/api/pagamenti/{id}': '/api/payments/{id}',
+  // Mappatura pagamenti
+  "/api/pagamenti": "/api/payments",
+  "/api/pagamenti/:id": "/api/payments/:id",
+  "/api/pagamenti/eventi/:eventoId": "/api/payments/events/:eventId",
+  "/api/pagamenti/collaboratori/:collaboratoreId": "/api/payments/collaborators/:collaboratorId",
   
-  // Gallerie e foto
-  '/api/galleria': '/api/gallery',
-  '/api/galleria/': '/api/gallery/',
-  '/api/selezione': '/api/selection',
-  '/api/selezione/foto': '/api/selection/photo',
-  '/api/selezione/commenti': '/api/selection/comments',
-  '/api/selezione/sessioni': '/api/selection/sessions',
-  
-  // Altri endpoint
-  '/api/notifiche': '/api/notifications',
-  '/api/impostazioni': '/api/settings',
-  '/api/preventivi': '/api/quotes',
-  '/api/contratti': '/api/contracts',
-  '/api/clienti': '/api/clients',
-  '/api/attivita': '/api/tasks',
-  '/api/clausole': '/api/clauses',
+  // Mappatura montaggi
+  "/api/montaggi": "/api/editing",
+  "/api/montaggi/:id": "/api/editing/:id",
+  "/api/montaggi/eventi/:eventoId": "/api/editing/events/:eventId",
+  "/api/montaggi/collaboratori/:collaboratoreId": "/api/editing/collaborators/:collaboratorId"
 };
 
 /**
  * Mappa i nomi dei campi italiani ai corrispondenti campi inglesi
  */
-const FIELD_MAPPING_IT_TO_EN: Record<string, string> = {
-  // Collaboratori
-  'collaboratoreId': 'collaboratorId',
-  'eventoId': 'eventId',
-  'ruolo': 'role',
-  'dataAssegnazione': 'assignedAt',
-  'note': 'notes',
+const FIELD_MAPPINGS_TO_ENGLISH: Record<string, string> = {
+  // Campi comuni
+  "id": "id",
+  "nome": "name",
+  "titolo": "title",
+  "descrizione": "description",
+  "data": "date",
+  "dataFine": "endDate",
+  "createdAt": "createdAt",
+  "updatedAt": "updatedAt",
+  "note": "notes",
   
-  // Pagamenti
-  'importo': 'amount',
-  'tipo': 'type',
-  'dataPagamento': 'paymentDate',
-  'metodoPagamento': 'paymentMethod',
-  'riferimentoEsterno': 'externalReference',
+  // Campi collaboratori
+  "cognome": "lastName",
+  "email": "email",
+  "telefono": "phone",
+  "indirizzo": "address",
+  "citta": "city",
+  "provincia": "province",
+  "cap": "postalCode",
+  "codiceFiscale": "taxCode",
+  "partitaIva": "vatNumber",
+  "iban": "iban",
+  "tipoCollaboratore": "type",
   
-  // Montaggi
-  'acconto': 'advance',
-  'saldo': 'balance',
-  'dataPrimoContatto': 'firstContactDate',
-  'priorita': 'priority',
-  'dataConsegnaPrevista': 'expectedDeliveryDate',
-  'statoMontaggio': 'editingStatus',
+  // Campi eventi
+  "luogo": "location",
+  "clienteId": "clientId",
+  "secondoClienteId": "secondClientId",
+  "tipoEvento": "type",
+  "statoEvento": "status",
+  "pubblico": "isPublic",
+  "idEsterno": "externalId",
+  "googleCalendarId": "googleCalendarId",
+  "googleCalendarLink": "googleCalendarLink",
+  "sincronizzaConGoogle": "syncWithGoogle",
   
-  // Eventi
-  'titolo': 'title',
-  'descrizione': 'description',
-  'data': 'date',
-  'luogo': 'location',
+  // Campi assegnazione collaboratori
+  "collaboratoreId": "collaboratorId",
+  "eventoId": "eventId",
+  "ruolo": "role",
+  "dataAssegnazione": "assignedAt",
   
-  // Clienti
-  'nome': 'name',
-  'cognome': 'surname',
-  'telefono': 'phone',
-  'email': 'email',
-  'indirizzo': 'address',
-  'citta': 'city',
-  'provincia': 'province',
-  'cap': 'zipCode',
+  // Campi pagamenti
+  "importo": "amount",
+  "dataPagamento": "paymentDate",
+  "metodoPagamento": "paymentMethod",
+  "tipoPagamento": "type",
+  "riferimentoEsterno": "externalReference",
   
-  // Quote e Contratti
-  'scadenza': 'expiry',
-  'stato': 'status',
-  'dataCreazione': 'createdAt',
-  'dataAggiornamento': 'updatedAt',
-  'dataFirma': 'signDate',
-  'condizioni': 'terms',
-  'scontistica': 'discounts'
+  // Campi montaggi
+  "tipoMontaggio": "editingType",
+  "accontoImporto": "depositAmount",
+  "accontoPagato": "depositPaid",
+  "accontoDataPagamento": "depositPaymentDate",
+  "saldoImporto": "balanceAmount",
+  "saldoPagato": "balancePaid",
+  "saldoDataPagamento": "balancePaymentDate",
+  "dataPrimoContatto": "firstContactDate",
+  "priorita": "priority",
+  "dataConsegnaPrevista": "expectedDeliveryDate",
+  "dataConsegnaEffettiva": "actualDeliveryDate",
+  "statoMontaggio": "status"
 };
 
 /**
  * Mappa i nomi dei campi inglesi ai corrispondenti campi italiani
  */
-const FIELD_MAPPING_EN_TO_IT = Object.entries(FIELD_MAPPING_IT_TO_EN).reduce((acc, [it, en]) => {
-  acc[en] = it;
-  return acc;
-}, {} as Record<string, string>);
+const FIELD_MAPPINGS_TO_ITALIAN: Record<string, string> = Object.entries(FIELD_MAPPINGS_TO_ENGLISH)
+  .reduce((acc, [italian, english]) => {
+    acc[english] = italian;
+    return acc;
+  }, {} as Record<string, string>);
 
 /**
  * Traduce un endpoint da italiano a inglese sostituendo i parametri contenuti nel percorso
@@ -129,45 +134,36 @@ const FIELD_MAPPING_EN_TO_IT = Object.entries(FIELD_MAPPING_IT_TO_EN).reduce((ac
  * @returns Endpoint inglese tradotto (es. '/api/collaborators/1/events')
  */
 export function translateEndpoint(endpoint: string): string {
-  // Estrae l'ID dal percorso, se presente
-  const matches = endpoint.match(/\/(\d+)(\/|$)/g);
-  
-  if (!matches) {
-    // Cerca una corrispondenza diretta
-    for (const [it, en] of Object.entries(ENDPOINT_MAPPING)) {
-      if (endpoint.startsWith(it)) {
-        return endpoint.replace(it, en);
-      }
-    }
-    return endpoint;
+  // Prima controlla se abbiamo una corrispondenza esatta
+  if (ENDPOINT_MAPPINGS[endpoint]) {
+    return ENDPOINT_MAPPINGS[endpoint];
   }
-  
-  // Sostituisce gli ID con un placeholder per trovare la corrispondenza
-  let templateEndpoint = endpoint;
-  const ids: string[] = [];
-  
-  matches.forEach(match => {
-    const id = match.replace(/\//g, '');
-    ids.push(id);
-    templateEndpoint = templateEndpoint.replace(match, '/{id}/');
-  });
-  
-  // Cerca la corrispondenza nel template
-  let translatedEndpoint = templateEndpoint;
-  for (const [it, en] of Object.entries(ENDPOINT_MAPPING)) {
-    if (templateEndpoint.includes(it)) {
-      translatedEndpoint = templateEndpoint.replace(it, en);
-      break;
+
+  // Altrimenti, prova a sostituire i parametri specifici
+  for (const [italianPattern, englishPattern] of Object.entries(ENDPOINT_MAPPINGS)) {
+    // Converti i pattern in espressioni regolari, sostituendo :param con ([^/]+)
+    const regexPattern = italianPattern.replace(/:\w+/g, '([^/]+)');
+    const regex = new RegExp(`^${regexPattern}$`);
+    
+    const match = endpoint.match(regex);
+    if (match) {
+      // Estrai i parametri dal match
+      const params = match.slice(1);
+      
+      // Sostituisci i parametri nel pattern inglese
+      let translatedEndpoint = englishPattern;
+      let paramIndex = 0;
+      
+      translatedEndpoint = translatedEndpoint.replace(/:\w+/g, () => {
+        return params[paramIndex++];
+      });
+      
+      return translatedEndpoint;
     }
   }
   
-  // Ripristina gli ID nel percorso tradotto
-  ids.forEach(id => {
-    translatedEndpoint = translatedEndpoint.replace('{id}', id);
-  });
-  
-  // Corregge eventuali doppie barre
-  return translatedEndpoint.replace(/\/\//g, '/');
+  // Se non troviamo una corrispondenza, restituisci l'endpoint originale
+  return endpoint;
 }
 
 /**
@@ -176,29 +172,28 @@ export function translateEndpoint(endpoint: string): string {
  * @returns Oggetto con nomi di campi tradotti in inglese
  */
 export function translateFieldsToEnglish(data: Record<string, any>): Record<string, any> {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    return data;
-  }
+  if (!data) return data;
   
-  const result: Record<string, any> = {};
-  
-  for (const [key, value] of Object.entries(data)) {
-    const translatedKey = FIELD_MAPPING_IT_TO_EN[key] || key;
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    const translatedKey = FIELD_MAPPINGS_TO_ENGLISH[key] || key;
     
-    // Traduce ricorsivamente i campi annidati
+    // Se il valore è un oggetto (non null e non Array), traduci ricorsivamente
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      result[translatedKey] = translateFieldsToEnglish(value);
-    } else if (Array.isArray(value)) {
-      // Traduce ogni elemento dell'array se è un oggetto
-      result[translatedKey] = value.map(item => 
-        item && typeof item === 'object' ? translateFieldsToEnglish(item) : item
+      acc[translatedKey] = translateFieldsToEnglish(value);
+    } 
+    // Se il valore è un array di oggetti, traduci ogni oggetto
+    else if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
+      acc[translatedKey] = value.map(item => 
+        typeof item === 'object' ? translateFieldsToEnglish(item) : item
       );
-    } else {
-      result[translatedKey] = value;
+    } 
+    // Altrimenti, usa il valore così com'è
+    else {
+      acc[translatedKey] = value;
     }
-  }
-  
-  return result;
+    
+    return acc;
+  }, {} as Record<string, any>);
 }
 
 /**
@@ -207,29 +202,28 @@ export function translateFieldsToEnglish(data: Record<string, any>): Record<stri
  * @returns Oggetto con nomi di campi tradotti in italiano
  */
 export function translateFieldsToItalian(data: Record<string, any>): Record<string, any> {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    return data;
-  }
+  if (!data) return data;
   
-  const result: Record<string, any> = {};
-  
-  for (const [key, value] of Object.entries(data)) {
-    const translatedKey = FIELD_MAPPING_EN_TO_IT[key] || key;
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    const translatedKey = FIELD_MAPPINGS_TO_ITALIAN[key] || key;
     
-    // Traduce ricorsivamente i campi annidati
+    // Se il valore è un oggetto (non null e non Array), traduci ricorsivamente
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      result[translatedKey] = translateFieldsToItalian(value);
-    } else if (Array.isArray(value)) {
-      // Traduce ogni elemento dell'array se è un oggetto
-      result[translatedKey] = value.map(item => 
-        item && typeof item === 'object' ? translateFieldsToItalian(item) : item
+      acc[translatedKey] = translateFieldsToItalian(value);
+    } 
+    // Se il valore è un array di oggetti, traduci ogni oggetto
+    else if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
+      acc[translatedKey] = value.map(item => 
+        typeof item === 'object' ? translateFieldsToItalian(item) : item
       );
-    } else {
-      result[translatedKey] = value;
+    } 
+    // Altrimenti, usa il valore così com'è
+    else {
+      acc[translatedKey] = value;
     }
-  }
-  
-  return result;
+    
+    return acc;
+  }, {} as Record<string, any>);
 }
 
 /**
@@ -242,20 +236,27 @@ export function translateFieldsToItalian(data: Record<string, any>): Record<stri
  * @returns Risposta dalla richiesta API
  */
 export async function adaptedApiRequest(
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  method: string,
   endpoint: string,
   data?: any,
   options: ApiAdapterOptions = DEFAULT_OPTIONS
 ): Promise<Response> {
-  const translatedEndpoint = options.useTranslatedEndpoints 
+  const finalEndpoint = options.useTranslatedEndpoints 
     ? translateEndpoint(endpoint) 
     : endpoint;
   
-  const translatedData = options.mapKeys && data 
+  const finalData = options.mapKeys && data 
     ? translateFieldsToEnglish(data) 
     : data;
   
-  return apiRequest(method, translatedEndpoint, translatedData);
+  // Usa la fetch API standard
+  return fetch(finalEndpoint, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: finalData ? JSON.stringify(finalData) : undefined,
+  });
 }
 
 /**
@@ -269,18 +270,18 @@ export function adaptedQueryFn(
   endpoint: string,
   options: ApiAdapterOptions = DEFAULT_OPTIONS
 ): QueryFn {
-  const translatedEndpoint = options.useTranslatedEndpoints 
+  const finalEndpoint = options.useTranslatedEndpoints 
     ? translateEndpoint(endpoint) 
     : endpoint;
   
-  return async ({ signal }) => {
-    const res = await fetch(translatedEndpoint, { signal });
-    
-    if (!res.ok) {
-      throw new Error(`Errore ${res.status}: ${res.statusText}`);
+  return async ({ signal } = {}) => {
+    const response = await fetch(finalEndpoint, { signal });
+    if (!response.ok) {
+      throw new Error(`Errore API: ${response.statusText}`);
     }
+    const data = await response.json();
     
-    const data = await res.json();
+    // Se mapKeys è true, traduci le chiavi nella risposta da inglese a italiano
     return options.mapKeys ? translateFieldsToItalian(data) : data;
   };
 }
@@ -290,18 +291,22 @@ export function adaptedQueryFn(
  * @param queryKey Chiave di query in italiano
  */
 export function invalidateBothQueries(queryKey: string | string[]): void {
-  const keyAsString = Array.isArray(queryKey) ? queryKey[0] : queryKey;
-  const translatedKey = translateEndpoint(keyAsString);
+  const queryKeyStr = Array.isArray(queryKey) ? queryKey[0] : queryKey;
   
-  // Invalida la versione italiana
-  queryClient.invalidateQueries({ queryKey: Array.isArray(queryKey) ? queryKey : [queryKey] });
+  // Converti eventuale array in stringa di path
+  const originalKey = Array.isArray(queryKey) 
+    ? queryKey 
+    : [queryKey];
   
-  // Invalida anche la versione inglese se diversa
-  if (translatedKey !== keyAsString) {
-    queryClient.invalidateQueries({ 
-      queryKey: Array.isArray(queryKey) 
-        ? [translatedKey, ...queryKey.slice(1)] 
-        : [translatedKey] 
-    });
-  }
+  // Traduci endpoint in inglese
+  const translatedEndpoint = translateEndpoint(queryKeyStr);
+  
+  // Crea chiave tradotta sostituendo il primo elemento dell'array
+  const translatedKey = Array.isArray(queryKey) 
+    ? [translatedEndpoint, ...queryKey.slice(1)] 
+    : [translatedEndpoint];
+  
+  // Invalida entrambe le versioni
+  queryClient.invalidateQueries({ queryKey: originalKey });
+  queryClient.invalidateQueries({ queryKey: translatedKey });
 }

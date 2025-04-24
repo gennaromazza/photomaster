@@ -3389,14 +3389,35 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Setup upload routes
   setupUploadRoutes(app);
 
-  // Sincronizza tutte le assegnazioni dei collaboratori all'avvio del server
+  // Esegui le migrazioni e sincronizzazioni necessarie all'avvio del server
   try {
+    // 1. Sincronizza tutte le assegnazioni dei collaboratori
     console.log("Avvio sincronizzazione delle assegnazioni collaboratori...");
     syncAllCollaboratorAssignments()
       .then(() => console.log("Sincronizzazione assegnazioni collaboratori completata con successo"))
       .catch(err => console.error("Errore durante la sincronizzazione iniziale delle assegnazioni:", err));
+      
+    // 2. Sincronizza tutti i dati degli eventi tra le tabelle in italiano e inglese
+    console.log("Avvio sincronizzazione dei dati eventi...");
+    syncAllEventData()
+      .then(() => console.log("Sincronizzazione dati eventi completata con successo"))
+      .catch(err => console.error("Errore durante la sincronizzazione dei dati eventi:", err));
+
+    // 3. Esegui la migrazione completa dei dati (quando necessario)
+    if (process.env.RUN_MIGRATIONS === 'true') {
+      console.log("Avvio migrazione completa dei dati...");
+      runMigration()
+        .then(success => {
+          if (success) {
+            console.log("✅ Migrazione completa dei dati terminata con successo");
+          } else {
+            console.error("⚠️ Migrazione dei dati completata con avvisi");
+          }
+        })
+        .catch(err => console.error("❌ Errore fatale durante la migrazione dei dati:", err));
+    }
   } catch (error) {
-    console.error("Errore nell'avvio della sincronizzazione:", error);
+    console.error("Errore nell'avvio delle sincronizzazioni:", error);
   }
 
   const httpServer = createServer(app);

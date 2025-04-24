@@ -478,19 +478,20 @@ export default function CollaboratorDetailPage() {
               </CardContent>
             </Card>
           
-          {/* Dashboard completa del collaboratore (include Eventi, Pagamenti, Montaggi) */}
-          <Card className="mt-6">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <i className="ri-dashboard-line text-primary"></i>
-                Dashboard Collaboratore
-              </CardTitle>
-              <CardDescription>Gestisci eventi, pagamenti e montaggi</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CollaboratoreDashboard collaboratoreId={collaboratorId} />
-            </CardContent>
-          </Card>
+            {/* Dashboard completa del collaboratore (include Eventi, Pagamenti, Montaggi) */}
+            <Card className="mt-6">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <i className="ri-dashboard-line text-primary"></i>
+                  Dashboard Collaboratore
+                </CardTitle>
+                <CardDescription>Gestisci eventi, pagamenti e montaggi</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CollaboratoreDashboard collaboratoreId={collaboratorId} />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

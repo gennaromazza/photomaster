@@ -41,7 +41,7 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
   const mutation = useMutation({
     mutationFn: async (values: SocialMediaFormValues) => {
       // Invia solo i campi dei social media, non tutti i settings
-      const res = await apiRequest('PATCH', '/api/settings', values);
+      const res = await apiRequest('PUT', '/api/settings', values);
       return await res.json();
     },
     onSuccess: () => {

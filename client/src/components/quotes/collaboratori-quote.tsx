@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, UserCheck, Phone } from "lucide-react";
@@ -28,9 +29,22 @@ interface CollaboratoriQuoteProps {
   location: string;
   ceremonyLocation?: string;
   ceremonyTime?: string;
+  client: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+  };
 }
 
-export function CollaboratoriQuote({ quoteId, title, date, location, ceremonyLocation, ceremonyTime }: CollaboratoriQuoteProps) {
+export function CollaboratoriQuote({ 
+  quoteId, 
+  title, 
+  date, 
+  location, 
+  ceremonyLocation, 
+  ceremonyTime,
+  client 
+}: CollaboratoriQuoteProps) {
   const { data: collaboratori, isLoading, error } = useQuery({
     queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
     enabled: !!quoteId
@@ -75,7 +89,6 @@ export function CollaboratoriQuote({ quoteId, title, date, location, ceremonyLoc
 
   const formattedDate = date ? format(new Date(date), "dd/MM/yyyy", { locale: it }) : 'Data non disponibile';
 
-  // Funzione per creare il messaggio WhatsApp
   const createWhatsAppMessage = (collaboratore: any) => {
     const message = encodeURIComponent(
       `Ciao ${collaboratore.collaboratore.firstName},\n\n` +
@@ -84,8 +97,8 @@ export function CollaboratoriQuote({ quoteId, title, date, location, ceremonyLoc
       `📍 Location: ${location}\n` +
       (ceremonyLocation ? `🏛️ Cerimonia: ${ceremonyLocation}\n` : '') +
       (ceremonyTime ? `⏰ Orario Cerimonia: ${ceremonyTime}\n` : '') +
-      `👥 Cliente: ${collaboratore.quote?.client?.firstName} ${collaboratore.quote?.client?.lastName}\n` +
-      `📱 Telefono Cliente: ${collaboratore.quote?.client?.phone}\n` +
+      `👥 Cliente: ${client.firstName} ${client.lastName}\n` +
+      `📱 Telefono Cliente: ${client.phone}\n` +
       `🎯 Il tuo ruolo: ${collaboratore.ruolo}\n\n` +
       `Per qualsiasi informazione, contattami.`
     );

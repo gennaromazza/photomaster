@@ -137,8 +137,8 @@ export function CollaboratoriQuote({
     staleTime: 3600000,
   });
 
-  const addMutation = useMutation(
-    async (data: CollaboratoreFormValues) => {
+  const addMutation = useMutation({
+    mutationFn: async (data: CollaboratoreFormValues) => {
       const res = await fetch(
         `/api/eventi/preventivo/${quoteId}/collaboratori`,
         {
@@ -157,26 +157,24 @@ export function CollaboratoriQuote({
       );
       return res.json();
     },
-    {
-      onSuccess: () => {
-        toast({
-          title: "Collaboratore assegnato",
-          description: "Assegnato con successo.",
-        });
-        queryClient.invalidateQueries({
-          queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
-        });
-        setIsDialogOpen(false);
-        form.reset();
-      },
-      onError: () =>
-        toast({
-          title: "Errore",
-          description: "Impossibile assegnare collaboratore.",
-          variant: "destructive",
-        }),
+    onSuccess: () => {
+      toast({
+        title: "Collaboratore assegnato",
+        description: "Assegnato con successo.",
+      });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
+      });
+      setIsDialogOpen(false);
+      form.reset();
     },
-  );
+    onError: () =>
+      toast({
+        title: "Errore",
+        description: "Impossibile assegnare collaboratore.",
+        variant: "destructive",
+      }),
+  });
 
   const removeMutation = useMutation(
     async (id: number) => {

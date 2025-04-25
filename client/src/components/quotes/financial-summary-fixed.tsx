@@ -794,13 +794,13 @@ export function FinancialSummary({
     return quoteStatus === "confermato" || quoteStatus === "approved";
   };
   
-  // Funzione per calcolare l'importo residuo da pagare (in euro, non centesimi)
+  // Funzione per calcolare l'importo residuo da pagare (in euro)
   const calculateRemainingAmount = (): number => {
     // Calcola l'importo totale già pagato nei pagamenti registrati (in euro)
     const totalPaid = transactions
       .filter((t: any) => t.type === "income" || t.type === "entrata")
       .reduce((sum: number, transaction: any) => {
-        return sum + transaction.amount / 100; // Converti da centesimi a euro
+        return sum + transaction.amount; // Gli importi sono già in euro dopo la standardizzazione
       }, 0);
     
     // Calcola l'importo residuo (in euro)
@@ -845,7 +845,7 @@ export function FinancialSummary({
       
       const installment = {
         quoteId,
-        amount: Math.round(installmentAmount * 100), // Converti in centesimi per il database
+        amount: installmentAmount, // Non serve più convertire in centesimi, tutti gli importi sono in euro
         dueDate,
         description: `Rata ${i + 1} di ${numberOfRates} per preventivo #${quoteId}`,
         status: "pending",

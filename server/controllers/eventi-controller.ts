@@ -114,33 +114,33 @@ export const getEventoDettaglio = async (req: Request, res: Response) => {
     
     // Calcola statistiche di pagamento
     // Incassi cliente
-    const pagamentiCliente = pagamentiEventoData.filter(p => 
+    const pagamentiCliente = pagamentiEventoData.filter((p: {tipo: string}) => 
       p.tipo === TipoPagamentoEvento.CLIENTE_ACCONTO || 
       p.tipo === TipoPagamentoEvento.CLIENTE_SALDO || 
       p.tipo === TipoPagamentoEvento.CLIENTE_EXTRA
     );
-    const totaleIncassi = pagamentiCliente.reduce((acc, p) => acc + Number(p.importo), 0);
+    const totaleIncassi = pagamentiCliente.reduce((acc: number, p: {importo: string|number}) => acc + Number(p.importo), 0);
     
     // Pagamenti collaboratori
-    const pagamentiCollaboratori = pagamentiEventoData.filter(p => 
+    const pagamentiCollaboratori = pagamentiEventoData.filter((p: {tipo: string}) => 
       p.tipo === TipoPagamentoEvento.COLLABORATORE_ACCONTO || 
       p.tipo === TipoPagamentoEvento.COLLABORATORE_SALDO
     );
-    const totalePagamentiCollaboratori = pagamentiCollaboratori.reduce((acc, p) => acc + Number(p.importo), 0);
+    const totalePagamentiCollaboratori = pagamentiCollaboratori.reduce((acc: number, p: {importo: string|number}) => acc + Number(p.importo), 0);
     
     // Pagamenti montaggi
-    const pagamentiMontaggi = pagamentiEventoData.filter(p => 
+    const pagamentiMontaggi = pagamentiEventoData.filter((p: {tipo: string}) => 
       p.tipo === TipoPagamentoEvento.MONTAGGIO_ACCONTO || 
       p.tipo === TipoPagamentoEvento.MONTAGGIO_SALDO
     );
-    const totalePagamentiMontaggi = pagamentiMontaggi.reduce((acc, p) => acc + Number(p.importo), 0);
+    const totalePagamentiMontaggi = pagamentiMontaggi.reduce((acc: number, p: {importo: string|number}) => acc + Number(p.importo), 0);
     
     // Pagamenti fornitori e altro
-    const altriPagamenti = pagamentiEventoData.filter(p => 
+    const altriPagamenti = pagamentiEventoData.filter((p: {tipo: string}) => 
       p.tipo === TipoPagamentoEvento.FORNITORE || 
       p.tipo === TipoPagamentoEvento.ALTRO
     );
-    const totaleAltriPagamenti = altriPagamenti.reduce((acc, p) => acc + Number(p.importo), 0);
+    const totaleAltriPagamenti = altriPagamenti.reduce((acc: number, p: {importo: string|number}) => acc + Number(p.importo), 0);
     
     // Calcola margine
     const margineLordo = totaleIncassi - totalePagamentiCollaboratori - totalePagamentiMontaggi - totaleAltriPagamenti;
@@ -385,7 +385,7 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
     
     // Gestione dell'eventuale pagamento associato al montaggio
     let pagamentoAcconto = null;
-    if (req.body.pagamentoAcconto && data.accontoImporto && data.accontoImporto > 0) {
+    if (req.body.pagamentoAcconto && data.accontoImporto && Number(data.accontoImporto) > 0) {
       const dataPagamento = new Date();
       
       // Crea un nuovo record di pagamento per l'acconto

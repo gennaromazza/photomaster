@@ -51,7 +51,7 @@ const requestBundleQuoteSchema = z.object({
   address: z.string().optional(),
   eventType: z.string().min(1, "Il tipo di evento è obbligatorio"),
   eventDate: z.date().optional(),
-  eventLocation: z.string().optional(),
+  location: z.string().optional(), // Cambio da eventLocation a location per allineamento con il DB
   message: z.string().optional(),
 });
 
@@ -73,7 +73,7 @@ export default function RequestQuoteFromBundlePage() {
       address: '',
       eventType: 'matrimonio',
       eventDate: undefined,
-      eventLocation: '',
+      location: '', // Cambio da eventLocation a location per allineamento con il DB
       message: '',
     },
   });

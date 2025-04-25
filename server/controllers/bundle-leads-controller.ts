@@ -171,75 +171,95 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
     let existingClient = null;
     let clientToUse = null;
     
-    try {
-      // Tentativo 1: Trova cliente con email esatta
-      existingClient = await db.query.clients.findFirst({
-        where: eq(clients.email, email),
-      });
-      
-      if (existingClient) {
-        console.log(`Cliente esistente trovato con email ${email}, ID: ${existingClient.id}`);
-      } else {
-        // Tentativo 2: Trova cliente con email case-insensitive usando SQL diretto
-        const clientsByEmail = await db.$queryRaw<any[]>`
-          SELECT * FROM clients WHERE LOWER(email) = LOWER(${email}) LIMIT 1
-        `;
+    // Se è stato fornito un ID di cliente esistente, lo utilizziamo direttamente
+    if (existingClientId) {
+      try {
+        existingClient = await db.query.clients.findFirst({
+          where: eq(clients.id, existingClientId),
+        });
         
-        if (clientsByEmail && clientsByEmail.length > 0) {
-          // Converti da snake_case a camelCase
-          existingClient = {
-            id: clientsByEmail[0].id,
-            firstName: clientsByEmail[0].first_name,
-            lastName: clientsByEmail[0].last_name,
-            email: clientsByEmail[0].email,
-            phone: clientsByEmail[0].phone || "",
-            address: clientsByEmail[0].address || "",
-            company: clientsByEmail[0].company || "",
-            postalCode: clientsByEmail[0].postal_code || "",
-            city: clientsByEmail[0].city || "",
-            province: clientsByEmail[0].province || "",
-            state: clientsByEmail[0].state || "",
-            taxCode: clientsByEmail[0].tax_code || "",
-            notes: clientsByEmail[0].notes || "",
-            createdAt: clientsByEmail[0].created_at,
-            updatedAt: clientsByEmail[0].updated_at
-          };
-          console.log(`Cliente trovato con email case-insensitive ${email}, ID: ${existingClient.id}`);
+        if (existingClient) {
+          console.log(`Cliente recuperato tramite ID ${existingClientId}`);
         } else {
-          // Tentativo 3: Cerca clienti con nome e cognome simili
-          const nameMatch = await db.$queryRaw<any[]>`
-            SELECT * FROM clients 
-            WHERE LOWER(first_name) = LOWER(${firstName}) 
-            AND LOWER(last_name) = LOWER(${lastName})
-            LIMIT 1
+          console.log(`Nessun cliente trovato con ID ${existingClientId}, procedendo con ricerca alternativa`);
+        }
+      } catch (idError) {
+        console.error(`Errore nel recupero del cliente con ID ${existingClientId}:`, idError);
+      }
+    }
+    
+    // Se non abbiamo trovato il cliente tramite ID, proviamo con email o altri metodi
+    if (!existingClient) {
+      try {
+        // Tentativo 1: Trova cliente con email esatta
+        existingClient = await db.query.clients.findFirst({
+          where: eq(clients.email, email),
+        });
+        
+        if (existingClient) {
+          console.log(`Cliente esistente trovato con email ${email}, ID: ${existingClient.id}`);
+        } else {
+          // Tentativo 2: Trova cliente con email case-insensitive usando SQL diretto
+          const clientsByEmail = await db.$queryRaw<any[]>`
+            SELECT * FROM clients WHERE LOWER(email) = LOWER(${email}) LIMIT 1
           `;
           
-          if (nameMatch && nameMatch.length > 0) {
+          if (clientsByEmail && clientsByEmail.length > 0) {
             // Converti da snake_case a camelCase
             existingClient = {
-              id: nameMatch[0].id,
-              firstName: nameMatch[0].first_name,
-              lastName: nameMatch[0].last_name,
-              email: email, // Aggiorniamo con l'email fornita
-              phone: nameMatch[0].phone || phone || "",
-              address: nameMatch[0].address || address || "",
-              company: nameMatch[0].company || "",
-              postalCode: nameMatch[0].postal_code || "",
-              city: nameMatch[0].city || "",
-              province: nameMatch[0].province || "",
-              state: nameMatch[0].state || "",
-              taxCode: nameMatch[0].tax_code || "",
-              notes: nameMatch[0].notes || "",
-              createdAt: nameMatch[0].created_at,
-              updatedAt: new Date()
+              id: clientsByEmail[0].id,
+              firstName: clientsByEmail[0].first_name,
+              lastName: clientsByEmail[0].last_name,
+              email: clientsByEmail[0].email,
+              phone: clientsByEmail[0].phone || "",
+              address: clientsByEmail[0].address || "",
+              company: clientsByEmail[0].company || "",
+              postalCode: clientsByEmail[0].postal_code || "",
+              city: clientsByEmail[0].city || "",
+              province: clientsByEmail[0].province || "",
+              state: clientsByEmail[0].state || "",
+              taxCode: clientsByEmail[0].tax_code || "",
+              notes: clientsByEmail[0].notes || "",
+              createdAt: clientsByEmail[0].created_at,
+              updatedAt: clientsByEmail[0].updated_at
             };
-            console.log(`Cliente trovato con nome e cognome simili, ID: ${existingClient.id}`);
+            console.log(`Cliente trovato con email case-insensitive ${email}, ID: ${existingClient.id}`);
+          } else {
+            // Tentativo 3: Cerca clienti con nome e cognome simili
+            const nameMatch = await db.$queryRaw<any[]>`
+              SELECT * FROM clients 
+              WHERE LOWER(first_name) = LOWER(${firstName}) 
+              AND LOWER(last_name) = LOWER(${lastName})
+              LIMIT 1
+            `;
+            
+            if (nameMatch && nameMatch.length > 0) {
+              // Converti da snake_case a camelCase
+              existingClient = {
+                id: nameMatch[0].id,
+                firstName: nameMatch[0].first_name,
+                lastName: nameMatch[0].last_name,
+                email: email, // Aggiorniamo con l'email fornita
+                phone: nameMatch[0].phone || phone || "",
+                address: nameMatch[0].address || address || "",
+                company: nameMatch[0].company || "",
+                postalCode: nameMatch[0].postal_code || "",
+                city: nameMatch[0].city || "",
+                province: nameMatch[0].province || "",
+                state: nameMatch[0].state || "",
+                taxCode: nameMatch[0].tax_code || "",
+                notes: nameMatch[0].notes || "",
+                createdAt: nameMatch[0].created_at,
+                updatedAt: new Date()
+              };
+              console.log(`Cliente trovato con nome e cognome simili, ID: ${existingClient.id}`);
+            }
           }
         }
+      } catch (searchError) {
+        console.error("Errore nella ricerca avanzata del cliente:", searchError);
+        // Continuiamo con existingClient = null, creeremo un nuovo cliente
       }
-    } catch (searchError) {
-      console.error("Errore nella ricerca avanzata del cliente:", searchError);
-      // Continuiamo con existingClient = null, creeremo un nuovo cliente
     }
     
     if (existingClient) {

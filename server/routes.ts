@@ -109,9 +109,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.use(csrfProtection);
 
   // Client routes
-  // Endpoints per la validazione dei clienti - non richiede autenticazione
-  apiRouter.post("/client-validation/check-existing", checkExistingClient);
-  apiRouter.get("/client-validation/search", searchClients);
+  // Questi endpoint sono stati spostati al router client-validation
+  // apiRouter.post("/client-validation/check-existing", checkExistingClient);
+  // apiRouter.get("/client-validation/search", searchClients);
 
   apiRouter.get("/clients", async (req, res) => {
     try {
@@ -3530,6 +3530,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/selection", selectionRouter);
   app.use("/api/clauses", isAuthenticated, clausesRouter);
   app.use("/api/notifications", isAuthenticated, notificationsRouter);
+  
+  // Rotta per la validazione dei clienti (pubblica, non richiede autenticazione)
+  app.use("/api/client-validation", clientValidationRouter);
   
   // Nuova rotta standardizzata per i collaboratori (versione inglese)
   app.use("/api/collaborators", isAuthenticated, collaboratorsRouter);

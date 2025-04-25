@@ -1,13 +1,15 @@
+import React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Mail, Phone, MapPin, User2, Check, ArrowRightCircle } from "lucide-react";
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { User, Phone, MapPin, Mail, Building2 } from 'lucide-react';
 
 interface ExistingClientModalProps {
   isOpen: boolean;
@@ -32,81 +34,82 @@ export function ExistingClientModal({
   onSelectClient,
   onContinue,
 }: ExistingClientModalProps) {
-  if (!clients || clients.length === 0) {
-    return null;
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Abbiamo trovato un cliente con informazioni simili</DialogTitle>
+          <DialogTitle>Cliente esistente trovato</DialogTitle>
           <DialogDescription>
-            Abbiamo trovato {clients.length === 1 ? "un cliente esistente" : `${clients.length} clienti esistenti`} 
-            con questi dati. Se sei già nostro cliente, seleziona il tuo profilo. In caso contrario, clicca su "Continua come nuovo cliente".
+            Abbiamo trovato un cliente già registrato con queste informazioni. Si tratta di te o qualcun altro?
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-          {clients.map((client) => (
-            <div 
-              key={client.id} 
-              className="border rounded-lg p-4 shadow-sm hover:border-primary transition-colors cursor-pointer"
-              onClick={() => onSelectClient(client.id)}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-medium text-lg flex items-center">
-                  <User2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                  {client.firstName} {client.lastName}
-                </h3>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-7 px-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectClient(client.id);
-                  }}
-                >
-                  <Check className="h-4 w-4 mr-1" />
-                  Seleziona
-                </Button>
-              </div>
-              
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                <li className="flex items-start">
-                  <Mail className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                  <span className="text-primary truncate">{client.email}</span>
-                </li>
-                {client.phone && (
-                  <li className="flex items-start">
-                    <Phone className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <span>{client.phone}</span>
-                  </li>
-                )}
-                {client.address && (
-                  <li className="flex items-start">
-                    <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <span className="truncate">{client.address}</span>
-                  </li>
-                )}
-              </ul>
+        <div className="max-h-[60vh] overflow-y-auto p-2">
+          {clients.length > 0 ? (
+            <div className="space-y-4">
+              {clients.map((client) => (
+                <Card key={client.id} className="overflow-hidden border border-gray-200 hover:border-primary/50 transition-colors">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <User className="h-4 w-4 text-primary" />
+                        <span className="font-medium">
+                          {client.firstName} {client.lastName}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Mail className="h-4 w-4 text-primary" />
+                        <span>{client.email}</span>
+                      </div>
+                      
+                      {client.phone && (
+                        <div className="flex items-center space-x-2">
+                          <Phone className="h-4 w-4 text-primary" />
+                          <span>{client.phone}</span>
+                        </div>
+                      )}
+                      
+                      {client.address && (
+                        <div className="flex items-center space-x-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          <span>{client.address}</span>
+                        </div>
+                      )}
+                      
+                      {client.company && (
+                        <div className="flex items-center space-x-2">
+                          <Building2 className="h-4 w-4 text-primary" />
+                          <span>{client.company}</span>
+                        </div>
+                      )}
+                      
+                      <Button 
+                        variant="outline" 
+                        className="mt-2 w-full"
+                        onClick={() => onSelectClient(client.id)}
+                      >
+                        Seleziona questo cliente
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          ))}
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Nessun cliente trovato</p>
+            </div>
+          )}
         </div>
 
-        <DialogFooter className="flex justify-between">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-2">
           <Button
+            type="button"
             variant="outline"
             onClick={onContinue}
           >
             Continua come nuovo cliente
-          </Button>
-          <Button 
-            onClick={onClose}
-            variant="ghost"
-          >
-            Annulla
           </Button>
         </DialogFooter>
       </DialogContent>

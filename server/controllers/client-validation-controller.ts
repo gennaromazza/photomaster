@@ -1,121 +1,163 @@
 import { Request, Response } from "express";
-import { db as dbAny } from "../db";
+import { db } from "../db";
+import { eq, or, and, desc, asc, sql, ilike } from "drizzle-orm";
 import { clients } from "@shared/schema";
-import { eq, or, ilike, and, sql, type SQL } from "drizzle-orm";
-import { storage } from "../storage";
-import type { Client } from "@shared/schema";
-
-const db = dbAny as any;
 
 /**
- * Controlla se esiste già un cliente con la stessa email o telefono
+ * Verifica se esiste già un cliente con la stessa email o telefono
  */
 export const checkExistingClient = async (req: Request, res: Response) => {
   try {
     const { email, phone } = req.query;
-    
+
     if (!email && !phone) {
-      return res.status(400).json({
-        exists: false,
-        clients: [],
-        message: "Devi fornire almeno un'email o un numero di telefono"
+      return res.status(400).json({ 
+        message: "È necessario fornire almeno un'email o un numero di telefono" 
       });
     }
+
+    // Crea un array di condizioni per la ricerca
+    const searchConditions = [];
     
-    const queryConditions = [];
-    
-    if (email && typeof email === 'string' && email.trim() !== '') {
-      queryConditions.push(eq(clients.email, email.trim().toLowerCase()));
+    if (email) {
+      searchConditions.push(eq(clients.email, email.toString()));
     }
     
-    if (phone && typeof phone === 'string' && phone.trim() !== '') {
-      queryConditions.push(eq(clients.phone, phone.trim()));
+    if (phone) {
+      searchConditions.push(eq(clients.phone, phone.toString()));
     }
-    
-    if (queryConditions.length === 0) {
-      return res.status(400).json({
+
+    // Cerca clienti che corrispondono a uno qualsiasi dei criteri
+    const matchingClients = await db
+      .select()
+      .from(clients)
+      .where(or(...searchConditions))
+      .limit(5);
+
+    if (matchingClients.length > 0) {
+      return res.status(200).json({
+        exists: true,
+        clients: matchingClients,
+        message: "Clienti esistenti trovati"
+      });
+    } else {
+      return res.status(200).json({
         exists: false,
         clients: [],
-        message: "Parametri di ricerca non validi"
+        message: "Nessun cliente trovato"
       });
     }
-    
-    const existingClients = await db.select().from(clients).where(or(...queryConditions));
-    
-    return res.json({
-      exists: existingClients.length > 0,
-      clients: existingClients,
-      message: existingClients.length > 0 
-        ? `Trovati ${existingClients.length} clienti con queste informazioni` 
-        : "Nessun cliente trovato"
-    });
   } catch (error: any) {
-    console.error("Errore durante la verifica del cliente esistente:", error);
-    return res.status(500).json({
-      exists: false,
-      clients: [],
-      message: `Errore durante la verifica: ${error.message}`
-    });
+    console.error("Errore nella ricerca di clienti esistenti:", error);
+    return res
+      .status(500)
+      .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
   }
 };
 
 /**
- * Ricerca clienti con supporto per paginazione e ricerca full-text
+ * Cerca clienti con criteri avanzati
  */
 export const searchClients = async (req: Request, res: Response) => {
   try {
-    const { query, page = "1", limit = "10" } = req.query;
-    const pageNum = parseInt(page as string, 10);
-    const limitNum = parseInt(limit as string, 10);
-    const offset = (pageNum - 1) * limitNum;
+    const { 
+      query = "", 
+      page = "1", 
+      limit = "10",
+      sortBy = "lastName",
+      sortDir = "asc"
+    } = req.query;
+
+    const pageNumber = parseInt(page.toString());
+    const limitNumber = parseInt(limit.toString());
+    const offset = (pageNumber - 1) * limitNumber;
     
-    // Costruisci la query di ricerca
-    let queryConditions: SQL | undefined;
-    if (query && typeof query === 'string' && query.trim() !== '') {
-      const searchQuery = `%${query.trim().toLowerCase()}%`;
-      queryConditions = or(
-        ilike(clients.firstName, searchQuery),
-        ilike(clients.lastName, searchQuery),
-        ilike(clients.email, searchQuery),
-        ilike(clients.phone, searchQuery),
-        ilike(clients.address, searchQuery),
-        ilike(clients.city, searchQuery),
-        ilike(clients.companyName || '', searchQuery)
+    const sortDirection = sortDir === "desc" ? desc : asc;
+    let sortColumn;
+    
+    // Gestisci la colonna di ordinamento
+    switch (sortBy) {
+      case "firstName":
+        sortColumn = clients.firstName;
+        break;
+      case "email":
+        sortColumn = clients.email;
+        break;
+      case "phone":
+        sortColumn = clients.phone;
+        break;
+      case "createdAt":
+        sortColumn = clients.createdAt;
+        break;
+      default:
+        sortColumn = clients.lastName; // default
+    }
+
+    let dbQuery = db.select().from(clients);
+    
+    // Aggiungi condizioni di ricerca solo se è presente una query
+    if (query && query.toString().trim() !== "") {
+      const searchTerm = query.toString().toLowerCase();
+      
+      dbQuery = dbQuery.where(
+        or(
+          sql`LOWER(${clients.firstName}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.lastName}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.email}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.phone}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.address}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.company}) LIKE ${'%' + searchTerm + '%'}`
+        )
       );
     }
     
-    // Ottieni il conteggio totale
-    const totalCountResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(clients)
-      .where(queryConditions || sql`TRUE`);
+    // Applica ordinamento, paginazione e recupera i risultati
+    const clientResults = await dbQuery
+      .orderBy(sortDirection(sortColumn))
+      .limit(limitNumber)
+      .offset(offset);
     
-    const totalCount = parseInt(totalCountResult[0].count.toString(), 10);
-    const totalPages = Math.ceil(totalCount / limitNum);
+    // Conta il totale di record per la paginazione
+    let totalCountQuery = db.select({ count: sql<number>`count(*)` }).from(clients);
     
-    // Esegui la query principale con paginazione
-    const result = await db
-      .select()
-      .from(clients)
-      .where(queryConditions || sql`TRUE`)
-      .orderBy(clients.lastName, clients.firstName)
-      .offset(offset)
-      .limit(limitNum);
+    // Se c'è una query di ricerca, applica le stesse condizioni al conteggio
+    if (query && query.toString().trim() !== "") {
+      const searchTerm = query.toString().toLowerCase();
+      
+      totalCountQuery = totalCountQuery.where(
+        or(
+          sql`LOWER(${clients.firstName}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.lastName}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.email}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.phone}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.address}) LIKE ${'%' + searchTerm + '%'}`,
+          sql`LOWER(${clients.company}) LIKE ${'%' + searchTerm + '%'}`
+        )
+      );
+    }
     
-    return res.json({
-      clients: result,
+    const [totalCount] = await totalCountQuery;
+    
+    // Calcola informazioni di paginazione
+    const totalPages = Math.ceil(totalCount.count / limitNumber);
+    const hasNextPage = pageNumber < totalPages;
+    const hasPrevPage = pageNumber > 1;
+    
+    return res.status(200).json({
+      clients: clientResults,
       pagination: {
-        page: pageNum,
-        limit: limitNum,
-        totalCount,
+        total: totalCount.count,
+        page: pageNumber,
+        limit: limitNumber,
         totalPages,
-        hasMore: pageNum < totalPages
+        hasNextPage,
+        hasPrevPage
       }
     });
   } catch (error: any) {
-    console.error("Errore durante la ricerca dei clienti:", error);
-    return res.status(500).json({
-      message: `Errore durante la ricerca: ${error.message}`
-    });
+    console.error("Errore nella ricerca avanzata di clienti:", error);
+    return res
+      .status(500)
+      .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
   }
 };

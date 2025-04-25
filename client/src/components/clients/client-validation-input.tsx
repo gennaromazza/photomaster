@@ -1,36 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { useClientValidation } from '@/hooks/use-client-validation';
-import { ExistingClientModal } from '@/components/clients/existing-client-modal';
+import { ExistingClientModal } from './existing-client-modal';
 
-interface ClientValidationInputProps {
-  type: "email" | "tel";
+interface ClientValidationInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement> | string) => void;
   onClientFound?: (client: any) => void;
-  placeholder?: string;
-  className?: string;
-  disabled?: boolean;
-  required?: boolean;
-  skipValidation?: boolean;
-  validateDelay?: number;
+  debounceMs?: number;
+  validateOn?: 'change' | 'blur';
 }
 
 export function ClientValidationInput({
-  type,
+  type = 'text',
   value,
   onChange,
   onClientFound,
-  placeholder,
-  className = "",
-  disabled = false,
-  required = false,
-  skipValidation = false,
-  validateDelay = 800,
+  debounceMs = 500,
+  validateOn = 'blur',
+  ...props
 }: ClientValidationInputProps) {
   const [inputValue, setInputValue] = useState(value);
-  const timerRef = useRef<NodeJS.Timeout>();
+  const [hasBlurred, setHasBlurred] = useState(false);
   
   const {
     checkExistingClient,
@@ -39,79 +31,94 @@ export function ClientValidationInput({
     setIsModalOpen,
     selectExistingClient,
     continueWithNewClient,
-    isChecking,
+    isChecking
   } = useClientValidation();
 
-  // Aggiorna lo stato locale quando il valore della prop cambia
+  // Aggiorna lo stato locale quando value cambia dall'esterno
   useEffect(() => {
     setInputValue(value);
   }, [value]);
 
-  useEffect(() => {
-    // Pulizia del timer quando il componente viene smontato
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Gestisci il cambio dell'input
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
-    onChange(newValue);
-
-    // Annulla il timer precedente
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-
-    // Imposta un nuovo timer per fare il controllo dopo il delay
-    if (!skipValidation && newValue.trim() !== '') {
-      timerRef.current = setTimeout(async () => {
-        if (type === 'email') {
-          // Verifica se è una email valida prima di fare la chiamata API
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (emailRegex.test(newValue)) {
-            await checkExistingClient(newValue, undefined);
-          }
-        } else if (type === 'tel') {
-          // Verifica che ci siano almeno 6 numeri nel telefono
-          const phoneRegex = /.*\d{6}.*/;
-          if (phoneRegex.test(newValue)) {
-            await checkExistingClient(undefined, newValue);
-          }
-        }
-      }, validateDelay);
+    onChange(e);
+    
+    // Se validateOn è 'change', verifica dopo il debounce
+    if (validateOn === 'change' && newValue.trim() !== '') {
+      debouncedValidate(newValue);
     }
   };
 
+  // Gestisci il blur dell'input
+  const handleBlur = async () => {
+    setHasBlurred(true);
+    
+    // Verifica solo se è il primo blur e c'è un valore
+    if (validateOn === 'blur' && inputValue.trim() !== '') {
+      validateField();
+    }
+  };
+
+  // Funzione di validazione
+  const validateField = async () => {
+    // Se è email, valida con email
+    if (type === 'email' && inputValue) {
+      const clientExists = await checkExistingClient(inputValue, undefined);
+      return clientExists;
+    }
+    
+    // Se è telefono, valida con telefono
+    if (type === 'tel' && inputValue) {
+      const clientExists = await checkExistingClient(undefined, inputValue);
+      return clientExists;
+    }
+    
+    return false;
+  };
+
+  // Implementazione di un debounce semplice
+  const debouncedValidate = (() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    return (value: string) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (value.trim() !== '') {
+          validateField();
+        }
+      }, debounceMs);
+    };
+  })();
+
+  // Gestisci la selezione di un cliente esistente
   const handleSelectClient = (clientId: number) => {
     const selectedClient = selectExistingClient(clientId);
+    
     if (selectedClient && onClientFound) {
       onClientFound(selectedClient);
     }
   };
 
   return (
-    <>
+    <div className="relative w-full">
       <div className="relative">
         <Input
-          type={type === 'email' ? 'email' : 'tel'}
+          type={type}
           value={inputValue}
           onChange={handleInputChange}
-          placeholder={placeholder}
-          className={`${className} ${isChecking ? 'pr-10' : ''}`}
-          disabled={disabled}
-          required={required}
+          onBlur={handleBlur}
+          className={`w-full ${isChecking ? 'pr-10' : ''}`}
+          {...props}
         />
         {isChecking && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <Loader2 className="animate-spin h-4 w-4 text-muted-foreground" />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
           </div>
         )}
       </div>
-
+      
       <ExistingClientModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -119,6 +126,6 @@ export function ClientValidationInput({
         onSelectClient={handleSelectClient}
         onContinue={continueWithNewClient}
       />
-    </>
+    </div>
   );
 }

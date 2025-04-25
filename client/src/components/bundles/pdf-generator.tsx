@@ -7,6 +7,9 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { formatDate } from './request-summary';
 
+// Aggiungo i font necessari
+import 'jspdf-autotable';
+
 interface PdfGeneratorProps {
   lead: BundleLead & {
     bundle: ServiceBundle & {
@@ -34,7 +37,18 @@ interface PdfGeneratorProps {
 }
 
 export default function PdfGenerator({ lead, settings }: PdfGeneratorProps) {
-  // Versione più semplice del generatore PDF senza html2canvas
+  // Definizione di colori in stile "country vintage"
+  const colors = {
+    primary: '#7A4E38',       // Marrone caldo (country)
+    secondary: '#D4B996',     // Beige vintage
+    accent: '#A67F5D',        // Marrone chiaro
+    text: '#4A4A4A',          // Grigio scuro
+    lightText: '#6D6D6D',     // Grigio chiaro
+    background: '#F9F5F0',    // Crema chiaro (sfondo)
+    border: '#D1C0A8'         // Beige bordi
+  };
+
+  // PDF generator con stile migliorato
   const generatePDF = async () => {
     try {
       // Prepara i dati
@@ -47,121 +61,298 @@ export default function PdfGenerator({ lead, settings }: PdfGeneratorProps) {
         return sum + ((item.service?.price || 0) * item.quantity);
       }, 0) || 0;
 
+      // Calcolo prezzo scontato se disponibile
+      let discountedPrice = totalAmount;
+      let discountText = '';
+      
+      if (lead.bundle?.discountType && lead.bundle?.discountValue > 0) {
+        if (lead.bundle.discountType === 'percentage') {
+          discountedPrice = totalAmount - (totalAmount * lead.bundle.discountValue / 100);
+          discountText = `${lead.bundle.discountValue}%`;
+        } else {
+          discountedPrice = Math.max(0, totalAmount - lead.bundle.discountValue);
+          discountText = `€${lead.bundle.discountValue.toFixed(2)}`;
+        }
+      }
+
       // Crea un nuovo documento PDF (orientamento portrait, unità in millimetri, formato A4)
       const pdf = new jsPDF();
       
+      // Imposta lo sfondo con colore vintage chiaro
+      pdf.setFillColor(colors.background);
+      pdf.rect(0, 0, 210, 297, 'F');
+      
+      // Imposta colore testo predefinito
+      pdf.setTextColor(colors.text);
+      
       // Impostazioni per il testo
       const lineHeight = 8;
-      let y = 20; // posizione verticale iniziale
+      let y = 15; // posizione verticale iniziale
       
       // Funzione di utilità per aggiungere testo
-      const addText = (text: string, fontSize = 12, isBold = false, align = 'left') => {
+      const addText = (text: string, fontSize = 12, isBold = false, align = 'left', color = colors.text) => {
         pdf.setFontSize(fontSize);
         isBold ? pdf.setFont('helvetica', 'bold') : pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(color);
         pdf.text(text, align === 'center' ? 105 : align === 'right' ? 200 : 20, y, { align });
         y += lineHeight;
       };
       
-      // Aggiungi intestazione
-      addText(settings?.companyName || 'Studio Fotografico', 16, true, 'center');
-      y += 5;
-      addText('Riepilogo Richiesta Preventivo', 14, true, 'center');
+      // Funzione per aggiungere una sezione con titolo e bordo stilizzato
+      const addSection = (title: string, startY: number) => {
+        // Titolo della sezione
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(14);
+        pdf.setTextColor(colors.primary);
+        pdf.text(title, 20, startY);
+        
+        // Linea decorativa sotto il titolo
+        pdf.setDrawColor(colors.primary);
+        pdf.setLineWidth(0.5);
+        pdf.line(20, startY + 2, 190, startY + 2);
+        
+        // Cornice decorativa attorno alla sezione
+        pdf.setDrawColor(colors.border);
+        pdf.setLineWidth(0.2);
+        pdf.roundedRect(15, startY - 5, 180, 2, 2, 2, 'S');
+        
+        return startY + 10;
+      };
+      
+      // Intestazione con logo (se disponibile) e nome studio
+      if (settings?.companyLogo) {
+        try {
+          // Se il logo è disponibile, lo aggiungiamo
+          const logoSize = 25;
+          const logoX = 105 - (logoSize / 2);
+          pdf.addImage(settings.companyLogo, 'PNG', logoX, y, logoSize, logoSize);
+          y += logoSize + 5;
+        } catch (e) {
+          console.error('Errore caricamento logo:', e);
+        }
+      }
+      
+      // Nome studio e titolo documento
+      addText(settings?.companyName || 'Image Studios', 20, true, 'center', colors.primary);
+      y += 3;
+      addText('Riepilogo Richiesta Preventivo', 16, true, 'center', colors.accent);
       y += 10;
+      
+      // Aggiungi data documento in alto a destra con stile elegante
+      pdf.setFontSize(9);
+      pdf.setTextColor(colors.lightText);
+      pdf.text(`Generato il ${format(new Date(), 'dd MMMM yyyy', { locale: it })}`, 190, 10, { align: 'right' });
       
       // Informazioni cliente
-      addText('Informazioni Cliente', 14, true);
-      pdf.line(20, y, 190, y);
-      y += 10;
+      y = addSection('Informazioni Cliente', y);
       
-      addText(`Nome: ${fullName}`, 12);
-      addText(`Email: ${lead.email}`, 12);
-      addText(`Telefono: ${lead.phone || 'Non specificato'}`, 12);
-      addText(`Data Richiesta: ${requestDate}`, 12);
+      // Tabella info cliente con stile elegante
+      const clientInfo = [
+        ['Nome:', fullName],
+        ['Email:', lead.email],
+        ['Telefono:', lead.phone || 'Non specificato'],
+        ['Data Richiesta:', requestDate]
+      ];
+      
+      // Definizione colonne tabella cliente
+      const clientTableWidth = 150;
+      const col1Width = 40;
+      const col2Width = clientTableWidth - col1Width;
+      
+      // Crea tabella info cliente con stile
+      for (const [label, value] of clientInfo) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(colors.primary);
+        pdf.text(label, 30, y);
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(colors.text);
+        pdf.text(value, 30 + col1Width, y);
+        
+        y += 8;
+      }
+      
       y += 5;
       
       // Dettagli pacchetto
-      addText('Dettagli Pacchetto', 14, true);
-      pdf.line(20, y, 190, y);
-      y += 10;
+      y = addSection('Dettagli Pacchetto', y);
       
-      addText(`Nome Pacchetto: ${lead.bundle?.name || 'Pacchetto non specificato'}`, 12);
-      addText(`Tipo Evento: ${lead.bundle?.eventType || 'Non specificato'}`, 12);
-      addText(`Data Evento: ${eventDate}`, 12);
-      addText(`Location: ${lead.bundle?.location || 'Non specificata'}`, 12);
-      y += 5;
+      // Tabella dettagli pacchetto
+      const packageDetails = [
+        ['Nome Pacchetto:', lead.bundle?.name || 'Pacchetto non specificato'],
+        ['Tipo Evento:', lead.bundle?.eventType || 'Non specificato'],
+        ['Data Evento:', eventDate],
+        ['Location:', lead.bundle?.location || 'Non specificata']
+      ];
       
-      // Descrizione
+      // Crea tabella dettagli pacchetto
+      for (const [label, value] of packageDetails) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(colors.primary);
+        pdf.text(label, 30, y);
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(colors.text);
+        pdf.text(value, 30 + col1Width, y);
+        
+        y += 8;
+      }
+      
+      // Descrizione con stile elegante
       if (lead.bundle?.description) {
-        addText('Descrizione:', 12, true);
-        const descriptionLines = pdf.splitTextToSize(lead.bundle.description, 170);
-        pdf.text(descriptionLines, 20, y);
-        y += descriptionLines.length * lineHeight + 5;
+        pdf.setFont('helvetica', 'italic');
+        pdf.setTextColor(colors.lightText);
+        pdf.setFontSize(11);
+        
+        // Sfondo per la descrizione
+        pdf.setFillColor(colors.background);
+        pdf.roundedRect(25, y, 160, 20, 2, 2, 'F');
+        
+        // Bordo sottile
+        pdf.setDrawColor(colors.border);
+        pdf.roundedRect(25, y, 160, 20, 2, 2, 'S');
+        
+        // Testo della descrizione
+        const descriptionLines = pdf.splitTextToSize(lead.bundle.description, 150);
+        pdf.text(descriptionLines, 30, y + 5);
+        
+        y += Math.max(25, descriptionLines.length * lineHeight + 10);
+      } else {
+        y += 5;
       }
       
       // Servizi inclusi
-      addText('Servizi Inclusi', 14, true);
-      pdf.line(20, y, 190, y);
-      y += 10;
-      
-      // Tabella dei servizi
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Servizio', 20, y);
-      pdf.text('Prezzo', 130, y);
-      pdf.text('Qtà', 150, y);
-      pdf.text('Totale', 170, y);
-      y += 6;
-      
-      pdf.line(20, y, 190, y);
+      y = addSection('Servizi Inclusi', y);
       y += 5;
       
-      // Righe della tabella
+      // Styling per la tabella dei servizi
       if (lead.bundle?.items?.length) {
-        pdf.setFont('helvetica', 'normal');
-        for (const item of lead.bundle.items) {
+        // Preparazione dati per la tabella
+        const tableHeaders = [['Servizio', 'Prezzo', 'Qtà', 'Totale']];
+        const tableData = lead.bundle.items.map(item => {
           const servicePrice = item.service?.price || 0;
           const serviceTotal = servicePrice * item.quantity;
           const serviceName = item.service?.name || 'Servizio non disponibile';
           
-          pdf.text(serviceName, 20, y);
-          pdf.text(`€${servicePrice.toFixed(2)}`, 130, y);
-          pdf.text(`${item.quantity}`, 150, y);
-          pdf.text(`€${serviceTotal.toFixed(2)}`, 170, y);
-          y += 7;
-        }
+          return [
+            serviceName,
+            `€${servicePrice.toFixed(2)}`,
+            `${item.quantity}`,
+            `€${serviceTotal.toFixed(2)}`
+          ];
+        });
+        
+        // Uso di autoTable per una tabella più elegante
+        (pdf as any).autoTable({
+          head: tableHeaders,
+          body: tableData,
+          startY: y,
+          theme: 'plain',
+          headStyles: {
+            fillColor: colors.accent,
+            textColor: '#FFFFFF',
+            fontStyle: 'bold',
+            halign: 'left'
+          },
+          styles: {
+            textColor: colors.text,
+            fontSize: 10
+          },
+          columnStyles: {
+            0: { cellWidth: 80 },
+            1: { cellWidth: 30, halign: 'right' },
+            2: { cellWidth: 15, halign: 'center' },
+            3: { cellWidth: 30, halign: 'right' }
+          },
+          alternateRowStyles: {
+            fillColor: colors.background
+          }
+        });
+        
+        // Aggiorna la posizione verticale dopo la tabella
+        y = (pdf as any).lastAutoTable.finalY + 10;
       } else {
-        pdf.text('Nessun servizio incluso nel pacchetto', 20, y);
-        y += 7;
+        pdf.setFont('helvetica', 'italic');
+        pdf.setTextColor(colors.lightText);
+        pdf.setFontSize(11);
+        pdf.text('Nessun servizio incluso nel pacchetto', 30, y);
+        y += 15;
       }
       
-      // Linea di separazione
-      pdf.line(20, y, 190, y);
-      y += 6;
+      // Riepilogo prezzi in un box elegante
+      pdf.setFillColor('#FFFFFF');
+      pdf.setDrawColor(colors.border);
+      pdf.roundedRect(110, y, 70, lead.bundle?.discountType && lead.bundle?.discountValue > 0 ? 40 : 20, 3, 3, 'FD');
       
-      // Totale
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Totale Pacchetto:', 130, y);
-      pdf.text(`€${totalAmount.toFixed(2)}`, 170, y);
-      y += 15;
+      pdf.setFontSize(12);
+      pdf.setTextColor(colors.primary);
+      pdf.text('Riepilogo Prezzi', 120, y + 7);
       
-      // Messaggio del cliente
-      if (lead.message) {
-        addText('Messaggio Cliente:', 12, true);
-        const messageLines = pdf.splitTextToSize(lead.message, 170);
+      // Linea separatrice decorativa
+      pdf.setDrawColor(colors.accent);
+      pdf.line(120, y + 9, 170, y + 9);
+      
+      if (lead.bundle?.discountType && lead.bundle?.discountValue > 0) {
+        // Prezzo originale
         pdf.setFont('helvetica', 'normal');
-        pdf.text(messageLines, 20, y);
-        y += messageLines.length * lineHeight + 10;
+        pdf.setFontSize(10);
+        pdf.setTextColor(colors.lightText);
+        pdf.text('Prezzo Originale:', 115, y + 17);
+        pdf.text(`€${totalAmount.toFixed(2)}`, 175, y + 17, { align: 'right' });
+        
+        // Sconto
+        pdf.text('Sconto:', 115, y + 25);
+        pdf.text(discountText, 175, y + 25, { align: 'right' });
+        
+        // Totale scontato
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.setTextColor(colors.accent);
+        pdf.text('Totale Scontato:', 115, y + 33);
+        pdf.text(`€${discountedPrice.toFixed(2)}`, 175, y + 33, { align: 'right' });
+      } else {
+        // Totale (senza sconto)
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(colors.accent);
+        pdf.text('Totale Pacchetto:', 115, y + 17);
+        pdf.text(`€${totalAmount.toFixed(2)}`, 175, y + 17, { align: 'right' });
       }
       
-      // Note a piè di pagina
-      y = 270; // Posizione fissa per il piè di pagina
+      y += lead.bundle?.discountType && lead.bundle?.discountValue > 0 ? 50 : 30;
+      
+      // Messaggio del cliente in un box stilizzato
+      if (lead.message) {
+        y = addSection('Messaggio Cliente', y);
+        
+        // Box per il messaggio
+        pdf.setFillColor('#FFFFFF');
+        pdf.setDrawColor(colors.border);
+        pdf.roundedRect(20, y, 170, 40, 3, 3, 'FD');
+        
+        // Testo messaggio
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(10);
+        pdf.setTextColor(colors.text);
+        
+        const messageLines = pdf.splitTextToSize(lead.message, 160);
+        pdf.text(messageLines, 25, y + 7);
+        
+        y += Math.max(45, messageLines.length * lineHeight + 14);
+      }
+      
+      // Footer elegante
+      pdf.setDrawColor(colors.primary);
+      pdf.setFillColor(colors.primary);
+      pdf.rect(0, 277, 210, 20, 'F');
+      
+      pdf.setTextColor('#FFFFFF');
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('Questa è una richiesta di preventivo. Il preventivo definitivo sarà inviato dallo studio.', 20, y);
-      y += 5;
-      pdf.text(`Per informazioni: ${settings?.companyEmail || 'info@studiofotografico.it'} - ${settings?.companyPhone || 'Non disponibile'}`, 20, y);
-      y += 5;
-      pdf.text(`Documento generato il ${format(new Date(), 'dd/MM/yyyy', { locale: it })}`, 20, y);
+      
+      // Testo del footer su sfondo colorato
+      pdf.text('Questa è una richiesta di preventivo. Il preventivo definitivo sarà inviato dallo studio.', 105, 282, { align: 'center' });
+      pdf.text(`Per informazioni: ${settings?.companyEmail || 'info@studiofotografico.it'} - ${settings?.companyPhone || 'Non disponibile'}`, 105, 288, { align: 'center' });
       
       // Genera il nome del file
       const fileName = `Richiesta_Preventivo_${lead.firstName}_${lead.lastName}_${new Date().toISOString().slice(0, 10)}.pdf`;

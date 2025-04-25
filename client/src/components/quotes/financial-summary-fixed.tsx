@@ -114,6 +114,13 @@ export function FinancialSummary({
   // Riferimenti ai form
   const transactionFormRef = useRef<HTMLFormElement>(null);
   const scheduledFormRef = useRef<HTMLFormElement>(null);
+  
+  // Stato per la configurazione della generazione automatica delle rate
+  const [rateGenerationData, setRateGenerationData] = useState({
+    numberOfRates: 3,
+    firstRateDate: format(addDays(new Date(), 30), "yyyy-MM-dd"),
+    interval: 30, // giorni tra le rate
+  });
 
   // Stati per i form
   const [transactionData, setTransactionData] = useState({
@@ -136,16 +143,7 @@ export function FinancialSummary({
     notes: "",
   });
   
-  // Stato per la generazione automatica delle rate
-  const [rateGenerationData, setRateGenerationData] = useState({
-    numberOfRates: 3,
-    firstRateDate: format(
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      "yyyy-MM-dd",
-    ),
-    interval: 30, // giorni tra le rate
-    initialPaymentPercentage: 30, // percentuale dell'acconto iniziale
-  });
+  // Lo stato per la generazione automatica delle rate è già definito sopra
 
   // Ottieni le transazioni per questo preventivo
   const {
@@ -1522,7 +1520,120 @@ export function FinancialSummary({
           </CardContent>
 
           {!readOnly && (
-            <CardFooter>
+            <CardFooter className="flex flex-col space-y-2">
+              <Dialog
+                open={isGenerateRatesOpen}
+                onOpenChange={setIsGenerateRatesOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    className="w-full"
+                    disabled={!isQuoteSigned()}
+                    title={
+                      !isQuoteSigned()
+                        ? "Puoi generare rate solo dopo che il preventivo è stato firmato"
+                        : ""
+                    }
+                    variant="outline"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Genera Rate Automatiche
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Genera Rate Automatiche</DialogTitle>
+                    <DialogDescription>
+                      Configurazione per la generazione automatica delle rate di pagamento.
+                      L'importo totale verrà suddiviso in rate uguali, considerando gli acconti già versati.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="numberOfRates">Numero di rate</Label>
+                      <Input
+                        id="numberOfRates"
+                        placeholder="3"
+                        type="number"
+                        min="1"
+                        max="24"
+                        value={rateGenerationData.numberOfRates}
+                        onChange={(e) =>
+                          setRateGenerationData({
+                            ...rateGenerationData,
+                            numberOfRates: parseInt(e.target.value) || 1,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="firstRateDate">Data prima rata</Label>
+                      <Input
+                        id="firstRateDate"
+                        type="date"
+                        value={rateGenerationData.firstRateDate}
+                        onChange={(e) =>
+                          setRateGenerationData({
+                            ...rateGenerationData,
+                            firstRateDate: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="interval">Giorni tra le rate</Label>
+                      <Input
+                        id="interval"
+                        placeholder="30"
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={rateGenerationData.interval}
+                        onChange={(e) =>
+                          setRateGenerationData({
+                            ...rateGenerationData,
+                            interval: parseInt(e.target.value) || 30,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="pt-2">
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Importo residuo</AlertTitle>
+                        <AlertDescription>
+                          Importo residuo da rateizzare: {formatAmount(calculateRemainingAmount())}
+                          <br />
+                          Ogni rata sarà di: {formatAmount(Math.round((calculateRemainingAmount() / rateGenerationData.numberOfRates) * 100) / 100)}
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsGenerateRatesOpen(false)}
+                    >
+                      Annulla
+                    </Button>
+                    <Button
+                      onClick={generateInstallments}
+                      disabled={calculateRemainingAmount() <= 0}
+                    >
+                      Genera Rate
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Dialog
                 open={isAddScheduledOpen}
                 onOpenChange={setIsAddScheduledOpen}
@@ -1538,7 +1649,7 @@ export function FinancialSummary({
                     }
                   >
                     <Calendar className="h-4 w-4 mr-2" />
-                    Aggiungi Rata
+                    Aggiungi Rata Manualmente
                   </Button>
                 </DialogTrigger>
                 <DialogContent>

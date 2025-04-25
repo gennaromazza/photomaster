@@ -213,7 +213,7 @@ const ElegantTemplate: React.FC<{
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl font-serif text-gray-800 mb-4">{settings.companyName}</h2>
           <p className="text-gray-600 max-w-2xl mx-auto mb-6">
-            Specializzati in fotografia artistica di altissima qualità, catturiamo i tuoi momenti speciali con uno stile unico e sofisticato.
+            {settings.companyDescription || 'Specializzati in fotografia artistica di altissima qualità, catturiamo i tuoi momenti speciali con uno stile unico e sofisticato.'}
           </p>
           <div className="flex justify-center space-x-4">
             <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
@@ -222,7 +222,7 @@ const ElegantTemplate: React.FC<{
                 Contattaci
               </Button>
             </a>
-            <a href={getWhatsAppUrl(settings.companyPhone || '+39123456789')} target="_blank" rel="noopener noreferrer">
+            <a href={getWhatsAppUrl(settings.companyPhone || '')} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">
                 <Phone className="mr-2 h-4 w-4" />
                 WhatsApp
@@ -396,7 +396,7 @@ const ModernTemplate: React.FC<{
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div>
               <h2 className="text-xl font-bold mb-2">{settings.companyName}</h2>
-              <p className="text-gray-400">Fotografia professionale di alta qualità</p>
+              <p className="text-gray-400">{settings.companyDescription || 'Fotografia professionale di alta qualità'}</p>
             </div>
             <div className="mt-6 md:mt-0 flex space-x-4">
               <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
@@ -405,7 +405,7 @@ const ModernTemplate: React.FC<{
                   Email
                 </Button>
               </a>
-              <a href={getWhatsAppUrl(settings.companyPhone || '+39123456789')} target="_blank" rel="noopener noreferrer">
+              <a href={getWhatsAppUrl(settings.companyPhone || '')} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" className="border-white text-white hover:text-black">
                   <Phone className="mr-2 h-4 w-4" />
                   WhatsApp
@@ -542,7 +542,7 @@ const MinimalTemplate: React.FC<{
                 Email
               </Button>
             </a>
-            <a href={getWhatsAppUrl(settings.companyPhone || '+39123456789')} target="_blank" rel="noopener noreferrer">
+            <a href={getWhatsAppUrl(settings.companyPhone || '')} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">
                 <Phone className="mr-2 h-4 w-4" />
                 WhatsApp
@@ -727,7 +727,7 @@ const BoldTemplate: React.FC<{
             <div>
               <h3 className="text-xl font-bold mb-4">{settings.companyName}</h3>
               <p className="text-gray-400 mb-6">
-                Fotografia professionale che racconta storie uniche attraverso immagini straordinarie.
+                {settings.companyDescription || 'Fotografia professionale che racconta storie uniche attraverso immagini straordinarie.'}
               </p>
             </div>
             <div>

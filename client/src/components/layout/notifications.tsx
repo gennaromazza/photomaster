@@ -11,6 +11,7 @@ import { Link } from 'wouter';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Notification {
   id: string;
@@ -24,6 +25,7 @@ export interface Notification {
 
 export default function NotificationsPopover() {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
   
   // Query per ottenere le notifiche
   const { data: notifications = [] } = useQuery<Notification[]>({
@@ -78,6 +80,11 @@ export default function NotificationsPopover() {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
     } catch (error) {
       console.error("Errore nell'aggiornamento delle notifiche:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile segnare tutte le notifiche come lette",
+        variant: "destructive",
+      });
     }
   };
   

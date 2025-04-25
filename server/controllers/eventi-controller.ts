@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../db";
+import type { PgDatabase } from "drizzle-orm/pg-core";
+import type { SQL } from "drizzle-orm";
 import { 
   pagamentiEvento, 
   montaggiEvento, 

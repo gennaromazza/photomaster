@@ -97,16 +97,16 @@ export const searchClients = async (req: Request, res: Response) => {
     
     // Aggiungi condizioni di ricerca solo se è presente una query
     if (query && query.toString().trim() !== "") {
-      const searchTerm = query.toString().toLowerCase();
+      const searchTerm = `%${query.toString()}%`;
       
       dbQuery = dbQuery.where(
         or(
-          sql`LOWER(${clients.firstName}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.lastName}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.email}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.phone}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.address}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.company}) LIKE ${'%' + searchTerm + '%'}`
+          sql`${clients.firstName} ILIKE ${searchTerm}`,
+          sql`${clients.lastName} ILIKE ${searchTerm}`,
+          sql`${clients.email} ILIKE ${searchTerm}`,
+          sql`${clients.phone} ILIKE ${searchTerm}`,
+          sql`${clients.address} ILIKE ${searchTerm}`,
+          sql`${clients.company} ILIKE ${searchTerm}`
         )
       );
     }
@@ -122,16 +122,16 @@ export const searchClients = async (req: Request, res: Response) => {
     
     // Se c'è una query di ricerca, applica le stesse condizioni al conteggio
     if (query && query.toString().trim() !== "") {
-      const searchTerm = query.toString().toLowerCase();
+      const searchTerm = `%${query.toString()}%`;
       
       totalCountQuery = totalCountQuery.where(
         or(
-          sql`LOWER(${clients.firstName}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.lastName}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.email}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.phone}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.address}) LIKE ${'%' + searchTerm + '%'}`,
-          sql`LOWER(${clients.company}) LIKE ${'%' + searchTerm + '%'}`
+          sql`${clients.firstName} ILIKE ${searchTerm}`,
+          sql`${clients.lastName} ILIKE ${searchTerm}`,
+          sql`${clients.email} ILIKE ${searchTerm}`,
+          sql`${clients.phone} ILIKE ${searchTerm}`,
+          sql`${clients.address} ILIKE ${searchTerm}`,
+          sql`${clients.company} ILIKE ${searchTerm}`
         )
       );
     }

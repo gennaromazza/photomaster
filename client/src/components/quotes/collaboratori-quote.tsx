@@ -84,8 +84,8 @@ export function CollaboratoriQuote({ quoteId, title, date, location, ceremonyLoc
       `📍 Location: ${location}\n` +
       (ceremonyLocation ? `🏛️ Cerimonia: ${ceremonyLocation}\n` : '') +
       (ceremonyTime ? `⏰ Orario Cerimonia: ${ceremonyTime}\n` : '') +
-      `👥 Cliente: ${quote.client?.firstName} ${quote.client?.lastName}\n` +
-      `📱 Telefono Cliente: ${quote.client?.phone}\n` +
+      `👥 Cliente: ${collaboratore.quote?.client?.firstName} ${collaboratore.quote?.client?.lastName}\n` +
+      `📱 Telefono Cliente: ${collaboratore.quote?.client?.phone}\n` +
       `🎯 Il tuo ruolo: ${collaboratore.ruolo}\n\n` +
       `Per qualsiasi informazione, contattami.`
     );

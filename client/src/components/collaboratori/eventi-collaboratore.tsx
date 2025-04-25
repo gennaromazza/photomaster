@@ -92,12 +92,23 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"assegnati" | "disponibili">("assegnati");
 
-  // Recupera la lista degli eventi assegnati al collaboratore
-  const { data: eventi, isLoading, error } = useQuery({
+  // Recupera la lista degli eventi assegnati al collaboratore - prima prova con la versione inglese
+  const { data: eventiEnglish = [], isLoading: isLoadingEnglish, error: errorEnglish } = useQuery({
+    queryKey: [`/api/collaborators/${collaboratoreId}/events`], 
+    staleTime: 5 * 60 * 1000, // 5 minuti
+  });
+
+  // Fallback alla versione italiana se quella inglese fallisce o non restituisce dati
+  const { data: eventiItalian = [], isLoading: isLoadingItalian, error: errorItalian } = useQuery({
     queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`],
     staleTime: 5 * 60 * 1000, // 5 minuti
-    queryFn: ({ signal }) => adaptedQueryFn(`/api/collaboratori/${collaboratoreId}/eventi`)({ signal }),
+    enabled: isLoadingEnglish === false && (errorEnglish !== null || eventiEnglish.length === 0),
   });
+
+  // Combina i risultati delle due API
+  const eventi = eventiEnglish.length > 0 ? eventiEnglish : eventiItalian;
+  const isLoading = isLoadingEnglish || isLoadingItalian;
+  const error = eventiEnglish.length === 0 ? errorEnglish : null;
 
   // Recupera la lista di tutti gli eventi disponibili per l'assegnazione
   const { data: eventiDisponibili, isLoading: isLoadingEventi } = useQuery({
@@ -115,12 +126,18 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
 
   // Filtra gli eventi in base alla tab selezionata (tutti, passati, futuri)
   const filteredEventi = Array.isArray(eventi) ? eventi.filter((evento) => {
-    // Usa il campo data o eventDate in base a quale è disponibile (compatibilità fra italiano e inglese)
-    const dataEvento = new Date(evento.eventDate || evento.data);
-    const oggi = new Date();
+    if (!evento) return false;
     
-    // Debug per capire quali dati abbiamo
-    console.log("Evento:", evento);
+    // Usa il campo data o eventDate in base a quale è disponibile (compatibilità fra italiano e inglese)
+    // Se il campo eventDate non esiste, prova con il campo data
+    const eventDate = evento.eventDate || evento.date || evento.data;
+    if (!eventDate) {
+      console.warn("Evento senza data:", evento);
+      return true; // Includi comunque l'evento se non ha una data
+    }
+    
+    const dataEvento = new Date(eventDate);
+    const oggi = new Date();
     
     if (filter === "passati") {
       return dataEvento < oggi;

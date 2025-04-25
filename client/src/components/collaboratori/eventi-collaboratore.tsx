@@ -156,7 +156,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   });
 
   // Funzione helper per estrarre e normalizzare la data dagli eventi
-  const getEventDateHelper = (evento: Evento): Date | null => {
+  function getEventDate(evento: Evento): Date | null {
     // Cerca in tutti i possibili campi di data in ordine di priorità
     const dateString = evento.eventDate || evento.date || evento.data;
     if (!dateString) {
@@ -184,7 +184,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
       console.error("Errore nel parsing della data:", error);
       return null;
     }
-  };
+  }
 
   // Filtra gli eventi in base alla tab selezionata (tutti, passati, futuri)
   const filteredEventi = Array.isArray(eventi) ? eventi.filter((evento) => {

@@ -300,7 +300,7 @@ export async function sendQuoteSignedConfirmation(clientEmail: string, clientNam
   // Calcola il totale degli elementi di base del preventivo
   let itemsSum = 0;
   if (quoteItemsList && quoteItemsList.length > 0) {
-    itemsSum = quoteItemsList.reduce((sum: number, item: any) => sum + parseFloat(item.price) * (item.quantity || 1), 0);
+    itemsSum = quoteItemsList.reduce((sum: number, item: any) => sum + (parseFloat(item.unitPrice || item.price || "0") * (item.quantity || 1)), 0);
   }
   
   // Ottieni e calcola i moduli variabili
@@ -314,10 +314,16 @@ export async function sendQuoteSignedConfirmation(clientEmail: string, clientNam
     // Se è un modulo variabile, considera solo gli elementi selezionati
     if (module.type === 'variable') {
       const selectedItems = moduleItems.filter(item => item.isSelected === true);
-      modulesSum += selectedItems.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+      modulesSum += selectedItems.reduce(
+        (sum, item) => sum + ((item.unitPrice || item.price || 0) * (item.selectedQuantity || item.quantity || 1)), 
+        0
+      );
     } else { 
       // Se è un modulo fisso, considera tutti gli elementi
-      modulesSum += moduleItems.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+      modulesSum += moduleItems.reduce(
+        (sum, item) => sum + ((item.unitPrice || item.price || 0) * (item.quantity || 1)), 
+        0
+      );
     }
   }
   

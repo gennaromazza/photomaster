@@ -1964,22 +1964,106 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         signedAt: signedAt || new Date().toISOString()
       });
 
+      // Funzione per aggiornare i totali del preventivo
+      const updateQuoteTotals = async (quoteId: number) => {
+        try {
+          // Recupera tutti gli elementi base del preventivo
+          const quoteItems = await storage.getQuoteItemsByQuote(quoteId);
+          let itemsSum = 0;
+          
+          // Calcola il totale degli elementi base
+          if (quoteItems && quoteItems.length > 0) {
+            itemsSum = quoteItems.reduce((sum, item) => sum + (item.unitPrice || 0) * (item.quantity || 1), 0);
+          }
+          
+          // Recupera tutti i moduli del preventivo
+          const modules = await storage.getModulesByQuote(quoteId);
+          let modulesSum = 0;
+          
+          // Calcola il totale di tutti i moduli
+          for (const module of modules) {
+            const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
+            
+            // Per i moduli variabili, considera solo gli elementi selezionati
+            if (module.type === 'variable') {
+              const selectedItems = moduleItems.filter(item => item.isSelected === true);
+              const moduleTotal = selectedItems.reduce((sum, item) => 
+                sum + (item.unitPrice || 0) * (item.selectedQuantity || item.quantity || 1), 0);
+              modulesSum += moduleTotal;
+            } else {
+              // Per i moduli fissi, considera tutti gli elementi
+              const moduleTotal = moduleItems.reduce((sum, item) => 
+                sum + (item.unitPrice || 0) * (item.quantity || 1), 0);
+              modulesSum += moduleTotal;
+            }
+          }
+          
+          // Calcola il totale complessivo
+          const subtotal = itemsSum + modulesSum;
+          
+          // Recupera il preventivo per applicare eventuali sconti
+          const quote = await storage.getQuote(quoteId);
+          let total = subtotal;
+          
+          // Applica eventuali sconti
+          if (quote.discountType === 'percentage' && quote.discountValue) {
+            total = subtotal * (1 - (quote.discountValue / 100));
+          } else if (quote.discountType === 'fixed' && quote.discountValue) {
+            total = subtotal - quote.discountValue;
+          }
+          
+          // Aggiorna il preventivo con i nuovi totali
+          await storage.updateQuote(quoteId, {
+            subtotal,
+            total,
+            // Registra quando è stato aggiornato il totale
+            updatedAt: new Date().toISOString()
+          });
+          
+          console.log(`[INFO] Totali aggiornati per il preventivo ${quoteId}: subtotal=${subtotal}, total=${total}`);
+          return true;
+        } catch (error) {
+          console.error(`[ERROR] Errore nell'aggiornamento dei totali per il preventivo ${quoteId}:`, error);
+          return false;
+        }
+      };
+      
       // Salva le selezioni degli elementi dei moduli variabili
       if (selectedModuleItems) {
         console.log("[INFO] Salvataggio selezioni moduli per preventivo ID:", quote.id);
         for (const moduleId in selectedModuleItems) {
           const moduleItems = await storage.getQuoteModuleItemsByModule(parseInt(moduleId));
           
-          // Aggiorna lo stato di selezione per ogni elemento del modulo
+          // Prima resettiamo tutte le selezioni per questo modulo
+          for (const item of moduleItems) {
+            await storage.updateQuoteModuleItem(item.id, { 
+              isSelected: false,
+              selectedQuantity: null
+            });
+          }
+          
+          // Ora aggiorniamo le selezioni in base alla scelta dell'utente
           for (const item of moduleItems) {
             const isSelected = selectedModuleItems[moduleId].includes(item.id);
             console.log(`[INFO] Modulo ${moduleId}, Item ${item.id}, Selezionato: ${isSelected}`);
-            await storage.updateQuoteModuleItem(item.id, { isSelected });
+            
+            if (isSelected) {
+              await storage.updateQuoteModuleItem(item.id, { 
+                isSelected: true,
+                selectedQuantity: item.quantity || 1 // imposta una quantità di default
+              });
+            }
           }
           
           // Segna il modulo come attivo (non più in attesa di selezione)
-          await storage.updateQuoteModule(parseInt(moduleId), { status: 'active' });
+          await storage.updateQuoteModule(parseInt(moduleId), { 
+            status: 'active',
+            selectedAt: new Date().toISOString() // registriamo quando è stata fatta la selezione
+          });
         }
+        
+        // Aggiorniamo i totali del preventivo dopo aver salvato tutte le selezioni
+        await updateQuoteTotals(quote.id);
       }
 
       // Crea un nuovo evento
@@ -2003,23 +2087,26 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         categoryId: quote.categoryId
       });
 
+      // Otteniamo il preventivo aggiornato con i totali corretti dopo l'aggiornamento
+      const updatedQuote = await storage.getQuote(quote.id);
+      
       // Invia email di notifica all'amministratore
       // Usa le importazioni già disponibili all'inizio del file
       const clientName = client ? `${client.firstName} ${client.lastName}`.trim() : "Cliente";
 
       try {
         // Invia notifica all'amministratore
-        await sendQuoteSignedNotification(quote, clientName, signature);
+        await sendQuoteSignedNotification(updatedQuote, clientName, signature);
 
         // Invia conferma al cliente principale se è disponibile l'email
         if (client && client.email) {
-          await sendQuoteSignedConfirmation(client.email, client.firstName, quote);
+          await sendQuoteSignedConfirmation(client.email, client.firstName, updatedQuote);
           console.log(`Email di conferma inviata al cliente principale: ${client.email}`);
         }
 
         // Invia conferma anche al cliente secondario, se presente
         if (secondClient && secondClient.email) {
-          await sendQuoteSignedConfirmation(secondClient.email, secondClient.firstName, quote);
+          await sendQuoteSignedConfirmation(secondClient.email, secondClient.firstName, updatedQuote);
           console.log(`Email di conferma inviata al secondo cliente: ${secondClient.email}`);
         }
       } catch (emailError) {

@@ -1,119 +1,98 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
-// Tipo per la risposta della verifica di cliente esistente
-interface CheckExistingClientResponse {
-  exists: boolean;
-  clients: Array<{
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    [key: string]: any;
-  }>;
-  message: string;
+interface Client {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  company?: string;
+  [key: string]: any;
 }
 
-// Tipo per la risposta della ricerca clienti
-interface SearchClientsResponse {
-  clients: Array<{
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    [key: string]: any;
-  }>;
-  pagination: {
-    page: number;
-    limit: number;
-    totalCount: number;
-    totalPages: number;
-    hasMore: boolean;
-  };
+interface UseClientValidationResult {
+  checkExistingClient: (email?: string, phone?: string) => Promise<boolean>;
+  foundClients: Client[];
+  isModalOpen: boolean;
+  setIsModalOpen: (isOpen: boolean) => void;
+  selectExistingClient: (clientId: number) => Client | undefined;
+  continueWithNewClient: () => void;
+  isChecking: boolean;
 }
 
-export function useClientValidation() {
-  const { toast } = useToast();
-  const [foundClients, setFoundClients] = useState<any[]>([]);
+export function useClientValidation(): UseClientValidationResult {
+  const [foundClients, setFoundClients] = useState<Client[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const { toast } = useToast();
 
-  // Mutation per verificare se un cliente esiste già
-  const checkExistingClientMutation = useMutation({
-    mutationFn: async ({ email, phone }: { email?: string; phone?: string }) => {
-      const res = await apiRequest("POST", "/api/client-validation/check-existing", { email, phone });
-      return await res.json() as CheckExistingClientResponse;
-    },
-    onSuccess: (data) => {
-      if (data.exists) {
+  const checkExistingClient = useCallback(async (email?: string, phone?: string): Promise<boolean> => {
+    try {
+      if (!email && !phone) {
+        return false;
+      }
+
+      setIsChecking(true);
+
+      const queryParams = new URLSearchParams();
+      if (email) queryParams.append('email', email);
+      if (phone) queryParams.append('phone', phone);
+
+      const response = await apiRequest('GET', `/api/client-validation/check?${queryParams.toString()}`);
+      const data = await response.json();
+
+      setIsChecking(false);
+
+      if (data.exists && data.clients && data.clients.length > 0) {
         setFoundClients(data.clients);
         setIsModalOpen(true);
+        return true;
       }
-    },
-    onError: (error: Error) => {
+
+      return false;
+    } catch (error: any) {
+      setIsChecking(false);
       toast({
-        title: "Errore nella verifica del cliente",
-        description: error.message,
-        variant: "destructive",
+        title: 'Errore durante la verifica del cliente',
+        description: error.message || 'Si è verificato un errore durante la ricerca di clienti esistenti',
+        variant: 'destructive'
       });
-    },
-  });
-
-  // Query per cercare clienti in base a una stringa di ricerca
-  const searchClients = ({ query, page = 1, limit = 10 }: { query: string; page?: number; limit?: number }) => {
-    return useQuery<SearchClientsResponse, Error>({
-      queryKey: ["/api/client-validation/search", query, page, limit],
-      queryFn: async () => {
-        const searchParams = new URLSearchParams({
-          query,
-          page: page.toString(),
-          limit: limit.toString()
-        });
-        
-        const res = await apiRequest("GET", `/api/client-validation/search?${searchParams.toString()}`);
-        return await res.json();
-      },
-      enabled: query.length > 2, // Abilita la query solo se la stringa di ricerca è più lunga di 2 caratteri
-      staleTime: 1000 * 60 * 5, // Cache valida per 5 minuti
-    });
-  };
-
-  // Funzione per verificare l'esistenza di un cliente
-  const checkExistingClient = async (email?: string, phone?: string) => {
-    if (!email && !phone) return false;
-    
-    try {
-      const result = await checkExistingClientMutation.mutateAsync({ email, phone });
-      return result.exists;
-    } catch (error) {
-      console.error("Errore nella verifica del cliente:", error);
       return false;
     }
-  };
+  }, [toast]);
 
-  // Funzione per selezionare un cliente esistente
-  const selectExistingClient = (clientId: number) => {
+  const selectExistingClient = useCallback((clientId: number): Client | undefined => {
+    const selectedClient = foundClients.find(client => client.id === clientId);
     setIsModalOpen(false);
-    return foundClients.find(client => client.id === clientId) || null;
-  };
+    
+    if (selectedClient) {
+      toast({
+        title: 'Cliente esistente selezionato',
+        description: `Hai selezionato ${selectedClient.firstName} ${selectedClient.lastName}`,
+      });
+    }
+    
+    return selectedClient;
+  }, [foundClients, toast]);
 
-  // Funzione per chiudere il modale e continuare con un nuovo cliente
-  const continueWithNewClient = () => {
+  const continueWithNewClient = useCallback(() => {
     setIsModalOpen(false);
-    setFoundClients([]);
-  };
+    toast({
+      title: 'Continua come nuovo cliente',
+      description: 'Stai continuando come nuovo cliente',
+    });
+  }, [toast]);
 
   return {
     checkExistingClient,
-    searchClients,
-    selectExistingClient,
-    continueWithNewClient,
     foundClients,
     isModalOpen,
     setIsModalOpen,
-    isChecking: checkExistingClientMutation.isPending
+    selectExistingClient,
+    continueWithNewClient,
+    isChecking
   };
 }

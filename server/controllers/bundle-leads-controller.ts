@@ -146,7 +146,8 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
       eventDate, 
       location, // Cambiato da eventLocation a location per uniformità con il database
       message, 
-      bundleId 
+      bundleId,
+      existingClientId // ID del cliente esistente, se è stato selezionato un cliente dal sistema di validazione
     } = req.body;
 
     // Verifica che il bundle esista

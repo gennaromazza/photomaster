@@ -150,7 +150,7 @@ export default function RequestQuoteFromBundlePage() {
 
   // Mutazione per creare il preventivo da pacchetto
   const createQuoteMutation = useMutation({
-    mutationFn: async (data: RequestBundleQuoteValues) => {
+    mutationFn: async (data: RequestBundleQuoteValues & { existingClientId?: number }) => {
       // Aggiungi l'ID del bundle ai dati della richiesta
       const requestData = {
         ...data,
@@ -318,7 +318,14 @@ export default function RequestQuoteFromBundlePage() {
                           <FormItem>
                             <FormLabel>Email *</FormLabel>
                             <FormControl>
-                              <Input {...field} type="email" />
+                              <ClientValidationInput 
+                                type="email"
+                                value={field.value}
+                                onChange={field.onChange}
+                                onClientFound={handleClientFound}
+                                placeholder="esempio@email.com"
+                                required
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -332,7 +339,13 @@ export default function RequestQuoteFromBundlePage() {
                           <FormItem>
                             <FormLabel>Telefono</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <ClientValidationInput 
+                                type="tel"
+                                value={field.value}
+                                onChange={field.onChange}
+                                onClientFound={handleClientFound}
+                                placeholder="Inserisci il tuo numero di telefono"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

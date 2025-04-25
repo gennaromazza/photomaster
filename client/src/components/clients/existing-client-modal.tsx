@@ -1,31 +1,28 @@
-import React from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Phone, Mail, User } from "lucide-react";
-
-interface Client {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  [key: string]: any;
-}
+import { Mail, Phone, MapPin, User2, Check, ArrowRightCircle } from "lucide-react";
 
 interface ExistingClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  clients: Client[];
+  clients: Array<{
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    [key: string]: any;
+  }>;
   onSelectClient: (clientId: number) => void;
-  onCreateNewClient: () => void;
+  onContinue: () => void;
 }
 
 export function ExistingClientModal({
@@ -33,62 +30,82 @@ export function ExistingClientModal({
   onClose,
   clients,
   onSelectClient,
-  onCreateNewClient,
+  onContinue,
 }: ExistingClientModalProps) {
+  if (!clients || clients.length === 0) {
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Clienti esistenti trovati</DialogTitle>
+          <DialogTitle>Abbiamo trovato un cliente con informazioni simili</DialogTitle>
           <DialogDescription>
-            Abbiamo trovato clienti con dati simili già registrati nel sistema.
-            Vuoi utilizzare uno di questi clienti esistenti o crearne uno nuovo?
+            Abbiamo trovato {clients.length === 1 ? "un cliente esistente" : `${clients.length} clienti esistenti`} 
+            con questi dati. Se sei già nostro cliente, seleziona il tuo profilo. In caso contrario, clicca su "Continua come nuovo cliente".
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 max-h-[400px] overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
           {clients.map((client) => (
-            <Card key={client.id} className="mb-4 hover:bg-muted/30 cursor-pointer" onClick={() => onSelectClient(client.id)}>
-              <CardContent className="p-4">
-                <div className="flex flex-col space-y-2">
-                  <div className="flex items-center font-medium text-lg">
-                    <User className="h-5 w-5 mr-2 text-primary" />
-                    {client.firstName} {client.lastName}
-                  </div>
-                  {client.email && (
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Mail className="h-4 w-4 mr-2 text-primary/60" />
-                      {client.email}
-                    </div>
-                  )}
-                  {client.phone && (
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4 mr-2 text-primary/60" />
-                      {client.phone}
-                    </div>
-                  )}
-                  {client.address && (
-                    <div className="text-sm text-muted-foreground">
-                      Indirizzo: {client.address}
-                      {client.city ? `, ${client.city}` : ""}
-                      {client.province ? ` (${client.province})` : ""}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <div 
+              key={client.id} 
+              className="border rounded-lg p-4 shadow-sm hover:border-primary transition-colors cursor-pointer"
+              onClick={() => onSelectClient(client.id)}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-medium text-lg flex items-center">
+                  <User2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {client.firstName} {client.lastName}
+                </h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 px-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectClient(client.id);
+                  }}
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  Seleziona
+                </Button>
+              </div>
+              
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                <li className="flex items-start">
+                  <Mail className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                  <span className="text-primary truncate">{client.email}</span>
+                </li>
+                {client.phone && (
+                  <li className="flex items-start">
+                    <Phone className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                    <span>{client.phone}</span>
+                  </li>
+                )}
+                {client.address && (
+                  <li className="flex items-start">
+                    <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                    <span className="truncate">{client.address}</span>
+                  </li>
+                )}
+              </ul>
+            </div>
           ))}
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex justify-between">
           <Button
-            variant="secondary"
-            onClick={onCreateNewClient}
-            className="sm:order-1"
+            variant="outline"
+            onClick={onContinue}
           >
-            Crea nuovo cliente
+            Continua come nuovo cliente
           </Button>
-          <Button variant="outline" onClick={onClose} className="sm:order-2">
+          <Button 
+            onClick={onClose}
+            variant="ghost"
+          >
             Annulla
           </Button>
         </DialogFooter>

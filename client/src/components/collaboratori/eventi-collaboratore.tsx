@@ -153,24 +153,44 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
     enabled: activeTab === "disponibili", // Carica solo quando la tab "disponibili" è attiva
   });
 
+  // Funzione helper per estrarre e normalizzare la data dagli eventi
+  const getEventDate = (evento: Evento): Date | null => {
+    // Cerca in tutti i possibili campi di data in ordine di priorità
+    const dateString = evento.eventDate || evento.date || evento.data;
+    if (!dateString) {
+      console.warn("Evento senza data:", evento);
+      return null;
+    }
+    
+    try {
+      // Prima prova con parseISO che è più affidabile per le stringhe ISO
+      let date = parseISO(dateString.toString());
+      
+      // Se la data non è valida, prova il costruttore standard di Date
+      if (!isValid(date)) {
+        date = new Date(dateString);
+      }
+      
+      // Se ancora non è valida, segnala il problema e ritorna null
+      if (!isValid(date)) {
+        console.warn("Data evento non valida:", dateString);
+        return null;
+      }
+      
+      return date;
+    } catch (error) {
+      console.error("Errore nel parsing della data:", error);
+      return null;
+    }
+  };
+
   // Filtra gli eventi in base alla tab selezionata (tutti, passati, futuri)
   const filteredEventi = Array.isArray(eventi) ? eventi.filter((evento) => {
     if (!evento) return false;
     
-    // Usa il campo data o eventDate in base a quale è disponibile (compatibilità fra italiano e inglese)
-    // Se il campo eventDate non esiste, prova con il campo data
-    const eventDate = evento.eventDate || evento.date;
-    if (!eventDate) {
-      console.warn("Evento senza data:", evento);
-      return true; // Includi comunque l'evento se non ha una data
-    }
-    
-    // Verifica che la data sia valida prima di procedere con il confronto
-    const dataEvento = new Date(eventDate);
-    if (!isValid(dataEvento)) {
-      console.warn("Data evento non valida:", eventDate);
-      return true; // Include comunque l'evento se la data non è valida
-    }
+    const dataEvento = getEventDate(evento);
+    // Se non abbiamo una data valida, includi comunque l'evento
+    if (!dataEvento) return true;
     
     const oggi = new Date();
     
@@ -559,7 +579,17 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4 text-primary/60" />
-                      <span>{format(new Date(evento.data || evento.eventDate), "dd/MM/yyyy", { locale: it })}</span>
+                      <span>
+                        {(() => {
+                          try {
+                            const date = getEventDate(evento);
+                            return date ? format(date, "dd/MM/yyyy", { locale: it }) : "Data non valida";
+                          } catch (error) {
+                            console.error("Errore formattazione data:", error);
+                            return "Errore data";
+                          }
+                        })()}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -688,7 +718,17 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4 text-primary/60" />
-                      <span>{evento.date ? format(new Date(evento.date), "dd/MM/yyyy", { locale: it }) : 'Data non disponibile'}</span>
+                      <span>
+                        {(() => {
+                          try {
+                            const date = getEventDate(evento);
+                            return date ? format(date, "dd/MM/yyyy", { locale: it }) : "Data non valida";
+                          } catch (error) {
+                            console.error("Errore formattazione data:", error);
+                            return "Errore data";
+                          }
+                        })()}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -826,7 +866,15 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
                             ) : (
                               eventiDisponibili.map((evento: any) => (
                                 <SelectItem key={evento.id} value={evento.id.toString()}>
-                                  {evento.title} {evento.date ? `(${format(new Date(evento.date), "dd/MM/yyyy")})` : '(Data non disponibile)'}
+                                  {evento.title} 
+                                  {(() => {
+                                    try {
+                                      const date = getEventDate(evento);
+                                      return date ? `(${format(date, "dd/MM/yyyy")})` : "(Data non disponibile)";
+                                    } catch (error) {
+                                      return "(Errore data)";
+                                    }
+                                  })()}
                                 </SelectItem>
                               ))
                             )}

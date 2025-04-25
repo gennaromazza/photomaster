@@ -84,8 +84,12 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-  retryOnCsrf: boolean = true,
+  options: {
+    headers?: Record<string, string>,
+    retryOnCsrf?: boolean
+  } = { retryOnCsrf: true },
 ): Promise<Response> {
+  const retryOnCsrf = options.retryOnCsrf !== false;
   // Controlla se c'è un token JWT nel localStorage
   const token = localStorage.getItem("auth_token");
   
@@ -133,7 +137,7 @@ export async function apiRequest(
       if (responseText.includes('CSRF') || responseText.includes('csrf')) {
         // Invalidiamo il token CSRF e ritentiamo una volta
         invalidateCsrfToken();
-        return apiRequest(method, url, data, false); // Ritenta senza ulteriori retry
+        return apiRequest(method, url, data, { retryOnCsrf: false }); // Ritenta senza ulteriori retry
       }
       throw new Error(`${res.status}: ${responseText}`);
     }

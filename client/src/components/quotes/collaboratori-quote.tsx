@@ -137,25 +137,18 @@ export function CollaboratoriQuote({
     staleTime: 3600000,
   });
 
+  // Mutation per aggiungere un collaboratore
   const addMutation = useMutation({
-    mutationFn: async (data: CollaboratoreFormValues) => {
-      const res = await fetch(
-        `/api/eventi/preventivo/${quoteId}/collaboratori`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": csrfData?.csrfToken || "",
-          },
-          credentials: "include" as RequestCredentials,
-          body: JSON.stringify({
-            collaboratoreId: parseInt(data.collaboratoreId),
-            ruolo: data.ruolo,
-            note: data.note || "",
-          }),
+    mutationFn: (data: CollaboratoreFormValues) => {
+      return apiRequest("POST", `/api/eventi/preventivo/${quoteId}/collaboratori`, {
+        collaboratoreId: parseInt(data.collaboratoreId),
+        ruolo: data.ruolo,
+        note: data.note || "",
+      }, {
+        headers: {
+          "X-CSRF-Token": csrfData?.csrfToken || "",
         },
-      );
-      return res.json();
+      });
     },
     onSuccess: () => {
       toast({
@@ -168,25 +161,23 @@ export function CollaboratoriQuote({
       setIsDialogOpen(false);
       form.reset();
     },
-    onError: () =>
+    onError: () => {
       toast({
         title: "Errore",
         description: "Impossibile assegnare collaboratore.",
         variant: "destructive",
-      }),
+      });
+    },
   });
 
+  // Mutation per rimuovere un collaboratore
   const removeMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(
-        `/api/eventi/preventivo/${quoteId}/collaboratori/${id}`,
-        {
-          method: "DELETE",
-          headers: { "X-CSRF-Token": csrfData?.csrfToken || "" },
-          credentials: "include" as RequestCredentials,
+    mutationFn: (id: number) => {
+      return apiRequest("DELETE", `/api/eventi/preventivo/${quoteId}/collaboratori/${id}`, null, {
+        headers: {
+          "X-CSRF-Token": csrfData?.csrfToken || "",
         },
-      );
-      return res.json();
+      });
     },
     onSuccess: () => {
       toast({
@@ -197,29 +188,26 @@ export function CollaboratoriQuote({
         queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
       });
     },
-    onError: () =>
+    onError: () => {
       toast({
         title: "Errore",
         description: "Impossibile rimuovere collaboratore.",
         variant: "destructive",
-      }),
+      });
+    },
   });
 
+  // Mutation per aggiornare un collaboratore
   const updateMutation = useMutation({
-    mutationFn: async (data: { id: number; ruolo: string; note?: string }) => {
-      const res = await fetch(
-        `/api/eventi/preventivo/${quoteId}/collaboratori/${data.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": csrfData?.csrfToken || "",
-          },
-          credentials: "include" as RequestCredentials,
-          body: JSON.stringify({ ruolo: data.ruolo, note: data.note || "" }),
+    mutationFn: (data: { id: number; ruolo: string; note?: string }) => {
+      return apiRequest("PATCH", `/api/eventi/preventivo/${quoteId}/collaboratori/${data.id}`, {
+        ruolo: data.ruolo,
+        note: data.note || "",
+      }, {
+        headers: {
+          "X-CSRF-Token": csrfData?.csrfToken || "",
         },
-      );
-      return res.json();
+      });
     },
     onSuccess: () => {
       toast({
@@ -234,12 +222,13 @@ export function CollaboratoriQuote({
       setCurrentCollaboratore(null);
       form.reset();
     },
-    onError: () =>
+    onError: () => {
       toast({
         title: "Errore",
         description: "Impossibile aggiornare collaboratore.",
         variant: "destructive",
-      }),
+      });
+    },
   });
 
   if (isLoading) {

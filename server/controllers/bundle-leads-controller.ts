@@ -89,7 +89,7 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
       address, 
       eventType, 
       eventDate, 
-      eventLocation, 
+      location, // Cambiato da eventLocation a location per uniformità con il database
       message, 
       bundleId 
     } = req.body;
@@ -204,6 +204,7 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
       status: "converted", // È stata convertita in preventivo
       createdAt: new Date(),
       quoteId: newQuote.id,
+      clientId: clientToUse.id, // Aggiungiamo l'ID del cliente per completezza
     });
 
     const [newLead] = await db

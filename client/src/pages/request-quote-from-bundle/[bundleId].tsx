@@ -372,13 +372,16 @@ export default function RequestQuoteFromBundlePage() {
                     
                     <FormField
                       control={form.control}
-                      name="eventLocation"
+                      name="location"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Luogo dell'Evento</FormLabel>
                           <FormControl>
                             <Input {...field} />
                           </FormControl>
+                          <FormDescription>
+                            Indica il nome del locale/ristorante dove si svolgerà l'evento
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

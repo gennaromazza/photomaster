@@ -97,20 +97,21 @@ export const insertMontaggioEventoSchema = createInsertSchema(montaggiEvento).pi
   collaboratoreId: true,
   tipoMontaggio: true,
   accontoImporto: true,
+  accontoPagato: true,
+  accontoDataPagamento: true,
   saldoImporto: true,
+  saldoPagato: true,
+  saldoDataPagamento: true,
+  dataPrimoContatto: true,
   priorita: true,
   dataConsegnaPrevista: true,
+  dataConsegnaEffettiva: true,
   stato: true,
   note: true,
 });
 
 export const updateMontaggioEventoSchema = insertMontaggioEventoSchema.partial().extend({
-  accontoPagato: z.boolean().optional(),
-  accontoDataPagamento: z.date().optional(),
-  saldoPagato: z.boolean().optional(),
-  saldoDataPagamento: z.date().optional(),
-  dataPrimoContatto: z.date().optional(),
-  dataConsegnaEffettiva: z.date().optional(),
+  // Rafforza la validazione del campo stato
   stato: z.enum(["da_fare", "in_corso", "completato"]).optional(),
 });
 

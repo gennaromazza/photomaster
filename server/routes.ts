@@ -3417,6 +3417,8 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
 
   // Register all API routes
   // Registrazione dei router modulari
+  // Tutte le routes di bundle-leads sono gestite nel file routes/bundle-leads.ts
+  // La protezione auth viene applicata a livello di route individuale
   app.use("/api/bundle-leads", bundleLeadsRouter);
   app.use("/api/settings", settingsRouter);
   app.use("/api/finance", financeRouter);
@@ -3476,7 +3478,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api", apiRouter);
 
   // Modulo routes
-  app.use("/api/bundle-leads", isAuthenticated, bundleLeadsRouter);
+  // Le routes di bundle-leads sono già registrate in precedenza
   app.use("/api/settings", isAuthenticated, settingsRouter);
   app.use("/api/gallery", isAuthenticated, galleryRouter);
   app.use("/api/finance", isAuthenticated, financeRouter);

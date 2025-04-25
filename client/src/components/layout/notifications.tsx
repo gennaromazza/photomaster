@@ -61,6 +61,11 @@ export default function NotificationsPopover() {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
     } catch (error) {
       console.error("Errore nell'aggiornamento della notifica:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile segnare la notifica come letta",
+        variant: "destructive",
+      });
     }
   };
   

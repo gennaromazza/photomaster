@@ -58,6 +58,21 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+
+// Definizione dell'interfaccia EventoCollaboratore
+interface EventoCollaboratore {
+  id: number;
+  ruolo: string;
+  note?: string;
+  dataAssegnazione?: Date;
+  collaboratore: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+  };
+}
 import { getRoleLabel } from "@/lib/constants";
 
 interface CollaboratoriQuoteProps {
@@ -116,18 +131,24 @@ export function CollaboratoriQuote({
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [currentCollaboratore, setCurrentCollaboratore] = useState<any>(null);
+  const [currentCollaboratore, setCurrentCollaboratore] = useState<EventoCollaboratore | null>(null);
 
   const {
     data: collaboratori = [],
     isLoading,
     error,
-  } = useQuery<any[]>({
+  } = useQuery<EventoCollaboratore[]>({
     queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
     enabled: !!quoteId,
   });
 
-  const { data: collaboratoriDisponibili = [] } = useQuery<any[]>({
+  const { data: collaboratoriDisponibili = [] } = useQuery<{
+    id: number;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+  }[]>({
     queryKey: ["/api/collaborators"],
     enabled: isDialogOpen,
   });
@@ -270,7 +291,7 @@ export function CollaboratoriQuote({
     ? format(new Date(date), "dd/MM/yyyy", { locale: it })
     : "N/D";
 
-  const createWhatsAppMessage = (c: any) => {
+  const createWhatsAppMessage = (c: EventoCollaboratore) => {
     let clientInfo = "";
     if (clientData.firstName && clientData.lastName) {
       clientInfo += `👥 Cliente: ${clientData.firstName} ${clientData.lastName}\n`;
@@ -319,7 +340,7 @@ export function CollaboratoriQuote({
     }
   }
 
-  function handleEdit(coll: any) {
+  function handleEdit(coll: EventoCollaboratore) {
     setIsEditMode(true);
     setCurrentCollaboratore(coll);
     form.setValue("ruolo", coll.ruolo);

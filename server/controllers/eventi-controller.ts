@@ -296,12 +296,8 @@ export const addPagamentoEvento = async (req: Request, res: Response) => {
     ) {
       // Recupera il montaggio associato al collaboratore per questo evento
       const [montaggio] = await db.select().from(montaggiEvento)
-        .where(
-          and(
-            eq(montaggiEvento.eventoId, Number(id)),
-            eq(montaggiEvento.collaboratoreId, data.collaboratoreId)
-          )
-        );
+        .where(eq(montaggiEvento.eventoId, Number(id)))
+        .where(eq(montaggiEvento.collaboratoreId, data.collaboratoreId));
       
       if (montaggio) {
         // Aggiorna lo stato di pagamento del montaggio
@@ -428,13 +424,9 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
     
     // Verifica che non esista già un montaggio dello stesso tipo per questo collaboratore e evento
     const [montaggioEsistente] = await db.select().from(montaggiEvento)
-      .where(
-        and(
-          eq(montaggiEvento.eventoId, Number(id)),
-          eq(montaggiEvento.collaboratoreId, data.collaboratoreId),
-          eq(montaggiEvento.tipoMontaggio, data.tipoMontaggio)
-        )
-      );
+      .where(eq(montaggiEvento.eventoId, Number(id)))
+      .where(eq(montaggiEvento.collaboratoreId, data.collaboratoreId))
+      .where(eq(montaggiEvento.tipoMontaggio, data.tipoMontaggio));
     
     if (montaggioEsistente) {
       return res.status(400).json({ 
@@ -679,12 +671,8 @@ export const addCollaboratorePreventivo = async (req: Request, res: Response) =>
     
     // Verifica se l'assegnazione esiste già
     const esisteGia = await db.select().from(eventiCollaboratori)
-      .where(
-        and(
-          eq(eventiCollaboratori.collaboratoreId, data.collaboratoreId),
-          eq(eventiCollaboratori.eventoId, evento.id)
-        )
-      )
+      .where(eq(eventiCollaboratori.collaboratoreId, data.collaboratoreId))
+      .where(eq(eventiCollaboratori.eventoId, evento.id))
       .limit(1);
     
     if (esisteGia.length > 0) {
@@ -831,12 +819,8 @@ export const removeCollaboratorePreventivo = async (req: Request, res: Response)
     
     // Elimina anche l'assegnazione dalla tabella inglese
     await db.delete(eventCollaborators)
-      .where(
-        and(
-          eq(eventCollaborators.collaboratorId, collaboratoreId),
-          eq(eventCollaborators.eventId, eventoId)
-        )
-      );
+      .where(eq(eventCollaborators.collaboratorId, collaboratoreId))
+      .where(eq(eventCollaborators.eventId, eventoId));
     
     return res.status(200).json({ 
       success: true, 
@@ -854,12 +838,8 @@ export const updateMontaggioEvento = async (req: Request, res: Response) => {
   try {
     // Verifica che il montaggio esista
     const [montaggio] = await db.select().from(montaggiEvento)
-      .where(
-        and(
-          eq(montaggiEvento.id, Number(montaggioId)),
-          eq(montaggiEvento.eventoId, Number(eventoId))
-        )
-      );
+      .where(eq(montaggiEvento.id, Number(montaggioId)))
+      .where(eq(montaggiEvento.eventoId, Number(eventoId)));
     
     if (!montaggio) {
       return res.status(404).json({ error: "Montaggio non trovato" });

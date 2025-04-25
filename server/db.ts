@@ -37,5 +37,8 @@ try {
 // Esporta il tipo corretto dell'istanza db
 export type DB = typeof db;
 
+// Creiamo un wrapper per postgres per query SQL dirette
+export const pgClient = client;
+
 // Esporta l'istanza db
 export { db };

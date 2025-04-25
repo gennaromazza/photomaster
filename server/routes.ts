@@ -28,6 +28,7 @@ import eventiRouter from "./routes/eventi-routes";
 import eventsRouter from "./routes/events-routes"; // English standardized version
 import dashboardPublicRouter from "./routes/dashboard-public-routes";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
+import { checkExistingClient, searchClients } from "./controllers/client-validation-controller";
 import multer from "multer";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -118,7 +119,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.get("/clients/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const client = await storage.getClient(id);
+      
+      // Prima proviamo con il metodo standard
+      let client = await storage.getClient(id);
+      
+      // Se non abbiamo trovato il cliente, proviamo con una query SQL diretta
+      if (!client) {
+        console.log(`Cliente con ID ${id} non trovato con metodo standard, provo con SQL diretto`);
+        
+        // Usa pgClient per query diretta
+        const directResult = await pgClient`
+          SELECT * FROM clients WHERE id = ${id}
+        `;
+        
+        console.log(`Risultato ricerca diretta per cliente ID ${id}:`, directResult);
+        
+        if (directResult && directResult.length > 0) {
+          // Converti da snake_case a camelCase
+          client = {
+            id: directResult[0].id,
+            firstName: directResult[0].first_name,
+            lastName: directResult[0].last_name,
+            email: directResult[0].email,
+            phone: directResult[0].phone || "",
+            address: directResult[0].address || "",
+            company: directResult[0].company || "",
+            postalCode: directResult[0].postal_code || "",
+            city: directResult[0].city || "",
+            province: directResult[0].province || "",
+            state: directResult[0].state || "",
+            taxCode: directResult[0].tax_code || "",
+            notes: directResult[0].notes || "",
+            createdAt: directResult[0].created_at,
+            updatedAt: directResult[0].updated_at,
+          };
+        }
+      }
 
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
@@ -126,6 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(client);
     } catch (err) {
+      console.error(`Errore nel recupero del cliente:`, err);
       res.status(500).json({ message: "Failed to fetch client" });
     }
   });

@@ -3463,6 +3463,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   // Tutte le routes di bundle-leads sono gestite nel file routes/bundle-leads.ts
   // La protezione auth viene applicata a livello di route individuale
   app.use("/api/bundle-leads", bundleLeadsRouter);
+  app.use("/api/client-validation", clientValidationRouter);
   app.use("/api/settings", settingsRouter);
   app.use("/api/finance", financeRouter);
   app.use("/api/gallery", galleryRouter);

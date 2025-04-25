@@ -159,14 +159,17 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
         serviceId: item.serviceId,
         quantity: item.quantity,
         unitPrice: item.service.price,
+        // Calcola prezzo totale (quantità * prezzo unitario o quantità * prezzo scontato)
+        total: item.discountType !== null && item.discountValue > 0 
+               ? (item.discountedPrice || 0) * item.quantity
+               : item.service.price * item.quantity,
         hasDiscount: item.discountType !== null && item.discountValue > 0,
         discountType: item.discountType,
         discountValue: item.discountValue || 0,
         discountedPrice: item.discountedPrice,
         bundleId: bundleId,
         notes: item.notes,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        // Rimuoviamo i campi createdAt e updatedAt che non esistono nella tabella
       });
     }
 

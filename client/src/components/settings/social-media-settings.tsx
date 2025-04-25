@@ -1,84 +1,63 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Settings } from "@shared/schema";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Instagram, Facebook, Twitter, Youtube, Linkedin, MessageCircle } from "lucide-react";
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Settings } from '@shared/schema';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { Facebook, Instagram, Twitter, Youtube, Globe, Save } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
+// Schema di validazione per i social media
 const socialMediaSchema = z.object({
-  instagramUrl: z.string().url("Inserisci un URL valido").optional().or(z.literal("")),
-  facebookUrl: z.string().url("Inserisci un URL valido").optional().or(z.literal("")),
-  twitterUrl: z.string().url("Inserisci un URL valido").optional().or(z.literal("")),
-  youtubeUrl: z.string().url("Inserisci un URL valido").optional().or(z.literal("")),
-  tiktokUrl: z.string().url("Inserisci un URL valido").optional().or(z.literal("")),
-  pinterestUrl: z.string().url("Inserisci un URL valido").optional().or(z.literal("")),
-  linkedinUrl: z.string().url("Inserisci un URL valido").optional().or(z.literal("")),
-  companyDescription: z.string().optional(),
+  facebook: z.string().url("URL di Facebook non valido").or(z.string().length(0)).optional(),
+  instagram: z.string().url("URL di Instagram non valido").or(z.string().length(0)).optional(),
+  twitter: z.string().url("URL di Twitter non valido").or(z.string().length(0)).optional(),
+  youtube: z.string().url("URL di YouTube non valido").or(z.string().length(0)).optional(),
+  website: z.string().url("URL del sito web non valido").or(z.string().length(0)).optional()
 });
 
 type SocialMediaFormValues = z.infer<typeof socialMediaSchema>;
 
 export const SocialMediaSettings = ({ settings }: { settings: Settings | undefined }) => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isLoading, setIsLoading] = useState(false);
+
+  const defaultValues: SocialMediaFormValues = {
+    facebook: settings?.facebook || '',
+    instagram: settings?.instagram || '',
+    twitter: settings?.twitter || '',
+    youtube: settings?.youtube || '',
+    website: settings?.website || ''
+  };
 
   const form = useForm<SocialMediaFormValues>({
     resolver: zodResolver(socialMediaSchema),
-    defaultValues: {
-      instagramUrl: settings?.instagramUrl || "",
-      facebookUrl: settings?.facebookUrl || "",
-      twitterUrl: settings?.twitterUrl || "",
-      youtubeUrl: settings?.youtubeUrl || "",
-      tiktokUrl: settings?.tiktokUrl || "",
-      pinterestUrl: settings?.pinterestUrl || "",
-      linkedinUrl: settings?.linkedinUrl || "",
-      companyDescription: settings?.companyDescription || "",
-    },
-    values: {
-      instagramUrl: settings?.instagramUrl || "",
-      facebookUrl: settings?.facebookUrl || "",
-      twitterUrl: settings?.twitterUrl || "",
-      youtubeUrl: settings?.youtubeUrl || "",
-      tiktokUrl: settings?.tiktokUrl || "",
-      pinterestUrl: settings?.pinterestUrl || "",
-      linkedinUrl: settings?.linkedinUrl || "",
-      companyDescription: settings?.companyDescription || "",
-    },
+    defaultValues
   });
 
   const mutation = useMutation({
     mutationFn: async (values: SocialMediaFormValues) => {
-      setIsLoading(true);
-      const res = await apiRequest("PATCH", "/api/settings", values);
-      const data = await res.json();
-      return data;
+      // Invia solo i campi dei social media, non tutti i settings
+      const res = await apiRequest('PATCH', '/api/settings', values);
+      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       toast({
-        title: "Impostazioni social aggiornate",
-        description: "Le impostazioni dei social media sono state aggiornate con successo.",
+        title: 'Impostazioni social media aggiornate',
+        description: 'Le tue impostazioni dei social media sono state salvate con successo.'
       });
-      setIsLoading(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'aggiornamento delle impostazioni social.",
-        variant: "destructive",
+        title: 'Errore',
+        description: `Si è verificato un errore: ${error.message}`,
+        variant: 'destructive'
       });
-      setIsLoading(false);
-      console.error(error);
-    },
+    }
   });
 
   function onSubmit(values: SocialMediaFormValues) {
@@ -88,10 +67,9 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Social Media e Descrizione Studio</CardTitle>
+        <CardTitle>Social Media</CardTitle>
         <CardDescription>
-          Gestisci i tuoi profili social e la descrizione del tuo studio fotografico.
-          Questi dettagli saranno mostrati nei template delle pagine pubbliche.
+          Configura i link ai tuoi profili social che verranno mostrati nei pacchetti e preventivi.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -99,136 +77,117 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="companyDescription"
+              name="facebook"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrizione Studio</FormLabel>
+                  <FormLabel className="flex items-center">
+                    <Facebook className="mr-2 h-4 w-4 text-blue-600" />
+                    Facebook
+                  </FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Descrivi il tuo studio fotografico con una frase accattivante..."
-                      rows={4}
-                      {...field}
-                    />
+                    <Input placeholder="https://facebook.com/tuoprofilo" {...field} />
                   </FormControl>
                   <FormDescription>
-                    Questa descrizione apparirà nei footer e nelle sezioni informative dei template.
+                    URL completo del tuo profilo Facebook professionale
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="instagramUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Instagram className="h-4 w-4" /> Instagram
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://instagram.com/tuostudio" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="instagram"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center">
+                    <Instagram className="mr-2 h-4 w-4 text-pink-600" />
+                    Instagram
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://instagram.com/tuoprofilo" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    URL completo del tuo profilo Instagram professionale
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="facebookUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Facebook className="h-4 w-4" /> Facebook
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://facebook.com/tuostudio" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="twitter"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center">
+                    <Twitter className="mr-2 h-4 w-4 text-blue-400" />
+                    Twitter
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://twitter.com/tuoprofilo" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    URL completo del tuo profilo Twitter professionale
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="twitterUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Twitter className="h-4 w-4" /> Twitter
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://twitter.com/tuostudio" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="youtube"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center">
+                    <Youtube className="mr-2 h-4 w-4 text-red-600" />
+                    YouTube
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://youtube.com/c/tuocanale" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    URL completo del tuo canale YouTube professionale
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="youtubeUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Youtube className="h-4 w-4" /> YouTube
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://youtube.com/c/tuostudio" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="website"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center">
+                    <Globe className="mr-2 h-4 w-4 text-gray-600" />
+                    Sito Web
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://tuosito.it" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    URL completo del tuo sito web pubblico
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="tiktokUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4" /> TikTok
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://tiktok.com/@tuostudio" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+            <div className="flex justify-end">
+              <Button type="submit" className="flex items-center" disabled={mutation.isPending}>
+                {mutation.isPending ? (
+                  <>
+                    <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Salvataggio...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Salva Impostazioni
+                  </>
                 )}
-              />
-
-              <FormField
-                control={form.control}
-                name="linkedinUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Linkedin className="h-4 w-4" /> LinkedIn
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://linkedin.com/company/tuostudio" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="flex justify-end space-x-4 pt-4">
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={() => form.reset()}
-              >
-                Annulla
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading}
-              >
-                {isLoading ? "Salvataggio..." : "Salva Impostazioni Social"}
               </Button>
             </div>
           </form>

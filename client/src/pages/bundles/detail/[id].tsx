@@ -765,6 +765,7 @@ const MinimalTemplate: React.FC<{
             </div>
           </div>
         </div>
+        <BundleTemplateSocialFooters templateType="minimal" settings={settings} />
       </footer>
     </div>
   );
@@ -1020,6 +1021,7 @@ const BoldTemplate: React.FC<{
             <p>&copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.</p>
           </div>
         </div>
+        <BundleTemplateSocialFooters templateType="bold" settings={settings} />
       </footer>
     </div>
   );

@@ -268,23 +268,28 @@ export class ClausesController {
       const conditions: SQL[] = [];
       
       // Clausole per tutte le categorie e tipi di evento (generiche)
-      conditions.push(and(isNull(contractClauses.categoryId), isNull(contractClauses.eventType)));
+      conditions.push(
+        sql`${isNull(contractClauses.categoryId)} AND ${isNull(contractClauses.eventType)}`
+      );
       
       // Clausole specifiche per il tipo di evento del preventivo
       if (quote.eventType) {
-        conditions.push(and(isNull(contractClauses.categoryId), eq(contractClauses.eventType, quote.eventType)));
+        conditions.push(
+          sql`${isNull(contractClauses.categoryId)} AND ${eq(contractClauses.eventType, quote.eventType)}`
+        );
       }
       
       // Clausole specifiche per la categoria del preventivo
       if (quote.categoryId) {
-        conditions.push(and(eq(contractClauses.categoryId, quote.categoryId), isNull(contractClauses.eventType)));
+        conditions.push(
+          sql`${eq(contractClauses.categoryId, quote.categoryId)} AND ${isNull(contractClauses.eventType)}`
+        );
         
         // Clausole specifiche per categoria E tipo di evento
         if (quote.eventType) {
-          conditions.push(and(
-            eq(contractClauses.categoryId, quote.categoryId),
-            eq(contractClauses.eventType, quote.eventType)
-          ));
+          conditions.push(
+            sql`${eq(contractClauses.categoryId, quote.categoryId)} AND ${eq(contractClauses.eventType, quote.eventType)}`
+          );
         }
       }
       

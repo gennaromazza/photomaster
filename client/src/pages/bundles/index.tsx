@@ -65,7 +65,7 @@ const formatPrice = (price: number) => {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
     currency: 'EUR',
-  }).format(price / 100);
+  }).format(price);
 };
 
 // Schema per il form di creazione/modifica di un pacchetto
@@ -400,7 +400,7 @@ const ServiceBundlesPage = () => {
     if (discountType === 'percentage') {
       discountedPrice = totalPrice - Math.round((totalPrice * discountValue) / 100);
     } else if (discountType === 'fixed') {
-      discountedPrice = Math.max(0, totalPrice - discountValue * 100); // Converti in centesimi
+      discountedPrice = Math.max(0, totalPrice - discountValue); // Usa direttamente il valore in euro
     }
     
     // Aggiorna i campi del form

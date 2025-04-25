@@ -88,7 +88,7 @@ type EventoCollaboratoreFormValues = z.infer<typeof eventoCollaboratoreSchema>;
 
 export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratoreListProps) {
   const { toast } = useToast();
-  const [filter, setFilter] = useState<"tutti" | "passati" | "futuri">("tutti");
+  const [filter, setFilter] = useState<string>("tutti");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"assegnati" | "disponibili">("assegnati");
 

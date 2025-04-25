@@ -92,33 +92,35 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"assegnati" | "disponibili">("assegnati");
 
-  // Recupera la lista degli eventi assegnati al collaboratore - prima prova con la versione inglese
-  const { data: eventiEnglish = [], isLoading: isLoadingEnglish, error: errorEnglish } = useQuery({
+  // Recupera la lista degli eventi assegnati al collaboratore - prova con la versione inglese
+  const { data: eventiEnglish = [], isLoading: isLoadingEnglish, error: errorEnglish } = useQuery<any[]>({
     queryKey: [`/api/collaborators/${collaboratoreId}/events`], 
     staleTime: 5 * 60 * 1000, // 5 minuti
   });
 
   // Fallback alla versione italiana se quella inglese fallisce o non restituisce dati
-  const { data: eventiItalian = [], isLoading: isLoadingItalian, error: errorItalian } = useQuery({
+  const { data: eventiItalian = [], isLoading: isLoadingItalian, error: errorItalian } = useQuery<any[]>({
     queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`],
     staleTime: 5 * 60 * 1000, // 5 minuti
-    enabled: isLoadingEnglish === false && (errorEnglish !== null || eventiEnglish.length === 0),
+    enabled: isLoadingEnglish === false,
   });
 
   // Combina i risultati delle due API
-  const eventi = eventiEnglish.length > 0 ? eventiEnglish : eventiItalian;
+  const eventi = (Array.isArray(eventiEnglish) && eventiEnglish.length > 0) 
+    ? eventiEnglish 
+    : (Array.isArray(eventiItalian) ? eventiItalian : []);
   const isLoading = isLoadingEnglish || isLoadingItalian;
-  const error = eventiEnglish.length === 0 ? errorEnglish : null;
+  const error = (Array.isArray(eventiEnglish) && eventiEnglish.length > 0) ? null : errorEnglish;
 
   // Recupera la lista di tutti gli eventi disponibili per l'assegnazione
-  const { data: eventiDisponibili, isLoading: isLoadingEventi } = useQuery({
+  const { data: eventiDisponibili = [], isLoading: isLoadingEventi } = useQuery<any[]>({
     queryKey: ["/api/events"],
     staleTime: 5 * 60 * 1000,
     enabled: isModalOpen, // Carica solo quando il modal è aperto
   });
   
   // Recupera la lista degli eventi senza collaboratori
-  const { data: eventiSenzaCollaboratori, isLoading: isLoadingEventiSenza, error: errorEventiSenza } = useQuery({
+  const { data: eventiSenzaCollaboratori = [], isLoading: isLoadingEventiSenza, error: errorEventiSenza } = useQuery<any[]>({
     queryKey: ["/api/events/senza-collaboratori"],
     staleTime: 5 * 60 * 1000, // 5 minuti
     enabled: activeTab === "disponibili", // Carica solo quando la tab "disponibili" è attiva
@@ -321,14 +323,14 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {!eventiDisponibili || eventiDisponibili.length === 0 ? (
+                        {!Array.isArray(eventiDisponibili) || eventiDisponibili.length === 0 ? (
                           <div className="p-2 text-center text-sm text-muted-foreground">
                             Nessun evento disponibile
                           </div>
                         ) : (
                           eventiDisponibili.map((evento: any) => (
                             <SelectItem key={evento.id} value={evento.id.toString()}>
-                              {evento.title} ({format(new Date(evento.date), "dd/MM/yyyy")})
+                              {evento.title} ({format(new Date(evento.date || evento.data), "dd/MM/yyyy")})
                             </SelectItem>
                           ))
                         )}
@@ -610,7 +612,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
       );
     }
 
-    if (!eventiSenzaCollaboratori || eventiSenzaCollaboratori.length === 0) {
+    if (!Array.isArray(eventiSenzaCollaboratori) || eventiSenzaCollaboratori.length === 0) {
       return (
         <div className="bg-muted/40 rounded-lg p-8 text-center">
           <p className="text-muted-foreground">
@@ -784,7 +786,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {!eventiDisponibili || eventiDisponibili.length === 0 ? (
+                            {!Array.isArray(eventiDisponibili) || eventiDisponibili.length === 0 ? (
                               <div className="p-2 text-center text-sm text-muted-foreground">
                                 Nessun evento disponibile
                               </div>

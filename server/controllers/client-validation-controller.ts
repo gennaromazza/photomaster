@@ -104,11 +104,11 @@ export const searchClients = async (req: Request, res: Response) => {
       // Ora che sappiamo che la base funziona, possiamo aggiungere la ricerca su più campi
       baseQuery = baseQuery.where(
         or(
-          clients.firstName.ilike(searchPattern),
-          clients.lastName.ilike(searchPattern),
-          clients.email.ilike(searchPattern),
-          clients.phone.ilike(searchPattern),
-          clients.address.ilike(searchPattern)
+          ilike(clients.firstName, searchPattern),
+          ilike(clients.lastName, searchPattern),
+          ilike(clients.email, searchPattern),
+          ilike(clients.phone, searchPattern),
+          ilike(clients.address, searchPattern)
         )
       );
     }
@@ -136,11 +136,11 @@ export const searchClients = async (req: Request, res: Response) => {
       const searchPattern = `%${query.toString().trim()}%`;
       countQuery = countQuery.where(
         or(
-          clients.firstName.ilike(searchPattern),
-          clients.lastName.ilike(searchPattern),
-          clients.email.ilike(searchPattern),
-          clients.phone.ilike(searchPattern),
-          clients.address.ilike(searchPattern)
+          ilike(clients.firstName, searchPattern),
+          ilike(clients.lastName, searchPattern),
+          ilike(clients.email, searchPattern),
+          ilike(clients.phone, searchPattern),
+          ilike(clients.address, searchPattern)
         )
       );
     }

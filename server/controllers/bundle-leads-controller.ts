@@ -308,7 +308,7 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
     const quoteWithItems = await db.query.quotes.findFirst({
       where: eq(quotes.id, newQuote.id),
       with: {
-        items: true,
+        quoteItems: true,
         client: true,
       },
     });
@@ -376,11 +376,13 @@ export const getBundleLeads = async (req: Request, res: Response) => {
  */
 export const getAllBundleLeads = async (_req: Request, res: Response) => {
   try {
+    // Utilizziamo la relazione corretta come definita nello schema
     const leads = await db.query.bundleLeads.findMany({
       orderBy: (bundleLeads, { desc }) => [desc(bundleLeads.createdAt)],
       with: {
         bundle: true,
         quote: true,
+        client: true,
       },
     });
     

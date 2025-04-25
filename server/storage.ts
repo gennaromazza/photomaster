@@ -1592,6 +1592,11 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(quoteModuleItems).where(eq(quoteModuleItems.id, id));
     return result !== undefined;
   }
+
+  async getQuoteModuleItem(id: number): Promise<QuoteModuleItem | undefined> {
+    const [item] = await db.select().from(quoteModuleItems).where(eq(quoteModuleItems.id, id));
+    return item || undefined;
+  }
 }
 
 export const storage = new DatabaseStorage();

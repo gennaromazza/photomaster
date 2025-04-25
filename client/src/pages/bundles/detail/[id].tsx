@@ -27,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Check, Phone, Mail, MapPin, Star, Camera, Video, Clock, Calendar, Heart, MessagesSquare, Instagram, Facebook, Twitter } from 'lucide-react';
+import { BundleTemplateSocialFooters } from '@/components/bundles/template-social-footers';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -210,64 +211,60 @@ const ElegantTemplate: React.FC<{
       </main>
 
       {/* Footer - Elegant Style */}
-      <footer className="bg-gray-50 border-t py-12">
-        <div className="container mx-auto px-4 text-center">
-          <div className="mb-6">
-            <h2 className="text-2xl font-serif text-gray-800 mb-2">{settings.companyName}</h2>
-            <div className="h-0.5 w-24 bg-primary/30 mx-auto"></div>
-          </div>
-          
-          <p className="text-gray-600 max-w-2xl mx-auto mb-8 italic">
-            "{settings.companyDescription || 'Specializzati in fotografia artistica di altissima qualità, catturiamo i tuoi momenti speciali con uno stile unico e sofisticato.'}"
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-8">
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-                <Phone className="h-4 w-4 text-primary" />
-              </div>
-              <p className="text-sm text-gray-500">Telefono</p>
-              <p className="font-medium">{settings.companyPhone || ''}</p>
+      <footer>
+        <div className="bg-gray-50 border-t py-12">
+          <div className="container mx-auto px-4 text-center">
+            <div className="mb-6">
+              <h2 className="text-2xl font-serif text-gray-800 mb-2">{settings.companyName}</h2>
+              <div className="h-0.5 w-24 bg-primary/30 mx-auto"></div>
             </div>
             
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-                <Mail className="h-4 w-4 text-primary" />
-              </div>
-              <p className="text-sm text-gray-500">Email</p>
-              <p className="font-medium">{settings.companyEmail}</p>
-            </div>
-            
-            {settings.companyAddress && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-8">
               <div className="flex flex-col items-center">
                 <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-                  <MapPin className="h-4 w-4 text-primary" />
+                  <Phone className="h-4 w-4 text-primary" />
                 </div>
-                <p className="text-sm text-gray-500">Indirizzo</p>
-                <p className="font-medium">{settings.companyAddress}</p>
+                <p className="text-sm text-gray-500">Telefono</p>
+                <p className="font-medium">{settings.companyPhone || ''}</p>
               </div>
-            )}
-          </div>
-          
-          <div className="flex justify-center space-x-4">
-            <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="rounded-full px-5">
-                <Mail className="mr-2 h-4 w-4" />
-                Contattaci
-              </Button>
-            </a>
-            <a href={getWhatsAppUrl(settings.companyPhone || '')} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="rounded-full px-5">
-                <Phone className="mr-2 h-4 w-4" />
-                WhatsApp
-              </Button>
-            </a>
-          </div>
-          
-          <div className="mt-8 text-xs text-gray-400">
-            &copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.
+              
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                  <Mail className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-sm text-gray-500">Email</p>
+                <p className="font-medium">{settings.companyEmail}</p>
+              </div>
+              
+              {settings.companyAddress && (
+                <div className="flex flex-col items-center">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                  </div>
+                  <p className="text-sm text-gray-500">Indirizzo</p>
+                  <p className="font-medium">{settings.companyAddress}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-center space-x-4">
+              <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="rounded-full px-5">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Contattaci
+                </Button>
+              </a>
+              <a href={getWhatsAppUrl(settings.companyPhone || '')} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="rounded-full px-5">
+                  <Phone className="mr-2 h-4 w-4" />
+                  WhatsApp
+                </Button>
+              </a>
+            </div>
           </div>
         </div>
+        
+        <SocialMediaFooter settings={settings} variant="elegant" />
       </footer>
     </div>
   );
@@ -536,6 +533,7 @@ const ModernTemplate: React.FC<{
             &copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.
           </div>
         </div>
+        <BundleTemplateSocialFooters templateType="modern" settings={settings} />
       </footer>
     </div>
   );

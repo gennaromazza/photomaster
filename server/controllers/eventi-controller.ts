@@ -820,7 +820,8 @@ export const removeCollaboratorePreventivo = async (req: Request, res: Response)
     
     // Elimina anche l'assegnazione dalla tabella inglese
     await db.delete(eventCollaborators)
-      .where(sql`${eq(eventCollaborators.collaboratorId, collaboratoreId)} AND ${eq(eventCollaborators.eventId, eventoId)}`);
+      .where(eq(eventCollaborators.collaboratorId, collaboratoreId))
+      .where(eq(eventCollaborators.eventId, eventoId));
     
     return res.status(200).json({ 
       success: true, 

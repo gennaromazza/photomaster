@@ -580,7 +580,7 @@ const BoldTemplate: React.FC<{
           <div className="flex items-center space-x-6">
             <div className="flex items-center">
               <Phone className="h-4 w-4 mr-2" />
-              <span className="text-sm">{settings.companyPhone || '+39 123 456 7890'}</span>
+              <span className="text-sm">{settings.companyPhone || ''}</span>
             </div>
             <Button variant="secondary" size="sm" className="bg-white text-primary hover:bg-white/90" onClick={onRequestBundle}>
               Richiedi Ora
@@ -735,7 +735,7 @@ const BoldTemplate: React.FC<{
               <div className="space-y-3">
                 <div className="flex items-center">
                   <Phone className="h-5 w-5 text-primary mr-3" />
-                  <span>{settings.companyPhone || '+39 123 456 7890'}</span>
+                  <span>{settings.companyPhone || ''}</span>
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-5 w-5 text-primary mr-3" />
@@ -748,7 +748,7 @@ const BoldTemplate: React.FC<{
                   </div>
                 )}
                 <div className="flex space-x-3 pt-3">
-                  <a href={getWhatsAppUrl(settings.companyPhone || '+39123456789')} target="_blank" rel="noopener noreferrer">
+                  <a href={getWhatsAppUrl(settings.companyPhone || '')} target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" size="sm" className="bg-white/10 border-white/20 hover:bg-white/20">
                       <Phone className="mr-2 h-4 w-4" />
                       WhatsApp

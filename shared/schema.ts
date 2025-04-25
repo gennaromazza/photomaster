@@ -583,6 +583,8 @@ export const quoteModuleItems = pgTable("quote_module_items", {
   discountedPrice: integer("discounted_price"), // Prezzo unitario scontato
   // Totale calcolato (quantity * unitPrice o quantity * discountedPrice se scontato)
   total: integer("total").notNull(),
+  // Quantità selezionata dal cliente (per moduli variabili)
+  selectedQuantity: integer("selected_quantity"),
   // Note specifiche per l'elemento
   notes: text("notes"),
 });
@@ -601,6 +603,7 @@ export const insertQuoteModuleItemSchema = createInsertSchema(quoteModuleItems).
   discountValue: true,
   discountedPrice: true,
   total: true,
+  selectedQuantity: true,
   notes: true,
 });
 

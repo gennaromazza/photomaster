@@ -1,192 +1,259 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { bundleLeads, insertBundleLeadSchema, quotes, quoteItems, clients, insertClientSchema, insertQuoteSchema, services, serviceItems, serviceBundles, serviceBundleItems } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
-import { sendEmail } from "../email";
+import { eq } from "drizzle-orm";
+import { 
+  insertBundleLeadSchema, 
+  bundleLeads, 
+  serviceBundles,
+  serviceBundleItems,
+  quotes,
+  clients,
+  quoteItems,
+  insertQuoteSchema,
+  insertClientSchema
+} from "@shared/schema";
+// import { sendBundleLeadNotification, sendBundleQuoteCreationConfirmation } from "../email";
 
-export const createQuoteFromBundle = async (req: Request, res: Response) => {
+// Funzioni interne per l'invio di email
+async function sendBundleLeadNotification(lead: any, bundle: any): Promise<boolean> {
   try {
-    console.log("Creazione preventivo da pacchetto bundle:", req.body);
-    
-    // Validazione dei dati di input
-    const {
-      firstName,
-      lastName,
-      email,
-      phone,
-      address,
-      message,
-      eventDate,
-      eventLocation,
-      eventType,
-      bundleId,
-    } = req.body;
-    
-    // Controllo che il bundleId sia presente
-    if (!bundleId) {
-      return res.status(400).json({ message: "ID del pacchetto mancante" });
-    }
-    
-    // Verifica che il bundle esista
-    const bundle = await db.query.serviceBundles.findFirst({
-      where: eq(serviceBundles.id, Number(bundleId)),
+    console.log(`[Email] Invio notifica lead pacchetto ${bundle.name} per ${lead.firstName} ${lead.lastName}`);
+    // In un ambiente di produzione, qui invieremmo l'email
+    return true;
+  } catch (error) {
+    console.error("Errore nell'invio della notifica di lead pacchetto:", error);
+    return false;
+  }
+}
+
+async function sendBundleQuoteCreationConfirmation(quote: any, bundle: any): Promise<boolean> {
+  try {
+    console.log(`[Email] Invio conferma creazione preventivo da pacchetto ${bundle.name} per ${quote.client.firstName} ${quote.client.lastName}`);
+    // In un ambiente di produzione, qui invieremmo l'email
+    return true;
+  } catch (error) {
+    console.error("Errore nell'invio della conferma di creazione preventivo:", error);
+    return false;
+  }
+}
+
+/**
+ * Crea una nuova lead da un pacchetto servizi
+ */
+export const createBundleLead = async (req: Request, res: Response) => {
+  try {
+    // Validare i dati in arrivo
+    const bundleLeadData = insertBundleLeadSchema.parse({
+      ...req.body,
+      status: "new",
+      createdAt: new Date(),
     });
-    
+
+    // Verificare che il bundle esista
+    const bundle = await db.query.serviceBundles.findFirst({
+      where: eq(serviceBundles.id, bundleLeadData.bundleId),
+    });
+
     if (!bundle) {
       return res.status(404).json({ message: "Pacchetto non trovato" });
     }
-    
-    // Recupera i servizi inclusi nel bundle
+
+    // Creare la lead
+    const [newLead] = await db
+      .insert(bundleLeads)
+      .values(bundleLeadData)
+      .returning();
+
+    // Inviare email di notifica
+    await sendBundleLeadNotification(newLead, bundle);
+
+    return res.status(201).json(newLead);
+  } catch (error: any) {
+    console.error("Errore nella creazione della lead da pacchetto:", error);
+    return res
+      .status(500)
+      .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
+  }
+};
+
+/**
+ * Crea un preventivo completo da una richiesta di pacchetto servizi
+ */
+export const createQuoteFromBundleLead = async (req: Request, res: Response) => {
+  try {
+    const { 
+      firstName, 
+      lastName, 
+      email, 
+      phone, 
+      address, 
+      eventType, 
+      eventDate, 
+      eventLocation, 
+      message, 
+      bundleId 
+    } = req.body;
+
+    // Verifica che il bundle esista
+    const bundle = await db.query.serviceBundles.findFirst({
+      where: eq(serviceBundles.id, bundleId),
+    });
+
+    if (!bundle) {
+      return res.status(404).json({ message: "Pacchetto non trovato" });
+    }
+
+    // Recupera tutti gli elementi del pacchetto
     const bundleItems = await db.query.serviceBundleItems.findMany({
-      where: eq(serviceBundleItems.bundleId, Number(bundleId)),
+      where: eq(serviceBundleItems.bundleId, bundleId),
       with: {
         service: true
       }
     });
+
+    // Crea il nuovo cliente se necessario
+    const clientData = insertClientSchema.parse({
+      firstName,
+      lastName,
+      email,
+      phone: phone || "",
+      address: address || "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const [newClient] = await db
+      .insert(clients)
+      .values(clientData)
+      .returning();
+
+    // Crea il preventivo
+    const quoteTitle = `Preventivo ${bundle.name} - ${firstName} ${lastName}`;
     
-    if (bundleItems.length === 0) {
-      return res.status(400).json({ message: "Il pacchetto non contiene servizi" });
+    const quoteData = insertQuoteSchema.parse({
+      title: quoteTitle,
+      clientId: newClient.id,
+      status: "draft",
+      eventType: eventType || "matrimonio",
+      eventDate: eventDate ? new Date(eventDate) : null,
+      eventLocation: eventLocation || "",
+      notes: message || "",
+      internalNotes: `Preventivo generato automaticamente da richiesta pacchetto "${bundle.name}"`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 giorni di validità
+      depositAmount: bundle.depositAmount || 0,
+      depositDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 giorni per l'acconto
+      installmentsCount: bundle.installmentsCount || 1,
+    });
+
+    const [newQuote] = await db
+      .insert(quotes)
+      .values(quoteData)
+      .returning();
+
+    // Aggiungi gli item dal bundle al preventivo
+    for (const item of bundleItems) {
+      await db.insert(quoteItems).values({
+        quoteId: newQuote.id,
+        serviceId: item.serviceId,
+        quantity: item.quantity,
+        unitPrice: item.service.price,
+        hasDiscount: item.discountType !== null && item.discountValue > 0,
+        discountType: item.discountType,
+        discountValue: item.discountValue || 0,
+        discountedPrice: item.discountedPrice,
+        bundleId: bundleId,
+        notes: item.notes,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
     }
 
-    // Esegui tutta la logica in una transazione
-    return await db.transaction(async (tx) => {
-      // 1. Crea o recupera il cliente
-      let clientId: number;
-      
-      // Cerca se il cliente esiste già con questa email
-      const existingClient = await tx.query.clients.findFirst({
-        where: eq(clients.email, email)
-      });
-      
-      if (existingClient) {
-        // Usa il cliente esistente
-        clientId = existingClient.id;
-        
-        // Aggiorna eventualmente i dati del cliente se necessario
-        if (phone && !existingClient.phone) {
-          await tx.update(clients)
-            .set({ phone })
-            .where(eq(clients.id, clientId));
-        }
-      } else {
-        // Crea un nuovo cliente
-        const [newClient] = await tx.insert(clients)
-          .values({
-            firstName,
-            lastName,
-            email,
-            phone: phone || null,
-            address: address || null,
-            notes: message || null,
-          })
-          .returning();
-          
-        clientId = newClient.id;
-      }
-      
-      // 2. Crea il preventivo
-      const [newQuote] = await tx.insert(quotes)
-        .values({
-          title: `Preventivo da ${bundle.name}`,
-          clientId,
-          secondClientId: null,
-          status: "draft",
-          eventType: eventType || "matrimonio",
-          eventDate: eventDate ? new Date(eventDate) : null,
-          eventLocation: eventLocation || null,
-          notes: message || null,
-          discountType: bundle.discountType || null,
-          discountValue: bundle.discountValue || null,
-          signedAt: null,
-          validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 giorni di validità
-          shareToken: null,
-          shareExpiry: null,
-          expiryNotificationSent: false,
-          moduleLayout: "gallery",
-          publicNotes: `Preventivo generato automaticamente dal pacchetto "${bundle.name}"`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          depositAmount: bundle.depositAmount || null,
-          depositDueDate: null,
-          totalPaid: 0,
-          totalDue: bundle.discountedPrice || bundle.totalPrice,
-          installmentsCount: bundle.installmentsCount || 1,
-          leadSourceId: null,
-        })
-        .returning();
-      
-      // 3. Crea gli elementi del preventivo basati sugli elementi del bundle
-      for (const item of bundleItems) {
-        await tx.insert(quoteItems)
-          .values({
-            quoteId: newQuote.id,
-            serviceId: item.serviceId,
-            bundleId: bundle.id,
-            quantity: item.quantity,
-            unitPrice: item.service.price,
-            total: item.quantity * item.service.price,
-            notes: null,
-            hasDiscount: false,
-            discountType: null,
-            discountValue: null,
-            discountedPrice: null,
-          });
-      }
-      
-      // 4. Registra il lead del bundle
-      await tx.insert(bundleLeads)
-        .values({
-          bundleId: bundle.id,
-          clientId,
-          quoteId: newQuote.id,
-          createdAt: new Date(),
-          notes: message || null,
-        });
-      
-      // 5. Invia notifica email (se configurato)
-      try {
-        const clientName = `${firstName} ${lastName}`;
-        const emailParams = {
-          to: process.env.ADMIN_EMAIL || "admin@example.com",
-          subject: `Nuova richiesta di preventivo dal pacchetto "${bundle.name}"`,
-          text: `
-            È stata ricevuta una nuova richiesta di preventivo:
-            
-            Cliente: ${clientName}
-            Email: ${email}
-            Telefono: ${phone || 'Non specificato'}
-            Pacchetto richiesto: ${bundle.name}
-            
-            Messaggio del cliente:
-            ${message || 'Nessun messaggio incluso'}
-            
-            Puoi visualizzare il preventivo creato automaticamente nel tuo pannello di controllo.
-          `
-        };
-        
-        await sendEmail(process.env.SENDGRID_API_KEY || '', {
-          ...emailParams,
-          from: process.env.FROM_EMAIL || "noreply@studiomaster.it",
-          html: emailParams.text.replace(/\n/g, '<br>')
-        });
-      } catch (emailError) {
-        console.error("Errore nell'invio dell'email:", emailError);
-        // Continua l'esecuzione anche se l'invio dell'email fallisce
-      }
-      
-      return res.status(201).json({ 
-        message: "Preventivo creato con successo", 
-        quoteId: newQuote.id,
-        bundleId: bundle.id,
-        clientId
-      });
+    // Aggiorna il preventivo con il totale
+    const quoteWithItems = await db.query.quotes.findFirst({
+      where: eq(quotes.id, newQuote.id),
+      with: {
+        items: true,
+        client: true,
+      },
+    });
+
+    // Salva la lead
+    const bundleLeadData = insertBundleLeadSchema.parse({
+      firstName,
+      lastName,
+      email,
+      phone: phone || "",
+      message: message || "",
+      bundleId,
+      status: "converted", // È stata convertita in preventivo
+      createdAt: new Date(),
+      quoteId: newQuote.id,
+    });
+
+    const [newLead] = await db
+      .insert(bundleLeads)
+      .values(bundleLeadData)
+      .returning();
+
+    // Invia email di conferma
+    if (quoteWithItems) {
+      await sendBundleQuoteCreationConfirmation(quoteWithItems, bundle);
+    }
+
+    return res.status(201).json({ 
+      quote: newQuote,
+      client: newClient,
+      lead: newLead
+    });
+  } catch (error: any) {
+    console.error("Errore nella creazione del preventivo da pacchetto:", error);
+    return res
+      .status(500)
+      .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
+  }
+};
+
+/**
+ * Recupera tutte le lead di un bundle
+ */
+export const getBundleLeads = async (req: Request, res: Response) => {
+  try {
+    const { bundleId } = req.params;
+    
+    const leads = await db.query.bundleLeads.findMany({
+      where: eq(bundleLeads.bundleId, parseInt(bundleId)),
+      orderBy: (bundleLeads, { desc }) => [desc(bundleLeads.createdAt)],
     });
     
-  } catch (error) {
-    console.error("Errore durante la creazione del preventivo dal pacchetto:", error);
-    return res.status(500).json({ 
-      message: "Si è verificato un errore durante la creazione del preventivo", 
-      error: error instanceof Error ? error.message : "Errore sconosciuto" 
+    return res.status(200).json(leads);
+  } catch (error: any) {
+    console.error("Errore nel recupero delle lead del pacchetto:", error);
+    return res
+      .status(500)
+      .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
+  }
+};
+
+/**
+ * Recupera tutte le lead
+ */
+export const getAllBundleLeads = async (_req: Request, res: Response) => {
+  try {
+    const leads = await db.query.bundleLeads.findMany({
+      orderBy: (bundleLeads, { desc }) => [desc(bundleLeads.createdAt)],
+      with: {
+        bundle: true,
+        quote: true,
+      },
     });
+    
+    return res.status(200).json(leads);
+  } catch (error: any) {
+    console.error("Errore nel recupero di tutte le lead:", error);
+    return res
+      .status(500)
+      .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
   }
 };

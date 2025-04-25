@@ -1,5 +1,5 @@
 import { MailService } from '@sendgrid/mail';
-import { User } from "../shared/schema";
+import { User, ServiceBundle, BundleLead } from "../shared/schema";
 import { storage } from './storage';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';

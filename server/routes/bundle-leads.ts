@@ -1,11 +1,21 @@
 import { Router } from "express";
-import { createQuoteFromBundle } from "../controllers/bundle-leads-controller";
+import { 
+  createBundleLead, 
+  createQuoteFromBundleLead, 
+  getBundleLeads, 
+  getAllBundleLeads 
+} from "../controllers/bundle-leads-controller";
 import { isAuthenticated, csrfProtection } from "../auth";
 
 const router = Router();
 
-// La rotta per creare un preventivo da un pacchetto non richiede autenticazione
-// perché è destinata ai clienti che visitano la pagina pubblica del pacchetto
-router.post("/create-quote", csrfProtection, createQuoteFromBundle);
+// Rotte pubbliche (non richiedono autenticazione)
+// Queste rotte sono accessibili ai clienti che visitano le pagine pubbliche
+router.post("/", csrfProtection, createBundleLead);
+router.post("/create-quote", csrfProtection, createQuoteFromBundleLead);
+
+// Rotte protette (richiedono autenticazione di amministratore)
+router.get("/", isAuthenticated, getAllBundleLeads);
+router.get("/:bundleId", isAuthenticated, getBundleLeads);
 
 export default router;

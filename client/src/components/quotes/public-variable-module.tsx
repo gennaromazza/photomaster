@@ -206,7 +206,10 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
     selectedItems.forEach(selected => {
       const item = module.items.find((item: ModuleItem) => item.id === selected.id);
       if (item) {
-        sum += Number(item.total || 0);
+        // Considera la quantità selezionata o la quantità di default
+        const quantity = item.selectedQuantity || item.quantity || 1;
+        const unitPrice = item.unitPrice || (item.total / (item.quantity || 1));
+        sum += Number(unitPrice * quantity);
       }
     });
     setTotal(sum);

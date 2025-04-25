@@ -2048,9 +2048,13 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
             console.log(`[INFO] Modulo ${moduleId}, Item ${item.id}, Selezionato: ${isSelected}`);
             
             if (isSelected) {
+              // Recupera i dettagli dell'item, in caso abbia una selectedQuantity personalizzata
+              const itemDetails = await storage.getQuoteModuleItem(item.id);
+              
               await storage.updateQuoteModuleItem(item.id, { 
                 isSelected: true,
-                selectedQuantity: item.quantity || 1 // imposta una quantità di default
+                // Mantiene la selectedQuantity se esistente oppure usa quantity come default
+                selectedQuantity: itemDetails.selectedQuantity || item.quantity || 1
               });
             }
           }

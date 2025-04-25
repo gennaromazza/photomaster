@@ -941,12 +941,20 @@ export class DatabaseStorage implements IStorage {
   async getAllQuotes(): Promise<Quote[]> {
     try {
       // Utilizziamo il client postgres diretto per evitare problemi con campi mancanti
+      // Selezioniamo solo preventivi univoci e aggiungiamo DISTINCT per evitare duplicati
       const rawQuotes = await pgClient`
-        SELECT id, title, client_id, second_client_id, event_id, category_id, lead_source_id, 
-        event_date, is_full_day, event_time, event_end_time, location, ceremony_location, ceremony_time, 
-        event_type, workflow, created_at, updated_at, expiry_date, status, notes, signature, 
-        is_shared, share_token
-        FROM quotes
+        WITH quote_with_bundle AS (
+          SELECT DISTINCT ON (quotes.id) 
+            quotes.id, title, client_id, second_client_id, event_id, category_id, lead_source_id,
+            event_date, is_full_day, event_time, event_end_time, location, ceremony_location, ceremony_time,
+            event_type, workflow, quotes.created_at, quotes.updated_at, expiry_date, status, notes, signature,
+            is_shared, share_token
+          FROM quotes
+          LEFT JOIN bundle_leads ON bundle_leads.quote_id = quotes.id
+          ORDER BY quotes.id, quotes.created_at DESC
+        )
+        SELECT * FROM quote_with_bundle
+        ORDER BY created_at DESC
       `;
       
       // Convertiamo manualmente i nomi delle colonne in camelCase e aggiungiamo campi virtuali

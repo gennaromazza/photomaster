@@ -795,6 +795,85 @@ export function FinancialSummary({
     // Altrimenti controlliamo lo status del preventivo
     return quoteStatus === "confermato" || quoteStatus === "approved";
   };
+  
+  // Funzione per calcolare l'importo residuo da pagare (in euro, non centesimi)
+  const calculateRemainingAmount = (): number => {
+    // Calcola l'importo totale già pagato nei pagamenti registrati (in euro)
+    const totalPaid = transactions
+      .filter((t: any) => t.type === "income" || t.type === "entrata")
+      .reduce((sum: number, transaction: any) => {
+        return sum + transaction.amount / 100; // Converti da centesimi a euro
+      }, 0);
+    
+    // Calcola l'importo residuo (in euro)
+    return Math.max(0, totalPreventivo - totalPaid);
+  };
+  
+  // Funzione per generare automaticamente le rate
+  const generateInstallments = () => {
+    // Verifica che il preventivo sia firmato prima di permettere la generazione delle rate
+    if (!isQuoteSigned()) {
+      toast({
+        title: "Operazione non consentita",
+        description: "Puoi generare rate solo dopo che il preventivo è stato firmato dal cliente.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const { numberOfRates, firstRateDate, interval } = rateGenerationData;
+    
+    // Calcolo dell'importo rimanente da rateizzare (in euro)
+    const remainingAmount = calculateRemainingAmount();
+    
+    if (remainingAmount <= 0) {
+      toast({
+        title: "Importo insufficiente",
+        description: "L'importo rimanente da pagare è zero o negativo. Non è possibile generare rate.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Calcola l'importo di ciascuna rata in euro (arrotondato a 2 decimali)
+    const installmentAmount = Math.round((remainingAmount / numberOfRates) * 100) / 100;
+    
+    // Crea le rate
+    const installments = [];
+    let currentDate = new Date(firstRateDate);
+    
+    for (let i = 0; i < numberOfRates; i++) {
+      const dueDate = format(currentDate, "yyyy-MM-dd");
+      
+      const installment = {
+        quoteId,
+        amount: Math.round(installmentAmount * 100), // Converti in centesimi per il database
+        dueDate,
+        description: `Rata ${i + 1} di ${numberOfRates} per preventivo #${quoteId}`,
+        status: "pending",
+        paymentMethod: null,
+        notes: null,
+      };
+      
+      installments.push(installment);
+      
+      // Aggiorna la data per la prossima rata
+      currentDate = addDays(currentDate, interval);
+    }
+    
+    // Crea le rate una per una
+    installments.forEach(installment => {
+      createScheduledPaymentMutation.mutate(installment);
+    });
+    
+    // Chiudi il dialog
+    setIsGenerateRatesOpen(false);
+    
+    toast({
+      title: "Rate generate",
+      description: `Sono state generate ${numberOfRates} rate automatiche per un totale di ${formatAmount(remainingAmount)}.`,
+    });
+  };
 
   // Badge di stato per i pagamenti programmati
   const getStatusBadge = (status: string) => {

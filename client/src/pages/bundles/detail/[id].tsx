@@ -34,6 +34,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useMutation } from '@tanstack/react-query';
+import { SocialMediaFooter } from '@/components/shared/social-media-footer';
 
 // Formattazione prezzo in Euro
 const formatPrice = (price: number) => {

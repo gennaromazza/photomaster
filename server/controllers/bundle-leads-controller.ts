@@ -121,25 +121,56 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
     if (existingClient) {
       // Se il cliente esiste già, lo utilizziamo
       console.log(`Cliente esistente trovato con email ${email}, ID: ${existingClient.id}`);
-      clientToUse = existingClient;
+      
+      // Aggiorniamo i dati del cliente con le informazioni più recenti
+      try {
+        const [updatedClient] = await db
+          .update(clients)
+          .set({
+            firstName,
+            lastName,
+            phone: phone || existingClient.phone,
+            address: address || existingClient.address,
+            updatedAt: new Date()
+          })
+          .where(eq(clients.id, existingClient.id))
+          .returning();
+          
+        console.log(`Cliente ID ${existingClient.id} aggiornato con successo`);
+        clientToUse = updatedClient;
+      } catch (updateError) {
+        console.error(`Errore nell'aggiornamento del cliente ID ${existingClient.id}:`, updateError);
+        clientToUse = existingClient; // Fallback al cliente esistente se l'aggiornamento fallisce
+      }
     } else {
       // Se il cliente non esiste, lo creiamo
-      const clientData = insertClientSchema.parse({
-        firstName,
-        lastName,
-        email,
-        phone: phone || "",
-        address: address || "",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+      try {
+        const clientData = insertClientSchema.parse({
+          firstName,
+          lastName,
+          email,
+          phone: phone || "",
+          address: address || "",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
 
-      const [newClient] = await db
-        .insert(clients)
-        .values(clientData)
-        .returning();
-        
-      clientToUse = newClient;
+        const [newClient] = await db
+          .insert(clients)
+          .values(clientData)
+          .returning();
+          
+        console.log(`Nuovo cliente creato con ID: ${newClient.id}, email: ${email}`);
+        clientToUse = newClient;
+      } catch (createError) {
+        console.error(`Errore nella creazione del nuovo cliente:`, createError);
+        throw createError; // Rilancia l'errore poiché senza cliente non possiamo procedere
+      }
+    }
+    
+    // Verifica che clientToUse abbia un ID valido
+    if (!clientToUse || !clientToUse.id) {
+      throw new Error(`Impossibile ottenere un cliente valido per l'email ${email}`);
     }
 
     // Crea il preventivo

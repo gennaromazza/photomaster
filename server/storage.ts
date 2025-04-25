@@ -698,15 +698,41 @@ export class DatabaseStorage implements IStorage {
       // Carica il cliente principale
       let client = null;
       if (quote.clientId) {
-        const [clientData] = await db
-          .select()
-          .from(clients)
-          .where(eq(clients.id, quote.clientId));
-        
-        if (clientData) {
-          client = clientData;
-        } else {
-          console.error(`Cliente con ID ${quote.clientId} non trovato per il preventivo ${id}`);
+        try {
+          // Prima cerca usando il client diretto per vedere se il cliente esiste
+          const clientCheck = await pgClient`SELECT id, first_name, last_name, email FROM clients WHERE id = ${quote.clientId}`;
+          console.log(`Verifica cliente per preventivo ${id} - ID cliente: ${quote.clientId}, risultato:`, clientCheck);
+          
+          if (clientCheck && clientCheck.length > 0) {
+            // Se il cliente è stato trovato con il client diretto, usiamo Drizzle per recuperarlo completo
+            const [clientData] = await db
+              .select()
+              .from(clients)
+              .where(eq(clients.id, quote.clientId));
+            
+            if (clientData) {
+              client = clientData;
+            } else {
+              console.error(`Cliente con ID ${quote.clientId} trovato con pgClient ma non con Drizzle`);
+              
+              // Fallback: costruiamo manualmente il cliente dai dati ottenuti con pgClient
+              client = {
+                id: clientCheck[0].id,
+                firstName: clientCheck[0].first_name,
+                lastName: clientCheck[0].last_name,
+                email: clientCheck[0].email,
+                // Aggiungi altri campi predefiniti se necessario
+                phone: "",
+                address: "",
+                createdAt: new Date(),
+                updatedAt: new Date()
+              };
+            }
+          } else {
+            console.error(`Cliente con ID ${quote.clientId} non trovato per il preventivo ${id}`);
+          }
+        } catch (clientError) {
+          console.error(`Errore nel recupero cliente ID ${quote.clientId} per preventivo ${id}:`, clientError);
         }
       }
       

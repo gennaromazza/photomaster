@@ -166,7 +166,7 @@ export function CollaboratoriQuote({
           ruolo: data.ruolo,
           note: data.note || "",
         }),
-        credentials: 'include'
+        credentials: 'include' as RequestCredentials
       };
       
       const response = await fetch(`/api/eventi/preventivo/${quoteId}/collaboratori`, requestOptions);
@@ -194,16 +194,17 @@ export function CollaboratoriQuote({
   // Mutation per rimuovere un collaboratore
   const removeCollaboratoreMutation = useMutation({
     mutationFn: async (collaboratoreId: number) => {
-      const response = await apiRequest(
-        "DELETE",
-        `/api/eventi/preventivo/${quoteId}/collaboratori/${collaboratoreId}`,
-        undefined,
-        {
-          headers: {
-            'X-CSRF-Token': csrfData?.csrfToken || '',
-          },
-        }
-      );
+      // Configura la richiesta con headers CSRF
+      const requestOptions = {
+        method: "DELETE", 
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfData?.csrfToken || ""
+        },
+        credentials: 'include' as RequestCredentials
+      };
+      
+      const response = await fetch(`/api/eventi/preventivo/${quoteId}/collaboratori/${collaboratoreId}`, requestOptions);
       return await response.json();
     },
     onSuccess: () => {
@@ -226,15 +227,22 @@ export function CollaboratoriQuote({
   // Mutation per modificare un collaboratore
   const updateCollaboratoreMutation = useMutation({
     mutationFn: async (data: { id: number, ruolo: string, note?: string }) => {
-      const response = await adaptedApiRequest(
-        "PATCH",
-        `/api/eventi/preventivo/${quoteId}/collaboratori/${data.id}`,
-        {
+      // Configura la richiesta con headers CSRF
+      const requestOptions = {
+        method: "PATCH", 
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfData?.csrfToken || ""
+        },
+        body: JSON.stringify({
           ruolo: data.ruolo,
           note: data.note || "",
-        }
-      );
-      return response.json();
+        }),
+        credentials: 'include' as RequestCredentials
+      };
+      
+      const response = await fetch(`/api/eventi/preventivo/${quoteId}/collaboratori/${data.id}`, requestOptions);
+      return await response.json();
     },
     onSuccess: () => {
       toast({

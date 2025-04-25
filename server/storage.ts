@@ -940,23 +940,15 @@ export class DatabaseStorage implements IStorage {
 
   async getAllQuotes(): Promise<Quote[]> {
     try {
-      // Utilizziamo il client postgres diretto per evitare problemi con campi mancanti
-      // Selezioniamo solo preventivi univoci e aggiungiamo DISTINCT per evitare duplicati
-      // Risolviamo l'ambiguità delle colonne specificando esplicitamente a quali tabelle appartengono
+      // Approccio più diretto e sicuro per evitare duplicati:
+      // Selezioniamo direttamente dalla tabella quotes senza join che potrebbero causare duplicati
       const rawQuotes = await pgClient`
-        WITH quote_with_bundle AS (
-          SELECT DISTINCT ON (quotes.id) 
-            quotes.id, quotes.title, quotes.client_id, quotes.second_client_id, quotes.event_id, 
-            quotes.category_id, quotes.lead_source_id, quotes.event_date, quotes.is_full_day, 
-            quotes.event_time, quotes.event_end_time, quotes.location, quotes.ceremony_location, 
-            quotes.ceremony_time, quotes.event_type, quotes.workflow, quotes.created_at, 
-            quotes.updated_at, quotes.expiry_date, quotes.status, quotes.notes, quotes.signature,
-            quotes.is_shared, quotes.share_token
-          FROM quotes
-          LEFT JOIN bundle_leads ON bundle_leads.quote_id = quotes.id
-          ORDER BY quotes.id, quotes.created_at DESC
-        )
-        SELECT * FROM quote_with_bundle
+        SELECT 
+          id, title, client_id, second_client_id, event_id, category_id, lead_source_id,
+          event_date, is_full_day, event_time, event_end_time, location, ceremony_location, ceremony_time,
+          event_type, workflow, created_at, updated_at, expiry_date, status, notes, signature,
+          is_shared, share_token
+        FROM quotes
         ORDER BY created_at DESC
       `;
       

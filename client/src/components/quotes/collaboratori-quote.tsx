@@ -147,7 +147,7 @@ export function CollaboratoriQuote({
             "Content-Type": "application/json",
             "X-CSRF-Token": csrfData?.csrfToken || "",
           },
-          credentials: "include",
+          credentials: "include" as RequestCredentials,
           body: JSON.stringify({
             collaboratoreId: parseInt(data.collaboratoreId),
             ruolo: data.ruolo,
@@ -176,39 +176,37 @@ export function CollaboratoriQuote({
       }),
   });
 
-  const removeMutation = useMutation(
-    async (id: number) => {
+  const removeMutation = useMutation({
+    mutationFn: async (id: number) => {
       const res = await fetch(
         `/api/eventi/preventivo/${quoteId}/collaboratori/${id}`,
         {
           method: "DELETE",
           headers: { "X-CSRF-Token": csrfData?.csrfToken || "" },
-          credentials: "include",
+          credentials: "include" as RequestCredentials,
         },
       );
       return res.json();
     },
-    {
-      onSuccess: () => {
-        toast({
-          title: "Collaboratore rimosso",
-          description: "Rimosso con successo.",
-        });
-        queryClient.invalidateQueries({
-          queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
-        });
-      },
-      onError: () =>
-        toast({
-          title: "Errore",
-          description: "Impossibile rimuovere collaboratore.",
-          variant: "destructive",
-        }),
+    onSuccess: () => {
+      toast({
+        title: "Collaboratore rimosso",
+        description: "Rimosso con successo.",
+      });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
+      });
     },
-  );
+    onError: () =>
+      toast({
+        title: "Errore",
+        description: "Impossibile rimuovere collaboratore.",
+        variant: "destructive",
+      }),
+  });
 
-  const updateMutation = useMutation(
-    async (data: { id: number; ruolo: string; note?: string }) => {
+  const updateMutation = useMutation({
+    mutationFn: async (data: { id: number; ruolo: string; note?: string }) => {
       const res = await fetch(
         `/api/eventi/preventivo/${quoteId}/collaboratori/${data.id}`,
         {
@@ -217,34 +215,32 @@ export function CollaboratoriQuote({
             "Content-Type": "application/json",
             "X-CSRF-Token": csrfData?.csrfToken || "",
           },
-          credentials: "include",
+          credentials: "include" as RequestCredentials,
           body: JSON.stringify({ ruolo: data.ruolo, note: data.note || "" }),
         },
       );
       return res.json();
     },
-    {
-      onSuccess: () => {
-        toast({
-          title: "Collaboratore aggiornato",
-          description: "Informazioni aggiornate.",
-        });
-        queryClient.invalidateQueries({
-          queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
-        });
-        setIsDialogOpen(false);
-        setIsEditMode(false);
-        setCurrentCollaboratore(null);
-        form.reset();
-      },
-      onError: () =>
-        toast({
-          title: "Errore",
-          description: "Impossibile aggiornare collaboratore.",
-          variant: "destructive",
-        }),
+    onSuccess: () => {
+      toast({
+        title: "Collaboratore aggiornato",
+        description: "Informazioni aggiornate.",
+      });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
+      });
+      setIsDialogOpen(false);
+      setIsEditMode(false);
+      setCurrentCollaboratore(null);
+      form.reset();
     },
-  );
+    onError: () =>
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare collaboratore.",
+        variant: "destructive",
+      }),
+  });
 
   if (isLoading) {
     return (

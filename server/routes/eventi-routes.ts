@@ -7,7 +7,10 @@ import {
   addMontaggioEvento,
   updateMontaggioEvento,
   getEventiSenzaCollaboratori,
-  getCollaboratoriPreventivo
+  getCollaboratoriPreventivo,
+  addCollaboratorePreventivo,
+  updateCollaboratorePreventivo,
+  removeCollaboratorePreventivo
 } from "../controllers/eventi-controller";
 import { csrfProtection } from "../auth";
 
@@ -17,8 +20,11 @@ const router = express.Router();
 // GET: Lista eventi senza collaboratori assegnati
 router.get("/senza-collaboratori", getEventiSenzaCollaboratori);
 
-// GET: Collaboratori assegnati ad un preventivo
+// Rotte per i collaboratori di un preventivo
 router.get("/preventivo/:quoteId/collaboratori", getCollaboratoriPreventivo);
+router.post("/preventivo/:quoteId/collaboratori", csrfProtection, addCollaboratorePreventivo);
+router.patch("/preventivo/:quoteId/collaboratori/:id", csrfProtection, updateCollaboratorePreventivo);
+router.delete("/preventivo/:quoteId/collaboratori/:id", csrfProtection, removeCollaboratorePreventivo);
 
 // GET: Dettagli completi dell'evento
 router.get("/:id", getEventoDettaglio);

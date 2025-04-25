@@ -7,14 +7,19 @@ import {
   insertPagamentoEventoSchema,
   insertMontaggioEventoSchema,
   updateMontaggioEventoSchema,
+  insertEventoCollaboratoreSchema,
   TipoPagamentoEvento,
   StatoMontaggioEvento,
   TipoMontaggioEvento
 } from "@shared/eventi-schema";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { z } from "zod";
-import { events } from "@shared/schema";
+import { events, quotes, eventCollaborators } from "@shared/schema";
 import { collaborators } from "@shared/schema";
+import { 
+  syncFromEventiCollaboratoriToEventCollaborators,
+  syncFromEventCollaboratorsToEventiCollaboratori
+} from "../utils/sync-collaboratori";
 
 /**
  * Controller per la gestione evento-centrica di:
@@ -453,18 +458,47 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
   }
 };
 
+// Funzione di supporto per verificare e ottenere l'evento da un preventivo
+const getEventoForPreventivo = async (quoteId: number) => {
+  // Recupera l'evento associato al preventivo (dalla tabella events)
+  const [evento] = await db.select().from(events)
+    .where(eq(events.quoteId, quoteId));
+  
+  // Se non esiste ancora un evento associato al preventivo, ne creiamo uno
+  if (!evento) {
+    // Recupera i dati del preventivo
+    const [quote] = await db.select().from(quotes).where(eq(quotes.id, quoteId));
+    
+    if (!quote) {
+      throw new Error(`Preventivo con ID ${quoteId} non trovato`);
+    }
+    
+    // Crea un nuovo evento associato al preventivo
+    const [nuovoEvento] = await db.insert(events)
+      .values({
+        title: quote.title || 'Evento senza titolo',
+        description: '',
+        clientId: quote.clientId,
+        startDate: quote.eventDate || new Date(),
+        location: quote.location || '',
+        status: 'pending',
+        quoteId: quoteId
+      })
+      .returning();
+    
+    return nuovoEvento;
+  }
+  
+  return evento;
+};
+
 // GET: Recupera i collaboratori associati ad un preventivo
 export const getCollaboratoriPreventivo = async (req: Request, res: Response) => {
   const { quoteId } = req.params;
   
   try {
-    // Recupera l'evento associato al preventivo (dalla tabella events)
-    const [evento] = await db.select().from(events)
-      .where(eq(events.quoteId, Number(quoteId)));
-    
-    if (!evento) {
-      return res.status(404).json({ error: "Nessun evento trovato per questo preventivo" });
-    }
+    // Ottieni l'evento associato al preventivo
+    const evento = await getEventoForPreventivo(Number(quoteId));
     
     // Recupera i collaboratori associati all'evento
     const collaboratoriEvento = await db.select({
@@ -532,6 +566,163 @@ export const getEventiSenzaCollaboratori = async (req: Request, res: Response) =
   } catch (error) {
     console.error("Errore recupero eventi senza collaboratori:", error);
     return res.status(500).json({ error: "Errore durante il recupero degli eventi senza collaboratori" });
+  }
+};
+
+// POST: Aggiunge un collaboratore a un preventivo
+export const addCollaboratorePreventivo = async (req: Request, res: Response) => {
+  const { quoteId } = req.params;
+  
+  try {
+    // Ottieni l'evento associato al preventivo (o creane uno se non esiste)
+    const evento = await getEventoForPreventivo(Number(quoteId));
+    
+    // Validazione input
+    const data = {
+      ...req.body,
+      eventoId: evento.id,
+      dataAssegnazione: new Date()
+    };
+    
+    // Verifica se l'assegnazione esiste già
+    const esisteGia = await db.select().from(eventiCollaboratori)
+      .where(
+        and(
+          eq(eventiCollaboratori.collaboratoreId, data.collaboratoreId),
+          eq(eventiCollaboratori.eventoId, evento.id)
+        )
+      )
+      .limit(1);
+    
+    if (esisteGia.length > 0) {
+      return res.status(409).json({ 
+        error: "Questo collaboratore è già assegnato a questo evento"
+      });
+    }
+    
+    // Inserisci il collaboratore
+    const [nuovaAssegnazione] = await db.insert(eventiCollaboratori)
+      .values({
+        collaboratoreId: data.collaboratoreId,
+        eventoId: evento.id,
+        ruolo: data.ruolo || "fotografo",
+        dataAssegnazione: data.dataAssegnazione,
+        note: data.note || ""
+      })
+      .returning();
+    
+    // Sincronizza con la tabella eventCollaborators
+    await syncFromEventiCollaboratoriToEventCollaborators(
+      data.collaboratoreId,
+      evento.id,
+      data.ruolo || "fotografo"
+    );
+    
+    // Recupera i dettagli completi dell'assegnazione
+    const [collaboratore] = await db.select().from(collaborators)
+      .where(eq(collaborators.id, data.collaboratoreId));
+    
+    const risultato = {
+      ...nuovaAssegnazione,
+      collaboratore: collaboratore
+    };
+    
+    return res.status(201).json(risultato);
+  } catch (error) {
+    console.error(`Errore aggiunta collaboratore al preventivo ${quoteId}:`, error);
+    return res.status(500).json({ error: "Errore durante l'assegnazione del collaboratore al preventivo" });
+  }
+};
+
+// PATCH: Aggiorna i dettagli di un collaboratore assegnato a un preventivo
+export const updateCollaboratorePreventivo = async (req: Request, res: Response) => {
+  const { quoteId, id } = req.params;
+  
+  try {
+    // Ottieni l'evento associato al preventivo
+    const evento = await getEventoForPreventivo(Number(quoteId));
+    
+    // Verifica che l'assegnazione esista
+    const [assegnazione] = await db.select().from(eventiCollaboratori)
+      .where(eq(eventiCollaboratori.id, Number(id)));
+    
+    if (!assegnazione) {
+      return res.status(404).json({ error: "Assegnazione non trovata" });
+    }
+    
+    // Aggiorna l'assegnazione
+    const [assegnazioneAggiornata] = await db.update(eventiCollaboratori)
+      .set({
+        ruolo: req.body.ruolo || assegnazione.ruolo,
+        note: req.body.note !== undefined ? req.body.note : assegnazione.note,
+        dataAssegnazione: req.body.dataAssegnazione || assegnazione.dataAssegnazione
+      })
+      .where(eq(eventiCollaboratori.id, Number(id)))
+      .returning();
+    
+    // Sincronizza con la tabella eventCollaborators (aggiorna il ruolo)
+    await syncFromEventiCollaboratoriToEventCollaborators(
+      assegnazione.collaboratoreId,
+      assegnazione.eventoId,
+      req.body.ruolo || assegnazione.ruolo
+    );
+    
+    // Recupera i dettagli completi dell'assegnazione
+    const [collaboratore] = await db.select().from(collaborators)
+      .where(eq(collaborators.id, assegnazione.collaboratoreId));
+    
+    const risultato = {
+      ...assegnazioneAggiornata,
+      collaboratore: collaboratore
+    };
+    
+    return res.status(200).json(risultato);
+  } catch (error) {
+    console.error(`Errore aggiornamento collaboratore ${id} del preventivo ${quoteId}:`, error);
+    return res.status(500).json({ error: "Errore durante l'aggiornamento dell'assegnazione del collaboratore" });
+  }
+};
+
+// DELETE: Rimuove un collaboratore da un preventivo
+export const removeCollaboratorePreventivo = async (req: Request, res: Response) => {
+  const { quoteId, id } = req.params;
+  
+  try {
+    // Ottieni l'evento associato al preventivo
+    const evento = await getEventoForPreventivo(Number(quoteId));
+    
+    // Verifica che l'assegnazione esista
+    const [assegnazione] = await db.select().from(eventiCollaboratori)
+      .where(eq(eventiCollaboratori.id, Number(id)));
+    
+    if (!assegnazione) {
+      return res.status(404).json({ error: "Assegnazione non trovata" });
+    }
+    
+    // Memorizza i dati prima dell'eliminazione per la sincronizzazione
+    const collaboratoreId = assegnazione.collaboratoreId;
+    const eventoId = assegnazione.eventoId;
+    
+    // Elimina l'assegnazione dalla tabella italiana
+    await db.delete(eventiCollaboratori)
+      .where(eq(eventiCollaboratori.id, Number(id)));
+    
+    // Elimina anche l'assegnazione dalla tabella inglese
+    await db.delete(eventCollaborators)
+      .where(
+        and(
+          eq(eventCollaborators.collaboratorId, collaboratoreId),
+          eq(eventCollaborators.eventId, eventoId)
+        )
+      );
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: "Collaboratore rimosso con successo" 
+    });
+  } catch (error) {
+    console.error(`Errore rimozione collaboratore ${id} dal preventivo ${quoteId}:`, error);
+    return res.status(500).json({ error: "Errore durante la rimozione del collaboratore dal preventivo" });
   }
 };
 

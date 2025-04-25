@@ -115,6 +115,9 @@ export function CollaboratoriQuote({
   clientNotes,
 }: CollaboratoriQuoteProps) {
   const clientData: ClientData = client || {};
+  const clientFullName = clientData && (clientData.firstName || clientData.lastName) 
+    ? `${clientData.firstName || ''} ${clientData.lastName || ''}`.trim() 
+    : "Cliente senza nome";
   const { toast } = useToast();
 
   const collaboratoreSchema = z.object({
@@ -367,8 +370,8 @@ export function CollaboratoriQuote({
             </CardTitle>
             <CardDescription>
               {collaboratori.length
-                ? `${collaboratori.length} assegnati`
-                : "Nessuno assegnato"}
+                ? `${collaboratori.length} assegnati - Cliente: ${clientFullName}`
+                : `Nessuno assegnato - Cliente: ${clientFullName}`}
             </CardDescription>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -77,8 +77,14 @@ export function CollaboratoriQuote({ quoteId, title, date, location }: Collabora
   const createWhatsAppMessage = (collaboratore: any) => {
     const message = encodeURIComponent(
       `Ciao ${collaboratore.collaboratore.firstName},\n\n` +
-      `Ti confermo l'evento "${title}" del ${formattedDate} a ${location}.\n\n` +
-      `Il tuo ruolo sarà: ${collaboratore.ruolo}.\n\n` +
+      `Ti confermo l'evento "${title}"\n\n` +
+      `📅 Data: ${formattedDate}\n` +
+      `📍 Location: ${location}\n` +
+      (ceremonyLocation ? `🏛️ Cerimonia: ${ceremonyLocation}\n` : '') +
+      (ceremonyTime ? `⏰ Orario Cerimonia: ${ceremonyTime}\n` : '') +
+      `👥 Cliente: ${collaboratore.quote?.client?.firstName} ${collaboratore.quote?.client?.lastName}\n` +
+      `📱 Telefono Cliente: ${collaboratore.quote?.client?.phone}\n` +
+      `🎯 Il tuo ruolo: ${collaboratore.ruolo}\n\n` +
       `Per qualsiasi informazione, contattami.`
     );
     return `https://wa.me/${collaboratore.collaboratore.phone?.replace(/\D/g, '')}?text=${message}`;

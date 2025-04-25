@@ -33,6 +33,8 @@ interface ModuleItem {
   productCategoryDescription?: string;
   bundleCategoryDescription?: string;
   isRequired?: boolean;  // Campo dal backend che indica se l'elemento è obbligatorio
+  isSelected?: boolean;  // Campo dal backend che indica se l'elemento è già selezionato
+  selectedQuantity?: number; // Quantità selezionata dall'utente
   minSelectCount?: number; // Campo legacy usato dal frontend per indicare obbligatorietà
   notes?: string; // Campo notes per contenere informazioni di categoria
 }
@@ -157,8 +159,8 @@ export function PublicVariableModule({ module, onSelectionChange, disabled = fal
         // In modalità modifica, mostra gli elementi obbligatori come preselezionati
         if (disabled) {
           // Se è disabled (preventivo firmato), considera selezionati solo quelli
-          // segnalati come tali dal server (che hanno quantity > 0 o altro flag)
-          const isReallySelected = item.quantity > 0;
+          // segnalati come tali dal server (che hanno isSelected=true o quantity > 0)
+          const isReallySelected = item.isSelected === true || item.quantity > 0;
           
           if (isReallySelected) {
             initialSelected.push({

@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, Check, Phone, Mail, MapPin, Star, Camera, Video, Clock, Calendar } from 'lucide-react';
+import { ArrowLeft, Check, Phone, Mail, MapPin, Star, Camera, Video, Clock, Calendar, Heart, MessagesSquare, Instagram, Facebook, Twitter } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -208,26 +208,63 @@ const ElegantTemplate: React.FC<{
         </div>
       </main>
 
-      {/* Footer */}
+      {/* Footer - Elegant Style */}
       <footer className="bg-gray-50 border-t py-12">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-2xl font-serif text-gray-800 mb-4">{settings.companyName}</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto mb-6">
-            {settings.companyDescription || 'Specializzati in fotografia artistica di altissima qualità, catturiamo i tuoi momenti speciali con uno stile unico e sofisticato.'}
+          <div className="mb-6">
+            <h2 className="text-2xl font-serif text-gray-800 mb-2">{settings.companyName}</h2>
+            <div className="h-0.5 w-24 bg-primary/30 mx-auto"></div>
+          </div>
+          
+          <p className="text-gray-600 max-w-2xl mx-auto mb-8 italic">
+            "{settings.companyDescription || 'Specializzati in fotografia artistica di altissima qualità, catturiamo i tuoi momenti speciali con uno stile unico e sofisticato.'}"
           </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-8">
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                <Phone className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-sm text-gray-500">Telefono</p>
+              <p className="font-medium">{settings.companyPhone || ''}</p>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                <Mail className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-sm text-gray-500">Email</p>
+              <p className="font-medium">{settings.companyEmail}</p>
+            </div>
+            
+            {settings.companyAddress && (
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-sm text-gray-500">Indirizzo</p>
+                <p className="font-medium">{settings.companyAddress}</p>
+              </div>
+            )}
+          </div>
+          
           <div className="flex justify-center space-x-4">
             <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="rounded-full px-5">
                 <Mail className="mr-2 h-4 w-4" />
                 Contattaci
               </Button>
             </a>
             <a href={getWhatsAppUrl(settings.companyPhone || '')} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="rounded-full px-5">
                 <Phone className="mr-2 h-4 w-4" />
                 WhatsApp
               </Button>
             </a>
+          </div>
+          
+          <div className="mt-8 text-xs text-gray-400">
+            &copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.
           </div>
         </div>
       </footer>
@@ -390,30 +427,111 @@ const ModernTemplate: React.FC<{
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      {/* Footer - Modern Style */}
+      <footer className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-16">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold mb-2">{settings.companyName}</h2>
-              <p className="text-gray-400">{settings.companyDescription || 'Fotografia professionale di alta qualità'}</p>
+          <div className="flex flex-col md:flex-row justify-between items-center mb-10">
+            <div className="relative mb-8 md:mb-0">
+              <h2 className="text-2xl font-bold mb-2 relative z-10">{settings.companyName}</h2>
+              <div className="absolute -bottom-1 left-0 w-12 h-1 bg-primary"></div>
+              <p className="text-gray-400 max-w-md mt-4">{settings.companyDescription || 'Fotografia professionale di alta qualità'}</p>
             </div>
-            <div className="mt-6 md:mt-0 flex space-x-4">
-              <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="border-white text-white hover:text-black">
-                  <Mail className="mr-2 h-4 w-4" />
-                  Email
-                </Button>
+            
+            <div className="flex flex-wrap gap-3 justify-center">
+              <a 
+                href={getEmailUrl(settings.companyEmail)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white/10 hover:bg-white/20 transition-colors duration-300 px-4 py-3 rounded-md flex items-center"
+              >
+                <Mail className="mr-2 h-5 w-5 text-primary" />
+                <span>{settings.companyEmail}</span>
               </a>
-              <a href={getWhatsAppUrl(settings.companyPhone || '')} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" className="border-white text-white hover:text-black">
-                  <Phone className="mr-2 h-4 w-4" />
-                  WhatsApp
-                </Button>
-              </a>
+              
+              {settings.companyPhone && (
+                <a 
+                  href={getWhatsAppUrl(settings.companyPhone)} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-white/10 hover:bg-white/20 transition-colors duration-300 px-4 py-3 rounded-md flex items-center"
+                >
+                  <Phone className="mr-2 h-5 w-5 text-primary" />
+                  <span>{settings.companyPhone}</span>
+                </a>
+              )}
+              
+              {settings.companyAddress && (
+                <div className="bg-white/10 px-4 py-3 rounded-md flex items-center">
+                  <MapPin className="mr-2 h-5 w-5 text-primary" />
+                  <span>{settings.companyAddress}</span>
+                </div>
+              )}
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
+          
+          <div className="border-t border-white/10 pt-8 mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div>
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <Camera className="mr-2 h-4 w-4 text-primary" />
+                Servizi
+              </h3>
+              <ul className="space-y-2 text-gray-400">
+                <li className="hover:text-white transition-colors">Fotografia di matrimonio</li>
+                <li className="hover:text-white transition-colors">Servizi per eventi</li>
+                <li className="hover:text-white transition-colors">Ritratti</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <Clock className="mr-2 h-4 w-4 text-primary" />
+                Orari
+              </h3>
+              <ul className="space-y-2 text-gray-400">
+                <li>Lun - Ven: 9:00 - 18:00</li>
+                <li>Sabato: 10:00 - 15:00</li>
+                <li>Domenica: Chiuso</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <Heart className="mr-2 h-4 w-4 text-primary" />
+                Seguici
+              </h3>
+              <div className="flex space-x-3">
+                <div className="bg-white/10 hover:bg-white/20 transition-colors duration-300 w-10 h-10 rounded-full flex items-center justify-center">
+                  <a href="#" target="_blank" rel="noopener noreferrer">
+                    <Instagram className="h-5 w-5" />
+                  </a>
+                </div>
+                <div className="bg-white/10 hover:bg-white/20 transition-colors duration-300 w-10 h-10 rounded-full flex items-center justify-center">
+                  <a href="#" target="_blank" rel="noopener noreferrer">
+                    <Facebook className="h-5 w-5" />
+                  </a>
+                </div>
+                <div className="bg-white/10 hover:bg-white/20 transition-colors duration-300 w-10 h-10 rounded-full flex items-center justify-center">
+                  <a href="#" target="_blank" rel="noopener noreferrer">
+                    <Twitter className="h-5 w-5" />
+                  </a>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <MessagesSquare className="mr-2 h-4 w-4 text-primary" />
+                Contattaci
+              </h3>
+              <div className="space-y-3">
+                <Button className="w-full" onClick={onRequestBundle}>
+                  Richiedi Preventivo
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-white/10 mt-10 pt-6 text-center text-gray-400 text-sm">
             &copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.
           </div>
         </div>
@@ -552,10 +670,101 @@ const MinimalTemplate: React.FC<{
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-500">
-          &copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.
+      {/* Footer - Minimal Style */}
+      <footer className="border-t py-16">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            <div className="text-center md:text-left">
+              <h3 className="text-lg font-medium text-gray-800 mb-4">{settings.companyName}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                {settings.companyDescription || 'Fotografia essenziale e raffinata che cattura momenti autentici con stile minimalista.'}
+              </p>
+            </div>
+            
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-800 mb-4">Contatti</h3>
+              <ul className="space-y-2 text-sm text-gray-500">
+                {settings.companyPhone && (
+                  <li className="flex items-center justify-center md:justify-start">
+                    <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                    <span>{settings.companyPhone}</span>
+                  </li>
+                )}
+                <li className="flex items-center justify-center md:justify-start">
+                  <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                  <span>{settings.companyEmail}</span>
+                </li>
+                {settings.companyAddress && (
+                  <li className="flex items-start justify-center md:justify-start">
+                    <MapPin className="h-4 w-4 mr-2 text-gray-400 mt-0.5" />
+                    <span>{settings.companyAddress}</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+            
+            <div className="text-center md:text-right">
+              <h3 className="text-lg font-medium text-gray-800 mb-4">Collegamenti Rapidi</h3>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><a href="#" className="hover:text-primary transition-colors">Servizi</a></li>
+                <li><a href="#" className="hover:text-primary transition-colors">Pacchetti</a></li>
+                <li><a href="#" className="hover:text-primary transition-colors">Preventivi</a></li>
+                <li>
+                  <Button 
+                    variant="link" 
+                    className="text-sm p-0 h-auto font-normal text-gray-500 hover:text-primary"
+                    onClick={onRequestBundle}
+                  >
+                    Richiedi Preventivo
+                  </Button>
+                </li>
+              </ul>
+            </div>
+          </div>
+          
+          <Separator className="mb-8" />
+          
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-xs text-gray-400 mb-4 md:mb-0">
+              &copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.
+            </p>
+            
+            <div className="flex space-x-6">
+              <a 
+                href={getEmailUrl(settings.companyEmail)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-primary transition-colors"
+              >
+                <Mail className="h-4 w-4" />
+              </a>
+              
+              {settings.companyPhone && (
+                <a 
+                  href={getWhatsAppUrl(settings.companyPhone)} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-primary transition-colors"
+                >
+                  <Phone className="h-4 w-4" />
+                </a>
+              )}
+              
+              <a 
+                href="#" 
+                className="text-gray-400 hover:text-primary transition-colors"
+              >
+                <Instagram className="h-4 w-4" />
+              </a>
+              
+              <a 
+                href="#" 
+                className="text-gray-400 hover:text-primary transition-colors"
+              >
+                <Facebook className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
@@ -720,58 +929,96 @@ const BoldTemplate: React.FC<{
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
+      {/* Footer - Bold Style */}
+      <footer className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white py-16">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div>
-              <h3 className="text-xl font-bold mb-4">{settings.companyName}</h3>
-              <p className="text-gray-400 mb-6">
-                {settings.companyDescription || 'Fotografia professionale che racconta storie uniche attraverso immagini straordinarie.'}
-              </p>
+          <div className="flex flex-col items-center text-center mb-12">
+            <div className="bg-white/10 w-24 h-24 rounded-full flex items-center justify-center mb-6">
+              <Camera className="h-12 w-12 text-primary" />
             </div>
-            <div>
-              <h3 className="text-xl font-bold mb-4">Contatti</h3>
+            <h2 className="text-3xl font-bold mb-4">{settings.companyName}</h2>
+            <div className="h-1 w-20 bg-primary mb-6 mx-auto rounded-full"></div>
+            <p className="text-gray-300 max-w-2xl mb-8">
+              {settings.companyDescription || 'Fotografia professionale che racconta storie uniche attraverso immagini straordinarie.'}
+            </p>
+            
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
+              {settings.companyPhone && (
+                <a 
+                  href={getWhatsAppUrl(settings.companyPhone)} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-white/10 hover:bg-primary hover:text-white transition-all duration-300 rounded-full py-3 px-6 flex items-center"
+                >
+                  <Phone className="mr-2 h-5 w-5" />
+                  <span>{settings.companyPhone}</span>
+                </a>
+              )}
+              
+              <a 
+                href={getEmailUrl(settings.companyEmail)} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white/10 hover:bg-primary hover:text-white transition-all duration-300 rounded-full py-3 px-6 flex items-center"
+              >
+                <Mail className="mr-2 h-5 w-5" />
+                <span>{settings.companyEmail}</span>
+              </a>
+              
+              {settings.companyAddress && (
+                <div className="bg-white/10 rounded-full py-3 px-6 flex items-center">
+                  <MapPin className="mr-2 h-5 w-5" />
+                  <span>{settings.companyAddress}</span>
+                </div>
+              )}
+            </div>
+            
+            <Button 
+              onClick={onRequestBundle}
+              size="lg" 
+              className="bg-primary hover:bg-primary/90 text-white rounded-full px-8"
+            >
+              Richiedi il Tuo Pacchetto Ora
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-white/10 pt-12">
+            <div className="text-center">
+              <h3 className="text-xl font-bold mb-6">I Nostri Servizi</h3>
               <div className="space-y-3">
-                <div className="flex items-center">
-                  <Phone className="h-5 w-5 text-primary mr-3" />
-                  <span>{settings.companyPhone || ''}</span>
-                </div>
-                <div className="flex items-center">
-                  <Mail className="h-5 w-5 text-primary mr-3" />
-                  <span>{settings.companyEmail}</span>
-                </div>
-                {settings.companyAddress && (
-                  <div className="flex items-start">
-                    <MapPin className="h-5 w-5 text-primary mr-3 mt-1 flex-shrink-0" />
-                    <span>{settings.companyAddress}</span>
-                  </div>
-                )}
-                <div className="flex space-x-3 pt-3">
-                  <a href={getWhatsAppUrl(settings.companyPhone || '')} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="sm" className="bg-white/10 border-white/20 hover:bg-white/20">
-                      <Phone className="mr-2 h-4 w-4" />
-                      WhatsApp
-                    </Button>
-                  </a>
-                  <a href={getEmailUrl(settings.companyEmail)} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="sm" className="bg-white/10 border-white/20 hover:bg-white/20">
-                      <Mail className="mr-2 h-4 w-4" />
-                      Email
-                    </Button>
-                  </a>
-                </div>
+                <p className="text-gray-400">Fotografia di Matrimonio</p>
+                <p className="text-gray-400">Book Fotografici</p>
+                <p className="text-gray-400">Eventi Speciali</p>
               </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold mb-4">Orari</h3>
-              <p className="text-gray-400 mb-2">Lun - Ven: 9:00 - 18:00</p>
-              <p className="text-gray-400 mb-2">Sab: 10:00 - 15:00</p>
-              <p className="text-gray-400">Dom: Chiuso</p>
+            
+            <div className="text-center">
+              <h3 className="text-xl font-bold mb-6">Orari Studio</h3>
+              <div className="space-y-3">
+                <p className="text-gray-400">Lunedì - Venerdì: 9:00 - 18:00</p>
+                <p className="text-gray-400">Sabato: 10:00 - 15:00</p>
+                <p className="text-gray-400">Domenica: Chiuso</p>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <h3 className="text-xl font-bold mb-6">Seguici</h3>
+              <div className="flex justify-center space-x-6">
+                <a href="#" className="bg-white/10 hover:bg-primary transition-all duration-300 w-12 h-12 rounded-full flex items-center justify-center">
+                  <Instagram className="h-5 w-5" />
+                </a>
+                <a href="#" className="bg-white/10 hover:bg-primary transition-all duration-300 w-12 h-12 rounded-full flex items-center justify-center">
+                  <Facebook className="h-5 w-5" />
+                </a>
+                <a href="#" className="bg-white/10 hover:bg-primary transition-all duration-300 w-12 h-12 rounded-full flex items-center justify-center">
+                  <Twitter className="h-5 w-5" />
+                </a>
+              </div>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-500">
-            &copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.
+          
+          <div className="border-t border-white/10 mt-12 pt-8 text-center text-gray-500">
+            <p>&copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.</p>
           </div>
         </div>
       </footer>

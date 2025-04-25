@@ -24,6 +24,7 @@ import selectionRouter from "./routes/selection";
 import clausesRouter from "./routes/clauses";
 import notificationsRouter from "./routes/notifications";
 import collaboratorsRouter from "./routes/collaborators-routes";
+import clientValidationRouter from "./routes/client-validation";
 import collaboratoriRouter from "./routes/collaboratori-routes"; // Manteniamo temporaneamente fino alla migrazione completa
 import eventiRouter from "./routes/eventi-routes";
 import eventsRouter from "./routes/events-routes"; // English standardized version

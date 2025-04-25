@@ -142,11 +142,9 @@ export const getGalleryBySlug = async (req: Request, res: Response) => {
     const featuredPhotos = await db
       .select()
       .from(photos)
-      .where(and(
-        eq(photos.galleryId, gallery.id),
-        eq(photos.isFeatured, true),
-        eq(photos.isHidden, false)
-      ))
+      .where(eq(photos.galleryId, gallery.id))
+      .where(eq(photos.isFeatured, true))
+      .where(eq(photos.isHidden, false))
       .limit(10);
 
     res.json({
@@ -1044,10 +1042,8 @@ export const subscribeToGallery = async (req: Request, res: Response) => {
     const existingSubscription = await db
       .select()
       .from(gallerySubscriptions)
-      .where(and(
-        eq(gallerySubscriptions.galleryId, subscriptionData.galleryId),
-        eq(gallerySubscriptions.email, subscriptionData.email)
-      ));
+      .where(eq(gallerySubscriptions.galleryId, subscriptionData.galleryId))
+      .where(eq(gallerySubscriptions.email, subscriptionData.email));
 
     if (existingSubscription.length > 0) {
       return res.status(400).json({ error: "Questa email è già sottoscritta agli aggiornamenti" });
@@ -1346,11 +1342,9 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
     const existingSelection = await db
       .select()
       .from(photoSelections)
-      .where(and(
-        eq(photoSelections.photoId, Number(photoId)),
-        eq(photoSelections.galleryId, Number(galleryId)),
-        clientId ? eq(photoSelections.clientId, clientId) : eq(photoSelections.sessionId, sessionId)
-      ));
+      .where(eq(photoSelections.photoId, Number(photoId)))
+      .where(eq(photoSelections.galleryId, Number(galleryId)))
+      .where(clientId ? eq(photoSelections.clientId, clientId) : eq(photoSelections.sessionId, sessionId));
 
     // Se esiste, aggiorna o elimina
     if (existingSelection.length > 0) {
@@ -1480,12 +1474,8 @@ export const deleteClientSelections = async (req: Request, res: Response) => {
     
     // Elimina le selezioni
     const result = await db.delete(photoSelections)
-      .where(
-        and(
-          eq(photoSelections.galleryId, Number(galleryId)),
-          eq(photoSelections.clientEmail, decodeURIComponent(clientEmail))
-        )
-      );
+      .where(eq(photoSelections.galleryId, Number(galleryId)))
+      .where(eq(photoSelections.clientEmail, decodeURIComponent(clientEmail)));
     
     res.json({ success: true, message: "Selezioni eliminate con successo" });
   } catch (error) {
@@ -1615,10 +1605,8 @@ export const createPhotoSelections = async (req: Request, res: Response) => {
     // Elimina eventuali selezioni esistenti
     await db
       .delete(photoSelections)
-      .where(and(
-        eq(photoSelections.galleryId, Number(galleryId)),
-        clientId ? eq(photoSelections.clientId, clientId) : eq(photoSelections.sessionId, actualSessionId)
-      ));
+      .where(eq(photoSelections.galleryId, Number(galleryId)))
+      .where(clientId ? eq(photoSelections.clientId, clientId) : eq(photoSelections.sessionId, actualSessionId));
 
     // Inserisci le nuove selezioni
     const insertedSelections = await db
@@ -1818,10 +1806,8 @@ export const updateGalleryVideo = async (req: Request, res: Response) => {
     const existingVideo = await db
       .select()
       .from(galleryVideos)
-      .where(and(
-        eq(galleryVideos.id, Number(videoId)),
-        eq(galleryVideos.galleryId, Number(galleryId))
-      ))
+      .where(eq(galleryVideos.id, Number(videoId)))
+      .where(eq(galleryVideos.galleryId, Number(galleryId)))
       .limit(1);
 
     if (existingVideo.length === 0) {
@@ -1858,10 +1844,8 @@ export const updateGalleryVideo = async (req: Request, res: Response) => {
         // Converti il chapterId in numero se presente, altrimenti null
         chapterId: req.body.chapterId ? Number(req.body.chapterId) : null,
       })
-      .where(and(
-        eq(galleryVideos.id, Number(videoId)),
-        eq(galleryVideos.galleryId, Number(galleryId))
-      ))
+      .where(eq(galleryVideos.id, Number(videoId)))
+      .where(eq(galleryVideos.galleryId, Number(galleryId)))
       .returning();
 
     res.json(updatedVideo);
@@ -1884,10 +1868,8 @@ export const deleteGalleryVideo = async (req: Request, res: Response) => {
     const [video] = await db
       .select()
       .from(galleryVideos)
-      .where(and(
-        eq(galleryVideos.id, Number(videoId)),
-        eq(galleryVideos.galleryId, Number(galleryId))
-      ));
+      .where(eq(galleryVideos.id, Number(videoId)))
+      .where(eq(galleryVideos.galleryId, Number(galleryId)));
 
     if (!video) {
       return res.status(404).json({ error: "Video non trovato" });

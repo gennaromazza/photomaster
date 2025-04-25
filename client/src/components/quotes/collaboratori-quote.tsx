@@ -26,9 +26,11 @@ interface CollaboratoriQuoteProps {
   title: string;
   date: Date;
   location: string;
+  ceremonyLocation?: string;
+  ceremonyTime?: string;
 }
 
-export function CollaboratoriQuote({ quoteId, title, date, location }: CollaboratoriQuoteProps) {
+export function CollaboratoriQuote({ quoteId, title, date, location, ceremonyLocation, ceremonyTime }: CollaboratoriQuoteProps) {
   const { data: collaboratori, isLoading, error } = useQuery({
     queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
     enabled: !!quoteId

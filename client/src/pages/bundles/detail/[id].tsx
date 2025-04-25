@@ -896,7 +896,8 @@ const BundleDetailPage: React.FC = () => {
   
   // Gestore per l'apertura del dialog di richiesta
   const handleRequestBundle = () => {
-    setIsRequestDialogOpen(true);
+    // Invece di aprire il dialogo, reindirizza alla nuova pagina di richiesta preventivo
+    navigate(`/request-quote-from-bundle/${id}`);
   };
   
   // Gestore per l'invio del form di richiesta

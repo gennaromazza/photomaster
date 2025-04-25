@@ -50,6 +50,8 @@ import ServicesPage from "@/pages/services";
 import ServiceDetailPage from "@/pages/services/[id]";
 import ServiceBundlesPage from "@/pages/bundles";
 import BundleDetailPage from "@/pages/bundles/detail/[id]";
+import BundleRequestSuccessPage from "@/pages/bundles/request-success";
+import RequestQuoteFromBundlePage from "@/pages/request-quote-from-bundle/[bundleId]";
 import NewQuotePage from "@/pages/quotes/new-redesign";
 import QuoteDetailPage from "@/pages/quotes/detail/[id]";
 import QuotePublicPage from "@/pages/quotes/public/[token]";
@@ -98,6 +100,8 @@ function Router() {
       <ProtectedRoute path="/services/:id" component={ServiceDetailPage} />
       <ProtectedRoute path="/bundles" component={ServiceBundlesPage} />
       <Route path="/bundles/detail/:id" component={BundleDetailPage} />
+      <Route path="/request-quote-from-bundle/:bundleId" component={RequestQuoteFromBundlePage} />
+      <Route path="/bundles/request-success" component={BundleRequestSuccessPage} />
       <ProtectedRoute path="/profile" component={SettingsPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/settings/categories" component={CategoriesPage} />

@@ -1,23 +1,12 @@
-import { Router } from "express";
-import { 
-  createBundleLead, 
-  createQuoteFromBundleLead, 
-  getBundleLeads, 
-  getAllBundleLeads,
-  getBundleLeadByEmail
-} from "../controllers/bundle-leads-controller";
-import { isAuthenticated, csrfProtection } from "../auth";
+import express from "express";
+import { createBundleQuote, getBundleLeadByEmail } from "../controllers/bundle-leads-controller";
 
-const router = Router();
+const router = express.Router();
 
-// Rotte pubbliche (non richiedono autenticazione)
-// Queste rotte sono accessibili ai clienti che visitano le pagine pubbliche
-router.post("/", csrfProtection, createBundleLead);
-router.post("/create-quote", csrfProtection, createQuoteFromBundleLead);
-router.get("/by-email/:email", getBundleLeadByEmail); // Rotta per ottenere il riepilogo da scaricare
+// Rotta per creare una richiesta di preventivo da pacchetto
+router.post("/create-quote", createBundleQuote);
 
-// Rotte protette (richiedono autenticazione di amministratore)
-router.get("/", isAuthenticated, getAllBundleLeads);
-router.get("/:bundleId", isAuthenticated, getBundleLeads);
+// Rotta per recuperare una richiesta di preventivo per email
+router.get("/by-email/:email", getBundleLeadByEmail);
 
 export default router;

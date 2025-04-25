@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
-import RequestSummary from './request-summary';
 import { BundleLead, ServiceBundle } from '@shared/schema';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import { formatDate } from './request-summary';
 
 interface PdfGeneratorProps {
   lead: BundleLead & {
@@ -33,79 +34,134 @@ interface PdfGeneratorProps {
 }
 
 export default function PdfGenerator({ lead, settings }: PdfGeneratorProps) {
-  const pdfRef = useRef<HTMLDivElement>(null);
-
+  // Versione più semplice del generatore PDF senza html2canvas
   const generatePDF = async () => {
-    if (!pdfRef.current) return;
-    
     try {
-      // Mostra un feedback all'utente
-      const element = pdfRef.current;
+      // Prepara i dati
+      const fullName = `${lead.firstName} ${lead.lastName}`;
+      const eventDate = formatDate(lead.bundle?.eventDate || null);
+      const requestDate = formatDate(lead.createdAt);
       
-      // Applica uno stile temporaneo per il rendering
-      const originalStyle = element.style.cssText;
-      element.style.width = '1024px';
-      element.style.padding = '20px';
-      element.style.backgroundColor = 'white';
+      // Calcola il totale del pacchetto
+      const totalAmount = lead.bundle?.items?.reduce((sum, item) => {
+        return sum + ((item.service?.price || 0) * item.quantity);
+      }, 0) || 0;
+
+      // Crea un nuovo documento PDF (orientamento portrait, unità in millimetri, formato A4)
+      const pdf = new jsPDF();
       
-      const canvas = await html2canvas(element, {
-        scale: 2, // Migliora la qualità
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-      });
+      // Impostazioni per il testo
+      const lineHeight = 8;
+      let y = 20; // posizione verticale iniziale
       
-      // Ripristina lo stile originale
-      element.style.cssText = originalStyle;
+      // Funzione di utilità per aggiungere testo
+      const addText = (text: string, fontSize = 12, isBold = false, align = 'left') => {
+        pdf.setFontSize(fontSize);
+        isBold ? pdf.setFont('helvetica', 'bold') : pdf.setFont('helvetica', 'normal');
+        pdf.text(text, align === 'center' ? 105 : align === 'right' ? 200 : 20, y, { align });
+        y += lineHeight;
+      };
       
-      const imgData = canvas.toDataURL('image/png');
+      // Aggiungi intestazione
+      addText(settings?.companyName || 'Studio Fotografico', 16, true, 'center');
+      y += 5;
+      addText('Riepilogo Richiesta Preventivo', 14, true, 'center');
+      y += 10;
       
-      // Determina il formato della pagina in base al contenuto
-      const contentWidth = canvas.width;
-      const contentHeight = canvas.height;
-      const ratio = contentHeight / contentWidth;
+      // Informazioni cliente
+      addText('Informazioni Cliente', 14, true);
+      pdf.line(20, y, 190, y);
+      y += 10;
       
-      // Crea un PDF A4 (210x297mm)
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdfWidth * ratio;
+      addText(`Nome: ${fullName}`, 12);
+      addText(`Email: ${lead.email}`, 12);
+      addText(`Telefono: ${lead.phone || 'Non specificato'}`, 12);
+      addText(`Data Richiesta: ${requestDate}`, 12);
+      y += 5;
       
-      // Se il contenuto è più grande di una pagina A4, lo dividiamo in più pagine
-      if (pdfHeight > pdf.internal.pageSize.getHeight()) {
-        // Calcola il numero di pagine necessarie
-        const numPages = Math.ceil(pdfHeight / pdf.internal.pageSize.getHeight());
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        
-        for (let i = 0; i < numPages; i++) {
-          // Aggiungi una nuova pagina dopo la prima
-          if (i > 0) {
-            pdf.addPage();
-          }
+      // Dettagli pacchetto
+      addText('Dettagli Pacchetto', 14, true);
+      pdf.line(20, y, 190, y);
+      y += 10;
+      
+      addText(`Nome Pacchetto: ${lead.bundle?.name || 'Pacchetto non specificato'}`, 12);
+      addText(`Tipo Evento: ${lead.bundle?.eventType || 'Non specificato'}`, 12);
+      addText(`Data Evento: ${eventDate}`, 12);
+      addText(`Location: ${lead.bundle?.location || 'Non specificata'}`, 12);
+      y += 5;
+      
+      // Descrizione
+      if (lead.bundle?.description) {
+        addText('Descrizione:', 12, true);
+        const descriptionLines = pdf.splitTextToSize(lead.bundle.description, 170);
+        pdf.text(descriptionLines, 20, y);
+        y += descriptionLines.length * lineHeight + 5;
+      }
+      
+      // Servizi inclusi
+      addText('Servizi Inclusi', 14, true);
+      pdf.line(20, y, 190, y);
+      y += 10;
+      
+      // Tabella dei servizi
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Servizio', 20, y);
+      pdf.text('Prezzo', 130, y);
+      pdf.text('Qtà', 150, y);
+      pdf.text('Totale', 170, y);
+      y += 6;
+      
+      pdf.line(20, y, 190, y);
+      y += 5;
+      
+      // Righe della tabella
+      if (lead.bundle?.items?.length) {
+        pdf.setFont('helvetica', 'normal');
+        for (const item of lead.bundle.items) {
+          const servicePrice = item.service?.price || 0;
+          const serviceTotal = servicePrice * item.quantity;
+          const serviceName = item.service?.name || 'Servizio non disponibile';
           
-          // Calcola quale parte dell'immagine mostrare in questa pagina
-          const sourceY = i * pageHeight * canvas.height / pdfHeight;
-          const sourceHeight = Math.min(
-            canvas.height - sourceY,
-            pageHeight * canvas.height / pdfHeight
-          );
-          
-          pdf.addImage(
-            imgData, 
-            'PNG', 
-            0, 
-            0, 
-            pdfWidth, 
-            pdfHeight, 
-            undefined, 
-            'FAST',
-            0,
-            i * -pageHeight
-          );
+          pdf.text(serviceName, 20, y);
+          pdf.text(`€${servicePrice.toFixed(2)}`, 130, y);
+          pdf.text(`${item.quantity}`, 150, y);
+          pdf.text(`€${serviceTotal.toFixed(2)}`, 170, y);
+          y += 7;
         }
       } else {
-        // Se il contenuto si adatta a una pagina, lo aggiungiamo semplicemente
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.text('Nessun servizio incluso nel pacchetto', 20, y);
+        y += 7;
       }
+      
+      // Linea di separazione
+      pdf.line(20, y, 190, y);
+      y += 6;
+      
+      // Totale
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Totale Pacchetto:', 130, y);
+      pdf.text(`€${totalAmount.toFixed(2)}`, 170, y);
+      y += 15;
+      
+      // Messaggio del cliente
+      if (lead.message) {
+        addText('Messaggio Cliente:', 12, true);
+        const messageLines = pdf.splitTextToSize(lead.message, 170);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(messageLines, 20, y);
+        y += messageLines.length * lineHeight + 10;
+      }
+      
+      // Note a piè di pagina
+      y = 270; // Posizione fissa per il piè di pagina
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Questa è una richiesta di preventivo. Il preventivo definitivo sarà inviato dallo studio.', 20, y);
+      y += 5;
+      pdf.text(`Per informazioni: ${settings?.companyEmail || 'info@studiofotografico.it'} - ${settings?.companyPhone || 'Non disponibile'}`, 20, y);
+      y += 5;
+      pdf.text(`Documento generato il ${format(new Date(), 'dd/MM/yyyy', { locale: it })}`, 20, y);
       
       // Genera il nome del file
       const fileName = `Richiesta_Preventivo_${lead.firstName}_${lead.lastName}_${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -128,13 +184,6 @@ export default function PdfGenerator({ lead, settings }: PdfGeneratorProps) {
         <Download className="mr-2 h-4 w-4" />
         Scarica Riepilogo PDF
       </Button>
-      
-      {/* Contenitore nascosto per il rendering del PDF */}
-      <div className="hidden">
-        <div ref={pdfRef} className="pdf-content">
-          <RequestSummary lead={lead} settings={settings} />
-        </div>
-      </div>
     </div>
   );
 }

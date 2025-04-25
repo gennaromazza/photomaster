@@ -43,8 +43,26 @@ export function CollaboratoriQuote({
   location, 
   ceremonyLocation, 
   ceremonyTime,
-  client = { firstName: '', lastName: '', phone: '' }
+  client
 }: CollaboratoriQuoteProps) {
+
+  if (!client) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center">
+            <UserCheck className="w-5 h-5 mr-2 text-primary/80" />
+            Collaboratori Assegnati
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center p-4 bg-yellow-50 rounded-md">
+            <p className="text-yellow-700">Dati cliente non disponibili.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   const { data: collaboratori, isLoading, error } = useQuery({
     queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
     enabled: !!quoteId

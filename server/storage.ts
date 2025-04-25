@@ -702,7 +702,12 @@ export class DatabaseStorage implements IStorage {
           .select()
           .from(clients)
           .where(eq(clients.id, quote.clientId));
-        client = clientData;
+        
+        if (clientData) {
+          client = clientData;
+        } else {
+          console.error(`Cliente con ID ${quote.clientId} non trovato per il preventivo ${id}`);
+        }
       }
       
       // Carica il secondo cliente se presente

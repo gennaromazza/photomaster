@@ -61,18 +61,18 @@ export const financeController = {
    */
   async createTransaction(data: any) {
     try {
-      console.log("Received transaction amount:", data.amount);
-      
+      console.log("Processing transaction amount:", data.amount);
+
       // Verifica che il preventivo sia confermato o approvato se è collegato a un preventivo
       if (data.quoteId) {
         const [quote] = await db.select()
           .from(quotes)
           .where(eq(quotes.id, data.quoteId));
-          
+
         if (!quote) {
           throw new Error("Preventivo non trovato");
         }
-        
+
         // Verifica che il preventivo sia firmato (confermato o approvato)
         if (quote.status !== "confermato" && quote.status !== "approved") {
           throw new Error("Non è possibile registrare pagamenti per preventivi non firmati");
@@ -211,7 +211,7 @@ export const financeController = {
       const relatedPayments = await db.select()
         .from(scheduledPayments)
         .where(eq(scheduledPayments.transactionId, id));
-      
+
       // Se ci sono pagamenti programmati collegati, li aggiorniamo
       if (relatedPayments.length > 0) {
         for (const payment of relatedPayments) {
@@ -352,11 +352,11 @@ export const financeController = {
         const [quote] = await db.select()
           .from(quotes)
           .where(eq(quotes.id, data.quoteId));
-          
+
         if (!quote) {
           throw new Error("Preventivo non trovato");
         }
-        
+
         // Verifica che il preventivo sia firmato (confermato o approvato)
         if (quote.status !== "confermato" && quote.status !== "approved") {
           throw new Error("Non è possibile programmare pagamenti per preventivi non firmati");
@@ -672,7 +672,7 @@ export const financeController = {
       const [quote] = await db.select()
         .from(quotes)
         .where(eq(quotes.id, quoteId));
-        
+
       // Recupero anche il preventivo tramite storage per ottenere i campi virtuali
       const quoteWithTotal = await storage.getQuote(quoteId);
       console.log(`Quote from storage for ID ${quoteId}:`, quoteWithTotal);
@@ -686,7 +686,7 @@ export const financeController = {
 
       // Utilizziamo il total dal preventivo recuperato tramite storage (che include i campi virtuali)
       const hasTotal = quoteWithTotal && quoteWithTotal.total !== undefined && quoteWithTotal.total !== null;
-      
+
       // Utilizzo il campo total dal preventivo se esiste e non è undefined/null
       // Permettiamo anche il valore 0 che è un valore valido per il totale (0 euro)
       const quoteTotal = hasTotal ? 

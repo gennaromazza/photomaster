@@ -1886,10 +1886,8 @@ export const deleteGalleryVideo = async (req: Request, res: Response) => {
     // Elimina il video dal database
     await db
       .delete(galleryVideos)
-      .where(and(
-        eq(galleryVideos.id, Number(videoId)),
-        eq(galleryVideos.galleryId, Number(galleryId))
-      ));
+      .where(eq(galleryVideos.id, Number(videoId)))
+      .where(eq(galleryVideos.galleryId, Number(galleryId)));
 
     res.json({ message: "Video eliminato con successo" });
   } catch (error) {
@@ -1908,10 +1906,8 @@ export const setGalleryVideoAsFeatured = async (req: Request, res: Response) => 
     const [updatedVideo] = await db
       .update(galleryVideos)
       .set({ isFeatured: !!isFeatured })
-      .where(and(
-        eq(galleryVideos.id, Number(videoId)),
-        eq(galleryVideos.galleryId, Number(galleryId))
-      ))
+      .where(eq(galleryVideos.id, Number(videoId)))
+      .where(eq(galleryVideos.galleryId, Number(galleryId)))
       .returning();
 
     if (!updatedVideo) {
@@ -1950,10 +1946,9 @@ export async function downloadAllPhotos(req: Request, res: Response) {
     
     if (chapterId) {
       photosQuery = { 
-        where: and(
-          eq(photos.galleryId, galleryId),
-          eq(photos.chapterId, chapterId)
-        ) 
+        where: (qb) => qb
+          .where(eq(photos.galleryId, galleryId))
+          .where(eq(photos.chapterId, chapterId))
       };
     }
     

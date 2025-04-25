@@ -29,10 +29,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Calendar, Check } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, User, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Separator } from '@/components/ui/separator';
+import { useClientValidation } from '@/hooks/use-client-validation';
+import { ClientValidationInput } from '@/components/clients/client-validation-input';
 
 // Formattazione prezzo in Euro
 const formatPrice = (price: number) => {
@@ -61,6 +63,7 @@ export default function RequestQuoteFromBundlePage() {
   const { bundleId } = useParams();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const [detectedClient, setDetectedClient] = useState<any>(null);
   
   // Form di richiesta preventivo
   const form = useForm<RequestBundleQuoteValues>({
@@ -175,8 +178,34 @@ export default function RequestQuoteFromBundlePage() {
   });
 
   // Handler per l'invio del form
+  // Funzione per gestire la selezione di un cliente esistente
+  const handleClientFound = (client: any) => {
+    setDetectedClient(client);
+    
+    // Aggiorna i valori del form con i dati del cliente
+    form.setValue("firstName", client.firstName);
+    form.setValue("lastName", client.lastName);
+    form.setValue("email", client.email);
+    form.setValue("phone", client.phone || "");
+    form.setValue("address", client.address || "");
+    
+    toast({
+      title: "Cliente esistente selezionato",
+      description: `Hai selezionato ${client.firstName} ${client.lastName}. I campi sono stati aggiornati automaticamente.`,
+      variant: "default",
+    });
+  };
+
   const onSubmit = (data: RequestBundleQuoteValues) => {
-    createQuoteMutation.mutate(data);
+    // Se è stato rilevato un cliente esistente, invia anche il suo ID
+    if (detectedClient) {
+      createQuoteMutation.mutate({
+        ...data,
+        existingClientId: detectedClient.id,
+      });
+    } else {
+      createQuoteMutation.mutate(data);
+    }
   };
 
   // Se i dati sono in caricamento, mostra un indicatore di caricamento

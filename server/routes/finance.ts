@@ -195,8 +195,12 @@ router.delete('/scheduled-payments/:id', async (req, res) => {
     
     const payment = await financeController.deleteScheduledPayment(id);
     res.json(payment);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Errore nell'eliminazione del pagamento programmato ${req.params.id}:`, error);
+    // Restituisci l'errore specifico al client per una migliore gestione degli errori
+    if (error.message === "Impossibile eliminare un pagamento già effettuato") {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Errore nell\'eliminazione del pagamento programmato' });
   }
 });

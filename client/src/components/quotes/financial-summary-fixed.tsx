@@ -105,6 +105,7 @@ export function FinancialSummary({
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isAddScheduledOpen, setIsAddScheduledOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isGenerateRatesOpen, setIsGenerateRatesOpen] = useState(false);
   const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(
     null,
   );
@@ -133,6 +134,17 @@ export function FinancialSummary({
     description: "",
     paymentMethod: "",
     notes: "",
+  });
+  
+  // Stato per la generazione automatica delle rate
+  const [rateGenerationData, setRateGenerationData] = useState({
+    numberOfRates: 3,
+    firstRateDate: format(
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      "yyyy-MM-dd",
+    ),
+    interval: 30, // giorni tra le rate
+    initialPaymentPercentage: 30, // percentuale dell'acconto iniziale
   });
 
   // Ottieni le transazioni per questo preventivo
@@ -376,12 +388,21 @@ export function FinancialSummary({
         "DELETE",
         `/api/finance/scheduled-payments/${id}`,
       );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Errore nell'eliminazione del pagamento programmato");
+      }
       return response.json();
     },
     onSuccess: () => {
       // Invalida le query per aggiornare i dati
       queryClient.invalidateQueries({
         queryKey: ["quoteScheduledPayments", quoteId],
+      });
+
+      toast({
+        title: "Pagamento programmato eliminato",
+        description: "Il pagamento è stato eliminato con successo",
       });
 
       // Forza il refetch immediato

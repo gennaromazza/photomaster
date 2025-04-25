@@ -93,60 +93,56 @@ export const searchClients = async (req: Request, res: Response) => {
         sortColumn = clients.lastName; // default
     }
 
-    let dbQuery = db.select().from(clients);
-    
-    // Aggiungi condizioni di ricerca solo se è presente una query
+    // Costruisci la query di base
+    let clientResults = [];
+    let countResult = { count: 0 };
+
     if (query && query.toString().trim() !== "") {
       const searchTerm = `%${query.toString()}%`;
       
-      dbQuery = dbQuery.where(
-        or(
-          sql`${clients.firstName} ILIKE ${searchTerm}`,
-          sql`${clients.lastName} ILIKE ${searchTerm}`,
-          sql`${clients.email} ILIKE ${searchTerm}`,
-          sql`${clients.phone} ILIKE ${searchTerm}`,
-          sql`${clients.address} ILIKE ${searchTerm}`,
-          sql`${clients.company} ILIKE ${searchTerm}`
-        )
-      );
-    }
-    
-    // Applica ordinamento, paginazione e recupera i risultati
-    const clientResults = await dbQuery
-      .orderBy(sortDirection(sortColumn))
-      .limit(limitNumber)
-      .offset(offset);
-    
-    // Conta il totale di record per la paginazione
-    let totalCountQuery = db.select({ count: sql<number>`count(*)` }).from(clients);
-    
-    // Se c'è una query di ricerca, applica le stesse condizioni al conteggio
-    if (query && query.toString().trim() !== "") {
-      const searchTerm = `%${query.toString()}%`;
+      // Versione estremamente semplificata - solo ricerca su first_name
+      clientResults = await db.execute(sql`
+        SELECT * FROM clients 
+        WHERE first_name ILIKE ${searchTerm}
+        ORDER BY last_name ASC
+        LIMIT ${limitNumber} OFFSET ${offset}
+      `);
       
-      totalCountQuery = totalCountQuery.where(
-        or(
-          sql`${clients.firstName} ILIKE ${searchTerm}`,
-          sql`${clients.lastName} ILIKE ${searchTerm}`,
-          sql`${clients.email} ILIKE ${searchTerm}`,
-          sql`${clients.phone} ILIKE ${searchTerm}`,
-          sql`${clients.address} ILIKE ${searchTerm}`,
-          sql`${clients.company} ILIKE ${searchTerm}`
-        )
-      );
+      // Conteggio totale
+      const countRows = await db.execute(sql`
+        SELECT COUNT(*) as count FROM clients 
+        WHERE first_name ILIKE ${searchTerm}
+      `);
+      
+      countResult = countRows[0];
+    } else {
+      // Se non c'è una query, restituisci tutti i clienti con paginazione
+      clientResults = await db.execute(sql`
+        SELECT * FROM clients 
+        ORDER BY last_name ASC
+        LIMIT ${limitNumber} OFFSET ${offset}
+      `);
+      
+      // Conteggio totale
+      const countRows = await db.execute(sql`
+        SELECT COUNT(*) as count FROM clients
+      `);
+      
+      countResult = countRows[0];
     }
     
-    const [totalCount] = await totalCountQuery;
+    // Assicurati che totalCount sia un numero
+    const totalCountValue = parseInt(countResult.count);
     
     // Calcola informazioni di paginazione
-    const totalPages = Math.ceil(totalCount.count / limitNumber);
+    const totalPages = Math.ceil(totalCountValue / limitNumber);
     const hasNextPage = pageNumber < totalPages;
     const hasPrevPage = pageNumber > 1;
     
     return res.status(200).json({
       clients: clientResults,
       pagination: {
-        total: totalCount.count,
+        total: totalCountValue,
         page: pageNumber,
         limit: limitNumber,
         totalPages,

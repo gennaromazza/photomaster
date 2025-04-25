@@ -488,12 +488,8 @@ export class DatabaseStorage implements IStorage {
   async removeCollaboratorFromEvent(eventId: number, collaboratorId: number): Promise<boolean> {
     const result = await db
       .delete(eventCollaborators)
-      .where(
-        and(
-          eq(eventCollaborators.eventId, eventId),
-          eq(eventCollaborators.collaboratorId, collaboratorId)
-        )
-      );
+      .where(eq(eventCollaborators.eventId, eventId))
+      .where(eq(eventCollaborators.collaboratorId, collaboratorId));
     return result !== undefined;
   }
 

@@ -29,7 +29,7 @@ interface CollaboratoriQuoteProps {
   location: string;
   ceremonyLocation?: string;
   ceremonyTime?: string;
-  client: {
+  client?: {
     firstName: string;
     lastName: string;
     phone: string;
@@ -43,7 +43,7 @@ export function CollaboratoriQuote({
   location, 
   ceremonyLocation, 
   ceremonyTime,
-  client 
+  client = { firstName: '', lastName: '', phone: '' }
 }: CollaboratoriQuoteProps) {
   const { data: collaboratori, isLoading, error } = useQuery({
     queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],

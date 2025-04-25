@@ -13,11 +13,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 // Schema di validazione per i social media
 const socialMediaSchema = z.object({
-  facebook: z.string().url("URL di Facebook non valido").or(z.string().length(0)).optional(),
-  instagram: z.string().url("URL di Instagram non valido").or(z.string().length(0)).optional(),
-  twitter: z.string().url("URL di Twitter non valido").or(z.string().length(0)).optional(),
-  youtube: z.string().url("URL di YouTube non valido").or(z.string().length(0)).optional(),
-  website: z.string().url("URL del sito web non valido").or(z.string().length(0)).optional()
+  facebookUrl: z.string().url("URL di Facebook non valido").or(z.string().length(0)).optional(),
+  instagramUrl: z.string().url("URL di Instagram non valido").or(z.string().length(0)).optional(),
+  twitterUrl: z.string().url("URL di Twitter non valido").or(z.string().length(0)).optional(),
+  youtubeUrl: z.string().url("URL di YouTube non valido").or(z.string().length(0)).optional(),
+  websiteUrl: z.string().url("URL del sito web non valido").or(z.string().length(0)).optional()
 });
 
 type SocialMediaFormValues = z.infer<typeof socialMediaSchema>;
@@ -26,11 +26,11 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
   const { toast } = useToast();
 
   const defaultValues: SocialMediaFormValues = {
-    facebook: settings?.facebook || '',
-    instagram: settings?.instagram || '',
-    twitter: settings?.twitter || '',
-    youtube: settings?.youtube || '',
-    website: settings?.website || ''
+    facebookUrl: settings?.facebook || '',
+    instagramUrl: settings?.instagram || '',
+    twitterUrl: settings?.twitter || '',
+    youtubeUrl: settings?.youtube || '',
+    websiteUrl: settings?.website || ''
   };
 
   const form = useForm<SocialMediaFormValues>({
@@ -77,7 +77,7 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="facebook"
+              name="facebookUrl"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center">
@@ -97,7 +97,7 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
 
             <FormField
               control={form.control}
-              name="instagram"
+              name="instagramUrl"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center">
@@ -117,7 +117,7 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
 
             <FormField
               control={form.control}
-              name="twitter"
+              name="twitterUrl"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center">
@@ -137,7 +137,7 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
 
             <FormField
               control={form.control}
-              name="youtube"
+              name="youtubeUrl"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center">
@@ -157,7 +157,7 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
 
             <FormField
               control={form.control}
-              name="website"
+              name="websiteUrl"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center">

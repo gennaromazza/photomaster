@@ -35,6 +35,7 @@ const ENDPOINT_MAPPINGS: Record<string, string> = {
   "/api/eventi/prossimi": "/api/events/upcoming",
   "/api/eventi/cliente/:clienteId": "/api/events/client/:clientId",
   "/api/eventi/:id/collaboratori": "/api/events/:id/collaborators",
+  "/api/eventi/preventivo/:quoteId/collaboratori": "/api/events/quote/:quoteId/collaborators",
   "/api/eventi/:id/pagamenti": "/api/events/:id/payments",
   "/api/eventi/:id/montaggi": "/api/events/:id/editing",
   

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db, type DB } from "../db";
-import type { SQL } from "drizzle-orm";
-import { DrizzleError, eq, sql, desc, asc, and, or, isNull } from "drizzle-orm";
+import { eq, sql, desc, asc } from "drizzle-orm";
+import { format, parse } from "date-fns";
 
 // Tipi esportabili per essere usati anche in altri file
 export interface Evento {
@@ -294,8 +294,7 @@ export const addPagamentoEvento = async (req: Request, res: Response) => {
     ) {
       // Recupera il montaggio associato al collaboratore per questo evento
       const [montaggio] = await db.select().from(montaggiEvento)
-        .where(eq(montaggiEvento.eventoId, Number(id)))
-        .where(eq(montaggiEvento.collaboratoreId, data.collaboratoreId));
+        .where(sql`${eq(montaggiEvento.eventoId, Number(id))} AND ${eq(montaggiEvento.collaboratoreId, data.collaboratoreId)}`);
       
       if (montaggio) {
         // Aggiorna lo stato di pagamento del montaggio
@@ -422,9 +421,9 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
     
     // Verifica che non esista già un montaggio dello stesso tipo per questo collaboratore e evento
     const [montaggioEsistente] = await db.select().from(montaggiEvento)
-      .where(eq(montaggiEvento.eventoId, Number(id)))
-      .where(eq(montaggiEvento.collaboratoreId, data.collaboratoreId))
-      .where(eq(montaggiEvento.tipoMontaggio, data.tipoMontaggio));
+      .where(sql`${eq(montaggiEvento.eventoId, Number(id))} 
+               AND ${eq(montaggiEvento.collaboratoreId, data.collaboratoreId)}
+               AND ${eq(montaggiEvento.tipoMontaggio, data.tipoMontaggio)}`);
     
     if (montaggioEsistente) {
       return res.status(400).json({ 
@@ -608,12 +607,12 @@ export const getEventiSenzaCollaboratori = async (req: Request, res: Response) =
     
     // Crea un Set di eventi con collaboratori per una ricerca veloce
     const eventiConCollaboratoriSet = new Set(
-      collaboratoriPerEvento.map(row => row.eventoId)
+      collaboratoriPerEvento.map((row: { eventoId: number }) => row.eventoId)
     );
     
     // Filtra gli eventi che non hanno collaboratori
     const eventiSenzaCollaboratori = eventiConfermati.filter(
-      evento => !eventiConCollaboratoriSet.has(evento.id)
+      (evento: { id: number }) => !eventiConCollaboratoriSet.has(evento.id)
     );
     
     return res.status(200).json(eventiSenzaCollaboratori);
@@ -669,8 +668,8 @@ export const addCollaboratorePreventivo = async (req: Request, res: Response) =>
     
     // Verifica se l'assegnazione esiste già
     const esisteGia = await db.select().from(eventiCollaboratori)
-      .where(eq(eventiCollaboratori.collaboratoreId, data.collaboratoreId))
-      .where(eq(eventiCollaboratori.eventoId, evento.id))
+      .where(sql`${eq(eventiCollaboratori.collaboratoreId, data.collaboratoreId)} 
+             AND ${eq(eventiCollaboratori.eventoId, evento.id)}`)
       .limit(1);
     
     if (esisteGia.length > 0) {
@@ -817,8 +816,7 @@ export const removeCollaboratorePreventivo = async (req: Request, res: Response)
     
     // Elimina anche l'assegnazione dalla tabella inglese
     await db.delete(eventCollaborators)
-      .where(eq(eventCollaborators.collaboratorId, collaboratoreId))
-      .where(eq(eventCollaborators.eventId, eventoId));
+      .where(sql`${eq(eventCollaborators.collaboratorId, collaboratoreId)} AND ${eq(eventCollaborators.eventId, eventoId)}`);
     
     return res.status(200).json({ 
       success: true, 
@@ -836,8 +834,7 @@ export const updateMontaggioEvento = async (req: Request, res: Response) => {
   try {
     // Verifica che il montaggio esista
     const [montaggio] = await db.select().from(montaggiEvento)
-      .where(eq(montaggiEvento.id, Number(montaggioId)))
-      .where(eq(montaggiEvento.eventoId, Number(eventoId)));
+      .where(sql`${eq(montaggiEvento.id, Number(montaggioId))} AND ${eq(montaggiEvento.eventoId, Number(eventoId))}`);
     
     if (!montaggio) {
       return res.status(404).json({ error: "Montaggio non trovato" });

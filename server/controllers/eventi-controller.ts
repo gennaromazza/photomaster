@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { db } from "../db";
+import { db, type DB } from "../db";
 import type { SQL } from "drizzle-orm";
-import { DrizzleError } from "drizzle-orm";
+import { DrizzleError, eq, sql, desc, asc, and, or, isNull } from "drizzle-orm";
 
 // Tipi esportabili per essere usati anche in altri file
 export interface Evento {
@@ -76,10 +76,8 @@ import {
   StatoMontaggioEvento,
   TipoMontaggioEvento
 } from "@shared/eventi-schema";
-import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { z } from "zod";
-import { events, quotes, eventCollaborators } from "@shared/schema";
-import { collaborators } from "@shared/schema";
+import { events, quotes, eventCollaborators, collaborators } from "@shared/schema";
 import { 
   syncFromEventiCollaboratoriToEventCollaborators,
   syncFromEventCollaboratorsToEventiCollaboratori

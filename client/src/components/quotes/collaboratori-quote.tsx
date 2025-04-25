@@ -1,47 +1,53 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Loader2, UserCheck, Phone, Plus, Edit, Trash2, UserPlus } from "lucide-react";
+import {
+  Loader2,
+  UserCheck,
+  Phone,
+  Plus,
+  Edit,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
+  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,7 +59,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { getRoleLabel } from "@/lib/constants";
-import { adaptedApiRequest } from "@/utils/api-adapter";
 
 interface CollaboratoriQuoteProps {
   quoteId: number;
@@ -83,201 +88,177 @@ interface ClientData {
   address?: string;
 }
 
-export function CollaboratoriQuote({ 
-  quoteId, 
-  title, 
-  date, 
-  location, 
-  ceremonyLocation, 
+export function CollaboratoriQuote({
+  quoteId,
+  title,
+  date,
+  location,
+  ceremonyLocation,
   ceremonyTime,
   client,
   internalNotes,
-  clientNotes
+  clientNotes,
 }: CollaboratoriQuoteProps) {
-
-  // Inizializziamo clientData con i dati che riceviamo come prop
-  // In questo modo il componente funziona anche senza dati cliente,
-  // ma li utilizzerà se disponibili
   const clientData: ClientData = client || {};
-  
-  // Importante: prima definiamo tutti gli hooks che utilizziamo
   const { toast } = useToast();
-  
-  // Schema per la validazione del form di aggiunta collaboratore
+
   const collaboratoreSchema = z.object({
     collaboratoreId: z.string().min(1, "Seleziona un collaboratore"),
     ruolo: z.string().min(1, "Seleziona un ruolo"),
     note: z.string().optional(),
   });
-
   type CollaboratoreFormValues = z.infer<typeof collaboratoreSchema>;
 
-  // Form per l'aggiunta di un nuovo collaboratore
   const form = useForm<CollaboratoreFormValues>({
     resolver: zodResolver(collaboratoreSchema),
-    defaultValues: {
-      ruolo: "fotografo",
-      note: "",
-    },
+    defaultValues: { ruolo: "fotografo", note: "" },
   });
-  
-  // State per il modale di aggiunta/modifica
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentCollaboratore, setCurrentCollaboratore] = useState<any>(null);
-  
-  // Query dei collaboratori assegnati
-  const { data: collaboratori = [], isLoading, error } = useQuery<any[]>({
+
+  const {
+    data: collaboratori = [],
+    isLoading,
+    error,
+  } = useQuery<any[]>({
     queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
-    enabled: !!quoteId
+    enabled: !!quoteId,
   });
-  
-  // Recupera la lista dei collaboratori disponibili
+
   const { data: collaboratoriDisponibili = [] } = useQuery<any[]>({
     queryKey: ["/api/collaborators"],
     enabled: isDialogOpen,
   });
-  
-  // Recupera il token CSRF
+
   const { data: csrfData } = useQuery<{ csrfToken: string }>({
     queryKey: ["/api/csrf-token"],
-    staleTime: 60 * 60 * 1000, // 1 ora
-  });
-  
-  // Mutation per aggiungere un collaboratore
-  const addCollaboratoreMutation = useMutation({
-    mutationFn: async (data: CollaboratoreFormValues) => {
-      // Utilizza apiRequest che include automaticamente l'header CSRF
-      // Aggiungi l'header CSRF
-      const headers = new Headers();
-      if (csrfData?.csrfToken) {
-        headers.append('X-CSRF-Token', csrfData.csrfToken);
-      }
-    
-      // Configura la richiesta con headers CSRF
-      const requestOptions = {
-        method: "POST", 
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfData?.csrfToken || ""
-        },
-        body: JSON.stringify({
-          collaboratoreId: parseInt(data.collaboratoreId),
-          ruolo: data.ruolo,
-          note: data.note || "",
-        }),
-        credentials: 'include' as RequestCredentials
-      };
-      
-      const response = await fetch(`/api/eventi/preventivo/${quoteId}/collaboratori`, requestOptions);
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Collaboratore assegnato",
-        description: "Il collaboratore è stato assegnato con successo al preventivo.",
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`] });
-      setIsDialogOpen(false);
-      form.reset();
-    },
-    onError: (error) => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'assegnazione del collaboratore.",
-        variant: "destructive",
-      });
-      console.error("Errore durante l'assegnazione del collaboratore:", error);
-    },
+    staleTime: 3600000,
   });
 
-  // Mutation per rimuovere un collaboratore
-  const removeCollaboratoreMutation = useMutation({
-    mutationFn: async (collaboratoreId: number) => {
-      // Configura la richiesta con headers CSRF
-      const requestOptions = {
-        method: "DELETE", 
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfData?.csrfToken || ""
+  const addMutation = useMutation(
+    async (data: CollaboratoreFormValues) => {
+      const res = await fetch(
+        `/api/eventi/preventivo/${quoteId}/collaboratori`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfData?.csrfToken || "",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            collaboratoreId: parseInt(data.collaboratoreId),
+            ruolo: data.ruolo,
+            note: data.note || "",
+          }),
         },
-        credentials: 'include' as RequestCredentials
-      };
-      
-      const response = await fetch(`/api/eventi/preventivo/${quoteId}/collaboratori/${collaboratoreId}`, requestOptions);
-      return await response.json();
+      );
+      return res.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Collaboratore rimosso",
-        description: "Il collaboratore è stato rimosso con successo dal preventivo.",
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante la rimozione del collaboratore.",
-        variant: "destructive",
-      });
-      console.error("Errore durante la rimozione del collaboratore:", error);
-    },
-  });
-
-  // Mutation per modificare un collaboratore
-  const updateCollaboratoreMutation = useMutation({
-    mutationFn: async (data: { id: number, ruolo: string, note?: string }) => {
-      // Configura la richiesta con headers CSRF
-      const requestOptions = {
-        method: "PATCH", 
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfData?.csrfToken || ""
-        },
-        body: JSON.stringify({
-          ruolo: data.ruolo,
-          note: data.note || "",
+    {
+      onSuccess: () => {
+        toast({
+          title: "Collaboratore assegnato",
+          description: "Assegnato con successo.",
+        });
+        queryClient.invalidateQueries({
+          queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
+        });
+        setIsDialogOpen(false);
+        form.reset();
+      },
+      onError: () =>
+        toast({
+          title: "Errore",
+          description: "Impossibile assegnare collaboratore.",
+          variant: "destructive",
         }),
-        credentials: 'include' as RequestCredentials
-      };
-      
-      const response = await fetch(`/api/eventi/preventivo/${quoteId}/collaboratori/${data.id}`, requestOptions);
-      return await response.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Collaboratore aggiornato",
-        description: "Le informazioni del collaboratore sono state aggiornate con successo.",
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`] });
-      setIsDialogOpen(false);
-      setIsEditMode(false);
-      setCurrentCollaboratore(null);
-      form.reset();
+  );
+
+  const removeMutation = useMutation(
+    async (id: number) => {
+      const res = await fetch(
+        `/api/eventi/preventivo/${quoteId}/collaboratori/${id}`,
+        {
+          method: "DELETE",
+          headers: { "X-CSRF-Token": csrfData?.csrfToken || "" },
+          credentials: "include",
+        },
+      );
+      return res.json();
     },
-    onError: (error) => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante l'aggiornamento del collaboratore.",
-        variant: "destructive",
-      });
-      console.error("Errore durante l'aggiornamento del collaboratore:", error);
+    {
+      onSuccess: () => {
+        toast({
+          title: "Collaboratore rimosso",
+          description: "Rimosso con successo.",
+        });
+        queryClient.invalidateQueries({
+          queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
+        });
+      },
+      onError: () =>
+        toast({
+          title: "Errore",
+          description: "Impossibile rimuovere collaboratore.",
+          variant: "destructive",
+        }),
     },
-  });
+  );
+
+  const updateMutation = useMutation(
+    async (data: { id: number; ruolo: string; note?: string }) => {
+      const res = await fetch(
+        `/api/eventi/preventivo/${quoteId}/collaboratori/${data.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfData?.csrfToken || "",
+          },
+          credentials: "include",
+          body: JSON.stringify({ ruolo: data.ruolo, note: data.note || "" }),
+        },
+      );
+      return res.json();
+    },
+    {
+      onSuccess: () => {
+        toast({
+          title: "Collaboratore aggiornato",
+          description: "Informazioni aggiornate.",
+        });
+        queryClient.invalidateQueries({
+          queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
+        });
+        setIsDialogOpen(false);
+        setIsEditMode(false);
+        setCurrentCollaboratore(null);
+        form.reset();
+      },
+      onError: () =>
+        toast({
+          title: "Errore",
+          description: "Impossibile aggiornare collaboratore.",
+          variant: "destructive",
+        }),
+    },
+  );
 
   if (isLoading) {
     return (
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center">
-            <UserCheck className="w-5 h-5 mr-2 text-primary/80" />
-            Collaboratori Assegnati
+            <UserCheck className="w-5 h-5 mr-2 text-primary/80" /> Collaboratori
+            Assegnati
           </CardTitle>
-          <CardDescription>
-            Visualizza i collaboratori assegnati al servizio
-          </CardDescription>
+          <CardDescription>Caricamento in corso…</CardDescription>
         </CardHeader>
-        <CardContent className="flex justify-center items-center py-8">
+        <CardContent className="flex justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary/70" />
         </CardContent>
       </Card>
@@ -289,107 +270,80 @@ export function CollaboratoriQuote({
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg flex items-center">
-            <UserCheck className="w-5 h-5 mr-2 text-primary/80" />
-            Collaboratori Assegnati
+            <UserCheck className="w-5 h-5 mr-2 text-primary/80" /> Collaboratori
+            Assegnati
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="p-4 bg-destructive/10 rounded-md text-center text-destructive">
-            Si è verificato un errore nel caricamento dei collaboratori.
+            Errore nel caricamento.
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  const formattedDate = date ? format(new Date(date), "dd/MM/yyyy", { locale: it }) : 'Data non disponibile';
+  const formattedDate = date
+    ? format(new Date(date), "dd/MM/yyyy", { locale: it })
+    : "N/D";
 
-  // Funzione per creare il messaggio WhatsApp con i dati completi del cliente
-  const createWhatsAppMessage = (collaboratore: any) => {
-    // Usiamo clientData invece di client per gestire anche il caso in cui client sia undefined
-    // Creiamo un'info cliente di base che mostri i dati se disponibili
-    let clientInfo = '';
-    
+  const createWhatsAppMessage = (c: any) => {
+    let clientInfo = "";
     if (clientData.firstName && clientData.lastName) {
-      clientInfo = `👥 Cliente: ${clientData.firstName} ${clientData.lastName}\n`;
-      
-      if (clientData.phone) {
-        clientInfo += `📱 Telefono Cliente: ${clientData.phone}\n`;
-      }
-      
-      if (clientData.email) {
-        clientInfo += `📧 Email Cliente: ${clientData.email}\n`;
-      }
-      
-      if (clientData.address) {
-        clientInfo += `🏠 Indirizzo Cliente: ${clientData.address}\n`;
-      }
-      
-      if (clientData.notes) {
-        clientInfo += `📝 Note Cliente: ${clientData.notes}\n`;
-      }
+      clientInfo += `👥 Cliente: ${clientData.firstName} ${clientData.lastName}\n`;
+      if (clientData.phone) clientInfo += `📱 Tel: ${clientData.phone}\n`;
+      if (clientData.email) clientInfo += `📧 Email: ${clientData.email}\n`;
+      if (clientData.address)
+        clientInfo += `🏠 Indirizzo: ${clientData.address}\n`;
+      if (clientData.notes) clientInfo += `📝 Note: ${clientData.notes}\n`;
     }
-    
-    // Aggiungere note specifiche se disponibili
-    let noteAggiuntive = '';
-    if (clientNotes) {
-      noteAggiuntive += `\n📋 Note Cliente: ${clientNotes}\n`;
-    }
-    
-    if (internalNotes) {
-      noteAggiuntive += `\n🔒 Note Interne: ${internalNotes}\n`;
-    }
-    
-    const message = encodeURIComponent(
-      `Ciao ${collaboratore.collaboratore.firstName},\n\n` +
-      `Ti confermo l'evento "${title}"\n\n` +
-      `📅 Data: ${formattedDate}\n` +
-      `📍 Location: ${location}\n` +
-      (ceremonyLocation ? `🏛️ Cerimonia: ${ceremonyLocation}\n` : '') +
-      (ceremonyTime ? `⏰ Orario Cerimonia: ${ceremonyTime}\n` : '') +
-      clientInfo +
-      noteAggiuntive +
-      `🎯 Il tuo ruolo: ${getRoleLabel(collaboratore.ruolo)}\n` +
-      (collaboratore.note ? `📌 Note sul tuo ruolo: ${collaboratore.note}\n\n` : '\n') +
-      `Per qualsiasi informazione, contattami.`
+    let extraNotes = clientNotes ? `\n📋 Note Cliente: ${clientNotes}\n` : "";
+    extraNotes += internalNotes ? `\n🔒 Note Interne: ${internalNotes}\n` : "";
+    const msg = encodeURIComponent(
+      `Ciao ${c.collaboratore.firstName},\n\n` +
+        `Evento: "${title}"\n` +
+        `📅 ${formattedDate}\n` +
+        `📍 ${location}\n` +
+        (ceremonyLocation ? `🏛️ Cerimonia: ${ceremonyLocation}\n` : "") +
+        (ceremonyTime ? `⏰ ${ceremonyTime}\n` : "") +
+        clientInfo +
+        extraNotes +
+        `🎯 Ruolo: ${getRoleLabel(c.ruolo)}\n` +
+        (c.note ? `📌 Note: ${c.note}\n` : "") +
+        `\nContattami per info.`,
     );
-    
-    // Se non c'è un numero di telefono del collaboratore, mostriamo un toast
-    if (!collaboratore.collaboratore?.phone) {
+    const phoneClean = c.collaboratore.phone?.replace(/\D/g, "");
+    if (!phoneClean) {
       toast({
-        title: "Telefono mancante",
-        description: "Il collaboratore non ha un numero di telefono registrato",
-        variant: "destructive"
+        title: "Errore",
+        description: "Numero mancante",
+        variant: "destructive",
       });
       return "#";
     }
-    
-    return `https://wa.me/${collaboratore.collaboratore.phone.replace(/\D/g, '')}?text=${message}`;
+    return `https://wa.me/${phoneClean}?text=${msg}`;
   };
 
-  // Gestisce la sottomissione del form
   function onSubmit(data: CollaboratoreFormValues) {
     if (isEditMode && currentCollaboratore) {
-      updateCollaboratoreMutation.mutate({
+      updateMutation.mutate({
         id: currentCollaboratore.id,
         ruolo: data.ruolo,
         note: data.note,
       });
     } else {
-      addCollaboratoreMutation.mutate(data);
+      addMutation.mutate(data);
     }
   }
 
-  // Apre il modal in modalità modifica
-  function handleEdit(collaboratore: any) {
+  function handleEdit(coll: any) {
     setIsEditMode(true);
-    setCurrentCollaboratore(collaboratore);
-    form.setValue("ruolo", collaboratore.ruolo);
-    form.setValue("note", collaboratore.note || "");
+    setCurrentCollaboratore(coll);
+    form.setValue("ruolo", coll.ruolo);
+    form.setValue("note", coll.note || "");
     setIsDialogOpen(true);
   }
 
-  // Apre il modal in modalità aggiunta
   function handleAdd() {
     setIsEditMode(false);
     setCurrentCollaboratore(null);
@@ -403,31 +357,32 @@ export function CollaboratoriQuote({
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg flex items-center">
-              <UserCheck className="w-5 h-5 mr-2 text-primary/80" />
+              <UserCheck className="w-5 h-5 mr-2 text-primary/80" />{" "}
               Collaboratori Assegnati
             </CardTitle>
             <CardDescription>
-              {collaboratori?.length ? `${collaboratori.length} collaboratori assegnati all'evento` : 'Nessun collaboratore assegnato'}
+              {collaboratori.length
+                ? `${collaboratori.length} assegnati`
+                : "Nessuno assegnato"}
             </CardDescription>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" onClick={handleAdd}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Aggiungi
+                <UserPlus className="h-4 w-4 mr-2" /> Aggiungi
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>{isEditMode ? "Modifica collaboratore" : "Aggiungi collaboratore"}</DialogTitle>
-                <DialogDescription>
-                  {isEditMode 
-                    ? "Modifica le informazioni del collaboratore" 
-                    : "Assegna un nuovo collaboratore al preventivo"}
-                </DialogDescription>
+                <DialogTitle>
+                  {isEditMode ? "Modifica" : "Aggiungi"} collaboratore
+                </DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
                   {!isEditMode && (
                     <FormField
                       control={form.control}
@@ -435,19 +390,22 @@ export function CollaboratoriQuote({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Collaboratore</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
+                          <Select
+                            onValueChange={field.onChange}
                             defaultValue={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Seleziona un collaboratore" />
+                                <SelectValue placeholder="Seleziona" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {collaboratoriDisponibili.map((collab) => (
-                                <SelectItem key={collab.id} value={collab.id.toString()}>
-                                  {collab.firstName} {collab.lastName}
+                              {collaboratoriDisponibili.map((cd) => (
+                                <SelectItem
+                                  key={cd.id}
+                                  value={cd.id.toString()}
+                                >
+                                  {cd.firstName} {cd.lastName}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -457,28 +415,33 @@ export function CollaboratoriQuote({
                       )}
                     />
                   )}
-                  
                   <FormField
                     control={form.control}
                     name="ruolo"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Ruolo</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
+                        <Select
+                          onValueChange={field.onChange}
                           defaultValue={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Seleziona un ruolo" />
+                              <SelectValue placeholder="Seleziona ruolo" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="fotografo">Fotografo</SelectItem>
-                            <SelectItem value="videomaker">Videomaker</SelectItem>
-                            <SelectItem value="assistente">Assistente</SelectItem>
+                            <SelectItem value="videomaker">
+                              Videomaker
+                            </SelectItem>
+                            <SelectItem value="assistente">
+                              Assistente
+                            </SelectItem>
                             <SelectItem value="grafico">Grafico</SelectItem>
-                            <SelectItem value="secondofotografo">Secondo Fotografo</SelectItem>
+                            <SelectItem value="secondofotografo">
+                              Secondo fotografo
+                            </SelectItem>
                             <SelectItem value="drone">Drone</SelectItem>
                           </SelectContent>
                         </Select>
@@ -486,7 +449,6 @@ export function CollaboratoriQuote({
                       </FormItem>
                     )}
                   />
-                  
                   <FormField
                     control={form.control}
                     name="note"
@@ -494,28 +456,29 @@ export function CollaboratoriQuote({
                       <FormItem>
                         <FormLabel>Note (opzionale)</FormLabel>
                         <Textarea
-                          placeholder="Note sull'assegnazione..."
                           className="resize-none"
+                          placeholder="Note..."
                           {...field}
                         />
-                        <FormDescription>Aggiungi eventuali note sull'assegnazione</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
                       Annulla
                     </Button>
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       disabled={
-                        addCollaboratoreMutation.isPending || 
-                        updateCollaboratoreMutation.isPending
+                        addMutation.isPending || updateMutation.isPending
                       }
                     >
-                      {(addCollaboratoreMutation.isPending || updateCollaboratoreMutation.isPending) && (
+                      {(addMutation.isPending || updateMutation.isPending) && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
                       {isEditMode ? "Aggiorna" : "Aggiungi"}
@@ -531,50 +494,49 @@ export function CollaboratoriQuote({
         {collaboratori.length === 0 ? (
           <div className="text-center p-8 bg-muted/30 rounded-md">
             <p className="text-muted-foreground">
-              Nessun collaboratore assegnato a questo preventivo.
+              Nessun collaboratore assegnato.
             </p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-4"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleAdd}
+              className="mt-4"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Aggiungi collaboratore
+              <Plus className="h-4 w-4 mr-2" /> Aggiungi
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
-            {collaboratori.map((collaboratore) => (
-              <div 
-                key={collaboratore.id} 
+            {collaboratori.map((c) => (
+              <div
+                key={c.id}
                 className="flex items-center justify-between p-4 rounded-lg border bg-card"
               >
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarFallback>
-                      {collaboratore.collaboratore.firstName[0]}
-                      {collaboratore.collaboratore.lastName[0]}
+                      {c.collaboratore.firstName[0]}
+                      {c.collaboratore.lastName[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-medium">
-                      {collaboratore.collaboratore.firstName} {collaboratore.collaboratore.lastName}
+                      {c.collaboratore.firstName} {c.collaboratore.lastName}
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                       <Badge variant="outline" className="text-xs">
-                        {getRoleLabel(collaboratore.ruolo)}
+                        {getRoleLabel(c.ruolo)}
                       </Badge>
-                      {collaboratore.note && (
+                      {c.note && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="italic text-xs text-muted-foreground cursor-help">
+                              <span className="italic text-xs cursor-help">
                                 Note
-                              </div>
+                              </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="max-w-xs">{collaboratore.note}</p>
+                              <p className="max-w-xs">{c.note}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -587,9 +549,9 @@ export function CollaboratoriQuote({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button size="icon" variant="ghost" asChild>
-                          <a 
-                            href={createWhatsAppMessage(collaboratore)} 
-                            target="_blank" 
+                          <a
+                            href={createWhatsAppMessage(c)}
+                            target="_blank"
                             rel="noopener noreferrer"
                           >
                             <Phone className="h-4 w-4 text-green-600" />
@@ -597,39 +559,37 @@ export function CollaboratoriQuote({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Invia dettagli evento via WhatsApp</p>
+                        <p>WhatsApp</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          onClick={() => handleEdit(collaboratore)}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleEdit(c)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Modifica ruolo</p>
+                        <p>Modifica</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="text-destructive" 
-                          onClick={() => removeCollaboratoreMutation.mutate(collaboratore.id)}
-                          disabled={removeCollaboratoreMutation.isPending}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => removeMutation.mutate(c.id)}
+                          disabled={removeMutation.isPending}
                         >
-                          {removeCollaboratoreMutation.isPending ? (
+                          {removeMutation.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <Trash2 className="h-4 w-4" />
@@ -637,7 +597,7 @@ export function CollaboratoriQuote({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Rimuovi collaboratore</p>
+                        <p>Rimuovi</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

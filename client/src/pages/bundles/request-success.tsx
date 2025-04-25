@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Home, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, MailIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
-import { Settings } from '@shared/schema';
+import { Settings, BundleLead } from '@shared/schema';
+import PdfGenerator from '@/components/bundles/pdf-generator';
+import { Loader2 } from 'lucide-react';
 
 export default function RequestSuccessPage() {
   const [, navigate] = useLocation();
+  const [email, setEmail] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Query per recuperare le impostazioni dello studio
   const settingsQuery = useQuery({
@@ -24,7 +28,40 @@ export default function RequestSuccessPage() {
     }
   });
 
+  // Recupera l'email dalla sessionStorage
+  useEffect(() => {
+    const storedEmail = sessionStorage.getItem('latestBundleRequestEmail');
+    if (storedEmail) {
+      setEmail(storedEmail);
+    }
+  }, []);
+
+  // Query per recuperare i dettagli della richiesta
+  const leadQuery = useQuery({
+    queryKey: ['/api/bundle-leads/by-email', email],
+    queryFn: async () => {
+      if (!email) throw new Error('Email non disponibile');
+      
+      try {
+        setIsLoading(true);
+        const res = await fetch(`/api/bundle-leads/by-email/${encodeURIComponent(email)}`);
+        if (!res.ok) throw new Error('Errore nel caricamento dei dettagli della richiesta');
+        const data = await res.json();
+        return data;
+      } catch (error) {
+        console.error('Errore durante il recupero dei dettagli della richiesta:', error);
+        throw new Error('Errore nel caricamento dei dettagli della richiesta');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    enabled: !!email, // Esegui la query solo se l'email è disponibile
+  });
+
   const settings = settingsQuery.data as Settings;
+  const lead = leadQuery.data as BundleLead & {
+    bundle: any;
+  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -49,24 +86,27 @@ export default function RequestSuccessPage() {
             </p>
           </div>
           
-          <div className="space-y-3">
-            <Button 
-              className="w-full" 
-              onClick={() => navigate('/bundles')}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Torna ai Pacchetti
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={() => navigate('/')}
-            >
-              <Home className="mr-2 h-4 w-4" />
-              Vai alla Home
-            </Button>
-          </div>
+          {isLoading ? (
+            <div className="py-4 flex justify-center items-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2">Caricamento riepilogo...</span>
+            </div>
+          ) : lead ? (
+            <PdfGenerator lead={lead} settings={settings} />
+          ) : email ? (
+            <div className="text-center text-amber-600 py-2">
+              <p>Impossibile caricare il riepilogo della richiesta.</p>
+            </div>
+          ) : null}
+          
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => window.location.href = `mailto:${settings?.companyEmail || 'info@studioarte.it'}`}
+          >
+            <MailIcon className="mr-2 h-4 w-4" />
+            Contattaci per Email
+          </Button>
           
           <div className="text-center text-sm text-gray-500 pt-4">
             <p>

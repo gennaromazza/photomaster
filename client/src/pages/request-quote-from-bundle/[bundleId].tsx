@@ -160,7 +160,10 @@ export default function RequestQuoteFromBundlePage() {
       const res = await apiRequest('POST', '/api/bundle-leads/create-quote', requestData);
       return await res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      // Salva l'email nella sessionStorage per recuperarla nella pagina di successo
+      sessionStorage.setItem('latestBundleRequestEmail', variables.email);
+      
       toast({
         title: 'Preventivo richiesto',
         description: 'La tua richiesta di preventivo è stata inviata con successo. Ti contatteremo presto!',

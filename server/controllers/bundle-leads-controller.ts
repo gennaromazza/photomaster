@@ -394,3 +394,46 @@ export const getAllBundleLeads = async (_req: Request, res: Response) => {
       .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
   }
 };
+
+/**
+ * Recupera i dettagli di una lead specifica per email (per il riepilogo da scaricare)
+ */
+export const getBundleLeadByEmail = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.params;
+    
+    if (!email) {
+      return res.status(400).json({ message: "Email non specificata" });
+    }
+    
+    // Trova la lead più recente con questa email
+    const lead = await db.query.bundleLeads.findFirst({
+      where: eq(bundleLeads.email, email),
+      orderBy: (bundleLeads, { desc }) => [desc(bundleLeads.createdAt)],
+      with: {
+        bundle: {
+          with: {
+            items: {
+              with: {
+                service: true
+              }
+            }
+          }
+        },
+        quote: true,
+        client: true,
+      },
+    });
+    
+    if (!lead) {
+      return res.status(404).json({ message: "Richiesta non trovata" });
+    }
+    
+    return res.status(200).json(lead);
+  } catch (error: any) {
+    console.error("Errore nel recupero della lead:", error);
+    return res
+      .status(500)
+      .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
+  }
+};

@@ -336,6 +336,7 @@ export function CollaboratoriQuote({
         note: data.note,
       });
     } else {
+
       addMutation.mutate(data);
     }
   }

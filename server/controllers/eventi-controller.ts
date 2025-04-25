@@ -1,10 +1,69 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import { DrizzleError } from "drizzle-orm";
-// Tipizzazione corretta del database con parametri generici
-const typedDb = db as PgDatabase<any>;
+
+// Tipi esportabili per essere usati anche in altri file
+export interface Evento {
+  id: number;
+  title: string;
+  description?: string;
+  eventDate?: Date | string;
+  date?: Date | string; // Supporto per entrambi i formati
+  data?: Date | string; // Supporto per formato italiano legacy
+  location?: string;
+  status?: string;
+  clientName?: string;
+  clientFirstName?: string; // Supporto per formato legacy
+  clientLastName?: string; // Supporto per formato legacy
+  eventoId?: number; // Supporto per formato legacy
+  clienteQuoteId?: number; // Supporto per formato legacy
+  titolo?: string; // Supporto per formato legacy italiano (title in inglese)
+  ruolo?: string; // Ruolo del collaboratore nell'evento
+  quote?: {
+    id: number;
+    title: string;
+    client?: {
+      firstName: string;
+      lastName: string;
+    };
+  };
+}
+
+export interface EventoCollaboratore {
+  id: number;
+  ruolo: string;
+  dataAssegnazione: Date;
+  note?: string;
+  eventoId: number;
+  collaboratoreId: number;
+}
+
+// Funzione helper esportabile per normalizzare date tra formati diversi
+export function getEventDate(evento: Evento): Date | null {
+  // Cerca in tutti i possibili campi di data in ordine di priorità
+  const dateString = evento.eventDate || evento.date || evento.data;
+  if (!dateString) {
+    console.warn("Evento senza data:", evento);
+    return null;
+  }
+  
+  try {
+    // Prima prova con il costruttore standard di Date
+    const date = new Date(dateString);
+    
+    // Se la data non è valida, segnala il problema e ritorna null
+    if (isNaN(date.getTime())) {
+      console.warn("Data evento non valida:", dateString);
+      return null;
+    }
+    
+    return date;
+  } catch (error) {
+    console.error("Errore nel parsing della data:", error);
+    return null;
+  }
+}
 import { 
   pagamentiEvento, 
   montaggiEvento, 
@@ -39,7 +98,7 @@ export const getEventoDettaglio = async (req: Request, res: Response) => {
   
   try {
     // Recupera i dettagli dell'evento
-    const [evento] = await typedDb.select().from(events)
+    const [evento] = await db.select().from(events)
       .where(eq(events.id, Number(id)));
     
     if (!evento) {
@@ -47,7 +106,7 @@ export const getEventoDettaglio = async (req: Request, res: Response) => {
     }
     
     // Recupera i collaboratori associati
-    const collaboratoriEvento = await typedDb.select({
+    const collaboratoriEvento = await db.select({
       id: eventiCollaboratori.id,
       ruolo: eventiCollaboratori.ruolo,
       dataAssegnazione: eventiCollaboratori.dataAssegnazione,

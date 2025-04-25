@@ -200,20 +200,42 @@ const ServiceBundlesPage = () => {
       const bundleRes = await apiRequest('PUT', `/api/service-bundles/${id}`, updateData);
       const bundle = await bundleRes.json();
       
-      // TODO: In una versione più avanzata, si potrebbero gestire anche gli aggiornamenti
-      // degli elementi del pacchetto, ma per ora li lasciamo invariati
+      // Ora aggiorniamo anche gli elementi del pacchetto
+      // 1. Prima eliminiamo tutti gli elementi esistenti
+      const existingItemsRes = await fetch(`/api/service-bundles/${id}/items`);
+      const existingItems = await existingItemsRes.json();
+      
+      console.log("Elementi esistenti da aggiornare:", existingItems);
+      
+      // Elimina tutti gli elementi esistenti
+      for (const item of existingItems) {
+        await apiRequest('DELETE', `/api/service-bundle-items/${item.id}`);
+      }
+      
+      console.log("Elementi esistenti eliminati. Aggiungo nuovi elementi:", selectedItems.length);
+      
+      // 2. Poi aggiungiamo i nuovi elementi
+      for (const item of selectedItems) {
+        await apiRequest('POST', '/api/service-bundle-items', {
+          bundleId: id,
+          serviceId: item.serviceId,
+          quantity: item.quantity,
+        });
+      }
       
       return bundle;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/service-bundles'] });
+      // Invalida anche la cache specifica per gli elementi di questo pacchetto
+      queryClient.invalidateQueries({ queryKey: [`/api/service-bundles/${data.id}/items`] });
       setIsOpen(false);
       setEditingBundle(null);
       setSelectedItems([]);
       form.reset();
       toast({
         title: 'Pacchetto aggiornato',
-        description: 'Il pacchetto è stato aggiornato con successo',
+        description: 'Il pacchetto e i suoi elementi sono stati aggiornati con successo',
       });
     },
     onError: (error: Error) => {

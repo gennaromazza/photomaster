@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { format, isAfter, parseISO } from "date-fns";
+import { format, isAfter, parseISO, isValid } from "date-fns";
 import { it } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -26,6 +26,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+// Definizione delle interfacce per tipizzare i dati
+interface Evento {
+  id: number;
+  title: string;
+  eventDate?: Date | string;
+  date?: Date | string; // Supporto per entrambi i formati
+  data?: Date | string; // Supporto per formato italiano legacy
+  location?: string;
+  description?: string;
+  status?: string;
+  clientName?: string;
+  clientFirstName?: string; // Supporto per formato legacy
+  clientLastName?: string; // Supporto per formato legacy
+  eventoId?: number; // Supporto per formato legacy
+  clienteQuoteId?: number; // Supporto per formato legacy
+  titolo?: string; // Supporto per formato legacy italiano (title in inglese)
+  ruolo?: string; // Ruolo del collaboratore nell'evento
+  quote?: {
+    id: number;
+    title: string;
+    client?: {
+      firstName: string;
+      lastName: string;
+    };
+  };
+}
 import {
   Dialog,
   DialogContent,
@@ -93,13 +120,13 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   const [activeTab, setActiveTab] = useState<"assegnati" | "disponibili">("assegnati");
 
   // Recupera la lista degli eventi assegnati al collaboratore - prova con la versione inglese
-  const { data: eventiEnglish = [], isLoading: isLoadingEnglish, error: errorEnglish } = useQuery<any[]>({
+  const { data: eventiEnglish = [], isLoading: isLoadingEnglish, error: errorEnglish } = useQuery<Evento[]>({
     queryKey: [`/api/collaborators/${collaboratoreId}/events`], 
     staleTime: 5 * 60 * 1000, // 5 minuti
   });
 
   // Fallback alla versione italiana se quella inglese fallisce o non restituisce dati
-  const { data: eventiItalian = [], isLoading: isLoadingItalian, error: errorItalian } = useQuery<any[]>({
+  const { data: eventiItalian = [], isLoading: isLoadingItalian, error: errorItalian } = useQuery<Evento[]>({
     queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`],
     staleTime: 5 * 60 * 1000, // 5 minuti
     enabled: isLoadingEnglish === false,
@@ -113,14 +140,14 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   const error = (Array.isArray(eventiEnglish) && eventiEnglish.length > 0) ? null : errorEnglish;
 
   // Recupera la lista di tutti gli eventi disponibili per l'assegnazione
-  const { data: eventiDisponibili = [], isLoading: isLoadingEventi } = useQuery<any[]>({
+  const { data: eventiDisponibili = [], isLoading: isLoadingEventi } = useQuery<Evento[]>({
     queryKey: ["/api/events"],
     staleTime: 5 * 60 * 1000,
     enabled: isModalOpen, // Carica solo quando il modal è aperto
   });
   
   // Recupera la lista degli eventi senza collaboratori
-  const { data: eventiSenzaCollaboratori = [], isLoading: isLoadingEventiSenza, error: errorEventiSenza } = useQuery<any[]>({
+  const { data: eventiSenzaCollaboratori = [], isLoading: isLoadingEventiSenza, error: errorEventiSenza } = useQuery<Evento[]>({
     queryKey: ["/api/events/senza-collaboratori"],
     staleTime: 5 * 60 * 1000, // 5 minuti
     enabled: activeTab === "disponibili", // Carica solo quando la tab "disponibili" è attiva
@@ -132,13 +159,19 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
     
     // Usa il campo data o eventDate in base a quale è disponibile (compatibilità fra italiano e inglese)
     // Se il campo eventDate non esiste, prova con il campo data
-    const eventDate = evento.eventDate || evento.date || evento.data;
+    const eventDate = evento.eventDate || evento.date;
     if (!eventDate) {
       console.warn("Evento senza data:", evento);
       return true; // Includi comunque l'evento se non ha una data
     }
     
+    // Verifica che la data sia valida prima di procedere con il confronto
     const dataEvento = new Date(eventDate);
+    if (!isValid(dataEvento)) {
+      console.warn("Data evento non valida:", eventDate);
+      return true; // Include comunque l'evento se la data non è valida
+    }
+    
     const oggi = new Date();
     
     if (filter === "passati") {

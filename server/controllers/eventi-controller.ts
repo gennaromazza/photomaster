@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
 import { db } from "../db";
+// Definizione del tipo corretto per il database
+const typedDb = db as PgDatabase;
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
+import { DrizzleError } from "drizzle-orm";
 import { 
   pagamentiEvento, 
   montaggiEvento, 
@@ -36,7 +39,7 @@ export const getEventoDettaglio = async (req: Request, res: Response) => {
   
   try {
     // Recupera i dettagli dell'evento
-    const [evento] = await db.select().from(events)
+    const [evento] = await typedDb.select().from(events)
       .where(eq(events.id, Number(id)));
     
     if (!evento) {

@@ -16,6 +16,7 @@ import { Settings } from "@shared/schema";
 import { z } from "zod";
 import { GoogleCalendarIntegration } from "@/components/settings/google-calendar-integration";
 import { AccountSettings } from "@/components/settings/account-settings";
+import { SocialMediaSettings } from "@/components/settings/social-media-settings";
 
 const generalSettingsSchema = z.object({
   companyName: z.string().min(1, "Il nome dell'azienda è obbligatorio"),
@@ -96,6 +97,7 @@ const SettingsPage = () => {
       <Tabs defaultValue="general" className="max-w-4xl">
         <TabsList className="mb-8">
           <TabsTrigger value="general">Generali</TabsTrigger>
+          <TabsTrigger value="social">Social Media</TabsTrigger>
           <TabsTrigger value="templates">Template</TabsTrigger>
           <TabsTrigger value="emails">Email</TabsTrigger>
           <TabsTrigger value="config">Configurazioni</TabsTrigger>
@@ -234,6 +236,10 @@ const SettingsPage = () => {
           </Form>
         </TabsContent>
         
+        <TabsContent value="social">
+          <SocialMediaSettings settings={settings} />
+        </TabsContent>
+
         <TabsContent value="templates">
           <Card>
             <CardHeader>

@@ -66,13 +66,21 @@ interface CollaboratoriQuoteProps {
     firstName: string;
     lastName: string;
     phone: string;
+    notes?: string;
+    email?: string;
+    address?: string;
   };
+  internalNotes?: string;
+  clientNotes?: string;
 }
 
 interface ClientData {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  notes?: string;
+  email?: string;
+  address?: string;
 }
 
 export function CollaboratoriQuote({ 
@@ -82,7 +90,9 @@ export function CollaboratoriQuote({
   location, 
   ceremonyLocation, 
   ceremonyTime,
-  client
+  client,
+  internalNotes,
+  clientNotes
 }: CollaboratoriQuoteProps) {
 
   // Inizializziamo clientData con i dati che riceviamo come prop
@@ -128,19 +138,39 @@ export function CollaboratoriQuote({
     enabled: isDialogOpen,
   });
   
+  // Recupera il token CSRF
+  const { data: csrfData } = useQuery<{ csrfToken: string }>({
+    queryKey: ["/api/csrf-token"],
+    staleTime: 60 * 60 * 1000, // 1 ora
+  });
+  
   // Mutation per aggiungere un collaboratore
   const addCollaboratoreMutation = useMutation({
     mutationFn: async (data: CollaboratoreFormValues) => {
-      const response = await adaptedApiRequest(
-        "POST",
-        `/api/eventi/preventivo/${quoteId}/collaboratori`,
-        {
+      // Utilizza apiRequest che include automaticamente l'header CSRF
+      // Aggiungi l'header CSRF
+      const headers = new Headers();
+      if (csrfData?.csrfToken) {
+        headers.append('X-CSRF-Token', csrfData.csrfToken);
+      }
+    
+      // Configura la richiesta con headers CSRF
+      const requestOptions = {
+        method: "POST", 
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfData?.csrfToken || ""
+        },
+        body: JSON.stringify({
           collaboratoreId: parseInt(data.collaboratoreId),
           ruolo: data.ruolo,
           note: data.note || "",
-        }
-      );
-      return response.json();
+        }),
+        credentials: 'include'
+      };
+      
+      const response = await fetch(`/api/eventi/preventivo/${quoteId}/collaboratori`, requestOptions);
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -164,11 +194,17 @@ export function CollaboratoriQuote({
   // Mutation per rimuovere un collaboratore
   const removeCollaboratoreMutation = useMutation({
     mutationFn: async (collaboratoreId: number) => {
-      const response = await adaptedApiRequest(
+      const response = await apiRequest(
         "DELETE",
         `/api/eventi/preventivo/${quoteId}/collaboratori/${collaboratoreId}`,
+        undefined,
+        {
+          headers: {
+            'X-CSRF-Token': csrfData?.csrfToken || '',
+          },
+        }
       );
-      return response.json();
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -272,8 +308,30 @@ export function CollaboratoriQuote({
       if (clientData.phone) {
         clientInfo += `📱 Telefono Cliente: ${clientData.phone}\n`;
       }
-    }
       
+      if (clientData.email) {
+        clientInfo += `📧 Email Cliente: ${clientData.email}\n`;
+      }
+      
+      if (clientData.address) {
+        clientInfo += `🏠 Indirizzo Cliente: ${clientData.address}\n`;
+      }
+      
+      if (clientData.notes) {
+        clientInfo += `📝 Note Cliente: ${clientData.notes}\n`;
+      }
+    }
+    
+    // Aggiungere note specifiche se disponibili
+    let noteAggiuntive = '';
+    if (clientNotes) {
+      noteAggiuntive += `\n📋 Note Cliente: ${clientNotes}\n`;
+    }
+    
+    if (internalNotes) {
+      noteAggiuntive += `\n🔒 Note Interne: ${internalNotes}\n`;
+    }
+    
     const message = encodeURIComponent(
       `Ciao ${collaboratore.collaboratore.firstName},\n\n` +
       `Ti confermo l'evento "${title}"\n\n` +
@@ -282,7 +340,9 @@ export function CollaboratoriQuote({
       (ceremonyLocation ? `🏛️ Cerimonia: ${ceremonyLocation}\n` : '') +
       (ceremonyTime ? `⏰ Orario Cerimonia: ${ceremonyTime}\n` : '') +
       clientInfo +
-      `🎯 Il tuo ruolo: ${getRoleLabel(collaboratore.ruolo)}\n\n` +
+      noteAggiuntive +
+      `🎯 Il tuo ruolo: ${getRoleLabel(collaboratore.ruolo)}\n` +
+      (collaboratore.note ? `📌 Note sul tuo ruolo: ${collaboratore.note}\n\n` : '\n') +
       `Per qualsiasi informazione, contattami.`
     );
     

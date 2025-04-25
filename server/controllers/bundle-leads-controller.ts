@@ -136,15 +136,11 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
       status: "draft",
       eventType: eventType || "matrimonio",
       eventDate: eventDate ? new Date(eventDate) : null,
-      eventLocation: eventLocation || "",
+      location: eventLocation || "", // Corretto: usa location invece di eventLocation
       notes: message || "",
-      internalNotes: `Preventivo generato automaticamente da richiesta pacchetto "${bundle.name}"`,
       createdAt: new Date(),
       updatedAt: new Date(),
       expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 giorni di validità
-      depositAmount: bundle.depositAmount || 0,
-      depositDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 giorni per l'acconto
-      installmentsCount: bundle.installmentsCount || 1,
     });
 
     const [newQuote] = await db

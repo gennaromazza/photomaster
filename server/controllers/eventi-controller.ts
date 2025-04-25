@@ -569,17 +569,46 @@ export const getEventiSenzaCollaboratori = async (req: Request, res: Response) =
   }
 };
 
+// Schema di validazione per l'aggiunta di un collaboratore a un preventivo
+const addCollaboratoreSchema = z.object({
+  collaboratoreId: z.number({
+    required_error: "ID collaboratore richiesto",
+    invalid_type_error: "L'ID collaboratore deve essere un numero"
+  }),
+  ruolo: z.string({
+    required_error: "Ruolo richiesto"
+  }).default("fotografo"),
+  note: z.string().optional().default("")
+});
+
 // POST: Aggiunge un collaboratore a un preventivo
 export const addCollaboratorePreventivo = async (req: Request, res: Response) => {
   const { quoteId } = req.params;
   
   try {
+    if (!quoteId || isNaN(Number(quoteId))) {
+      return res.status(400).json({ error: "ID preventivo non valido" });
+    }
+    
     // Ottieni l'evento associato al preventivo (o creane uno se non esiste)
     const evento = await getEventoForPreventivo(Number(quoteId));
     
     // Validazione input
+    let validatedData;
+    try {
+      validatedData = addCollaboratoreSchema.parse(req.body);
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Dati non validi", 
+          details: validationError.errors 
+        });
+      }
+      throw validationError;
+    }
+    
     const data = {
-      ...req.body,
+      ...validatedData,
       eventoId: evento.id,
       dataAssegnazione: new Date()
     };
@@ -634,11 +663,22 @@ export const addCollaboratorePreventivo = async (req: Request, res: Response) =>
   }
 };
 
+// Schema di validazione per l'aggiornamento di un collaboratore
+const updateCollaboratoreSchema = z.object({
+  ruolo: z.string().optional(),
+  note: z.string().optional(),
+  dataAssegnazione: z.date().optional()
+});
+
 // PATCH: Aggiorna i dettagli di un collaboratore assegnato a un preventivo
 export const updateCollaboratorePreventivo = async (req: Request, res: Response) => {
   const { quoteId, id } = req.params;
   
   try {
+    if (!quoteId || isNaN(Number(quoteId)) || !id || isNaN(Number(id))) {
+      return res.status(400).json({ error: "ID preventivo o ID assegnazione non validi" });
+    }
+    
     // Ottieni l'evento associato al preventivo
     const evento = await getEventoForPreventivo(Number(quoteId));
     
@@ -648,6 +688,20 @@ export const updateCollaboratorePreventivo = async (req: Request, res: Response)
     
     if (!assegnazione) {
       return res.status(404).json({ error: "Assegnazione non trovata" });
+    }
+    
+    // Validazione input
+    let validatedData;
+    try {
+      validatedData = updateCollaboratoreSchema.parse(req.body);
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Dati non validi", 
+          details: validationError.errors 
+        });
+      }
+      throw validationError;
     }
     
     // Aggiorna l'assegnazione
@@ -688,6 +742,10 @@ export const removeCollaboratorePreventivo = async (req: Request, res: Response)
   const { quoteId, id } = req.params;
   
   try {
+    if (!quoteId || isNaN(Number(quoteId)) || !id || isNaN(Number(id))) {
+      return res.status(400).json({ error: "ID preventivo o ID assegnazione non validi" });
+    }
+    
     // Ottieni l'evento associato al preventivo
     const evento = await getEventoForPreventivo(Number(quoteId));
     

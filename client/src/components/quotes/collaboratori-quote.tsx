@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Loader2, UserCheck, Phone, Plus, Edit, Trash2, UserPlus } from "lucide-react";
@@ -70,6 +69,12 @@ interface CollaboratoriQuoteProps {
   };
 }
 
+interface ClientData {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+}
+
 export function CollaboratoriQuote({ 
   quoteId, 
   title, 
@@ -80,96 +85,14 @@ export function CollaboratoriQuote({
   client
 }: CollaboratoriQuoteProps) {
 
-  if (!client) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center">
-            <UserCheck className="w-5 h-5 mr-2 text-primary/80" />
-            Collaboratori Assegnati
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center p-4 bg-yellow-50 rounded-md">
-            <p className="text-yellow-700">Dati cliente non disponibili.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-  const { data: collaboratori = [], isLoading, error } = useQuery<any[]>({
-    queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
-    enabled: !!quoteId
-  });
-
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center">
-            <UserCheck className="w-5 h-5 mr-2 text-primary/80" />
-            Collaboratori Assegnati
-          </CardTitle>
-          <CardDescription>
-            Visualizza i collaboratori assegnati al servizio
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center items-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary/70" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center">
-            <UserCheck className="w-5 h-5 mr-2 text-primary/80" />
-            Collaboratori Assegnati
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 bg-destructive/10 rounded-md text-center text-destructive">
-            Si è verificato un errore nel caricamento dei collaboratori.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const formattedDate = date ? format(new Date(date), "dd/MM/yyyy", { locale: it }) : 'Data non disponibile';
-
-  // Funzione per creare il messaggio WhatsApp con i dati completi del cliente
-  const createWhatsAppMessage = (collaboratore: any) => {
-    if (!client) {
-      toast({
-        title: "Dati cliente mancanti",
-        description: "Non è possibile inviare il messaggio senza i dati del cliente",
-        variant: "destructive"
-      });
-      return "#";
-    }
-    
-    // Assicuriamoci che i dati del cliente siano sempre inclusi
-    const clientInfo = `👥 Cliente: ${client.firstName} ${client.lastName}\n` +
-      (client.phone ? `📱 Telefono Cliente: ${client.phone}\n` : '');
-      
-    const message = encodeURIComponent(
-      `Ciao ${collaboratore.collaboratore.firstName},\n\n` +
-      `Ti confermo l'evento "${title}"\n\n` +
-      `📅 Data: ${formattedDate}\n` +
-      `📍 Location: ${location}\n` +
-      (ceremonyLocation ? `🏛️ Cerimonia: ${ceremonyLocation}\n` : '') +
-      (ceremonyTime ? `⏰ Orario Cerimonia: ${ceremonyTime}\n` : '') +
-      clientInfo +
-      `🎯 Il tuo ruolo: ${getRoleLabel(collaboratore.ruolo)}\n\n` +
-      `Per qualsiasi informazione, contattami.`
-    );
-    return `https://wa.me/${collaboratore.collaboratore.phone?.replace(/\D/g, '')}?text=${message}`;
-  };
-
+  // Inizializziamo clientData con i dati che riceviamo come prop
+  // In questo modo il componente funziona anche senza dati cliente,
+  // ma li utilizzerà se disponibili
+  const clientData: ClientData = client || {};
+  
+  // Importante: prima definiamo tutti gli hooks che utilizziamo
+  const { toast } = useToast();
+  
   // Schema per la validazione del form di aggiunta collaboratore
   const collaboratoreSchema = z.object({
     collaboratoreId: z.string().min(1, "Seleziona un collaboratore"),
@@ -187,19 +110,24 @@ export function CollaboratoriQuote({
       note: "",
     },
   });
-
+  
   // State per il modale di aggiunta/modifica
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentCollaboratore, setCurrentCollaboratore] = useState<any>(null);
-  const { toast } = useToast();
-
+  
+  // Query dei collaboratori assegnati
+  const { data: collaboratori = [], isLoading, error } = useQuery<any[]>({
+    queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
+    enabled: !!quoteId
+  });
+  
   // Recupera la lista dei collaboratori disponibili
   const { data: collaboratoriDisponibili = [] } = useQuery<any[]>({
     queryKey: ["/api/collaborators"],
     enabled: isDialogOpen,
   });
-
+  
   // Mutation per aggiungere un collaboratore
   const addCollaboratoreMutation = useMutation({
     mutationFn: async (data: CollaboratoreFormValues) => {
@@ -292,6 +220,84 @@ export function CollaboratoriQuote({
       console.error("Errore durante l'aggiornamento del collaboratore:", error);
     },
   });
+
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center">
+            <UserCheck className="w-5 h-5 mr-2 text-primary/80" />
+            Collaboratori Assegnati
+          </CardTitle>
+          <CardDescription>
+            Visualizza i collaboratori assegnati al servizio
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary/70" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center">
+            <UserCheck className="w-5 h-5 mr-2 text-primary/80" />
+            Collaboratori Assegnati
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 bg-destructive/10 rounded-md text-center text-destructive">
+            Si è verificato un errore nel caricamento dei collaboratori.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const formattedDate = date ? format(new Date(date), "dd/MM/yyyy", { locale: it }) : 'Data non disponibile';
+
+  // Funzione per creare il messaggio WhatsApp con i dati completi del cliente
+  const createWhatsAppMessage = (collaboratore: any) => {
+    // Usiamo clientData invece di client per gestire anche il caso in cui client sia undefined
+    // Creiamo un'info cliente di base che mostri i dati se disponibili
+    let clientInfo = '';
+    
+    if (clientData.firstName && clientData.lastName) {
+      clientInfo = `👥 Cliente: ${clientData.firstName} ${clientData.lastName}\n`;
+      
+      if (clientData.phone) {
+        clientInfo += `📱 Telefono Cliente: ${clientData.phone}\n`;
+      }
+    }
+      
+    const message = encodeURIComponent(
+      `Ciao ${collaboratore.collaboratore.firstName},\n\n` +
+      `Ti confermo l'evento "${title}"\n\n` +
+      `📅 Data: ${formattedDate}\n` +
+      `📍 Location: ${location}\n` +
+      (ceremonyLocation ? `🏛️ Cerimonia: ${ceremonyLocation}\n` : '') +
+      (ceremonyTime ? `⏰ Orario Cerimonia: ${ceremonyTime}\n` : '') +
+      clientInfo +
+      `🎯 Il tuo ruolo: ${getRoleLabel(collaboratore.ruolo)}\n\n` +
+      `Per qualsiasi informazione, contattami.`
+    );
+    
+    // Se non c'è un numero di telefono del collaboratore, mostriamo un toast
+    if (!collaboratore.collaboratore?.phone) {
+      toast({
+        title: "Telefono mancante",
+        description: "Il collaboratore non ha un numero di telefono registrato",
+        variant: "destructive"
+      });
+      return "#";
+    }
+    
+    return `https://wa.me/${collaboratore.collaboratore.phone.replace(/\D/g, '')}?text=${message}`;
+  };
 
   // Gestisce la sottomissione del form
   function onSubmit(data: CollaboratoreFormValues) {
@@ -436,12 +442,15 @@ export function CollaboratoriQuote({
                     </Button>
                     <Button 
                       type="submit" 
-                      disabled={addCollaboratoreMutation.isPending || updateCollaboratoreMutation.isPending}
+                      disabled={
+                        addCollaboratoreMutation.isPending || 
+                        updateCollaboratoreMutation.isPending
+                      }
                     >
                       {(addCollaboratoreMutation.isPending || updateCollaboratoreMutation.isPending) && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      {isEditMode ? "Salva modifiche" : "Aggiungi collaboratore"}
+                      {isEditMode ? "Aggiorna" : "Aggiungi"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -451,83 +460,76 @@ export function CollaboratoriQuote({
         </div>
       </CardHeader>
       <CardContent>
-        {collaboratori?.length === 0 ? (
-          <div className="text-center p-4 bg-muted/40 rounded-md">
+        {collaboratori.length === 0 ? (
+          <div className="text-center p-8 bg-muted/30 rounded-md">
             <p className="text-muted-foreground">
               Nessun collaboratore assegnato a questo preventivo.
             </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-4"
+              onClick={handleAdd}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Aggiungi collaboratore
+            </Button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {collaboratori?.map((collaboratore: any) => (
+          <div className="space-y-4">
+            {collaboratori.map((collaboratore) => (
               <div 
                 key={collaboratore.id} 
-                className="border rounded-md p-3 flex items-center"
+                className="flex items-center justify-between p-4 rounded-lg border bg-card"
               >
-                <div className="flex items-center gap-3 flex-1">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {collaboratore.collaboratore.firstName.charAt(0)}
-                      {collaboratore.collaboratore.lastName.charAt(0)}
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarFallback>
+                      {collaboratore.collaboratore.firstName[0]}
+                      {collaboratore.collaboratore.lastName[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-medium">
                       {collaboratore.collaboratore.firstName} {collaboratore.collaboratore.lastName}
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <Badge variant="outline" className="capitalize">
+                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                      <Badge variant="outline" className="text-xs">
                         {getRoleLabel(collaboratore.ruolo)}
                       </Badge>
-                      {collaboratore.dataAssegnazione && (
-                        <span className="text-xs text-muted-foreground">
-                          Assegnato il {format(new Date(collaboratore.dataAssegnazione), "dd/MM/yyyy", { locale: it })}
-                        </span>
+                      {collaboratore.note && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="italic text-xs text-muted-foreground cursor-help">
+                                Note
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">{collaboratore.note}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
-                    {collaboratore.note && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        <span className="font-medium">Note:</span> {collaboratore.note}
-                      </div>
-                    )}
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-1">
-                  {collaboratore.collaboratore.phone && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-9 w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                            onClick={() => window.open(createWhatsAppMessage(collaboratore), '_blank')}
-                          >
-                            <Phone className="h-5 w-5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Invia dettagli evento via WhatsApp</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  
+                <div className="flex items-center gap-2">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-9 w-9 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          onClick={() => handleEdit(collaboratore)}
-                        >
-                          <Edit className="h-4 w-4" />
+                        <Button size="icon" variant="ghost" asChild>
+                          <a 
+                            href={createWhatsAppMessage(collaboratore)} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                          >
+                            <Phone className="h-4 w-4 text-green-600" />
+                          </a>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Modifica collaboratore</p>
+                        <p>Invia dettagli evento via WhatsApp</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -536,20 +538,34 @@ export function CollaboratoriQuote({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button 
-                          size="sm" 
+                          size="icon" 
                           variant="ghost" 
-                          className="h-9 w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => {
-                            if (confirm("Sei sicuro di voler rimuovere questo collaboratore?")) {
-                              removeCollaboratoreMutation.mutate(collaboratore.id);
-                            }
-                          }}
+                          onClick={() => handleEdit(collaboratore)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Modifica ruolo</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="text-destructive" 
+                          onClick={() => removeCollaboratoreMutation.mutate(collaboratore.id)}
                           disabled={removeCollaboratoreMutation.isPending}
                         >
-                          {removeCollaboratoreMutation.isPending 
-                            ? <Loader2 className="h-4 w-4 animate-spin" /> 
-                            : <Trash2 className="h-4 w-4" />
-                          }
+                          {removeCollaboratoreMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>

@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-// Definizione del tipo corretto per il database
-const typedDb = db as PgDatabase;
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import { DrizzleError } from "drizzle-orm";
+// Tipizzazione corretta del database con parametri generici
+const typedDb = db as PgDatabase<any>;
 import { 
   pagamentiEvento, 
   montaggiEvento, 
@@ -47,7 +47,7 @@ export const getEventoDettaglio = async (req: Request, res: Response) => {
     }
     
     // Recupera i collaboratori associati
-    const collaboratoriEvento = await db.select({
+    const collaboratoriEvento = await typedDb.select({
       id: eventiCollaboratori.id,
       ruolo: eventiCollaboratori.ruolo,
       dataAssegnazione: eventiCollaboratori.dataAssegnazione,

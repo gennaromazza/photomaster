@@ -17,6 +17,8 @@ import {
   invalidateBothQueries 
 } from "@/utils/api-adapter";
 import { Link } from "wouter";
+
+
 import {
   Table,
   TableBody,
@@ -28,7 +30,7 @@ import {
 } from "@/components/ui/table";
 
 // Definizione delle interfacce per tipizzare i dati
-interface Evento {
+export interface Evento {
   id: number;
   title: string;
   eventDate?: Date | string;
@@ -154,7 +156,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
   });
 
   // Funzione helper per estrarre e normalizzare la data dagli eventi
-  const getEventDate = (evento: Evento): Date | null => {
+  const getEventDateHelper = (evento: Evento): Date | null => {
     // Cerca in tutti i possibili campi di data in ordine di priorità
     const dateString = evento.eventDate || evento.date || evento.data;
     if (!dateString) {

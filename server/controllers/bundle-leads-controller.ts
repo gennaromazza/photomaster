@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { 
   insertBundleLeadSchema, 
   bundleLeads, 
@@ -13,6 +13,61 @@ import {
   insertClientSchema
 } from "@shared/schema";
 // import { sendBundleLeadNotification, sendBundleQuoteCreationConfirmation } from "../email";
+
+/**
+ * Verifica se esiste già un cliente con la stessa email o telefono
+ */
+export const checkExistingClient = async (req: Request, res: Response) => {
+  try {
+    const { email, phone } = req.body;
+
+    if (!email && !phone) {
+      return res.status(400).json({ 
+        message: "È necessario fornire almeno un'email o un numero di telefono" 
+      });
+    }
+
+    // Crea un array di condizioni per la ricerca
+    const searchConditions = [];
+    
+    if (email) {
+      searchConditions.push(eq(clients.email, email));
+    }
+    
+    if (phone) {
+      searchConditions.push(eq(clients.phone, phone));
+    }
+
+    // Cerca clienti che corrispondono a uno qualsiasi dei criteri
+    let matchingClients = [];
+    
+    if (searchConditions.length > 0) {
+      matchingClients = await db
+        .select()
+        .from(clients)
+        .where(or(...searchConditions));
+    }
+
+    if (matchingClients.length > 0) {
+      return res.status(200).json({
+        exists: true,
+        clients: matchingClients,
+        message: "Clienti esistenti trovati"
+      });
+    } else {
+      return res.status(200).json({
+        exists: false,
+        clients: [],
+        message: "Nessun cliente trovato"
+      });
+    }
+  } catch (error: any) {
+    console.error("Errore nella ricerca di clienti esistenti:", error);
+    return res
+      .status(500)
+      .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
+  }
+};
 
 // Funzioni interne per l'invio di email
 async function sendBundleLeadNotification(lead: any, bundle: any): Promise<boolean> {
@@ -111,24 +166,90 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
       }
     });
 
-    // Cerca se esiste già un cliente con questa email
-    let existingClient = await db.query.clients.findFirst({
-      where: eq(clients.email, email),
-    });
-
-    let clientToUse;
+    // Ricerca più robusta di clienti esistenti
+    let existingClient = null;
+    let clientToUse = null;
+    
+    try {
+      // Tentativo 1: Trova cliente con email esatta
+      existingClient = await db.query.clients.findFirst({
+        where: eq(clients.email, email),
+      });
+      
+      if (existingClient) {
+        console.log(`Cliente esistente trovato con email ${email}, ID: ${existingClient.id}`);
+      } else {
+        // Tentativo 2: Trova cliente con email case-insensitive usando SQL diretto
+        const clientsByEmail = await db.$queryRaw<any[]>`
+          SELECT * FROM clients WHERE LOWER(email) = LOWER(${email}) LIMIT 1
+        `;
+        
+        if (clientsByEmail && clientsByEmail.length > 0) {
+          // Converti da snake_case a camelCase
+          existingClient = {
+            id: clientsByEmail[0].id,
+            firstName: clientsByEmail[0].first_name,
+            lastName: clientsByEmail[0].last_name,
+            email: clientsByEmail[0].email,
+            phone: clientsByEmail[0].phone || "",
+            address: clientsByEmail[0].address || "",
+            company: clientsByEmail[0].company || "",
+            postalCode: clientsByEmail[0].postal_code || "",
+            city: clientsByEmail[0].city || "",
+            province: clientsByEmail[0].province || "",
+            state: clientsByEmail[0].state || "",
+            taxCode: clientsByEmail[0].tax_code || "",
+            notes: clientsByEmail[0].notes || "",
+            createdAt: clientsByEmail[0].created_at,
+            updatedAt: clientsByEmail[0].updated_at
+          };
+          console.log(`Cliente trovato con email case-insensitive ${email}, ID: ${existingClient.id}`);
+        } else {
+          // Tentativo 3: Cerca clienti con nome e cognome simili
+          const nameMatch = await db.$queryRaw<any[]>`
+            SELECT * FROM clients 
+            WHERE LOWER(first_name) = LOWER(${firstName}) 
+            AND LOWER(last_name) = LOWER(${lastName})
+            LIMIT 1
+          `;
+          
+          if (nameMatch && nameMatch.length > 0) {
+            // Converti da snake_case a camelCase
+            existingClient = {
+              id: nameMatch[0].id,
+              firstName: nameMatch[0].first_name,
+              lastName: nameMatch[0].last_name,
+              email: email, // Aggiorniamo con l'email fornita
+              phone: nameMatch[0].phone || phone || "",
+              address: nameMatch[0].address || address || "",
+              company: nameMatch[0].company || "",
+              postalCode: nameMatch[0].postal_code || "",
+              city: nameMatch[0].city || "",
+              province: nameMatch[0].province || "",
+              state: nameMatch[0].state || "",
+              taxCode: nameMatch[0].tax_code || "",
+              notes: nameMatch[0].notes || "",
+              createdAt: nameMatch[0].created_at,
+              updatedAt: new Date()
+            };
+            console.log(`Cliente trovato con nome e cognome simili, ID: ${existingClient.id}`);
+          }
+        }
+      }
+    } catch (searchError) {
+      console.error("Errore nella ricerca avanzata del cliente:", searchError);
+      // Continuiamo con existingClient = null, creeremo un nuovo cliente
+    }
     
     if (existingClient) {
-      // Se il cliente esiste già, lo utilizziamo
-      console.log(`Cliente esistente trovato con email ${email}, ID: ${existingClient.id}`);
-      
-      // Aggiorniamo i dati del cliente con le informazioni più recenti
+      // Se il cliente esiste già, lo utilizziamo e aggiorniamo
       try {
         const [updatedClient] = await db
           .update(clients)
           .set({
             firstName,
             lastName,
+            email, // Aggiorniamo anche l'email per sicurezza
             phone: phone || existingClient.phone,
             address: address || existingClient.address,
             updatedAt: new Date()

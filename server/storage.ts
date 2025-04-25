@@ -699,37 +699,99 @@ export class DatabaseStorage implements IStorage {
       let client = null;
       if (quote.clientId) {
         try {
-          // Prima cerca usando il client diretto per vedere se il cliente esiste
-          const clientCheck = await pgClient`SELECT id, first_name, last_name, email FROM clients WHERE id = ${quote.clientId}`;
-          console.log(`Verifica cliente per preventivo ${id} - ID cliente: ${quote.clientId}, risultato:`, clientCheck);
+          // Tentativo 1: Utilizzare il metodo standard di Drizzle
+          const [clientData] = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.id, quote.clientId));
           
-          if (clientCheck && clientCheck.length > 0) {
-            // Se il cliente è stato trovato con il client diretto, usiamo Drizzle per recuperarlo completo
-            const [clientData] = await db
-              .select()
-              .from(clients)
-              .where(eq(clients.id, quote.clientId));
+          if (clientData) {
+            client = clientData;
+            console.log(`Cliente trovato con metodo standard per preventivo ${id} - ID: ${quote.clientId}`);
+          } else {
+            console.log(`Cliente non trovato con metodo standard per preventivo ${id} - ID: ${quote.clientId}, tentativo con SQL diretto`);
             
-            if (clientData) {
-              client = clientData;
-            } else {
-              console.error(`Cliente con ID ${quote.clientId} trovato con pgClient ma non con Drizzle`);
-              
-              // Fallback: costruiamo manualmente il cliente dai dati ottenuti con pgClient
+            // Tentativo 2: Usare SQL diretto con pgClient
+            const clientCheck = await pgClient`SELECT * FROM clients WHERE id = ${quote.clientId}`;
+            console.log(`Verifica cliente (SQL diretto) per preventivo ${id} - ID cliente: ${quote.clientId}, risultato:`, clientCheck);
+            
+            if (clientCheck && clientCheck.length > 0) {
+              // Creiamo un oggetto cliente completo dalla riga del database
               client = {
                 id: clientCheck[0].id,
-                firstName: clientCheck[0].first_name,
-                lastName: clientCheck[0].last_name,
-                email: clientCheck[0].email,
-                // Aggiungi altri campi predefiniti se necessario
-                phone: "",
-                address: "",
-                createdAt: new Date(),
-                updatedAt: new Date()
+                firstName: clientCheck[0].first_name || "",
+                lastName: clientCheck[0].last_name || "",
+                email: clientCheck[0].email || "",
+                phone: clientCheck[0].phone || "",
+                address: clientCheck[0].address || "",
+                company: clientCheck[0].company || "",
+                postalCode: clientCheck[0].postal_code || "",
+                city: clientCheck[0].city || "",
+                province: clientCheck[0].province || "",
+                state: clientCheck[0].state || "",
+                taxCode: clientCheck[0].tax_code || "",
+                notes: clientCheck[0].notes || "",
+                createdAt: clientCheck[0].created_at || new Date(),
+                updatedAt: clientCheck[0].updated_at || new Date()
               };
+              console.log(`Cliente recuperato con SQL diretto per preventivo ${id}`);
+            } else {
+              // Tentativo 3: Cercare per email se esiste un cliente con email simile nel preventivo
+              console.log(`Cliente ID ${quote.clientId} non trovato, cerco per titolo nel preventivo: ${quote.title}`);
+              
+              // Estrai possibili email o nomi dal titolo del preventivo
+              const titleParts = quote.title.split(' ');
+              for (const part of titleParts) {
+                if (part.includes('@') || part.length > 3) { // Potrebbe essere un'email o un nome
+                  const potentialClients = await pgClient`
+                    SELECT * FROM clients 
+                    WHERE email ILIKE ${`%${part}%`} 
+                    OR first_name ILIKE ${`%${part}%`} 
+                    OR last_name ILIKE ${`%${part}%`}
+                    LIMIT 1
+                  `;
+                  
+                  if (potentialClients && potentialClients.length > 0) {
+                    client = {
+                      id: potentialClients[0].id,
+                      firstName: potentialClients[0].first_name || "",
+                      lastName: potentialClients[0].last_name || "",
+                      email: potentialClients[0].email || "",
+                      phone: potentialClients[0].phone || "",
+                      address: potentialClients[0].address || "",
+                      company: potentialClients[0].company || "",
+                      postalCode: potentialClients[0].postal_code || "",
+                      city: potentialClients[0].city || "",
+                      province: potentialClients[0].province || "",
+                      state: potentialClients[0].state || "",
+                      taxCode: potentialClients[0].tax_code || "",
+                      notes: potentialClients[0].notes || "",
+                      createdAt: potentialClients[0].created_at || new Date(),
+                      updatedAt: potentialClients[0].updated_at || new Date()
+                    };
+                    
+                    console.log(`Cliente trovato per corrispondenza in titolo per preventivo ${id}: ${part}`);
+                    
+                    // Aggiorna il preventivo per collegarlo a questo cliente
+                    try {
+                      await pgClient`
+                        UPDATE quotes SET client_id = ${client.id} 
+                        WHERE id = ${id}
+                      `;
+                      console.log(`Preventivo ${id} aggiornato con il cliente corretto ID ${client.id}`);
+                    } catch (updateError) {
+                      console.error(`Errore nell'aggiornare il preventivo ${id} con cliente ${client.id}:`, updateError);
+                    }
+                    
+                    break;
+                  }
+                }
+              }
+              
+              if (!client) {
+                console.error(`Cliente con ID ${quote.clientId} non trovato per il preventivo ${id} dopo tutti i tentativi`);
+              }
             }
-          } else {
-            console.error(`Cliente con ID ${quote.clientId} non trovato per il preventivo ${id}`);
           }
         } catch (clientError) {
           console.error(`Errore nel recupero cliente ID ${quote.clientId} per preventivo ${id}:`, clientError);

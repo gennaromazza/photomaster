@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db, pgClient } from "./db"; // Aggiungiamo l'importazione di pgClient
 import { setupAuth, isAuthenticated, isAdmin, csrfProtection, hashPassword, generateCsrfToken } from "./auth";
 import { 
   sendPasswordResetEmail, 
@@ -107,6 +108,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.use(csrfProtection);
 
   // Client routes
+  // Endpoints per la validazione dei clienti - non richiede autenticazione
+  apiRouter.post("/client-validation/check-existing", checkExistingClient);
+  apiRouter.get("/client-validation/search", searchClients);
+
   apiRouter.get("/clients", async (req, res) => {
     try {
       const clients = await storage.getAllClients();

@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
-import { db, type DB } from "../db";
+import { db as dbAny, type DB } from "../db";
 import { eq, sql, desc, asc } from "drizzle-orm";
 import { format, parse } from "date-fns";
+
+// Tipizziamo correttamente db per evitare errori "implicitly has an 'any' type"
+const db: DB = dbAny;
 
 // Tipi esportabili per essere usati anche in altri file
 export interface Evento {
@@ -294,7 +297,8 @@ export const addPagamentoEvento = async (req: Request, res: Response) => {
     ) {
       // Recupera il montaggio associato al collaboratore per questo evento
       const [montaggio] = await db.select().from(montaggiEvento)
-        .where(sql`${eq(montaggiEvento.eventoId, Number(id))} AND ${eq(montaggiEvento.collaboratoreId, data.collaboratoreId)}`);
+        .where(eq(montaggiEvento.eventoId, Number(id)))
+        .where(eq(montaggiEvento.collaboratoreId, data.collaboratoreId));
       
       if (montaggio) {
         // Aggiorna lo stato di pagamento del montaggio
@@ -421,9 +425,9 @@ export const addMontaggioEvento = async (req: Request, res: Response) => {
     
     // Verifica che non esista già un montaggio dello stesso tipo per questo collaboratore e evento
     const [montaggioEsistente] = await db.select().from(montaggiEvento)
-      .where(sql`${eq(montaggiEvento.eventoId, Number(id))} 
-               AND ${eq(montaggiEvento.collaboratoreId, data.collaboratoreId)}
-               AND ${eq(montaggiEvento.tipoMontaggio, data.tipoMontaggio)}`);
+      .where(eq(montaggiEvento.eventoId, Number(id)))
+      .where(eq(montaggiEvento.collaboratoreId, data.collaboratoreId))
+      .where(eq(montaggiEvento.tipoMontaggio, data.tipoMontaggio));
     
     if (montaggioEsistente) {
       return res.status(400).json({ 
@@ -668,8 +672,8 @@ export const addCollaboratorePreventivo = async (req: Request, res: Response) =>
     
     // Verifica se l'assegnazione esiste già
     const esisteGia = await db.select().from(eventiCollaboratori)
-      .where(sql`${eq(eventiCollaboratori.collaboratoreId, data.collaboratoreId)} 
-             AND ${eq(eventiCollaboratori.eventoId, evento.id)}`)
+      .where(eq(eventiCollaboratori.collaboratoreId, data.collaboratoreId))
+      .where(eq(eventiCollaboratori.eventoId, evento.id))
       .limit(1);
     
     if (esisteGia.length > 0) {
@@ -834,7 +838,8 @@ export const updateMontaggioEvento = async (req: Request, res: Response) => {
   try {
     // Verifica che il montaggio esista
     const [montaggio] = await db.select().from(montaggiEvento)
-      .where(sql`${eq(montaggiEvento.id, Number(montaggioId))} AND ${eq(montaggiEvento.eventoId, Number(eventoId))}`);
+      .where(eq(montaggiEvento.id, Number(montaggioId)))
+      .where(eq(montaggiEvento.eventoId, Number(eventoId)));
     
     if (!montaggio) {
       return res.status(404).json({ error: "Montaggio non trovato" });
@@ -848,7 +853,7 @@ export const updateMontaggioEvento = async (req: Request, res: Response) => {
     let pagamentoSaldo = null;
     
     if (req.body.pagamentoSaldo && montaggio.saldoImporto && montaggio.saldoImporto > 0) {
-      await db.transaction(async (tx) => {
+      await db.transaction(async (tx: DB) => {
         // Aggiorna il montaggio
         [montaggioAggiornato] = await tx.update(montaggiEvento)
           .set({

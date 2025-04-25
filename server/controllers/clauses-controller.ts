@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
-import { db, pool } from "../db";
+import { db as dbAny, pool, type DB } from "../db";
+
+// Tipizziamo correttamente db per evitare errori "implicitly has an 'any' type"
+const db: DB = dbAny;
 import { 
   contractClauses, 
   quoteClauses, 

@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
-import { db } from "../db";
+import { db as dbAny, type DB } from "../db";
+
+// Tipizziamo correttamente db per evitare errori "implicitly has an 'any' type"
+const db: DB = dbAny;
 import { 
   galleries, insertGallerySchema, galleryChapters, insertGalleryChapterSchema,
   photos, insertPhotoSchema, photoSelections, gallerySubscriptions, insertGallerySubscriptionSchema,

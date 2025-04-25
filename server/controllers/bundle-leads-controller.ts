@@ -111,32 +111,47 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
       }
     });
 
-    // Crea il nuovo cliente se necessario
-    const clientData = insertClientSchema.parse({
-      firstName,
-      lastName,
-      email,
-      phone: phone || "",
-      address: address || "",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    // Cerca se esiste già un cliente con questa email
+    let existingClient = await db.query.clients.findFirst({
+      where: eq(clients.email, email),
     });
 
-    const [newClient] = await db
-      .insert(clients)
-      .values(clientData)
-      .returning();
+    let clientToUse;
+    
+    if (existingClient) {
+      // Se il cliente esiste già, lo utilizziamo
+      console.log(`Cliente esistente trovato con email ${email}, ID: ${existingClient.id}`);
+      clientToUse = existingClient;
+    } else {
+      // Se il cliente non esiste, lo creiamo
+      const clientData = insertClientSchema.parse({
+        firstName,
+        lastName,
+        email,
+        phone: phone || "",
+        address: address || "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const [newClient] = await db
+        .insert(clients)
+        .values(clientData)
+        .returning();
+        
+      clientToUse = newClient;
+    }
 
     // Crea il preventivo
     const quoteTitle = `Preventivo ${bundle.name} - ${firstName} ${lastName}`;
     
     const quoteData = insertQuoteSchema.parse({
       title: quoteTitle,
-      clientId: newClient.id,
+      clientId: clientToUse.id,
       status: "draft",
       eventType: eventType || "matrimonio",
       eventDate: eventDate ? new Date(eventDate) : null,
-      location: eventLocation || "", // Corretto: usa location invece di eventLocation
+      location: location || "", // Corretto: ora usiamo location invece di eventLocation
       notes: message || "",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -203,7 +218,7 @@ export const createQuoteFromBundleLead = async (req: Request, res: Response) => 
 
     return res.status(201).json({ 
       quote: newQuote,
-      client: newClient,
+      client: clientToUse,
       lead: newLead
     });
   } catch (error: any) {

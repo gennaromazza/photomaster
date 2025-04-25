@@ -297,11 +297,32 @@ export async function sendQuoteSignedConfirmation(clientEmail: string, clientNam
   const quoteItemsList = await db.select().from(quoteItems).where(eq(quoteItems.quoteId, quote.id));
   const client = await storage.getClient(quote.clientId);
   
-  // Calcola il totale
-  let totale = 0;
+  // Calcola il totale degli elementi di base del preventivo
+  let itemsSum = 0;
   if (quoteItemsList && quoteItemsList.length > 0) {
-    totale = quoteItemsList.reduce((sum: number, item: any) => sum + parseFloat(item.price) * (item.quantity || 1), 0);
+    itemsSum = quoteItemsList.reduce((sum: number, item: any) => sum + parseFloat(item.price) * (item.quantity || 1), 0);
   }
+  
+  // Ottieni e calcola i moduli variabili
+  const modules = await storage.getModulesByQuote(quote.id);
+  let modulesSum = 0;
+  
+  // Per ogni modulo, recupera gli elementi selezionati
+  for (const module of modules) {
+    const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
+    
+    // Se è un modulo variabile, considera solo gli elementi selezionati
+    if (module.type === 'variable') {
+      const selectedItems = moduleItems.filter(item => item.isSelected === true);
+      modulesSum += selectedItems.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+    } else { 
+      // Se è un modulo fisso, considera tutti gli elementi
+      modulesSum += moduleItems.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+    }
+  }
+  
+  // Calcola il totale complessivo
+  let totale = itemsSum + modulesSum;
   
   // Applica eventuali sconti
   if (quote.discountType === 'percentage' && quote.discountValue) {

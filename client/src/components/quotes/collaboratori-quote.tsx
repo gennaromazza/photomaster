@@ -63,7 +63,7 @@ export function CollaboratoriQuote({
       </Card>
     );
   }
-  const { data: collaboratori, isLoading, error } = useQuery({
+  const { data: collaboratori = [], isLoading, error } = useQuery<any[]>({
     queryKey: [`/api/eventi/preventivo/${quoteId}/collaboratori`],
     enabled: !!quoteId
   });
@@ -108,6 +108,11 @@ export function CollaboratoriQuote({
   const formattedDate = date ? format(new Date(date), "dd/MM/yyyy", { locale: it }) : 'Data non disponibile';
 
   const createWhatsAppMessage = (collaboratore: any) => {
+    // Verifica che il client esista prima di usare le sue proprietà
+    const clientInfo = client 
+      ? `👥 Cliente: ${client.firstName} ${client.lastName}\n📱 Telefono Cliente: ${client.phone}\n` 
+      : 'Cliente: Informazioni non disponibili\n';
+      
     const message = encodeURIComponent(
       `Ciao ${collaboratore.collaboratore.firstName},\n\n` +
       `Ti confermo l'evento "${title}"\n\n` +
@@ -115,8 +120,7 @@ export function CollaboratoriQuote({
       `📍 Location: ${location}\n` +
       (ceremonyLocation ? `🏛️ Cerimonia: ${ceremonyLocation}\n` : '') +
       (ceremonyTime ? `⏰ Orario Cerimonia: ${ceremonyTime}\n` : '') +
-      `👥 Cliente: ${client.firstName} ${client.lastName}\n` +
-      `📱 Telefono Cliente: ${client.phone}\n` +
+      clientInfo +
       `🎯 Il tuo ruolo: ${collaboratore.ruolo}\n\n` +
       `Per qualsiasi informazione, contattami.`
     );

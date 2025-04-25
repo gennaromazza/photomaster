@@ -655,7 +655,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4 text-primary/60" />
-                      <span>{format(new Date(evento.date), "dd/MM/yyyy", { locale: it })}</span>
+                      <span>{evento.date ? format(new Date(evento.date), "dd/MM/yyyy", { locale: it }) : 'Data non disponibile'}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -793,7 +793,7 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
                             ) : (
                               eventiDisponibili.map((evento: any) => (
                                 <SelectItem key={evento.id} value={evento.id.toString()}>
-                                  {evento.title} ({format(new Date(evento.date), "dd/MM/yyyy")})
+                                  {evento.title} {evento.date ? `(${format(new Date(evento.date), "dd/MM/yyyy")})` : '(Data non disponibile)'}
                                 </SelectItem>
                               ))
                             )}

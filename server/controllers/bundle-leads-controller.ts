@@ -14,60 +14,7 @@ import {
 } from "@shared/schema";
 // import { sendBundleLeadNotification, sendBundleQuoteCreationConfirmation } from "../email";
 
-/**
- * Verifica se esiste già un cliente con la stessa email o telefono
- */
-export const checkExistingClient = async (req: Request, res: Response) => {
-  try {
-    const { email, phone } = req.body;
-
-    if (!email && !phone) {
-      return res.status(400).json({ 
-        message: "È necessario fornire almeno un'email o un numero di telefono" 
-      });
-    }
-
-    // Crea un array di condizioni per la ricerca
-    const searchConditions = [];
-    
-    if (email) {
-      searchConditions.push(eq(clients.email, email));
-    }
-    
-    if (phone) {
-      searchConditions.push(eq(clients.phone, phone));
-    }
-
-    // Cerca clienti che corrispondono a uno qualsiasi dei criteri
-    let matchingClients = [];
-    
-    if (searchConditions.length > 0) {
-      matchingClients = await db
-        .select()
-        .from(clients)
-        .where(or(...searchConditions));
-    }
-
-    if (matchingClients.length > 0) {
-      return res.status(200).json({
-        exists: true,
-        clients: matchingClients,
-        message: "Clienti esistenti trovati"
-      });
-    } else {
-      return res.status(200).json({
-        exists: false,
-        clients: [],
-        message: "Nessun cliente trovato"
-      });
-    }
-  } catch (error: any) {
-    console.error("Errore nella ricerca di clienti esistenti:", error);
-    return res
-      .status(500)
-      .json({ message: `Errore: ${error.message || "Errore sconosciuto"}` });
-  }
-};
+// La funzione checkExistingClient è stata spostata nel client-validation-controller
 
 // Funzioni interne per l'invio di email
 async function sendBundleLeadNotification(lead: any, bundle: any): Promise<boolean> {

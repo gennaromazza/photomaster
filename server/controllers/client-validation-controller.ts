@@ -19,12 +19,27 @@ export const checkExistingClient = async (req: Request, res: Response) => {
     // Crea un array di condizioni per la ricerca
     const searchConditions = [];
     
-    if (email) {
-      searchConditions.push(eq(clients.email, email.toString()));
+    if (email && email.toString().trim() !== "") {
+      // Ricerca case-insensitive con ILIKE per email
+      searchConditions.push(ilike(clients.email, `%${email.toString().trim()}%`));
     }
     
-    if (phone) {
-      searchConditions.push(eq(clients.phone, phone.toString()));
+    if (phone && phone.toString().trim() !== "") {
+      // Normalizza il numero di telefono (rimuovi spazi e caratteri non numerici)
+      const normalizedPhone = phone.toString().trim().replace(/[\s()-]/g, "");
+      
+      // Se il numero è abbastanza lungo, gestisce diverse forme: con/senza prefisso
+      if (normalizedPhone.length > 8) {
+        const lastDigits = normalizedPhone.slice(-9);
+        searchConditions.push(
+          or(
+            ilike(clients.phone, `%${normalizedPhone}%`),
+            ilike(clients.phone, `%${lastDigits}%`)
+          )
+        );
+      } else {
+        searchConditions.push(ilike(clients.phone, `%${normalizedPhone}%`));
+      }
     }
 
     // Cerca clienti che corrispondono a uno qualsiasi dei criteri
@@ -38,7 +53,10 @@ export const checkExistingClient = async (req: Request, res: Response) => {
       return res.status(200).json({
         exists: true,
         clients: matchingClients,
-        message: "Clienti esistenti trovati"
+        message: "Clienti esistenti trovati",
+        // Include il primo cliente come principale e gli altri come alternativi
+        primaryMatch: matchingClients[0],
+        alternativeMatches: matchingClients.length > 1 ? matchingClients.slice(1) : []
       });
     } else {
       return res.status(200).json({
@@ -72,77 +90,72 @@ export const searchClients = async (req: Request, res: Response) => {
     const limitNumber = parseInt(limit.toString());
     const offset = (pageNumber - 1) * limitNumber;
     
-    const sortDirection = sortDir === "desc" ? desc : asc;
-    let sortColumn;
+    // Variabili per ordinamento
+    const sortColumn = sortBy.toString() || "lastName";
+    const isDescending = sortDir.toString() === "desc";
     
-    // Gestisci la colonna di ordinamento
-    switch (sortBy) {
-      case "firstName":
-        sortColumn = clients.firstName;
-        break;
-      case "email":
-        sortColumn = clients.email;
-        break;
-      case "phone":
-        sortColumn = clients.phone;
-        break;
-      case "createdAt":
-        sortColumn = clients.createdAt;
-        break;
-      default:
-        sortColumn = clients.lastName; // default
-    }
-
-    // Costruisci la query di base
-    let clientResults = [];
-    let countResult = { count: 0 };
-
+    // Risultati base senza query di ricerca
+    let baseQuery = db.select().from(clients);
+    
+    // Aggiungi condizioni di ricerca
     if (query && query.toString().trim() !== "") {
-      const searchTerm = `%${query.toString()}%`;
+      const searchPattern = `%${query.toString().trim()}%`;
       
-      // Versione estremamente semplificata - solo ricerca su first_name
-      clientResults = await db.execute(sql`
-        SELECT * FROM clients 
-        WHERE first_name ILIKE ${searchTerm}
-        ORDER BY last_name ASC
-        LIMIT ${limitNumber} OFFSET ${offset}
-      `);
-      
-      // Conteggio totale
-      const countRows = await db.execute(sql`
-        SELECT COUNT(*) as count FROM clients 
-        WHERE first_name ILIKE ${searchTerm}
-      `);
-      
-      countResult = countRows[0];
-    } else {
-      // Se non c'è una query, restituisci tutti i clienti con paginazione
-      clientResults = await db.execute(sql`
-        SELECT * FROM clients 
-        ORDER BY last_name ASC
-        LIMIT ${limitNumber} OFFSET ${offset}
-      `);
-      
-      // Conteggio totale
-      const countRows = await db.execute(sql`
-        SELECT COUNT(*) as count FROM clients
-      `);
-      
-      countResult = countRows[0];
+      // Ora che sappiamo che la base funziona, possiamo aggiungere la ricerca su più campi
+      baseQuery = baseQuery.where(
+        or(
+          clients.firstName.ilike(searchPattern),
+          clients.lastName.ilike(searchPattern),
+          clients.email.ilike(searchPattern),
+          clients.phone.ilike(searchPattern),
+          clients.address.ilike(searchPattern)
+        )
+      );
     }
     
-    // Assicurati che totalCount sia un numero
-    const totalCountValue = parseInt(countResult.count);
+    // Applica ordinamento
+    if (isDescending) {
+      if (sortColumn === "firstName") baseQuery = baseQuery.orderBy(desc(clients.firstName));
+      else if (sortColumn === "email") baseQuery = baseQuery.orderBy(desc(clients.email));
+      else if (sortColumn === "phone") baseQuery = baseQuery.orderBy(desc(clients.phone));
+      else baseQuery = baseQuery.orderBy(desc(clients.lastName));
+    } else {
+      if (sortColumn === "firstName") baseQuery = baseQuery.orderBy(asc(clients.firstName));
+      else if (sortColumn === "email") baseQuery = baseQuery.orderBy(asc(clients.email));
+      else if (sortColumn === "phone") baseQuery = baseQuery.orderBy(asc(clients.phone));
+      else baseQuery = baseQuery.orderBy(asc(clients.lastName));
+    }
+    
+    // Applica paginazione
+    const clientResults = await baseQuery.limit(limitNumber).offset(offset);
+    
+    // Conta il totale senza paginazione ma con gli stessi filtri
+    let countQuery = db.select({ count: sql<number>`count(*)` }).from(clients);
+    
+    if (query && query.toString().trim() !== "") {
+      const searchPattern = `%${query.toString().trim()}%`;
+      countQuery = countQuery.where(
+        or(
+          clients.firstName.ilike(searchPattern),
+          clients.lastName.ilike(searchPattern),
+          clients.email.ilike(searchPattern),
+          clients.phone.ilike(searchPattern),
+          clients.address.ilike(searchPattern)
+        )
+      );
+    }
+    
+    const [totalCount] = await countQuery;
     
     // Calcola informazioni di paginazione
-    const totalPages = Math.ceil(totalCountValue / limitNumber);
+    const totalPages = Math.ceil(totalCount.count / limitNumber);
     const hasNextPage = pageNumber < totalPages;
     const hasPrevPage = pageNumber > 1;
     
     return res.status(200).json({
       clients: clientResults,
       pagination: {
-        total: totalCountValue,
+        total: totalCount.count,
         page: pageNumber,
         limit: limitNumber,
         totalPages,

@@ -38,6 +38,7 @@ import { Watermark } from "@/components/ui/watermark";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { SocialMediaShowcase } from "@/components/shared/social-media-showcase";
 
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
@@ -138,7 +139,7 @@ export default function PublicQuotePage() {
         setIsExpired(true);
         throw new Error("Token preventivo mancante");
       }
-      
+
       try {
         const res = await fetch(`/api/quotes/share/${tokenValue}`);
         if (!res.ok) {
@@ -269,7 +270,7 @@ export default function PublicQuotePage() {
       });
       return;
     }
-    
+
     // Verifica che le clausole obbligatorie siano state accettate
     if (!allClausesAccepted) {
       toast({
@@ -279,7 +280,7 @@ export default function PublicQuotePage() {
       });
       return;
     }
-    
+
     // Aggiorna lo stato locale della firma
     setSignature(signatureValue);
 
@@ -306,7 +307,7 @@ export default function PublicQuotePage() {
         console.error("Errore nell'accettazione delle clausole:", error);
         // Continua comunque con la firma anche se fallisce l'accettazione delle clausole
       }
-      
+
       // Poi procediamo con la firma del preventivo
       const response = await apiRequest("POST", `/api/quotes/share/${token}/sign`, {
         signature: signatureValue.trim(),
@@ -717,7 +718,38 @@ export default function PublicQuotePage() {
             />
           </CardContent>
         </Card>
-        
+
+        {/* Social Media Showcase */}
+        <Card className="mb-6 overflow-hidden shadow-md">
+          <CardHeader className="bg-primary text-primary-foreground border-b">
+            <CardTitle className="text-center font-playfair">
+              Seguici sui Social
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <SocialMediaShowcase settings={settings} variant="default" />
+          </CardContent>
+        </Card>
+
+        {/* Note */}
+        {quote.notes && (
+          <Card className="mt-10 mb-6 overflow-hidden shadow-md">
+            <CardHeader className="bg-primary text-primary-foreground border-b">
+              <CardTitle className="text-center font-playfair">
+                Per qualsiasi informazione
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <p className="text-center mb-6 text-muted-foreground">
+                Contattaci direttamente per confermare il tuo preventivo o per
+                richieste personalizzate.
+              </p>
+              <div className="bg-muted/20 p-5 rounded-lg border">
+                <StudioInfo className="mx-auto max-w-md" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {/* Sezione Firma Digitale */}
         <Card className="mb-8 border-primary/20">
           <CardHeader className="bg-primary/5 border-b">
@@ -736,7 +768,7 @@ export default function PublicQuotePage() {
                       Preventivo confermato e firmato
                     </div>
                   </div>
-                  
+
                   <div className="border-2 border-dashed border-primary/30 rounded-lg p-6 bg-primary/5">
                     <p className="text-sm text-muted-foreground mb-3 text-center">Firmato da:</p>
                     <p className="text-center text-3xl text-primary font-handwriting-great-vibes">
@@ -749,7 +781,7 @@ export default function PublicQuotePage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <div className="mt-8 p-4 rounded-md bg-muted text-center">
                     <p className="text-sm">
                       Questo preventivo è stato approvato e non può essere modificato.
@@ -777,25 +809,6 @@ export default function PublicQuotePage() {
           </CardContent>
         </Card>
 
-        {/* Note */}
-        {quote.notes && (
-          <Card className="mt-10 mb-6 overflow-hidden shadow-md">
-            <CardHeader className="bg-primary text-primary-foreground border-b">
-              <CardTitle className="text-center font-playfair">
-                Per qualsiasi informazione
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-center mb-6 text-muted-foreground">
-                Contattaci direttamente per confermare il tuo preventivo o per
-                richieste personalizzate.
-              </p>
-              <div className="bg-muted/20 p-5 rounded-lg border">
-                <StudioInfo className="mx-auto max-w-md" />
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </PublicLayout>
   );

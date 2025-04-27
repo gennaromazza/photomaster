@@ -390,22 +390,50 @@ export const deleteBundleLead = async (req: Request, res: Response) => {
  */
 export const getAllBundleLeads = async (req: Request, res: Response) => {
   try {
-    const bundleLeads = await db.query.bundleLeads.findMany({
-      orderBy: (bundleLeads, { desc }) => [desc(bundleLeads.createdAt)],
-      with: {
-        bundle: true,
-        client: true,
-        quote: {
-          columns: {
-            id: true,
-            title: true,
-            status: true
-          }
-        }
-      }
-    });
+    // Seleziona solo le colonne esistenti per evitare errori con colonne mancanti
+    const bundleLeads = await db.select({
+      id: bundleLeads.id,
+      bundleId: bundleLeads.bundleId,
+      firstName: bundleLeads.firstName,
+      lastName: bundleLeads.lastName,
+      email: bundleLeads.email,
+      phone: bundleLeads.phone,
+      message: bundleLeads.message,
+      status: bundleLeads.status,
+      quoteId: bundleLeads.quoteId,
+      clientId: bundleLeads.clientId,
+      createdAt: bundleLeads.createdAt,
+      // Non includiamo eventDate qui poiché non esiste in tutte le righe
+    })
+    .from(bundleLeads)
+    .orderBy(bundleLeads.createdAt.desc())
+    .leftJoin(serviceBundles, eq(bundleLeads.bundleId, serviceBundles.id))
+    .leftJoin(clients, eq(bundleLeads.clientId, clients.id))
+    .leftJoin(quotes, eq(bundleLeads.quoteId, quotes.id));
+
+    // Formattare i risultati in un formato più leggibile
+    const results = bundleLeads.map(lead => ({
+      id: lead.id,
+      bundleId: lead.bundleId,
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      email: lead.email,
+      phone: lead.phone,
+      message: lead.message,
+      status: lead.status,
+      quoteId: lead.quoteId,
+      clientId: lead.clientId,
+      createdAt: lead.createdAt,
+      bundle: lead.serviceBundles,
+      client: lead.clients,
+      quote: lead.quotes ? {
+        id: lead.quotes.id,
+        title: lead.quotes.title,
+        status: lead.quotes.status
+      } : null
+    }));
     
-    return res.status(200).json(bundleLeads);
+    return res.status(200).json(results);
   } catch (error) {
     console.error("Errore nel recupero delle richieste di preventivo:", error);
     return res.status(500).json({ error: "Errore del server" });

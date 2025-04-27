@@ -307,20 +307,26 @@ const createFixedModuleFromBundle = async (bundle: any, quoteId: number) => {
     }
     
     // Aggiungi tutti i servizi/prodotti del bundle come elementi del modulo
-    const moduleItems = bundle.items.map((item: any) => ({
-      moduleId: module.id,
-      serviceId: item.serviceId,
-      name: item.service.name,
-      description: item.service.description || "",
-      price: item.service.price,
-      unit_price: item.service.price, // Aggiungi questo campo obbligatorio
-      quantity: 1,
-      discount: 0,
-      total: item.service.price,
-      type: item.service.type || "service",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
+    const moduleItems = bundle.items.map((item: any) => {
+      // Assicuriamoci che il prezzo sia un numero
+      const itemPrice = parseFloat(item.service.price) || 0;
+      
+      return {
+        moduleId: module.id,
+        serviceId: item.serviceId,
+        name: item.service.name,
+        description: item.service.description || "",
+        price: itemPrice,
+        unit_price: itemPrice, // Aggiungi questo campo obbligatorio
+        unitPrice: itemPrice, // Aggiungi anche questo per compatibilità
+        quantity: 1,
+        discount: 0,
+        total: itemPrice,
+        type: item.service.type || "service",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    });
     
     if (moduleItems.length > 0) {
       await db.insert(quoteModuleItems)

@@ -77,7 +77,22 @@ const completaMontaggioSchema = z.object({
   note: z.string().optional(),
 });
 
+// Schema di validazione per il form aggiunta montaggio
+const aggiungiMontaggioSchema = z.object({
+  tipoMontaggio: z.enum(["foto", "video", "album", "slideshow", "altro"], {
+    required_error: "Seleziona un tipo di montaggio",
+  }),
+  dataConsegnaPrevista: z.date({
+    required_error: "La data di consegna è obbligatoria",
+  }),
+  priorita: z.coerce.number().min(1).max(10).default(5),
+  accontoImporto: z.coerce.number().positive('L\'acconto deve essere maggiore di zero'),
+  note: z.string().optional(),
+  eventoId: z.coerce.number().positive('Seleziona un evento'),
+});
+
 type CompletaMontaggioFormValues = z.infer<typeof completaMontaggioSchema>;
+type AggiungiMontaggioFormValues = z.infer<typeof aggiungiMontaggioSchema>;
 
 // Numero di elementi per pagina
 const ITEMS_PER_PAGE = 9;
@@ -89,6 +104,8 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
   const [montaggioSelezionato, setMontaggioSelezionato] = useState<any | null>(null);
   const [isCompletaDialogOpen, setIsCompletaDialogOpen] = useState(false);
   const [isAvviaDialogOpen, setIsAvviaDialogOpen] = useState(false);
+  const [isAggiungiDialogOpen, setIsAggiungiDialogOpen] = useState(false);
+  const [eventoSelezionato, setEventoSelezionato] = useState<any | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   
   // Form per completamento
@@ -97,6 +114,19 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
     defaultValues: {
       saldo: undefined,
       note: "",
+    },
+  });
+  
+  // Form per aggiunta nuovo montaggio
+  const aggiungiForm = useForm<AggiungiMontaggioFormValues>({
+    resolver: zodResolver(aggiungiMontaggioSchema),
+    defaultValues: {
+      tipoMontaggio: "video",
+      dataConsegnaPrevista: addDays(new Date(), 14),
+      priorita: 5,
+      accontoImporto: 100,
+      note: "",
+      eventoId: undefined,
     },
   });
 
@@ -314,6 +344,85 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
     });
   }, [montaggioSelezionato, completaMutation]);
 
+  // Mutation per aggiungere un nuovo montaggio
+  const aggiungiMutation = useMutation({
+    mutationFn: async (values: AggiungiMontaggioFormValues) => {
+      const { eventoId, tipoMontaggio, dataConsegnaPrevista, priorita, accontoImporto, note } = values;
+      
+      // Validazione lato client extra
+      if (!eventoId) throw new Error("Evento non selezionato");
+      
+      // Prepara i dati per la chiamata API
+      const montaggioData = {
+        collaboratoreId: Number(collaboratoreId),
+        tipoMontaggio,
+        dataConsegnaPrevista: dataConsegnaPrevista.toISOString(),
+        priorita,
+        accontoImporto,
+        note,
+        stato: "da_fare",
+      };
+      
+      // Invia la richiesta all'API
+      const response = await apiRequest(
+        "POST",
+        `/api/eventi/${eventoId}/montaggi`,
+        montaggioData
+      );
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Montaggio aggiunto",
+        description: "Il montaggio è stato assegnato con successo.",
+      });
+      
+      // Ricarichiamo i montaggi dopo l'operazione
+      fetchAllMontaggi();
+      
+      // Invalidiamo la cache
+      queryClient.invalidateQueries({ queryKey: [`/api/collaboratori/${collaboratoreId}/dashboard`] });
+      
+      // Chiudiamo il dialog e resettiamo il form
+      setIsAggiungiDialogOpen(false);
+      aggiungiForm.reset({
+        tipoMontaggio: "video",
+        dataConsegnaPrevista: addDays(new Date(), 14),
+        priorita: 5,
+        accontoImporto: 100,
+        note: "",
+        eventoId: undefined,
+      });
+      setEventoSelezionato(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Errore",
+        description: `Si è verificato un errore durante l'aggiunta del montaggio: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handler per aprire il modal di aggiunta montaggio
+  const handleAggiungiMontaggio = useCallback(() => {
+    setIsAggiungiDialogOpen(true);
+  }, []);
+  
+  // Handler per preselezionare un evento nel form
+  const handleSelectEvento = useCallback((evento: any) => {
+    if (!evento) return;
+    
+    setEventoSelezionato(evento);
+    aggiungiForm.setValue('eventoId', evento.id);
+  }, [aggiungiForm]);
+  
+  // Handler per inviare il form di aggiunta
+  const onSubmitAggiungiMontaggio = useCallback((values: AggiungiMontaggioFormValues) => {
+    aggiungiMutation.mutate(values);
+  }, [aggiungiMutation]);
+  
   // Gestione del cambio pagina
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -478,6 +587,14 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
                 </div>
               )}
             </div>
+            <Button 
+              onClick={handleAggiungiMontaggio}
+              size="sm"
+              className="mt-2 sm:mt-0"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Aggiungi Montaggio
+            </Button>
           </div>
         </CardHeader>
       </Card>
@@ -996,6 +1113,227 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
               </form>
             </Form>
           )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog aggiungi montaggio */}
+      <Dialog open={isAggiungiDialogOpen} onOpenChange={setIsAggiungiDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Assegna Nuovo Montaggio</DialogTitle>
+            <DialogDescription>
+              Inserisci i dettagli per assegnare un nuovo montaggio a {collaboratore?.firstName} {collaboratore?.lastName}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...aggiungiForm}>
+            <form onSubmit={aggiungiForm.handleSubmit(onSubmitAggiungiMontaggio)} className="space-y-4">
+              
+              {/* Evento */}
+              <FormField
+                control={aggiungiForm.control}
+                name="eventoId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Evento</FormLabel>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(parseInt(value));
+                        const evento = eventi.find(e => e.id === parseInt(value));
+                        setEventoSelezionato(evento);
+                      }}
+                      defaultValue={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona un evento" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {eventi?.map((evento) => (
+                          <SelectItem key={`evento-${evento.id}`} value={evento.id.toString()}>
+                            {evento.title || `Evento #${evento.id}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Seleziona l'evento per cui assegnare il montaggio.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Tipo Montaggio */}
+              <FormField
+                control={aggiungiForm.control}
+                name="tipoMontaggio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo di Montaggio</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona il tipo di montaggio" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="video">Video</SelectItem>
+                        <SelectItem value="foto">Foto</SelectItem>
+                        <SelectItem value="album">Album</SelectItem>
+                        <SelectItem value="slideshow">Slideshow</SelectItem>
+                        <SelectItem value="altro">Altro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Data Consegna */}
+              <FormField
+                control={aggiungiForm.control}
+                name="dataConsegnaPrevista"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data Consegna Prevista</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP", { locale: it })
+                            ) : (
+                              <span>Seleziona una data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date()
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Priorità */}
+                <FormField
+                  control={aggiungiForm.control}
+                  name="priorita"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priorità (1-10)</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                          <Input 
+                            type="number" 
+                            min={1} 
+                            max={10}
+                            {...field}
+                            value={field.value ?? 5}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          />
+                          <span className="ml-2 text-muted-foreground">{field.value}/10</span>
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        La priorità aiuta a organizzare il lavoro (10 = massima).
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Acconto */}
+                <FormField
+                  control={aggiungiForm.control}
+                  name="accontoImporto"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Acconto €</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={0} 
+                          step={1}
+                          {...field}
+                          value={field.value ?? 0}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        L'importo dell'acconto per questo montaggio.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              {/* Note */}
+              <FormField
+                control={aggiungiForm.control}
+                name="note"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Inserisci eventuali note o istruzioni per il montaggio..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAggiungiDialogOpen(false)}
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={aggiungiMutation.isPending || !aggiungiForm.formState.isValid}
+                >
+                  {aggiungiMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creazione in corso...
+                    </>
+                  ) : (
+                    <>Assegna Montaggio</>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

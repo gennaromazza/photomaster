@@ -1,8 +1,8 @@
 import express from "express";
 import { db } from "../db";
 import { scheduledPayments } from "@shared/schema";
-import { eq, asc, isBefore } from "drizzle-orm";
-import { isAfter, isBefore as dateFnsBefore } from "date-fns";
+import { eq, asc } from "drizzle-orm";
+import { isBefore } from "date-fns";
 
 const router = express.Router();
 
@@ -26,7 +26,7 @@ router.get("/by-quote/:quoteId", async (req, res) => {
     // Aggiungi lo stato overdue se necessario
     const result = payments.map(payment => {
       let status = payment.status;
-      if (status === "pending" && dateFnsBefore(new Date(payment.dueDate), currentDate)) {
+      if (status === "pending" && isBefore(new Date(payment.dueDate), currentDate)) {
         status = "overdue";
       }
 

@@ -423,7 +423,6 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
         tipoMontaggio: "video",
         dataConsegnaPrevista: addDays(new Date(), 14),
         priorita: 5,
-        accontoImporto: 100,
         note: "",
         eventoId: undefined,
       });

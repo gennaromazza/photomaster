@@ -313,6 +313,7 @@ const createFixedModuleFromBundle = async (bundle: any, quoteId: number) => {
       name: item.service.name,
       description: item.service.description || "",
       price: item.service.price,
+      unit_price: item.service.price, // Aggiungi questo campo obbligatorio
       quantity: 1,
       discount: 0,
       total: item.service.price,

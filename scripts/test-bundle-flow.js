@@ -195,6 +195,36 @@ const photographerConvertsRequest = async (requestData) => {
   console.log('│ 3. SIMULAZIONE FOTOGRAFO: Conversione preventivo │');
   console.log('└──────────────────────────────────────────────────┘');
   
+  // Verifica se è già stato creato un preventivo automaticamente
+  if (requestData.quoteId) {
+    console.log(`✅ Preventivo già creato automaticamente con ID: ${requestData.quoteId}`);
+    
+    // Recupera il preventivo esistente
+    try {
+      const quoteResponse = await axios.get(`${BASE_URL}/api/quotes/${requestData.quoteId}`, { headers: defaultHeaders });
+      console.log('✅ Dettagli preventivo esistente recuperati con successo!');
+      
+      // Salva dettagli preventivo per riferimento
+      saveResponse('3-conversion-result', quoteResponse.data);
+      
+      const quoteData = quoteResponse.data;
+      console.log(`\nPreventivo esistente:`);
+      console.log(`- ID preventivo: ${quoteData.id}`);
+      console.log(`- Titolo: ${quoteData.title}`);
+      console.log(`- Stato: ${quoteData.status}`);
+      
+      return quoteData;
+    } catch (error) {
+      console.error('❌ Errore nel recupero del preventivo esistente:');
+      console.error(error.response?.data || error.message);
+      
+      // Se non riusciamo a recuperare il preventivo esistente, creiamo un oggetto
+      // con l'ID che conosciamo per poter continuare il test
+      return { id: requestData.quoteId };
+    }
+  }
+  
+  // Se non c'è un preventivo già creato, procediamo con la conversione manuale
   console.log(`Conversione della richiesta ID: ${requestData.id} in preventivo...`);
   
   try {
@@ -213,9 +243,38 @@ const photographerConvertsRequest = async (requestData) => {
     
     return quoteData;
   } catch (error) {
-    console.error('❌ Errore nella conversione della richiesta in preventivo:');
-    console.error(error.response?.data || error.message);
-    return null;
+    // Verifica se l'errore è perché il preventivo è già stato creato
+    if (error.response?.data?.quoteId) {
+      console.log(`✅ Preventivo già creato con ID: ${error.response.data.quoteId}`);
+      
+      // Recupera il preventivo esistente
+      try {
+        const quoteResponse = await axios.get(`${BASE_URL}/api/quotes/${error.response.data.quoteId}`, { headers: defaultHeaders });
+        console.log('✅ Dettagli preventivo esistente recuperati con successo!');
+        
+        // Salva dettagli preventivo per riferimento
+        saveResponse('3-conversion-result', quoteResponse.data);
+        
+        const quoteData = quoteResponse.data;
+        console.log(`\nPreventivo esistente:`);
+        console.log(`- ID preventivo: ${quoteData.id}`);
+        console.log(`- Titolo: ${quoteData.title}`);
+        console.log(`- Stato: ${quoteData.status}`);
+        
+        return quoteData;
+      } catch (getError) {
+        console.error('❌ Errore nel recupero del preventivo esistente:');
+        console.error(getError.response?.data || getError.message);
+        
+        // Se non riusciamo a recuperare il preventivo esistente, creiamo un oggetto
+        // con l'ID che conosciamo per poter continuare il test
+        return { id: error.response.data.quoteId };
+      }
+    } else {
+      console.error('❌ Errore nella conversione della richiesta in preventivo:');
+      console.error(error.response?.data || error.message);
+      return null;
+    }
   }
 };
 
@@ -295,35 +354,42 @@ const verifyScheduledPayments = async (quoteData) => {
   
   try {
     // Recupera pagamenti programmati per il preventivo
-    const response = await axios.get(`${BASE_URL}/api/scheduled-payments?quoteId=${quoteData.id}`, { headers: defaultHeaders });
+    const response = await axios.get(`${BASE_URL}/api/scheduled-payments/by-quote/${quoteData.id}`, { headers: defaultHeaders });
     
     // Salva dettagli pagamenti per riferimento
     saveResponse('5-scheduled-payments', response.data);
     
-    const payments = response.data;
+    // Assicurati che la risposta sia un array
+    const payments = Array.isArray(response.data) ? response.data : [];
     
-    if (payments && payments.length > 0) {
+    if (payments.length > 0) {
       console.log(`✅ Trovati ${payments.length} pagamenti programmati`);
       
       // Dovrebbero esserci due pagamenti: acconto e saldo
       payments.forEach((payment, index) => {
         console.log(`\nPagamento #${index + 1}:`);
-        console.log(`- Descrizione: ${payment.description}`);
-        console.log(`- Importo: ${formatEuro(payment.amount / 100)}`); // Dividiamo per 100 perché gli importi sono in centesimi nel DB
-        console.log(`- Stato: ${payment.status}`);
-        console.log(`- Data scadenza: ${new Date(payment.dueDate).toLocaleDateString('it-IT')}`);
-        console.log(`- Num. rata: ${payment.installmentNumber}/${payment.totalInstallments}`);
+        console.log(`- Descrizione: ${payment.description || 'N/A'}`);
+        console.log(`- Importo: ${formatEuro((payment.amount || 0) / 100)}`); // Dividiamo per 100 perché gli importi sono in centesimi nel DB
+        console.log(`- Stato: ${payment.status || 'N/A'}`);
+        
+        if (payment.dueDate) {
+          console.log(`- Data scadenza: ${new Date(payment.dueDate).toLocaleDateString('it-IT')}`);
+        } else {
+          console.log(`- Data scadenza: N/A`);
+        }
+        
+        console.log(`- Num. rata: ${payment.installmentNumber || 0}/${payment.totalInstallments || 0}`);
       });
       
       // Verifica che ci siano un acconto e un saldo
-      const deposit = payments.find(p => p.description.toLowerCase().includes('acconto'));
-      const balance = payments.find(p => p.description.toLowerCase().includes('saldo'));
+      const deposit = payments.find(p => p.description && p.description.toLowerCase().includes('acconto'));
+      const balance = payments.find(p => p.description && p.description.toLowerCase().includes('saldo'));
       
       if (deposit && balance) {
         console.log('\n✅ Trovati sia acconto che saldo');
-        console.log(`- Acconto: ${formatEuro(deposit.amount / 100)}`);
-        console.log(`- Saldo: ${formatEuro(balance.amount / 100)}`);
-        console.log(`- Totale: ${formatEuro((deposit.amount + balance.amount) / 100)}`);
+        console.log(`- Acconto: ${formatEuro((deposit.amount || 0) / 100)}`);
+        console.log(`- Saldo: ${formatEuro((balance.amount || 0) / 100)}`);
+        console.log(`- Totale: ${formatEuro(((deposit.amount || 0) + (balance.amount || 0)) / 100)}`);
       } else {
         console.log('⚠️ Non trovati sia acconto che saldo!');
       }

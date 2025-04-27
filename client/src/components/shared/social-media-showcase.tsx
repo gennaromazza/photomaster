@@ -12,6 +12,9 @@ type ExtendedSettings = Settings & {
   twitterUrl?: string | null;
   youtubeUrl?: string | null;
   websiteUrl?: string | null;
+  linkedinUrl?: string | null;
+  tiktokUrl?: string | null;
+  pinterestUrl?: string | null;
 };
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,7 +60,7 @@ export const SocialMediaShowcase = ({
     const socialItems: SocialMediaItem[] = [
       {
         id: 'facebook',
-        url: settings.facebook || settings.facebookUrl,
+        url: settings.facebook || extSettings.facebookUrl,
         name: 'Facebook',
         icon: <Facebook size={variant === 'minimal' ? 18 : 24} />,
         color: 'text-blue-600',
@@ -65,7 +68,7 @@ export const SocialMediaShowcase = ({
       },
       {
         id: 'instagram',
-        url: settings.instagram || settings.instagramUrl,
+        url: settings.instagram || extSettings.instagramUrl,
         name: 'Instagram',
         icon: <Instagram size={variant === 'minimal' ? 18 : 24} />,
         color: 'text-pink-500',
@@ -73,7 +76,7 @@ export const SocialMediaShowcase = ({
       },
       {
         id: 'twitter',
-        url: settings.twitter || settings.twitterUrl,
+        url: settings.twitter || extSettings.twitterUrl,
         name: 'Twitter',
         icon: <Twitter size={variant === 'minimal' ? 18 : 24} />,
         color: 'text-sky-500',
@@ -81,7 +84,7 @@ export const SocialMediaShowcase = ({
       },
       {
         id: 'youtube',
-        url: settings.youtube || settings.youtubeUrl,
+        url: settings.youtube || extSettings.youtubeUrl,
         name: 'YouTube',
         icon: <Youtube size={variant === 'minimal' ? 18 : 24} />,
         color: 'text-red-600',
@@ -89,7 +92,7 @@ export const SocialMediaShowcase = ({
       },
       {
         id: 'website',
-        url: settings.website || settings.websiteUrl,
+        url: settings.website || extSettings.websiteUrl,
         name: 'Sito Web',
         icon: <Globe size={variant === 'minimal' ? 18 : 24} />,
         color: 'text-gray-600',

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Settings } from '@shared/schema';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Facebook, Instagram, Twitter, Youtube, Globe, Save } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Youtube, Globe, Linkedin, Save } from 'lucide-react';
+import { FaPinterest, FaTiktok } from 'react-icons/fa';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Schema di validazione per i social media
@@ -17,7 +18,10 @@ const socialMediaSchema = z.object({
   instagramUrl: z.string().url("URL di Instagram non valido").or(z.string().length(0)).optional(),
   twitterUrl: z.string().url("URL di Twitter non valido").or(z.string().length(0)).optional(),
   youtubeUrl: z.string().url("URL di YouTube non valido").or(z.string().length(0)).optional(),
-  websiteUrl: z.string().url("URL del sito web non valido").or(z.string().length(0)).optional()
+  websiteUrl: z.string().url("URL del sito web non valido").or(z.string().length(0)).optional(),
+  linkedinUrl: z.string().url("URL di LinkedIn non valido").or(z.string().length(0)).optional(),
+  tiktokUrl: z.string().url("URL di TikTok non valido").or(z.string().length(0)).optional(),
+  pinterestUrl: z.string().url("URL di Pinterest non valido").or(z.string().length(0)).optional()
 });
 
 type SocialMediaFormValues = z.infer<typeof socialMediaSchema>;
@@ -30,7 +34,10 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
     instagramUrl: settings?.instagram || '',
     twitterUrl: settings?.twitter || '',
     youtubeUrl: settings?.youtube || '',
-    websiteUrl: settings?.website || ''
+    websiteUrl: settings?.website || '',
+    linkedinUrl: settings?.linkedinUrl || '',
+    tiktokUrl: settings?.tiktokUrl || '',
+    pinterestUrl: settings?.pinterestUrl || ''
   };
 
   const form = useForm<SocialMediaFormValues>({

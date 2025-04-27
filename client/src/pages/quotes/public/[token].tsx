@@ -71,6 +71,13 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => {
         position={watermarkPosition as "center" | "top" | "bottom"}
         color="var(--primary)"
       />
+      
+      {/* Aggiungiamo il componente social nella modalità floating sul lato destro della pagina */}
+      <SocialMediaShowcase 
+        settings={settings} 
+        variant="floating" 
+        showFollowText={false}
+      />
 
       <header className="bg-primary py-5 shadow-md relative z-10">
         <div className="container px-4 sm:px-6 md:px-8">
@@ -92,16 +99,25 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => {
       </main>
       <footer className="bg-muted py-5 border-t shadow-inner relative z-10">
         <div className="container px-4 text-center">
-          <div className="flex flex-col items-center justify-center space-y-2">
-            <p className="text-sm md:text-base text-muted-foreground">
-              Preventivo generato da{" "}
-              <span className="font-medium">
-                {settings?.companyName || "ImageStudio"}
-              </span>
-            </p>
-            <p className="text-xs text-muted-foreground/70">
-              © {new Date().getFullYear()} - Tutti i diritti riservati
-            </p>
+          <div className="flex flex-col items-center justify-center space-y-5">
+            {/* Aggiungiamo il componente SocialMediaShowcase con variante footer */}
+            <SocialMediaShowcase 
+              settings={settings} 
+              variant="footer" 
+              title="Seguici sui social" 
+            />
+            
+            <div className="flex flex-col items-center space-y-2">
+              <p className="text-sm md:text-base text-muted-foreground">
+                Preventivo generato da{" "}
+                <span className="font-medium">
+                  {settings?.companyName || "ImageStudio"}
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground/70">
+                © {new Date().getFullYear()} - Tutti i diritti riservati
+              </p>
+            </div>
           </div>
         </div>
       </footer>

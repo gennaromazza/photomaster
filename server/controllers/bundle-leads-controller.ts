@@ -95,6 +95,72 @@ export const createBundleQuote = async (req: Request, res: Response) => {
         updatedAt: new Date()
       })
       .returning();
+      
+    // Converti automaticamente in preventivo
+    try {
+      // Recupera i dettagli del bundle completi con i servizi
+      const bundleComplete = await db.query.bundleLeads.findFirst({
+        where: eq(bundleLeads.id, bundleLead.id),
+        with: {
+          bundle: {
+            with: {
+              items: {
+                with: {
+                  service: true
+                }
+              }
+            }
+          },
+          client: true
+        }
+      });
+      
+      if (bundleComplete && bundleComplete.bundle) {
+        // Crea un nuovo preventivo basato sulla richiesta
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30); // Scadenza a 30 giorni
+        
+        const shareToken = uuidv4().replace(/-/g, '');
+        
+        const [quote] = await db.insert(quotes)
+          .values({
+            title: `Preventivo ${bundleComplete.bundle.name} - ${bundleComplete.firstName} ${bundleComplete.lastName}`,
+            clientId: bundleComplete.clientId,
+            eventDate: bundleComplete.eventDate,
+            location: bundleComplete.location,
+            eventType: bundleComplete.eventType || "altro",
+            status: "draft",
+            notes: bundleComplete.message || "",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            expiryDate: expiryDate,
+            bundleId: bundleComplete.bundleId,
+            isShared: false,
+            shareToken: shareToken
+          })
+          .returning();
+        
+        if (quote) {
+          // Aggiorna il lead con il riferimento al preventivo creato
+          await db.update(bundleLeads)
+            .set({ 
+              quoteId: quote.id,
+              status: "converted"
+            })
+            .where(eq(bundleLeads.id, bundleLead.id));
+          
+          // Crea un modulo fisso con i servizi del bundle
+          await createFixedModuleFromBundle(bundleComplete.bundle, quote.id);
+          
+          // Aggiorna l'oggetto bundleLead con il quoteId
+          bundleLead.quoteId = quote.id;
+          bundleLead.status = "converted";
+        }
+      }
+    } catch (conversionError) {
+      console.error("Errore nella conversione automatica in preventivo:", conversionError);
+      // Non bloccare la risposta, si tratta di un'operazione secondaria
+    }
 
     // Restituisci i dati della richiesta
     return res.status(201).json({

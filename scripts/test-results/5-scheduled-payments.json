@@ -1,0 +1,26 @@
+[
+  {
+    "id": 14,
+    "quoteId": 79,
+    "amount": "10950",
+    "dueDate": "2025-04-27",
+    "description": "Acconto iniziale",
+    "status": "overdue",
+    "paymentMethod": null,
+    "notes": "Acconto generato automaticamente da richiesta preventivo",
+    "transactionId": null,
+    "reminderSent": false
+  },
+  {
+    "id": 15,
+    "quoteId": 79,
+    "amount": "25550",
+    "dueDate": "2025-05-27",
+    "description": "Saldo finale",
+    "status": "pending",
+    "paymentMethod": null,
+    "notes": "Saldo generato automaticamente da richiesta preventivo",
+    "transactionId": null,
+    "reminderSent": false
+  }
+]

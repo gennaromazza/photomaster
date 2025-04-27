@@ -557,7 +557,7 @@ const createInitialScheduledPayment = async (clientId: number, quoteId: number, 
       .values({
         quoteId: quoteId,
         amount: depositAmount,
-        dueDate: today,
+        dueDate: today.toISOString(), // Converti Date in stringa ISO
         description: "Acconto iniziale",
         status: "pending",
         paymentMethod: null,
@@ -570,7 +570,7 @@ const createInitialScheduledPayment = async (clientId: number, quoteId: number, 
       .values({
         quoteId: quoteId,
         amount: balanceAmount,
-        dueDate: balanceDate,
+        dueDate: balanceDate.toISOString(), // Converti Date in stringa ISO
         description: "Saldo finale",
         status: "pending",
         paymentMethod: null,

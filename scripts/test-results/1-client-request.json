@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "quote": {
+    "id": 15,
+    "bundleId": 7,
+    "firstName": "Mario",
+    "lastName": "Rossi",
+    "email": "mario.rossi.1745764247069@example.com",
+    "phone": "+39 333 1234567",
+    "message": "Vorrei più informazioni su questo pacchetto per il mio matrimonio.",
+    "status": "converted",
+    "quoteId": 79,
+    "clientId": 27,
+    "createdAt": "2025-04-27T14:30:47.453Z",
+    "eventDate": "2025-09-27T14:30:47.069Z",
+    "eventType": "Matrimonio",
+    "location": "Villa Bella Vista, Lago di Como"
+  }
+}

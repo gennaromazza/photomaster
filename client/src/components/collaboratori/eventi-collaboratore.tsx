@@ -607,12 +607,28 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" asChild className="h-8 px-2">
-                        <Link href={`/events/${eventoId}`}>
-                          <Calendar className="h-3.5 w-3.5 mr-1" />
-                          <span>Evento</span>
-                        </Link>
-                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 px-2">
+                            <Calendar className="h-3.5 w-3.5 mr-1" />
+                            <span>Dettagli</span>
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-6xl h-[90vh]">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl">Dettaglio Evento</DialogTitle>
+                            <DialogDescription>
+                              Visualizzazione dettagliata dell'evento e collaboratori associati
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="h-full overflow-y-auto -mx-6 px-6">
+                            <iframe 
+                              src={`/events/detail/${eventoId}`} 
+                              className="w-full h-[calc(90vh-120px)] border-0"
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                       
                       {clienteQuoteId && (
                         <Dialog>
@@ -740,12 +756,28 @@ export function EventoCollaboratoreList({ collaboratoreId }: EventoCollaboratore
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm" asChild className="h-8 px-2">
-                      <Link href={`/events/${evento.id}`}>
-                        <Info className="h-3.5 w-3.5 mr-1" />
-                        <span>Dettagli</span>
-                      </Link>
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 px-2">
+                          <Info className="h-3.5 w-3.5 mr-1" />
+                          <span>Dettagli</span>
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-6xl h-[90vh]">
+                        <DialogHeader>
+                          <DialogTitle className="text-xl">Dettaglio Evento</DialogTitle>
+                          <DialogDescription>
+                            Visualizzazione dettagliata dell'evento e collaboratori associati
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="h-full overflow-y-auto -mx-6 px-6">
+                          <iframe 
+                            src={`/events/detail/${evento.id}`} 
+                            className="w-full h-[calc(90vh-120px)] border-0"
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </TableCell>
                   <TableCell>
                     <Popover>

@@ -431,7 +431,7 @@ export const getAllBundleLeads = async (req: Request, res: Response) => {
       // Non includiamo eventDate qui poiché non esiste in tutte le righe
     })
     .from(bundleLeads)
-    .orderBy(bundleLeads.createdAt.desc());
+    .orderBy((bundleLeads, { desc }) => [desc(bundleLeads.createdAt)]);
     
     console.log(`Recuperate ${leadResults.length} richieste di preventivo`);
     

@@ -111,6 +111,22 @@ export default function MobileSidebar({
               isActive={isActive("/services")}
               onClick={onClose}
             />
+            
+            <NavItem
+              href="/bundles"
+              icon={<ShoppingBag className="h-4 w-4" />}
+              label="Pacchetti"
+              isActive={isActive("/bundles")}
+              onClick={onClose}
+            />
+            
+            <NavItem
+              href="/bundles/leads"
+              icon={<BarChart2 className="h-4 w-4" />}
+              label="Richieste Lead"
+              isActive={isActive("/bundles/leads")}
+              onClick={onClose}
+            />
 
             <NavItem
               href="/tasks"

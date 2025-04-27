@@ -1014,6 +1014,10 @@ export const bundleLeads = pgTable("bundle_leads", {
   quoteId: integer("quote_id"), // ID del preventivo generato automaticamente
   clientId: integer("client_id"), // ID del cliente creato o associato
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Campi per l'evento
+  eventDate: timestamp("event_date"),
+  eventType: text("event_type"),
+  location: text("location"),
 });
 
 export const insertBundleLeadSchema = createInsertSchema(bundleLeads).pick({
@@ -1026,6 +1030,9 @@ export const insertBundleLeadSchema = createInsertSchema(bundleLeads).pick({
   status: true,
   quoteId: true,
   clientId: true,
+  eventDate: true,
+  eventType: true,
+  location: true,
 });
 
 export type InsertBundleLead = z.infer<typeof insertBundleLeadSchema>;

@@ -25,6 +25,15 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Alias di formatCurrency per retrocompatibilità
+ * @param amount - Importo già in euro (non in centesimi)
+ * @returns Stringa formattata con simbolo dell'Euro
+ */
+export function formatPrice(amount: number): string {
+  return formatCurrency(amount);
+}
+
+/**
  * Formatta una data in formato italiano
  * @param date - Data da formattare
  * @param formatStr - Formato di output (default: 'dd/MM/yyyy')

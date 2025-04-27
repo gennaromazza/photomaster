@@ -406,7 +406,7 @@ export const deleteBundleLead = async (req: Request, res: Response) => {
 export const getAllBundleLeads = async (req: Request, res: Response) => {
   try {
     // Seleziona solo le colonne esistenti per evitare errori con colonne mancanti
-    const bundleLeads = await db.select({
+    const leadResults = await db.select({
       id: bundleLeads.id,
       bundleId: bundleLeads.bundleId,
       firstName: bundleLeads.firstName,
@@ -427,7 +427,7 @@ export const getAllBundleLeads = async (req: Request, res: Response) => {
     .leftJoin(quotes, eq(bundleLeads.quoteId, quotes.id));
 
     // Formattare i risultati in un formato più leggibile
-    const results = bundleLeads.map(lead => ({
+    const results = leadResults.map(lead => ({
       id: lead.id,
       bundleId: lead.bundleId,
       firstName: lead.firstName,

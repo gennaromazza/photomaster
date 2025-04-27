@@ -126,11 +126,7 @@ export default function PublicQuotePage() {
   const memoizedToken = useMemo(() => token, [token]);
 
   // Carica i dati del preventivo tramite token di condivisione con aggiornamento automatico
-  const {
-    data: quote,
-    isLoading,
-    error,
-  } = useQuery({
+  const quoteQuery = useQuery({
     queryKey: ["/api/quotes/share", memoizedToken],
     queryFn: async ({ queryKey }) => {
       // Tipo esplicito per evitare problemi con QueryKey
@@ -167,7 +163,7 @@ export default function PublicQuotePage() {
 
   // Carica i moduli del preventivo 
   const { data: modules = [], isLoading: isLoadingModules } = useQuery({
-    queryKey: ["/api/quotes/modules", quote?.id],
+    queryKey: ["/api/quotes/modules", quoteQuery.data?.id],
     queryFn: async ({ queryKey }) => {
       // Tipo esplicito per evitare problemi con QueryKey
       const [_baseUrl, quoteId] = queryKey as [string, number | undefined];
@@ -183,7 +179,7 @@ export default function PublicQuotePage() {
       }
     },
     // Abilita la query solo quando il quoteId è disponibile
-    enabled: !!quote?.id,
+    enabled: !!quoteQuery.data?.id,
     // Performance optimization:
     staleTime: 2 * 60 * 1000, // 2 minuti prima di considerare i dati obsoleti
     gcTime: 5 * 60 * 1000, // 5 minuti in cache
@@ -251,8 +247,8 @@ export default function PublicQuotePage() {
   const handleSignQuote = async (signatureValue: string) => {
     //Check if quote is already signed
     if (
-      quote &&
-      (quote.status === "approved" || quote.status === "confermato")
+      quoteQuery.data &&
+      (quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato")
     ) {
       toast({
         title: "Errore",
@@ -301,7 +297,7 @@ export default function PublicQuotePage() {
     try {
       // Prima proviamo ad accettare le clausole
       try {
-        await apiRequest("POST", `/api/clauses/quote/${quote.id}/accept`, {});
+        await apiRequest("POST", `/api/clauses/quote/${quoteQuery.data?.id}/accept`, {});
         console.log("Clausole accettate con successo");
       } catch (error) {
         console.error("Errore nell'accettazione delle clausole:", error);
@@ -330,34 +326,34 @@ export default function PublicQuotePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title: quote.title,
-          description: quote.notes || "",
-          date: quote.eventDate,
-          location: quote.location,
-          clientId: quote.client.id, // Assuming client object has an id property. Adjust as needed
-          secondClientId: quote.secondClient?.id || null, //Handle optional second client
-          quoteId: quote.id,
+          title: quoteQuery.data?.title,
+          description: quoteQuery.data?.notes || "",
+          date: quoteQuery.data?.eventDate,
+          location: quoteQuery.data?.location,
+          clientId: quoteQuery.data?.client.id, // Assuming client object has an id property. Adjust as needed
+          secondClientId: quoteQuery.data?.secondClient?.id || null, //Handle optional second client
+          quoteId: quoteQuery.data?.id,
           status: "confirmed",
-          eventType: quote.eventType || "wedding",
-          categoryId: quote.category?.id, // Assuming category object has an id property. Adjust as needed.
-          leadSourceId: quote.leadSourceId,
-          ceremonyLocation: quote.ceremonyLocation,
-          ceremonyTime: quote.ceremonyTime,
+          eventType: quoteQuery.data?.eventType || "wedding",
+          categoryId: quoteQuery.data?.category?.id, // Assuming category object has an id property. Adjust as needed.
+          leadSourceId: quoteQuery.data?.leadSourceId,
+          ceremonyLocation: quoteQuery.data?.ceremonyLocation,
+          ceremonyTime: quoteQuery.data?.ceremonyTime,
         }),
       });
 
       // Salviamo i dati nel localStorage per la pagina di conferma
-      if (quote.client) {
+      if (quoteQuery.data?.client) {
         localStorage.setItem(
           "signedQuoteClient",
-          `${quote.client.firstName} ${quote.client.lastName}`.trim(),
+          `${quoteQuery.data.client.firstName} ${quoteQuery.data.client.lastName}`.trim(),
         );
-        if (quote.client.email) {
-          localStorage.setItem("signedQuoteEmail", quote.client.email);
+        if (quoteQuery.data.client.email) {
+          localStorage.setItem("signedQuoteEmail", quoteQuery.data.client.email);
         }
       }
-      if (quote.title) {
-        localStorage.setItem("signedQuoteTitle", quote.title);
+      if (quoteQuery.data?.title) {
+        localStorage.setItem("signedQuoteTitle", quoteQuery.data.title);
       }
 
       toast({
@@ -381,16 +377,16 @@ export default function PublicQuotePage() {
   };
 
   useEffect(() => {
-    if (error) {
+    if (quoteQuery.error) {
       toast({
         title: "Errore",
-        description: (error as Error).message,
+        description: (quoteQuery.error as Error).message,
         variant: "destructive",
       });
     }
-  }, [error, toast]);
+  }, [quoteQuery.error, toast]);
 
-  if (isLoading) {
+  if (quoteQuery.isLoading) {
     return (
       <PublicLayout>
         <div className="flex justify-center items-center min-h-[60vh]">
@@ -403,7 +399,7 @@ export default function PublicQuotePage() {
     );
   }
 
-  if (isExpired || !quote) {
+  if (isExpired || !quoteQuery.data) {
     return (
       <PublicLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -428,40 +424,40 @@ export default function PublicQuotePage() {
         {/* Intestazione preventivo */}
         <div className="text-center mb-10 bg-primary/5 py-8 px-4 rounded-lg shadow-sm border border-primary/10">
           <h1 className="text-3xl md:text-4xl font-playfair font-bold mb-3">
-            {quote.title}
+            {quoteQuery.data.title}
           </h1>
           <Badge
             variant={
-              quote.status === "confermato" || quote.status === "approved"
+              quoteQuery.data.status === "confermato" || quoteQuery.data.status === "approved"
                 ? "success"
-                : quote.status === "in attesa" || quote.status === "pending"
+                : quoteQuery.data.status === "in attesa" || quoteQuery.data.status === "pending"
                   ? "warning"
                   : "default"
             }
             className="mb-2 px-3 py-1 text-sm"
           >
-            {quote.status === "draft"
+            {quoteQuery.data.status === "draft"
               ? "Bozza"
-              : quote.status === "pending" || quote.status === "in attesa"
+              : quoteQuery.data.status === "pending" || quoteQuery.data.status === "in attesa"
                 ? "In attesa"
-                : quote.status === "approved" || quote.status === "confermato"
+                : quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato"
                   ? "Confermato"
-                  : quote.status === "rejected" || quote.status === "rifiutato"
+                  : quoteQuery.data.status === "rejected" || quoteQuery.data.status === "rifiutato"
                     ? "Rifiutato"
-                    : quote.status || "Preventivo"}
+                    : quoteQuery.data.status || "Preventivo"}
           </Badge>
           <p className="text-muted-foreground mt-2">
             Creato il{" "}
-            {quote.createdAt
-              ? format(new Date(quote.createdAt), "dd/MM/yyyy", { locale: it })
+            {quoteQuery.data.createdAt
+              ? format(new Date(quoteQuery.data.createdAt), "dd/MM/yyyy", { locale: it })
               : ""}
           </p>
         </div>
 
         {/* Dettagli cliente */}
         <ClientAddressDetails
-          client={quote.client}
-          secondClient={quote.secondClient}
+          client={quoteQuery.data.client}
+          secondClient={quoteQuery.data.secondClient}
           className="mb-6"
           showAddresses={true}
         />
@@ -478,7 +474,7 @@ export default function PublicQuotePage() {
                   Tipo Evento
                 </h4>
                 <p className="font-medium">
-                  {quote.category?.name || "Non specificato"}
+                  {quoteQuery.data.category?.name || "Non specificato"}
                 </p>
               </div>
               <div>
@@ -488,8 +484,8 @@ export default function PublicQuotePage() {
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
                   <p className="font-medium">
-                    {quote.eventDate
-                      ? format(new Date(quote.eventDate), "dd/MM/yyyy", {
+                    {quoteQuery.data.eventDate
+                      ? format(new Date(quoteQuery.data.eventDate), "dd/MM/yyyy", {
                           locale: it,
                         })
                       : "Non specificata"}
@@ -503,12 +499,12 @@ export default function PublicQuotePage() {
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
                   <p className="font-medium">
-                    {quote.isFullDay
+                    {quoteQuery.data.isFullDay
                       ? "Giornata intera"
-                      : (quote.eventTime
-                          ? quote.eventTime
+                      : (quoteQuery.data.eventTime
+                          ? quoteQuery.data.eventTime
                           : "Non specificato") +
-                        (quote.eventEndTime ? ` - ${quote.eventEndTime}` : "")}
+                        (quoteQuery.data.eventEndTime ? ` - ${quoteQuery.data.eventEndTime}` : "")}
                   </p>
                 </div>
               </div>
@@ -519,19 +515,19 @@ export default function PublicQuotePage() {
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
                   <p className="font-medium">
-                    {quote.location || "Non specificata"}
+                    {quoteQuery.data.location || "Non specificata"}
                   </p>
                 </div>
               </div>
 
               {/* Utilizziamo il componente CeremonyDetails per una visualizzazione più elegante */}
-              {(quote.ceremonyLocation || quote.ceremonyTime) && (
+              {(quoteQuery.data.ceremonyLocation || quoteQuery.data.ceremonyTime) && (
                 <div className="col-span-1 md:col-span-2">
                   <CeremonyDetails
                     readOnly={true}
                     ceremony={{
-                      location: quote.ceremonyLocation,
-                      time: quote.ceremonyTime,
+                      location: quoteQuery.data.ceremonyLocation,
+                      time: quoteQuery.data.ceremonyTime,
                     }}
                     className="bg-muted/30 p-3 rounded-md border border-muted mt-2"
                   />
@@ -542,7 +538,7 @@ export default function PublicQuotePage() {
         </Card>
 
         {/* Sezione Pagamenti - visibile solo se il preventivo è stato firmato */}
-        {(quote.status === "approved" || quote.status === "confermato") && (
+        {(quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato") && (
           <Card className="mb-8 border-primary/20">
             <CardHeader className="bg-primary/5 border-b">
               <CardTitle className="flex items-center">
@@ -552,15 +548,15 @@ export default function PublicQuotePage() {
             </CardHeader>
             <CardContent className="p-6">
               <FinancialSummaryWrapper
-                quoteId={quote.id}
-                quoteTotal={quote.total || 0}
+                quoteId={quoteQuery.data.id}
+                quoteTotal={quoteQuery.data.total || 0}
                 readOnly={true}
                 clientName={
-                  quote.client?.firstName && quote.client?.lastName
-                    ? `${quote.client.firstName} ${quote.client.lastName}`
+                  quoteQuery.data.client?.firstName && quoteQuery.data.client?.lastName
+                    ? `${quoteQuery.data.client.firstName} ${quoteQuery.data.client.lastName}`
                     : undefined
                 }
-                quoteStatus={quote.status || ''}
+                quoteStatus={quoteQuery.data.status || ''}
               />
             </CardContent>
           </Card>
@@ -575,9 +571,9 @@ export default function PublicQuotePage() {
                   <FileText className="h-5 w-5 mr-2 text-primary" />
                   {modules.length > 1 ? "Moduli" : "Modulo"}
                 </div>
-                {quote.modulesSum > 0 && (
+                {quoteQuery.data.modulesSum > 0 && (
                   <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 font-medium border-green-200">
-                    Totale Moduli: {(quote.modulesSum / 100).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}
+                    Totale Moduli: {(quoteQuery.data.modulesSum / 100).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}
                   </Badge>
                 )}
               </CardTitle>
@@ -682,16 +678,16 @@ export default function PublicQuotePage() {
                       key={module.id}
                       module={module}
                       onSelectionChange={
-                        quote &&
-                        (quote.status === "approved" ||
-                          quote.status === "confermato")
+                        quoteQuery.data &&
+                        (quoteQuery.data.status === "approved" ||
+                          quoteQuery.data.status === "confermato")
                           ? undefined
                           : handleModuleItemSelection
                       }
                       disabled={
-                        quote &&
-                        (quote.status === "approved" ||
-                          quote.status === "confermato")
+                        quoteQuery.data &&
+                        (quoteQuery.data.status === "approved" ||
+                          quoteQuery.data.status === "confermato")
                       }
                     />
                   ))}
@@ -710,8 +706,8 @@ export default function PublicQuotePage() {
           </CardHeader>
           <CardContent className="p-6">
             <ContractClauses 
-              quoteId={quote.id} 
-              readOnly={quote.status === "approved" || quote.status === "confermato"}
+              quoteId={quoteQuery.data.id} 
+              readOnly={quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato"}
               onClausesAccepted={(accepted) => {
                 setAllClausesAccepted(accepted);
               }}
@@ -727,12 +723,14 @@ export default function PublicQuotePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <SocialMediaShowcase settings={settings} variant="default" />
+            {quoteQuery.data?.settings && (
+              <SocialMediaShowcase settings={quoteQuery.data.settings} variant="default" />
+            )}
           </CardContent>
         </Card>
 
         {/* Note */}
-        {quote.notes && (
+        {quoteQuery.data.notes && (
           <Card className="mt-10 mb-6 overflow-hidden shadow-md">
             <CardHeader className="bg-primary text-primary-foreground border-b">
               <CardTitle className="text-center font-playfair">
@@ -759,7 +757,7 @@ export default function PublicQuotePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            {quote.status === "approved" || quote.status === "confermato" ? (
+            {quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato" ? (
               <div className="text-center space-y-4">
                 <div className="max-w-sm mx-auto">
                   <div className="p-4 rounded-lg bg-green-50 border border-green-200 mb-4">
@@ -772,12 +770,12 @@ export default function PublicQuotePage() {
                   <div className="border-2 border-dashed border-primary/30 rounded-lg p-6 bg-primary/5">
                     <p className="text-sm text-muted-foreground mb-3 text-center">Firmato da:</p>
                     <p className="text-center text-3xl text-primary font-handwriting-great-vibes">
-                      {quote.signature || 
-                        (quote.client ? `${quote.client.firstName} ${quote.client.lastName}`.trim() : "Nome non disponibile")}
+                      {quoteQuery.data.signature || 
+                        (quoteQuery.data.client ? `${quoteQuery.data.client.firstName} ${quoteQuery.data.client.lastName}`.trim() : "Nome non disponibile")}
                     </p>
-                    {quote.signedAt && (
+                    {quoteQuery.data.signedAt && (
                       <p className="text-xs text-muted-foreground mt-3 text-center">
-                        in data {format(new Date(quote.signedAt), "d MMMM yyyy", { locale: it })}
+                        in data {format(new Date(quoteQuery.data.signedAt), "d MMMM yyyy", { locale: it })}
                       </p>
                     )}
                   </div>

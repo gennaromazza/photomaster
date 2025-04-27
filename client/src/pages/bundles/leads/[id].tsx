@@ -220,6 +220,7 @@ const BundleLeadDetailPage: React.FC = () => {
           
           <div className="flex gap-2">
             {bundleLead.quoteId ? (
+              // Se esiste quoteId, mostra il pulsante per vedere il preventivo
               <Button
                 onClick={() => navigate(`/quotes/detail/${bundleLead.quoteId}`)}
                 className="flex items-center"
@@ -227,7 +228,21 @@ const BundleLeadDetailPage: React.FC = () => {
                 <FileText className="h-4 w-4 mr-2" />
                 Vai al preventivo
               </Button>
+            ) : bundleLead.status === "converted" ? (
+              // Se è convertito ma non c'è quoteId, mostra un messaggio informativo
+              <Button
+                variant="outline"
+                onClick={() => toast({
+                  title: "Richiesta già in elaborazione", 
+                  description: "La richiesta è già stata convertita ma il preventivo non è ancora disponibile"
+                })}
+                className="flex items-center"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Elaborazione in corso
+              </Button>
             ) : (
+              // Se non è convertito, mostra il pulsante di conversione
               <Button
                 onClick={() => convertToQuoteMutation.mutate()}
                 disabled={convertToQuoteMutation.isPending}

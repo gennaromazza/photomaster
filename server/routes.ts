@@ -21,6 +21,7 @@ import financeRouter from "./routes/finance";
 import galleryRouter from "./routes/gallery";
 import searchRouter from "./routes/search";
 import selectionRouter from "./routes/selection";
+import unifiedGallerySelectionsRouter from "./routes/unified-gallery-selections"; // Router unificato per gallerie e selezioni
 import clausesRouter from "./routes/clauses";
 import notificationsRouter from "./routes/notifications";
 import collaboratorsRouter from "./routes/collaborators-routes";
@@ -3470,6 +3471,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/gallery", galleryRouter);
   app.use("/api/search", searchRouter);
   app.use("/api/selection", selectionRouter);
+  app.use("/api/unified-selections", unifiedGallerySelectionsRouter); // Nuovo router unificato per selezioni
   app.use("/api/clauses", clausesRouter);
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/eventi", eventiRouter); // Italian endpoint (legacy)

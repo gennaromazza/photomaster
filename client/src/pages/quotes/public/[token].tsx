@@ -71,11 +71,11 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => {
         position={watermarkPosition as "center" | "top" | "bottom"}
         color="var(--primary)"
       />
-      
+
       {/* Aggiungiamo il componente social nella modalità floating sul lato destro della pagina */}
-      <SocialMediaShowcase 
-        settings={settings} 
-        variant="floating" 
+      <SocialMediaShowcase
+        settings={settings}
+        variant="floating"
         showFollowText={false}
       />
 
@@ -101,12 +101,12 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => {
         <div className="container px-4 text-center">
           <div className="flex flex-col items-center justify-center space-y-5">
             {/* Aggiungiamo il componente SocialMediaShowcase con variante footer */}
-            <SocialMediaShowcase 
-              settings={settings} 
-              variant="footer" 
-              title="Seguici sui social" 
+            <SocialMediaShowcase
+              settings={settings}
+              variant="footer"
+              title="Seguici sui social"
             />
-            
+
             <div className="flex flex-col items-center space-y-2">
               <p className="text-sm md:text-base text-muted-foreground">
                 Preventivo generato da{" "}
@@ -177,7 +177,7 @@ export default function PublicQuotePage() {
     refetchIntervalInBackground: false,
   });
 
-  // Carica i moduli del preventivo 
+  // Carica i moduli del preventivo
   const { data: modules = [], isLoading: isLoadingModules } = useQuery({
     queryKey: ["/api/quotes/modules", quoteQuery.data?.id],
     queryFn: async ({ queryKey }) => {
@@ -199,7 +199,7 @@ export default function PublicQuotePage() {
     // Performance optimization:
     staleTime: 2 * 60 * 1000, // 2 minuti prima di considerare i dati obsoleti
     gcTime: 5 * 60 * 1000, // 5 minuti in cache
-    // Aggiornamento automatico ogni 30 secondi invece di 15 
+    // Aggiornamento automatico ogni 30 secondi invece di 15
     refetchInterval: 30 * 1000,
     // Disabilitiamo il refetch in background per risparmiare risorse
     refetchIntervalInBackground: false,
@@ -207,64 +207,67 @@ export default function PublicQuotePage() {
 
   // Funzione per gestire la selezione degli elementi nei moduli variabili
   // Funzione memorizzata con useMemo per evitare ricreazioni inutili
-  const handleModuleItemSelection = useMemo(() => (
-    moduleId: number,
-    selectedItems: number[],
-  ) => {
-    setSelectedModuleItems((prev) => ({
-      ...prev,
-      [moduleId]: selectedItems,
-    }));
-  }, []);
+  const handleModuleItemSelection = useMemo(
+    () => (moduleId: number, selectedItems: number[]) => {
+      setSelectedModuleItems((prev) => ({
+        ...prev,
+        [moduleId]: selectedItems,
+      }));
+    },
+    [],
+  );
 
   // Funzione di validazione per i moduli variabili - usando useMemo per evitare ricalcoli inutili
-  const isSelectionValidForAllModules = useMemo(() => (): {
-    isValid: boolean;
-    message?: string;
-  } => {
-    if (!modules?.length) return { isValid: true };
+  const isSelectionValidForAllModules = useMemo(
+    () =>
+      (): {
+        isValid: boolean;
+        message?: string;
+      } => {
+        if (!modules?.length) return { isValid: true };
 
-    // Esamina tutti i moduli variabili
-    for (const module of modules) {
-      if (module.type !== "variable") continue;
+        // Esamina tutti i moduli variabili
+        for (const module of modules) {
+          if (module.type !== "variable") continue;
 
-      // Ottieni gli item selezionati per questo modulo
-      const selectedItems = selectedModuleItems[module.id] || [];
+          // Ottieni gli item selezionati per questo modulo
+          const selectedItems = selectedModuleItems[module.id] || [];
 
-      // Verifica i requisiti minimi
-      if (
-        module.minSelectCount &&
-        selectedItems.length < module.minSelectCount
-      ) {
-        return {
-          isValid: false,
-          message: `Nel modulo "${module.name}" devi selezionare almeno ${module.minSelectCount} ${module.minSelectCount === 1 ? "elemento" : "elementi"}.`,
-        };
-      }
+          // Verifica i requisiti minimi
+          if (
+            module.minSelectCount &&
+            selectedItems.length < module.minSelectCount
+          ) {
+            return {
+              isValid: false,
+              message: `Nel modulo "${module.name}" devi selezionare almeno ${module.minSelectCount} ${module.minSelectCount === 1 ? "elemento" : "elementi"}.`,
+            };
+          }
 
-      // Verifica i requisiti massimi
-      if (
-        module.maxSelectCount &&
-        selectedItems.length > module.maxSelectCount
-      ) {
-        return {
-          isValid: false,
-          message: `Nel modulo "${module.name}" puoi selezionare al massimo ${module.maxSelectCount} ${module.maxSelectCount === 1 ? "elemento" : "elementi"}.`,
-        };
-      }
-    }
+          // Verifica i requisiti massimi
+          if (
+            module.maxSelectCount &&
+            selectedItems.length > module.maxSelectCount
+          ) {
+            return {
+              isValid: false,
+              message: `Nel modulo "${module.name}" puoi selezionare al massimo ${module.maxSelectCount} ${module.maxSelectCount === 1 ? "elemento" : "elementi"}.`,
+            };
+          }
+        }
 
-    return { isValid: true };
-  }, [modules, selectedModuleItems]);
-
-
+        return { isValid: true };
+      },
+    [modules, selectedModuleItems],
+  );
 
   // Gestione firma e conferma preventivo - implementato come funzione per gestire la firma
   const handleSignQuote = async (signatureValue: string) => {
     //Check if quote is already signed
     if (
       quoteQuery.data &&
-      (quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato")
+      (quoteQuery.data.status === "approved" ||
+        quoteQuery.data.status === "confermato")
     ) {
       toast({
         title: "Errore",
@@ -287,7 +290,8 @@ export default function PublicQuotePage() {
     if (!allClausesAccepted) {
       toast({
         title: "Clausole non accettate",
-        description: "Devi accettare tutte le clausole obbligatorie prima di firmare",
+        description:
+          "Devi accettare tutte le clausole obbligatorie prima di firmare",
         variant: "destructive",
       });
       return;
@@ -313,7 +317,11 @@ export default function PublicQuotePage() {
     try {
       // Prima proviamo ad accettare le clausole
       try {
-        await apiRequest("POST", `/api/clauses/quote/${quoteQuery.data?.id}/accept`, {});
+        await apiRequest(
+          "POST",
+          `/api/clauses/quote/${quoteQuery.data?.id}/accept`,
+          {},
+        );
         console.log("Clausole accettate con successo");
       } catch (error) {
         console.error("Errore nell'accettazione delle clausole:", error);
@@ -321,12 +329,16 @@ export default function PublicQuotePage() {
       }
 
       // Poi procediamo con la firma del preventivo
-      const response = await apiRequest("POST", `/api/quotes/share/${token}/sign`, {
-        signature: signatureValue.trim(),
-        status: "approved",
-        signedAt: new Date().toISOString(),
-        selectedModuleItems: selectedModuleItems,
-      });
+      const response = await apiRequest(
+        "POST",
+        `/api/quotes/share/${token}/sign`,
+        {
+          signature: signatureValue.trim(),
+          status: "approved",
+          signedAt: new Date().toISOString(),
+          selectedModuleItems: selectedModuleItems,
+        },
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -365,7 +377,10 @@ export default function PublicQuotePage() {
           `${quoteQuery.data.client.firstName} ${quoteQuery.data.client.lastName}`.trim(),
         );
         if (quoteQuery.data.client.email) {
-          localStorage.setItem("signedQuoteEmail", quoteQuery.data.client.email);
+          localStorage.setItem(
+            "signedQuoteEmail",
+            quoteQuery.data.client.email,
+          );
         }
       }
       if (quoteQuery.data?.title) {
@@ -444,9 +459,11 @@ export default function PublicQuotePage() {
           </h1>
           <Badge
             variant={
-              quoteQuery.data.status === "confermato" || quoteQuery.data.status === "approved"
+              quoteQuery.data.status === "confermato" ||
+              quoteQuery.data.status === "approved"
                 ? "success"
-                : quoteQuery.data.status === "in attesa" || quoteQuery.data.status === "pending"
+                : quoteQuery.data.status === "in attesa" ||
+                    quoteQuery.data.status === "pending"
                   ? "warning"
                   : "default"
             }
@@ -454,18 +471,23 @@ export default function PublicQuotePage() {
           >
             {quoteQuery.data.status === "draft"
               ? "Bozza"
-              : quoteQuery.data.status === "pending" || quoteQuery.data.status === "in attesa"
+              : quoteQuery.data.status === "pending" ||
+                  quoteQuery.data.status === "in attesa"
                 ? "In attesa"
-                : quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato"
+                : quoteQuery.data.status === "approved" ||
+                    quoteQuery.data.status === "confermato"
                   ? "Confermato"
-                  : quoteQuery.data.status === "rejected" || quoteQuery.data.status === "rifiutato"
+                  : quoteQuery.data.status === "rejected" ||
+                      quoteQuery.data.status === "rifiutato"
                     ? "Rifiutato"
                     : quoteQuery.data.status || "Preventivo"}
           </Badge>
           <p className="text-muted-foreground mt-2">
             Creato il{" "}
             {quoteQuery.data.createdAt
-              ? format(new Date(quoteQuery.data.createdAt), "dd/MM/yyyy", { locale: it })
+              ? format(new Date(quoteQuery.data.createdAt), "dd/MM/yyyy", {
+                  locale: it,
+                })
               : ""}
           </p>
         </div>
@@ -501,9 +523,13 @@ export default function PublicQuotePage() {
                   <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
                   <p className="font-medium">
                     {quoteQuery.data.eventDate
-                      ? format(new Date(quoteQuery.data.eventDate), "dd/MM/yyyy", {
-                          locale: it,
-                        })
+                      ? format(
+                          new Date(quoteQuery.data.eventDate),
+                          "dd/MM/yyyy",
+                          {
+                            locale: it,
+                          },
+                        )
                       : "Non specificata"}
                   </p>
                 </div>
@@ -520,7 +546,9 @@ export default function PublicQuotePage() {
                       : (quoteQuery.data.eventTime
                           ? quoteQuery.data.eventTime
                           : "Non specificato") +
-                        (quoteQuery.data.eventEndTime ? ` - ${quoteQuery.data.eventEndTime}` : "")}
+                        (quoteQuery.data.eventEndTime
+                          ? ` - ${quoteQuery.data.eventEndTime}`
+                          : "")}
                   </p>
                 </div>
               </div>
@@ -537,7 +565,8 @@ export default function PublicQuotePage() {
               </div>
 
               {/* Utilizziamo il componente CeremonyDetails per una visualizzazione più elegante */}
-              {(quoteQuery.data.ceremonyLocation || quoteQuery.data.ceremonyTime) && (
+              {(quoteQuery.data.ceremonyLocation ||
+                quoteQuery.data.ceremonyTime) && (
                 <div className="col-span-1 md:col-span-2">
                   <CeremonyDetails
                     readOnly={true}
@@ -554,7 +583,8 @@ export default function PublicQuotePage() {
         </Card>
 
         {/* Sezione Pagamenti - visibile solo se il preventivo è stato firmato */}
-        {(quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato") && (
+        {(quoteQuery.data.status === "approved" ||
+          quoteQuery.data.status === "confermato") && (
           <Card className="mb-8 border-primary/20">
             <CardHeader className="bg-primary/5 border-b">
               <CardTitle className="flex items-center">
@@ -568,11 +598,12 @@ export default function PublicQuotePage() {
                 quoteTotal={quoteQuery.data.total || 0}
                 readOnly={true}
                 clientName={
-                  quoteQuery.data.client?.firstName && quoteQuery.data.client?.lastName
+                  quoteQuery.data.client?.firstName &&
+                  quoteQuery.data.client?.lastName
                     ? `${quoteQuery.data.client.firstName} ${quoteQuery.data.client.lastName}`
                     : undefined
                 }
-                quoteStatus={quoteQuery.data.status || ''}
+                quoteStatus={quoteQuery.data.status || ""}
               />
             </CardContent>
           </Card>
@@ -588,8 +619,15 @@ export default function PublicQuotePage() {
                   {modules.length > 1 ? "Moduli" : "Modulo"}
                 </div>
                 {quoteQuery.data.modulesSum > 0 && (
-                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 font-medium border-green-200">
-                    Totale Moduli: {(quoteQuery.data.modulesSum / 100).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}
+                  <Badge
+                    variant="outline"
+                    className="ml-2 bg-green-50 text-green-700 font-medium border-green-200"
+                  >
+                    Totale Moduli:{" "}
+                    {(quoteQuery.data.modulesSum / 100).toLocaleString(
+                      "it-IT",
+                      { style: "currency", currency: "EUR" },
+                    )}
                   </Badge>
                 )}
               </CardTitle>
@@ -721,27 +759,16 @@ export default function PublicQuotePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <ContractClauses 
-              quoteId={quoteQuery.data.id} 
-              readOnly={quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato"}
+            <ContractClauses
+              quoteId={quoteQuery.data.id}
+              readOnly={
+                quoteQuery.data.status === "approved" ||
+                quoteQuery.data.status === "confermato"
+              }
               onClausesAccepted={(accepted) => {
                 setAllClausesAccepted(accepted);
               }}
             />
-          </CardContent>
-        </Card>
-
-        {/* Social Media Showcase */}
-        <Card className="mb-6 overflow-hidden shadow-md">
-          <CardHeader className="bg-primary text-primary-foreground border-b">
-            <CardTitle className="text-center font-playfair">
-              Seguici sui Social
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            {quoteQuery.data?.settings && (
-              <SocialMediaShowcase settings={quoteQuery.data.settings} variant="default" />
-            )}
           </CardContent>
         </Card>
 
@@ -773,7 +800,8 @@ export default function PublicQuotePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            {quoteQuery.data.status === "approved" || quoteQuery.data.status === "confermato" ? (
+            {quoteQuery.data.status === "approved" ||
+            quoteQuery.data.status === "confermato" ? (
               <div className="text-center space-y-4">
                 <div className="max-w-sm mx-auto">
                   <div className="p-4 rounded-lg bg-green-50 border border-green-200 mb-4">
@@ -784,23 +812,35 @@ export default function PublicQuotePage() {
                   </div>
 
                   <div className="border-2 border-dashed border-primary/30 rounded-lg p-6 bg-primary/5">
-                    <p className="text-sm text-muted-foreground mb-3 text-center">Firmato da:</p>
+                    <p className="text-sm text-muted-foreground mb-3 text-center">
+                      Firmato da:
+                    </p>
                     <p className="text-center text-3xl text-primary font-handwriting-great-vibes">
-                      {quoteQuery.data.signature || 
-                        (quoteQuery.data.client ? `${quoteQuery.data.client.firstName} ${quoteQuery.data.client.lastName}`.trim() : "Nome non disponibile")}
+                      {quoteQuery.data.signature ||
+                        (quoteQuery.data.client
+                          ? `${quoteQuery.data.client.firstName} ${quoteQuery.data.client.lastName}`.trim()
+                          : "Nome non disponibile")}
                     </p>
                     {quoteQuery.data.signedAt && (
                       <p className="text-xs text-muted-foreground mt-3 text-center">
-                        in data {format(new Date(quoteQuery.data.signedAt), "d MMMM yyyy", { locale: it })}
+                        in data{" "}
+                        {format(
+                          new Date(quoteQuery.data.signedAt),
+                          "d MMMM yyyy",
+                          { locale: it },
+                        )}
                       </p>
                     )}
                   </div>
 
                   <div className="mt-8 p-4 rounded-md bg-muted text-center">
                     <p className="text-sm">
-                      Questo preventivo è stato approvato e non può essere modificato.
+                      Questo preventivo è stato approvato e non può essere
+                      modificato.
                       <br />
-                      <span className="text-primary font-medium">Grazie per la vostra fiducia!</span>
+                      <span className="text-primary font-medium">
+                        Grazie per la vostra fiducia!
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -809,11 +849,12 @@ export default function PublicQuotePage() {
               <div className="text-center space-y-4">
                 <p className="text-muted-foreground">
                   Firmando questo documento, confermi di accettare il preventivo
-                  e tutti i servizi/prodotti inclusi, insieme a tutte le clausole contrattuali.
+                  e tutti i servizi/prodotti inclusi, insieme a tutte le
+                  clausole contrattuali.
                 </p>
 
                 <div className="max-w-sm mx-auto">
-                  <SignaturePad 
+                  <SignaturePad
                     onSignatureSubmit={handleSignQuote}
                     isSubmitting={isSubmitting}
                   />
@@ -822,7 +863,6 @@ export default function PublicQuotePage() {
             )}
           </CardContent>
         </Card>
-
       </div>
     </PublicLayout>
   );

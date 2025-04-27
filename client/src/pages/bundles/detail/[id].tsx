@@ -728,7 +728,7 @@ const MinimalTemplate: React.FC<{
               &copy; {new Date().getFullYear()} {settings.companyName}. Tutti i diritti riservati.
             </p>
             
-            <div className="flex space-x-6">
+            <div className="flex items-center space-x-6">
               <a 
                 href={getEmailUrl(settings.companyEmail)} 
                 target="_blank" 
@@ -749,19 +749,12 @@ const MinimalTemplate: React.FC<{
                 </a>
               )}
               
-              <a 
-                href="#" 
-                className="text-gray-400 hover:text-primary transition-colors"
-              >
-                <Instagram className="h-4 w-4" />
-              </a>
-              
-              <a 
-                href="#" 
-                className="text-gray-400 hover:text-primary transition-colors"
-              >
-                <Facebook className="h-4 w-4" />
-              </a>
+              {/* Utilizzo del componente SocialMediaShowcase con variante minimal */}
+              <SocialMediaShowcase 
+                settings={settings} 
+                variant="minimal" 
+                showFollowText={false} 
+              />
             </div>
           </div>
         </div>

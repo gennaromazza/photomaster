@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Loader2, 
   AlertTriangle, 
-  Calendar, 
+  Calendar as LucideCalendar, 
   FileCheck, 
   MoreHorizontal, 
   PlayCircle, 
@@ -15,7 +15,8 @@ import {
   Plus, 
   ArrowRight,
   AlertCircle,
-  Bell
+  Bell,
+  CalendarIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,19 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 interface MontaggioCollaboratoreListProps {
   collaboratoreId: number;
@@ -332,6 +346,20 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
       completaForm.setValue('saldo', Number(montaggio.acconto));
     }
   }, [completaForm]);
+  
+  // Handler per aprire il dialog aggiungi montaggio
+  const handleAggiungiMontaggio = useCallback(() => {
+    setIsAggiungiDialogOpen(true);
+    // Reset del form
+    aggiungiForm.reset({
+      tipoMontaggio: "video",
+      dataConsegnaPrevista: addDays(new Date(), 14),
+      priorita: 5,
+      accontoImporto: 100,
+      note: "",
+      eventoId: undefined,
+    });
+  }, [aggiungiForm]);
 
   // Handler per inviare il form di completamento
   const onSubmitCompletaMontaggio = useCallback((values: CompletaMontaggioFormValues) => {
@@ -404,11 +432,6 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
       });
     },
   });
-  
-  // Handler per aprire il modal di aggiunta montaggio
-  const handleAggiungiMontaggio = useCallback(() => {
-    setIsAggiungiDialogOpen(true);
-  }, []);
   
   // Handler per preselezionare un evento nel form
   const handleSelectEvento = useCallback((evento: any) => {

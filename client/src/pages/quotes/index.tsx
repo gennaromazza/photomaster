@@ -16,10 +16,12 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { RiEyeLine, RiEdit2Line, RiDeleteBinLine } from "react-icons/ri";
-import { MoreVertical, Clock, Calendar } from "lucide-react";
+import { MoreVertical, Clock, Calendar, Package } from "lucide-react";
 import { useState as useState2 } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogDescription, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BundleLeadsContent from "@/components/quotes/bundle-leads-content";
 
 
 
@@ -105,12 +107,14 @@ const QuotesPage = () => {
     }
   };
 
+  const [activeTab, setActiveTab] = useState<string>("quotes");
+  
   return (
     <div className="lg:px-8 px-4 mt-6 lg:mt-8">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-display font-semibold text-gray-900">Preventivi</h1>
-          <p className="mt-1 text-gray-500">Gestisci i preventivi per i clienti</p>
+          <p className="mt-1 text-gray-500">Gestisci i preventivi e le richieste dai pacchetti</p>
         </div>
         <div className="mt-4 lg:mt-0 flex space-x-3">
           <Link href="/quotes/new">
@@ -122,11 +126,24 @@ const QuotesPage = () => {
         </div>
       </div>
 
-      <Card className="mb-8">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-medium">Tutti i Preventivi</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Tabs defaultValue="quotes" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="quotes" className="flex items-center gap-2">
+            <i className="ri-file-list-3-line"></i>
+            Preventivi
+          </TabsTrigger>
+          <TabsTrigger value="bundle-leads" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Richieste Pacchetti
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="quotes">
+          <Card className="mb-8">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-medium">Tutti i Preventivi</CardTitle>
+            </CardHeader>
+            <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <Input
               placeholder="Cerca preventivi..."
@@ -245,6 +262,20 @@ const QuotesPage = () => {
           )}
         </CardContent>
       </Card>
+      </TabsContent>
+      
+      <TabsContent value="bundle-leads">
+        <Card className="mb-8">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium">Richieste di Preventivo dai Pacchetti</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BundleLeadsContent />
+          </CardContent>
+        </Card>
+      </TabsContent>
+      </Tabs>
+      
       <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -255,7 +286,7 @@ const QuotesPage = () => {
           </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setIsModalOpen(false)}>Annulla</AlertDialogAction>
-            <AlertDialogAction color="red" onClick={handleDeleteQuote}>Elimina</AlertDialogAction>
+            <AlertDialogAction className="bg-red-500 hover:bg-red-600 text-white" onClick={handleDeleteQuote}>Elimina</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

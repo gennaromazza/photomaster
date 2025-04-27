@@ -337,6 +337,34 @@ export default function QuoteDetailPage() {
     },
   });
 
+  // Mutation per la rigenerazione delle clausole contrattuali
+  const regenerateClausesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest(
+        "POST",
+        `/api/clauses/quote/${id}/associate`
+      );
+      if (!response.ok) {
+        throw new Error("Errore nella rigenerazione delle clausole");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Clausole rigenerate",
+        description: "Le clausole contrattuali sono state rigenerate con successo.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/clauses/quote/${id}`] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
   // Funzione per copiare il link negli appunti
   const copyLinkToClipboard = async () => {
     try {
@@ -694,6 +722,23 @@ export default function QuoteDetailPage() {
                 }}>
                   <Download className="mr-2 h-4 w-4" />
                   Esporta PDF
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => regenerateClausesMutation.mutate()}
+                  disabled={regenerateClausesMutation.isPending}
+                >
+                  {regenerateClausesMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generazione in corso...
+                    </>
+                  ) : (
+                    <>
+                      <FileSignature className="mr-2 h-4 w-4" />
+                      Rigenera clausole
+                    </>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <AlertDialog>

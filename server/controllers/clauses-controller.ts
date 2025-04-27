@@ -216,6 +216,7 @@ export class ClausesController {
   
   /**
    * Ottiene le clausole associate a un preventivo
+   * Se non ci sono clausole associate, le associa automaticamente in base a categoria e tipo evento
    */
   static async getQuoteClauses(req: Request, res: Response) {
     try {
@@ -240,6 +241,79 @@ export class ClausesController {
           clause: true
         }
       });
+      
+      // Se non ci sono clausole associate, associamo automaticamente le clausole disponibili
+      if (quoteClausesList.length === 0) {
+        console.log(`Nessuna clausola trovata per il preventivo ${quoteId}, procedendo con associazione automatica`);
+        
+        // Costruiamo condizioni per trovare clausole appropriate
+        const conditions: SQL[] = [];
+        
+        // Clausole per tutte le categorie e tipi di evento (generiche)
+        conditions.push(
+          sql`${isNull(contractClauses.categoryId)} AND ${isNull(contractClauses.eventType)}`
+        );
+        
+        // Clausole specifiche per il tipo di evento del preventivo
+        if (quote.eventType) {
+          conditions.push(
+            sql`${isNull(contractClauses.categoryId)} AND ${eq(contractClauses.eventType, quote.eventType)}`
+          );
+        }
+        
+        // Clausole specifiche per la categoria del preventivo
+        if (quote.categoryId) {
+          conditions.push(
+            sql`${eq(contractClauses.categoryId, quote.categoryId)} AND ${isNull(contractClauses.eventType)}`
+          );
+          
+          // Clausole specifiche per categoria E tipo di evento
+          if (quote.eventType) {
+            conditions.push(
+              sql`${eq(contractClauses.categoryId, quote.categoryId)} AND ${eq(contractClauses.eventType, quote.eventType)}`
+            );
+          }
+        }
+        
+        // Recupera clausole attive che corrispondono ai criteri
+        const availableClauses = await db.query.contractClauses.findMany({
+          where: and(
+            eq(contractClauses.isActive, true),
+            sql`(${sql.join(conditions, sql` OR `)})`
+          ),
+          orderBy: [
+            { order: "asc" }
+          ]
+        });
+        
+        console.log(`Trovate ${availableClauses.length} clausole appropriate per associazione automatica`);
+        
+        if (availableClauses.length > 0) {
+          // Crea le nuove associazioni
+          const newAssociations = availableClauses.map(clause => ({
+            quoteId,
+            clauseId: clause.id,
+            isAccepted: false,
+            createdAt: new Date()
+          }));
+          
+          const result = await db.insert(quoteClauses)
+            .values(newAssociations)
+            .returning();
+          
+          console.log(`Associate automaticamente ${result.length} clausole al preventivo ${quoteId}`);
+          
+          // Recupera le clausole appena associate con le relative informazioni
+          const updatedClausesList = await db.query.quoteClauses.findMany({
+            where: eq(quoteClauses.quoteId, quoteId),
+            with: {
+              clause: true
+            }
+          });
+          
+          return res.json(updatedClausesList);
+        }
+      }
       
       return res.json(quoteClausesList);
     } catch (error) {

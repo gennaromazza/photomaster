@@ -120,13 +120,7 @@ export default function MobileSidebar({
               onClick={onClose}
             />
             
-            <NavItem
-              href="/bundles/leads"
-              icon={<BarChart2 className="h-4 w-4" />}
-              label="Richieste Lead"
-              isActive={isActive("/bundles/leads")}
-              onClick={onClose}
-            />
+            {/* Richieste lead integrate nella pagina preventivi */}
 
             <NavItem
               href="/tasks"

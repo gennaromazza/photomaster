@@ -122,12 +122,7 @@ export default function Sidebar() {
           isActive={isActive("/bundles")}
         />
         
-        <SidebarLink
-          href="/bundles/leads"
-          icon={<BarChart2 className="h-4 w-4" />}
-          text="Richieste Lead"
-          isActive={isActive("/bundles/leads")}
-        />
+        {/* Richieste lead integrate nella pagina preventivi */}
         
         <SidebarLink
           href="/tasks"

@@ -98,15 +98,25 @@ const clientRequestsQuote = async () => {
   try {
     // Invia la richiesta di preventivo
     console.log('\nInvio richiesta al server...');
-    const response = await axios.post(`${BASE_URL}/api/bundle-leads`, clientData, { headers: defaultHeaders });
+    const response = await axios.post(`${BASE_URL}/api/bundle-leads/create-quote`, clientData, { headers: defaultHeaders });
     
     console.log('✅ Richiesta di preventivo inviata con successo!');
-    console.log(`ID richiesta: ${response.data.id}`);
+    
+    // La risposta è in formato { success: true, quote: { ... } }
+    const bundleLead = response.data.quote || response.data;
+    
+    console.log(`ID richiesta: ${bundleLead.id}`);
+    console.log(`Status: ${bundleLead.status}`);
+    
+    // Verifica se è già stato creato un preventivo automaticamente
+    if (bundleLead.quoteId) {
+      console.log(`✅ Preventivo creato automaticamente con ID: ${bundleLead.quoteId}`);
+    }
     
     // Salva la risposta per riferimento
     saveResponse('1-client-request', response.data);
     
-    return response.data;
+    return bundleLead;
   } catch (error) {
     console.error('❌ Errore nell\'invio della richiesta di preventivo:');
     console.error(error.response?.data || error.message);
@@ -188,7 +198,7 @@ const photographerConvertsRequest = async (requestData) => {
   console.log(`Conversione della richiesta ID: ${requestData.id} in preventivo...`);
   
   try {
-    const response = await axios.post(`${BASE_URL}/api/bundle-leads/${requestData.id}/convert`, {}, { headers: defaultHeaders });
+    const response = await axios.post(`${BASE_URL}/api/bundle-leads/convert-to-quote/${requestData.id}`, {}, { headers: defaultHeaders });
     console.log('✅ Richiesta convertita in preventivo con successo!');
     
     // Salva dettagli della conversione per riferimento

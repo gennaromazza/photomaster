@@ -327,13 +327,21 @@ const createFixedModuleFromBundle = async (bundle: any, quoteId: number) => {
     }
     
     // Calcola il subtotal e total del modulo
-    const subtotal = moduleItems.reduce((sum: number, item: any) => sum + (parseFloat(item.price) * item.quantity), 0);
+    // Moltiplichiamo per 100 per convertire da euro a centesimi (per consistenza col DB)
+    const subtotal = moduleItems.reduce((sum: number, item: any) => {
+      // Assicuriamoci che il prezzo sia un numero
+      const itemPrice = parseFloat(item.price) || 0;
+      const quantity = item.quantity || 1;
+      return sum + (itemPrice * quantity);
+    }, 0);
     
-    // Aggiorna il modulo con i totali calcolati
+    const subtotalInCents = Math.round(subtotal * 100);
+    
+    // Aggiorna il modulo con i totali calcolati in centesimi
     await db.update(quoteModules)
       .set({
-        subtotal: subtotal,
-        total: subtotal
+        subtotal: subtotalInCents,
+        total: subtotalInCents
       })
       .where(eq(quoteModules.id, module.id));
     
@@ -493,8 +501,10 @@ export const getBundleLeadByEmail = async (req: Request, res: Response) => {
 const createInitialScheduledPayment = async (clientId: number, quoteId: number, totalAmount: number) => {
   try {
     // Calcoliamo acconto (30%) e saldo (70%)
-    const depositAmount = Math.round(totalAmount * 0.3);
-    const balanceAmount = totalAmount - depositAmount;
+    // Assicuriamoci che totalAmount sia in centesimi per il database
+    const totalAmountInCents = Math.round(totalAmount * 100);
+    const depositAmount = Math.round(totalAmountInCents * 0.3);
+    const balanceAmount = totalAmountInCents - depositAmount;
     
     // Data attuale per l'acconto
     const today = new Date();
@@ -538,7 +548,10 @@ const createInitialScheduledPayment = async (clientId: number, quoteId: number, 
         updatedAt: new Date()
       });
     
-    console.log(`Pagamenti programmati creati per il preventivo ${quoteId}: acconto di ${depositAmount} e saldo di ${balanceAmount}`);
+    // Riconverti in euro per i log
+    const depositAmountEuro = depositAmount / 100;
+    const balanceAmountEuro = balanceAmount / 100;
+    console.log(`Pagamenti programmati creati per il preventivo ${quoteId}: acconto di ${depositAmountEuro}€ e saldo di ${balanceAmountEuro}€`);
     
   } catch (error) {
     console.error("Errore nella creazione dei pagamenti programmati:", error);

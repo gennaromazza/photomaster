@@ -1,0 +1,37 @@
+{
+  "totalTests": 4,
+  "passedTests": 3,
+  "failedTests": 1,
+  "totalDuration": 1299,
+  "timestamp": "2025-04-27T19:51:47.989Z",
+  "results": [
+    {
+      "name": "Creazione Collaboratore",
+      "success": true,
+      "duration": 443,
+      "timestamp": "2025-04-27T19:51:47.167Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Creazione Evento",
+      "success": true,
+      "duration": 270,
+      "timestamp": "2025-04-27T19:51:47.448Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Assegnazione Collaboratore a Evento",
+      "success": false,
+      "duration": 15,
+      "timestamp": "2025-04-27T19:51:47.467Z",
+      "errorDetails": "Assegnazione collaboratore-evento non creata correttamente"
+    },
+    {
+      "name": "Pulizia Dati Test",
+      "success": true,
+      "duration": 520,
+      "timestamp": "2025-04-27T19:51:47.988Z",
+      "errorDetails": null
+    }
+  ]
+}

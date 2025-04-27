@@ -1,0 +1,44 @@
+{
+  "totalTests": 5,
+  "passedTests": 4,
+  "failedTests": 1,
+  "totalDuration": 1276,
+  "timestamp": "2025-04-27T19:52:26.984Z",
+  "results": [
+    {
+      "name": "Creazione Collaboratore",
+      "success": true,
+      "duration": 281,
+      "timestamp": "2025-04-27T19:52:26.024Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Creazione Evento",
+      "success": true,
+      "duration": 266,
+      "timestamp": "2025-04-27T19:52:26.290Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Assegnazione Collaboratore a Evento",
+      "success": true,
+      "duration": 172,
+      "timestamp": "2025-04-27T19:52:26.462Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Creazione Montaggio",
+      "success": false,
+      "duration": 21,
+      "timestamp": "2025-04-27T19:52:26.483Z",
+      "errorDetails": "Montaggio non creato correttamente"
+    },
+    {
+      "name": "Pulizia Dati Test",
+      "success": true,
+      "duration": 500,
+      "timestamp": "2025-04-27T19:52:26.984Z",
+      "errorDetails": null
+    }
+  ]
+}

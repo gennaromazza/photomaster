@@ -53,7 +53,7 @@ export default function PdfGenerator({ lead, settings }: PdfGeneratorProps) {
     try {
       // Prepara i dati
       const fullName = `${lead.firstName} ${lead.lastName}`;
-      const eventDate = formatDate(lead.eventDate || null);
+      const eventDate = formatDate(lead.bundle?.eventDate || null);
       const requestDate = formatDate(lead.createdAt);
       
       // Calcola il totale del pacchetto
@@ -90,7 +90,7 @@ export default function PdfGenerator({ lead, settings }: PdfGeneratorProps) {
       let y = 15; // posizione verticale iniziale
       
       // Funzione di utilità per aggiungere testo
-      const addText = (text: string, fontSize = 12, isBold = false, align: 'left' | 'center' | 'right' = 'left', color = colors.text) => {
+      const addText = (text: string, fontSize = 12, isBold = false, align = 'left', color = colors.text) => {
         pdf.setFontSize(fontSize);
         isBold ? pdf.setFont('helvetica', 'bold') : pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(color);
@@ -180,9 +180,9 @@ export default function PdfGenerator({ lead, settings }: PdfGeneratorProps) {
       // Tabella dettagli pacchetto
       const packageDetails = [
         ['Nome Pacchetto:', lead.bundle?.name || 'Pacchetto non specificato'],
-        ['Tipo Evento:', lead.eventType || 'Non specificato'],
+        ['Tipo Evento:', lead.bundle?.eventType || 'Non specificato'],
         ['Data Evento:', eventDate],
-        ['Location:', lead.location || 'Non specificata']
+        ['Location:', lead.bundle?.location || 'Non specificata']
       ];
       
       // Crea tabella dettagli pacchetto
@@ -242,6 +242,8 @@ export default function PdfGenerator({ lead, settings }: PdfGeneratorProps) {
           ];
         });
         
+
+        
         // Aggiorna la posizione verticale dopo la tabella dopo l'utilizzo di autoTable
         // In autoTable la finalY è disponibile nel risultato restituito dalla funzione
         const lastTable = autoTable(pdf, {
@@ -270,7 +272,7 @@ export default function PdfGenerator({ lead, settings }: PdfGeneratorProps) {
           }
         });
         
-        y = (lastTable.finalY || y) + 10;
+        y = (lastTable.lastAutoTable?.finalY || y) + 10;
       } else {
         pdf.setFont('helvetica', 'italic');
         pdf.setTextColor(colors.lightText);

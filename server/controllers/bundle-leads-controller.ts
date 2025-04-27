@@ -405,6 +405,16 @@ export const deleteBundleLead = async (req: Request, res: Response) => {
  */
 export const getAllBundleLeads = async (req: Request, res: Response) => {
   try {
+    console.log("Inizio recupero di tutte le richieste di preventivo dai bundle");
+    
+    // Verifica la struttura della tabella per il debug
+    try {
+      const tablesInfo = await db.query.bundleLeads.findFirst();
+      console.log("Informazioni sulla tabella bundleLeads:", Object.keys(tablesInfo || {}));
+    } catch (tableError) {
+      console.error("Errore nel recupero informazioni tabella:", tableError);
+    }
+    
     // Seleziona solo le colonne esistenti per evitare errori con colonne mancanti
     const leadResults = await db.select({
       id: bundleLeads.id,
@@ -421,12 +431,11 @@ export const getAllBundleLeads = async (req: Request, res: Response) => {
       // Non includiamo eventDate qui poiché non esiste in tutte le righe
     })
     .from(bundleLeads)
-    .orderBy(bundleLeads.createdAt.desc())
-    .leftJoin(serviceBundles, eq(bundleLeads.bundleId, serviceBundles.id))
-    .leftJoin(clients, eq(bundleLeads.clientId, clients.id))
-    .leftJoin(quotes, eq(bundleLeads.quoteId, quotes.id));
-
-    // Formattare i risultati in un formato più leggibile
+    .orderBy(bundleLeads.createdAt.desc());
+    
+    console.log(`Recuperate ${leadResults.length} richieste di preventivo`);
+    
+    // Formattare i risultati in un formato più leggibile senza join che potrebbero causare problemi
     const results = leadResults.map(lead => ({
       id: lead.id,
       bundleId: lead.bundleId,
@@ -438,20 +447,19 @@ export const getAllBundleLeads = async (req: Request, res: Response) => {
       status: lead.status,
       quoteId: lead.quoteId,
       clientId: lead.clientId,
-      createdAt: lead.createdAt,
-      bundle: lead.serviceBundles,
-      client: lead.clients,
-      quote: lead.quotes ? {
-        id: lead.quotes.id,
-        title: lead.quotes.title,
-        status: lead.quotes.status
-      } : null
+      createdAt: lead.createdAt
+      // Rimuoviamo temporaneamente i riferimenti alle tabelle join
     }));
     
     return res.status(200).json(results);
   } catch (error) {
     console.error("Errore nel recupero delle richieste di preventivo:", error);
-    return res.status(500).json({ error: "Errore del server" });
+    // Aggiungiamo più dettagli sull'errore nella risposta
+    return res.status(500).json({ 
+      error: "Errore del server", 
+      details: error.message,
+      stack: error.stack 
+    });
   }
 };
 

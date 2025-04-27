@@ -73,14 +73,33 @@ const BundleLeadsContent: React.FC = () => {
     queryKey: ['/api/bundle-leads'],
     queryFn: async () => {
       try {
+        console.log('Inizio richiesta bundle leads...');
         const res = await fetch('/api/bundle-leads');
-        if (!res.ok) throw new Error('Errore nel caricamento delle richieste');
-        return await res.json();
+        
+        if (!res.ok) {
+          console.error('Risposta non OK:', res.status, res.statusText);
+          
+          // Tenta di leggere la risposta di errore
+          let errorData = null;
+          try {
+            errorData = await res.json();
+            console.error('Dettagli errore dal server:', errorData);
+          } catch (parseError) {
+            console.error('Impossibile analizzare la risposta di errore:', parseError);
+          }
+          
+          throw new Error(`Errore HTTP ${res.status}: ${res.statusText}`);
+        }
+        
+        const jsonData = await res.json();
+        console.log('Dati ricevuti:', jsonData);
+        return jsonData;
       } catch (error) {
         console.error('Errore durante il recupero delle richieste:', error);
         throw error;
       }
-    }
+    },
+    retry: 1 // Riduciamo il numero di tentativi automatici
   });
 
   // Mutation per eliminare un bundle lead
@@ -219,15 +238,30 @@ const BundleLeadsContent: React.FC = () => {
       
       {error ? (
         <div className="bg-red-50 text-red-700 p-4 rounded-md">
-          Si è verificato un errore nel caricamento delle richieste.
-          <div className="mt-2">
-            <Button
-              variant="outline"
-              onClick={() => refetch()}
-              className="text-red-700"
-            >
-              Riprova
-            </Button>
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Si è verificato un errore nel caricamento delle richieste.</p>
+              <p className="text-sm mt-1">{error.message}</p>
+              {(error as any).details && <p className="text-sm mt-1">Dettagli: {(error as any).details}</p>}
+              <div className="mt-3 flex space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => refetch()}
+                  className="text-red-700 border-red-300"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Riprova
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => console.clear()}
+                  className="text-red-700 border-red-300"
+                >
+                  Pulisci Console
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       ) : paginatedLeads.length === 0 ? (

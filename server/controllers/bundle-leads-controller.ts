@@ -327,7 +327,6 @@ const createFixedModuleFromBundle = async (bundle: any, quoteId: number) => {
     }
     
     // Calcola il subtotal e total del modulo
-    // Moltiplichiamo per 100 per convertire da euro a centesimi (per consistenza col DB)
     const subtotal = moduleItems.reduce((sum: number, item: any) => {
       // Assicuriamoci che il prezzo sia un numero
       const itemPrice = parseFloat(item.price) || 0;
@@ -335,13 +334,11 @@ const createFixedModuleFromBundle = async (bundle: any, quoteId: number) => {
       return sum + (itemPrice * quantity);
     }, 0);
     
-    const subtotalInCents = Math.round(subtotal * 100);
-    
-    // Aggiorna il modulo con i totali calcolati in centesimi
+    // Aggiorna il modulo con i totali calcolati
     await db.update(quoteModules)
       .set({
-        subtotal: subtotalInCents,
-        total: subtotalInCents
+        subtotal: subtotal,
+        total: subtotal
       })
       .where(eq(quoteModules.id, module.id));
     

@@ -1,0 +1,134 @@
+{
+  "testName": "Quote Flow Diagnostic",
+  "startTime": "2025-04-27T20:27:32.337Z",
+  "endTime": "2025-04-27T20:27:38.691Z",
+  "steps": [
+    {
+      "name": "Check Tabelle Database",
+      "status": "warning",
+      "time": "2025-04-27T20:27:32.374Z",
+      "details": {
+        "message": "Impossibile ottenere le tabelle tramite API, usando lista predefinita"
+      }
+    },
+    {
+      "name": "Verifica Relazioni Database",
+      "status": "warning",
+      "time": "2025-04-27T20:27:35.398Z",
+      "details": {
+        "message": "Relazioni incomplete: mancano rate"
+      }
+    },
+    {
+      "name": "Selezione Cliente",
+      "status": "success",
+      "time": "2025-04-27T20:27:35.460Z",
+      "details": {
+        "message": "Utilizzato cliente esistente ID: 2"
+      }
+    },
+    {
+      "name": "Creazione Preventivo",
+      "status": "error",
+      "time": "2025-04-27T20:27:35.481Z",
+      "details": {
+        "message": "Errore nella creazione del preventivo: Request failed with status code 403: {\"message\":\"Token CSRF mancante\"}"
+      }
+    },
+    {
+      "name": "Verifica Collaboratori",
+      "status": "success",
+      "time": "2025-04-27T20:27:35.546Z",
+      "details": {
+        "message": "Trovati 2 collaboratori nel sistema"
+      }
+    },
+    {
+      "name": "Verifica Collaboratori Evento",
+      "status": "success",
+      "time": "2025-04-27T20:27:37.021Z",
+      "details": {
+        "message": "Evento ID 37 ha 1 collaboratori assegnati"
+      }
+    },
+    {
+      "name": "Verifica Eventi Collaboratore",
+      "status": "success",
+      "time": "2025-04-27T20:27:37.382Z",
+      "details": {
+        "message": "Collaboratore ID 1 ha 1 eventi assegnati"
+      }
+    },
+    {
+      "name": "Verifica Campi Finanziari Preventivo",
+      "status": "success",
+      "time": "2025-04-27T20:27:38.477Z",
+      "details": {}
+    },
+    {
+      "name": "Verifica Rate Pagamento",
+      "status": "warning",
+      "time": "2025-04-27T20:27:38.478Z",
+      "details": {
+        "message": "Nessuna rata di pagamento configurata"
+      }
+    },
+    {
+      "name": "Verifica Transazioni",
+      "status": "warning",
+      "time": "2025-04-27T20:27:38.487Z",
+      "details": {
+        "message": "Impossibile accedere alle transazioni: Failed to parse response: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+      }
+    },
+    {
+      "name": "Verifica Pagamenti Programmati",
+      "status": "warning",
+      "time": "2025-04-27T20:27:38.499Z",
+      "details": {
+        "message": "Impossibile accedere ai pagamenti programmati: Failed to parse response: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+      }
+    },
+    {
+      "name": "Verifica Pagamenti Collaboratore",
+      "status": "warning",
+      "time": "2025-04-27T20:27:38.690Z",
+      "details": {
+        "message": "Collaboratore ID 1 non ha pagamenti registrati"
+      }
+    }
+  ],
+  "errors": [
+    {
+      "step": "Creazione Preventivo",
+      "message": "Errore nella creazione del preventivo: Request failed with status code 403: {\"message\":\"Token CSRF mancante\"}"
+    }
+  ],
+  "warnings": [
+    {
+      "step": "Check Tabelle Database",
+      "message": "Impossibile ottenere le tabelle tramite API, usando lista predefinita"
+    },
+    {
+      "step": "Verifica Relazioni Database",
+      "message": "Relazioni incomplete: mancano rate"
+    },
+    {
+      "step": "Verifica Rate Pagamento",
+      "message": "Nessuna rata di pagamento configurata"
+    },
+    {
+      "step": "Verifica Transazioni",
+      "message": "Impossibile accedere alle transazioni: Failed to parse response: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+    },
+    {
+      "step": "Verifica Pagamenti Programmati",
+      "message": "Impossibile accedere ai pagamenti programmati: Failed to parse response: Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON"
+    },
+    {
+      "step": "Verifica Pagamenti Collaboratore",
+      "message": "Collaboratore ID 1 non ha pagamenti registrati"
+    }
+  ],
+  "successRate": 41.66666666666667
+}

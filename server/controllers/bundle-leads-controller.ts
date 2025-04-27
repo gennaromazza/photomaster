@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { bundleLeads, serviceBundles, serviceBundleItems, services, clients } from "@shared/schema";
+import { bundleLeads, serviceBundles, serviceBundleItems, services, clients, quotes, quoteModules, quoteModuleItems } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { storage } from "../storage";
 

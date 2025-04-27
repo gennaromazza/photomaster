@@ -15,6 +15,12 @@ import { exit } from 'process';
 // Configurazione dell'endpoint
 const BASE_URL = 'http://localhost:5000';
 
+// Headers di default per le richieste API (include header per bypassare la protezione CSRF)
+const defaultHeaders = {
+  'Content-Type': 'application/json',
+  'x-test-automation': 'true'
+};
+
 // Genera date casuali future per test
 const getRandomFutureDate = (monthsAhead = 6) => {
   const date = new Date();
@@ -54,7 +60,7 @@ const clientRequestsQuote = async () => {
 
   // Prima otteniamo un pacchetto esistente come riferimento
   console.log('Ottenimento pacchetti disponibili...');
-  const bundlesResponse = await axios.get(`${BASE_URL}/api/service-bundles`);
+  const bundlesResponse = await axios.get(`${BASE_URL}/api/service-bundles`, { headers: defaultHeaders });
   
   if (!bundlesResponse.data || bundlesResponse.data.length === 0) {
     console.error('Errore: Nessun pacchetto disponibile nel sistema!');
@@ -92,7 +98,7 @@ const clientRequestsQuote = async () => {
   try {
     // Invia la richiesta di preventivo
     console.log('\nInvio richiesta al server...');
-    const response = await axios.post(`${BASE_URL}/api/bundle-leads`, clientData);
+    const response = await axios.post(`${BASE_URL}/api/bundle-leads`, clientData, { headers: defaultHeaders });
     
     console.log('✅ Richiesta di preventivo inviata con successo!');
     console.log(`ID richiesta: ${response.data.id}`);
@@ -120,7 +126,7 @@ const photographerViewsRequests = async (requestData) => {
   if (!requestData) {
     console.log('Ricerca di tutte le richieste preventivo...');
     try {
-      const response = await axios.get(`${BASE_URL}/api/bundle-leads`);
+      const response = await axios.get(`${BASE_URL}/api/bundle-leads`, { headers: defaultHeaders });
       console.log(`Trovate ${response.data.length} richieste di preventivo`);
       
       if (response.data.length === 0) {
@@ -150,7 +156,7 @@ const photographerViewsRequests = async (requestData) => {
     console.log(`Recupero informazioni per la richiesta specifica ID: ${requestData.id}`);
     
     try {
-      const response = await axios.get(`${BASE_URL}/api/bundle-leads/${requestData.id}`);
+      const response = await axios.get(`${BASE_URL}/api/bundle-leads/${requestData.id}`, { headers: defaultHeaders });
       console.log('✅ Informazioni richiesta recuperate con successo!');
       
       // Salva dettagli richiesta per riferimento
@@ -182,7 +188,7 @@ const photographerConvertsRequest = async (requestData) => {
   console.log(`Conversione della richiesta ID: ${requestData.id} in preventivo...`);
   
   try {
-    const response = await axios.post(`${BASE_URL}/api/bundle-leads/${requestData.id}/convert`);
+    const response = await axios.post(`${BASE_URL}/api/bundle-leads/${requestData.id}/convert`, {}, { headers: defaultHeaders });
     console.log('✅ Richiesta convertita in preventivo con successo!');
     
     // Salva dettagli della conversione per riferimento

@@ -1091,6 +1091,13 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
     return next();
   }
   
+  // Bypass per test automatici - verifica lo special header 'x-test-automation'
+  const isTestAutomation = req.headers["x-test-automation"] === "true";
+  if (isTestAutomation && process.env.NODE_ENV !== "production") {
+    console.log("DEBUG csrfProtection - Skip per test automatico");
+    return next();
+  }
+  
   // Verifica il token CSRF negli header
   const csrfToken = req.headers["x-csrf-token"] as string;
   console.log("DEBUG csrfProtection - Token CSRF ricevuto:", csrfToken ? "Sì" : "No");

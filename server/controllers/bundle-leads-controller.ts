@@ -349,7 +349,15 @@ const createFixedModuleFromBundle = async (bundle: any, quoteId: number) => {
       })
       .where(eq(quoteModules.id, module.id));
     
-    return module;
+    // Recupera il modulo aggiornato con i totali per il return
+    const [updatedModule] = await db.select()
+      .from(quoteModules)
+      .where(eq(quoteModules.id, module.id));
+    
+    // Log per debugging
+    console.log(`Modulo creato con subtotal: ${updatedModule.subtotal}, total: ${updatedModule.total}`);
+    
+    return updatedModule;
   } catch (error) {
     console.error("Errore nella creazione del modulo fisso:", error);
     throw error;

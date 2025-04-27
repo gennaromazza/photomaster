@@ -263,7 +263,7 @@ async function testSessionManagement() {
     };
     
     const sessionResponse = await axios.post(`${BASE_URL}/selections/sessions/create`, sessionData);
-    console.log('Debug risposta sessione:', JSON.stringify(sessionResponse.data, null, 2));
+    console.log('Debug risposta sessione completa:', JSON.stringify(sessionResponse.data, null, 2));
     testSessionId = sessionResponse.data.id || sessionResponse.data.sessionId || sessionResponse.data.session?.id || sessionResponse.data.data?.id;
     
     // Se non abbiamo un ID reale, utilizziamo un valore simulato
@@ -395,10 +395,12 @@ async function testPhotoComments() {
     const commentData = {
       photoId: testPhotoId,
       sessionId: testSessionId,
-      comment: 'Commento di test automatico'
+      content: 'Commento di test automatico',
+      clientName: 'Cliente Test Commento'
     };
     
-    await axios.post(`${BASE_URL}/selections/photos/comment`, commentData);
+    const commentResponse = await axios.post(`${BASE_URL}/selections/photos/comment`, commentData);
+    console.log('Debug risposta commento:', JSON.stringify(commentResponse.data, null, 2));
     
     logSuccess('Commento aggiunto alla foto');
     return true;

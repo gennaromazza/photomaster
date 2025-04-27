@@ -251,7 +251,15 @@ export const createSelectionSession = async (req: Request, res: Response) => {
       })
       .returning();
     
-    res.status(201).json(session);
+    // Restituisci la risposta in un formato consistente con più opzioni per l'ID
+    res.status(201).json({
+      ...session,
+      sessionId: session.id, // Alias per compatibilità
+      data: {
+        id: session.id
+      },
+      message: "Sessione creata con successo"
+    });
   } catch (error) {
     console.error("Errore nella creazione della sessione di selezione:", error);
     res.status(500).json({ error: "Errore nella creazione della sessione di selezione" });
@@ -423,9 +431,15 @@ export const togglePhotoSelection = async (req: Request, res: Response) => {
       })
       .returning();
     
+    // Restituisci la risposta in un formato consistente con più opzioni per l'ID
     res.status(201).json({ 
       action: "added", 
       selection: newSelection,
+      id: newSelection.id, // ID principale
+      selectionId: newSelection.id, // Alias per compatibilità
+      data: {
+        id: newSelection.id
+      },
       message: "Foto selezionata con successo" 
     });
   } catch (error) {
@@ -569,7 +583,15 @@ export const addPhotoComment = async (req: Request, res: Response) => {
       })
       .returning();
     
-    res.status(201).json(comment);
+    // Restituisci la risposta in un formato consistente con più opzioni per l'ID
+    res.status(201).json({
+      ...comment,
+      commentId: comment.id, // Alias per compatibilità
+      data: {
+        id: comment.id
+      },
+      message: "Commento aggiunto con successo"
+    });
   } catch (error) {
     console.error("Errore nell'aggiunta del commento:", error);
     res.status(500).json({ error: "Errore nell'aggiunta del commento" });

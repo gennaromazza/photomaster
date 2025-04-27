@@ -21,11 +21,16 @@ import { syncFromEventiCollaboratoriToEventCollaborators } from "../utils/sync-c
  * Controller per la gestione delle operazioni relative al modulo Collaboratori
  */
 
+import { cleanupStaleEventReferences, verificaEsistenzaEvento } from "../utils/clean-eventi-collabs";
+
 // GET: Lista di eventi di un collaboratore
 export const getEventiCollaboratore = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     console.log(`Recupero eventi per il collaboratore ID: ${id}`);
+    
+    // Prima di recuperare gli eventi, puliamo i riferimenti non validi
+    await cleanupStaleEventReferences();
     
     // Soluzione molto più semplice: recuperiamo gli eventi da entrambe le tabelle in modo separato
     // e costruiamo manualmente oggetti semplici
@@ -220,6 +225,15 @@ export const addEventoCollaboratore = async (req: Request, res: Response) => {
     // Validazione input con dati già convertiti
     const data = insertEventoCollaboratoreSchema.parse(requestData);
     
+    // Verifica che l'evento esiste prima di procedere
+    const eventoEsiste = await verificaEsistenzaEvento(data.eventoId);
+    if (!eventoEsiste) {
+      return res.status(404).json({ 
+        error: "Evento non trovato o eliminato",
+        eventoId: data.eventoId
+      });
+    }
+    
     // Inserimento nel database usando l'approccio event-centric
     // Prima verifichiamo se l'associazione esiste già in entrambe le tabelle
     // Verifica nella tabella eventiCollaboratori (schema italiano)
@@ -383,6 +397,17 @@ export const addMontaggioCollaboratore = async (req: Request, res: Response) => 
       ...req.body,
       collaboratoreId
     });
+    
+    // Se c'è un eventoId, verifica che l'evento esista
+    if (data.eventoId) {
+      const eventoEsiste = await verificaEsistenzaEvento(data.eventoId);
+      if (!eventoEsiste) {
+        return res.status(404).json({ 
+          error: "Evento non trovato o eliminato",
+          eventoId: data.eventoId
+        });
+      }
+    }
     
     // Verifica se è stato richiesto anche il pagamento di un acconto
     const registraAcconto = req.body.registraAcconto === true;

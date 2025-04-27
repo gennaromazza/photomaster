@@ -66,8 +66,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Importiamo la funzione di pulizia
+import { cleanupStaleEventReferences } from "./utils/clean-eventi-collabs";
+
 (async () => {
   const server = await registerRoutes(app);
+  
+  // Esegui la pulizia delle referenze a eventi eliminati all'avvio del server
+  try {
+    console.log("Avvio pulizia di manutenzione all'avvio del server...");
+    const result = await cleanupStaleEventReferences();
+    console.log("Pulizia riferimenti completata:", result);
+    
+    // Imposta un timer per eseguire la pulizia ogni 24 ore
+    setInterval(async () => {
+      console.log("Esecuzione pulizia automatica periodica...");
+      const periodicResult = await cleanupStaleEventReferences();
+      console.log("Pulizia periodica completata:", periodicResult);
+    }, 24 * 60 * 60 * 1000); // 24 ore in millisecondi
+  } catch (error) {
+    console.error("Errore durante la pulizia iniziale:", error);
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

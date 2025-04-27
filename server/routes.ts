@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { db, pgClient } from "./db"; // Aggiungiamo l'importazione di pgClient
 import { setupAuth, isAuthenticated, isAdmin, csrfProtection, hashPassword, generateCsrfToken } from "./auth";
 import { setupDebugDbEndpoints } from "./endpoints/debug-db";
+import { registerDebugCollaboratoriRoutes } from "./routes/debug-collaboratori-routes";
 import { 
   sendPasswordResetEmail, 
   sendQuoteSignedNotification, 
@@ -3554,6 +3555,9 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   
   // Setup debug DB endpoints (solo in dev)
   setupDebugDbEndpoints(app);
+  
+  // Setup debug collaboratori endpoints (solo in dev)
+  registerDebugCollaboratoriRoutes(app);
 
   // Esegui le migrazioni e sincronizzazioni necessarie all'avvio del server
   try {

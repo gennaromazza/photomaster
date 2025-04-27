@@ -4,126 +4,85 @@
  * Controllore per debug delle funzionalità del modulo collaboratori
  * Fornisce endpoint speciali per testare l'integrazione finanziaria
  */
-
 import { Request, Response } from 'express';
 import { db } from '../db';
+import { eq, and, or, sql } from 'drizzle-orm';
 import { 
-  collaborators, 
   events, 
+  collaborators, 
   eventCollaborators,
-  transactions,
-  quotes
+  quotes,
+  clients,
+  transactions
 } from '@shared/schema';
-import { eq, and, inArray } from 'drizzle-orm';
 
 /**
  * Verifica lo stato dell'integrazione finanziaria tra collaboratori e sistema generale
  */
 export async function verificaIntegrazioneFinanziaria(req: Request, res: Response) {
   try {
-    const results = {
-      statusCheck: true,
-      errors: [],
-      warnings: [],
-      suggerimenti: [],
-      report: {
-        totals: {
-          collaborators: 0,
-          events: 0,
-          eventCollaborators: 0,
-          transactions: 0,
-          pagamentiCollaboratori: 0,
-        },
-        inconsistencies: [],
-        missingTransactions: 0,
-        orphanedRecords: 0
+    // 1. Verifica la consistenza tra pagamenti ai collaboratori e transactions totali
+    const pagamentiCollaboratori = await db.execute(sql`
+      SELECT SUM(amount) as total_pagamenti_collaboratori 
+      FROM pagamenti_evento
+    `);
+    
+    const transazioniUscita = await db.execute(sql`
+      SELECT SUM(amount) as total_uscite
+      FROM transactions 
+      WHERE type = 'expense'
+    `);
+    
+    // 2. Controllo relazioni tra eventi e collaboratori
+    const relazioniEventiCollaboratori = await db.execute(sql`
+      SELECT 
+        e.id as event_id, 
+        e.title as event_title,
+        COUNT(ec.collaborator_id) as num_collaboratori,
+        COUNT(pe.id) as num_pagamenti
+      FROM events e
+      LEFT JOIN event_collaborators ec ON e.id = ec.event_id
+      LEFT JOIN pagamenti_evento pe ON e.id = pe.event_id
+      GROUP BY e.id, e.title
+      ORDER BY e.date DESC
+      LIMIT 10
+    `);
+
+    // 3. Controlla consistenza dei saldi collaboratori
+    const saldoCollaboratori = await db.execute(sql`
+      SELECT 
+        c.id as collaborator_id,
+        c.first_name, 
+        c.last_name,
+        SUM(pe.amount) as pagamenti_totali
+      FROM collaborators c
+      LEFT JOIN eventi_collaboratori ec ON c.id = ec.collaborator_id
+      LEFT JOIN pagamenti_evento pe ON ec.event_id = pe.event_id AND ec.collaborator_id = pe.collaborator_id
+      GROUP BY c.id, c.first_name, c.last_name
+      ORDER BY pagamenti_totali DESC
+      LIMIT 10
+    `);
+
+    res.json({
+      status: 'success',
+      finanziario: {
+        pagamentiCollaboratori: pagamentiCollaboratori[0] || { total_pagamenti_collaboratori: 0 },
+        transazioniUscita: transazioniUscita[0] || { total_uscite: 0 },
+        consistenza: pagamentiCollaboratori[0]?.total_pagamenti_collaboratori === transazioniUscita[0]?.total_uscite
+      },
+      relazioni: {
+        eventiCollaboratori: relazioniEventiCollaboratori
+      },
+      saldi: {
+        collaboratori: saldoCollaboratori
       }
-    };
-
-    // 1. Conta elementi per statistiche generali
-    const collaboratoriCount = await db.select({ count: db.fn.count() }).from(collaborators);
-    const eventiCount = await db.select({ count: db.fn.count() }).from(events);
-    const assegnazioniCount = await db.select({ count: db.fn.count() }).from(eventCollaborators);
-    const transakioniCount = await db.select({ count: db.fn.count() }).from(transactions);
-
-    results.report.totals.collaborators = Number(collaboratoriCount[0].count || 0);
-    results.report.totals.events = Number(eventiCount[0].count || 0);
-    results.report.totals.eventCollaborators = Number(assegnazioniCount[0].count || 0);
-    results.report.totals.transactions = Number(transakioniCount[0].count || 0);
-
-    // 2. Verifica assegnazioni senza eventi validi
-    const assegnazioniInvalide = await db
-      .select({
-        assignment: eventCollaborators
-      })
-      .from(eventCollaborators)
-      .leftJoin(events, eq(eventCollaborators.eventId, events.id))
-      .where(eq(events.id, null))
-      .limit(50);
-
-    if (assegnazioniInvalide.length > 0) {
-      results.errors.push('Trovate assegnazioni collaboratori ad eventi inesistenti');
-      results.report.inconsistencies.push({
-        type: 'invalid_assignments',
-        count: assegnazioniInvalide.length,
-        examples: assegnazioniInvalide.slice(0, 5).map(item => item.assignment)
-      });
-      results.statusCheck = false;
-      results.report.orphanedRecords += assegnazioniInvalide.length;
-    }
-
-    // 3. Verifica collaboratori eliminati ma ancora assegnati
-    const assegnazioniCollegateAColleghi = await db
-      .select({
-        assignment: eventCollaborators
-      })
-      .from(eventCollaborators)
-      .leftJoin(collaborators, eq(eventCollaborators.collaboratorId, collaborators.id))
-      .where(eq(collaborators.id, null))
-      .limit(50);
-
-    if (assegnazioniCollegateAColleghi.length > 0) {
-      results.errors.push('Trovate assegnazioni a collaboratori eliminati');
-      results.report.inconsistencies.push({
-        type: 'deleted_collaborator_assignments',
-        count: assegnazioniCollegateAColleghi.length,
-        examples: assegnazioniCollegateAColleghi.slice(0, 5).map(item => item.assignment)
-      });
-      results.statusCheck = false;
-      results.report.orphanedRecords += assegnazioniCollegateAColleghi.length;
-    }
-
-    // 4. Verifica transazioni collegate a collaboratori
-    // Questo dipende da come è implementato il sistema finanziario
-    // Esempio ipotetico basato su un campo di riferimento nelle transazioni
-    const transakioniCollaboratori = await db
-      .select({
-        count: db.fn.count()
-      })
-      .from(transactions)
-      .where(eq(transactions.type, 'collaborator_payment'));
-
-    results.report.totals.pagamentiCollaboratori = Number(transakioniCollaboratori[0].count || 0);
-
-    // 5. Suggerimenti migliorativi se non ci sono errori
-    if (results.errors.length === 0) {
-      results.suggerimenti.push(
-        'Il sistema di integrazioni finanziarie sembra funzionare correttamente.',
-        'Per migliorare ulteriormente, considera di aggiungere riconciliazione automatica tra pagamenti e montaggi.'
-      );
-    } else {
-      results.suggerimenti.push(
-        'Risolvi le inconsistenze prima di eseguire altri test finanziari.',
-        'Considera di implementare vincoli referenziali a livello di database per prevenire record orfani.'
-      );
-    }
-
-    return res.status(200).json(results);
-  } catch (error: any) {
-    console.error('Errore nella verifica finanziaria collaboratori:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Errore interno durante la verifica finanziaria'
+    });
+  } catch (error) {
+    console.error('Errore nella verifica integrazione finanziaria:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Errore durante la verifica dell\'integrazione finanziaria',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 }
@@ -133,24 +92,64 @@ export async function verificaIntegrazioneFinanziaria(req: Request, res: Respons
  */
 export async function verificaStatistichePagamenti(req: Request, res: Response) {
   try {
-    const stats = {
-      pagamentiTotali: 0,
-      pagamentiPerTipo: {},
-      pagamentiPerMese: {},
-      mediaImporto: 0,
-      collaboratoriTopPagamenti: [],
-      collaboratoriSenzaPagamenti: []
-    };
+    // Statistiche mensili
+    const statisticheMensili = await db.execute(sql`
+      SELECT 
+        EXTRACT(YEAR FROM pe.data) as anno,
+        EXTRACT(MONTH FROM pe.data) as mese,
+        SUM(pe.amount) as totale,
+        COUNT(pe.id) as num_pagamenti
+      FROM pagamenti_evento pe
+      GROUP BY anno, mese
+      ORDER BY anno DESC, mese DESC
+      LIMIT 12
+    `);
 
-    // Implementa le query per recuperare le statistiche necessarie
-    // Questa è una versione semplificata che andrebbe adattata alla tua struttura dati
+    // Statistiche per collaboratore
+    const statisticheCollaboratori = await db.execute(sql`
+      SELECT 
+        c.id,
+        c.first_name,
+        c.last_name,
+        COUNT(pe.id) as num_pagamenti,
+        SUM(pe.amount) as totale_pagamenti,
+        AVG(pe.amount) as media_pagamenti
+      FROM collaborators c
+      JOIN pagamenti_evento pe ON c.id = pe.collaborator_id
+      GROUP BY c.id, c.first_name, c.last_name
+      ORDER BY totale_pagamenti DESC
+      LIMIT 10
+    `);
 
-    return res.status(200).json(stats);
-  } catch (error: any) {
-    console.error('Errore nelle statistiche pagamenti:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Errore interno durante l\'analisi delle statistiche pagamenti'
+    // Statistiche per evento
+    const statisticheEventi = await db.execute(sql`
+      SELECT 
+        e.id,
+        e.title,
+        COUNT(pe.id) as num_pagamenti,
+        SUM(pe.amount) as totale_pagamenti
+      FROM events e
+      JOIN pagamenti_evento pe ON e.id = pe.event_id
+      GROUP BY e.id, e.title
+      ORDER BY totale_pagamenti DESC
+      LIMIT 10
+    `);
+    
+    res.json({
+      status: 'success',
+      statistiche: {
+        mensili: statisticheMensili,
+        collaboratori: statisticheCollaboratori,
+        eventi: statisticheEventi
+      }
+    });
+
+  } catch (error) {
+    console.error('Errore nel recupero statistiche pagamenti:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Errore durante il recupero delle statistiche sui pagamenti',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 }
@@ -160,24 +159,67 @@ export async function verificaStatistichePagamenti(req: Request, res: Response) 
  */
 export async function getMontaggiConRelazioni(req: Request, res: Response) {
   try {
-    // Questa query dipende dalla struttura effettiva del tuo schema
-    // Esempio rappresentativo che andrà adattato
-    const result = await db.query.events.findMany({
-      with: {
-        eventCollaborators: {
-          with: {
-            collaborator: true
-          }
+    const montaggi = await db.execute(sql`
+      SELECT 
+        me.id as montaggio_id,
+        me.event_id,
+        me.collaborator_id,
+        me.tipo,
+        me.stato,
+        me.priorita,
+        me.scadenza,
+        me.data_consegna,
+        me.created_at,
+        e.title as event_title,
+        c.first_name,
+        c.last_name
+      FROM montaggi_evento me
+      JOIN events e ON me.event_id = e.id
+      JOIN collaborators c ON me.collaborator_id = c.id
+      ORDER BY me.created_at DESC
+      LIMIT 50
+    `);
+
+    const conteggioStati = await db.execute(sql`
+      SELECT 
+        stato,
+        COUNT(*) as conteggio
+      FROM montaggi_evento
+      GROUP BY stato
+    `);
+
+    const montaggiPerCollaboratore = await db.execute(sql`
+      SELECT 
+        c.id,
+        c.first_name,
+        c.last_name,
+        COUNT(me.id) as num_montaggi,
+        COUNT(CASE WHEN me.stato = 'completato' THEN 1 END) as completati,
+        COUNT(CASE WHEN me.stato = 'in_corso' THEN 1 END) as in_corso,
+        COUNT(CASE WHEN me.stato = 'da_iniziare' THEN 1 END) as da_iniziare
+      FROM collaborators c
+      LEFT JOIN montaggi_evento me ON c.id = me.collaborator_id
+      GROUP BY c.id, c.first_name, c.last_name
+      ORDER BY num_montaggi DESC
+    `);
+
+    res.json({
+      status: 'success',
+      dati: {
+        montaggi,
+        statistiche: {
+          conteggioStati,
+          perCollaboratore: montaggiPerCollaboratore
         }
       }
     });
 
-    return res.status(200).json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Errore nel recupero montaggi con relazioni:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Errore interno durante il recupero dei montaggi'
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Errore durante il recupero dei montaggi con relazioni',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 }
@@ -187,44 +229,55 @@ export async function getMontaggiConRelazioni(req: Request, res: Response) {
  */
 export async function verificaIntegrazionePreventivi(req: Request, res: Response) {
   try {
-    const result = {
-      associazioni: [],
-      totalePreventivi: 0,
-      totalePreventivConAssociazioni: 0,
-      errori: []
-    };
+    // Preventivi con eventi collegati
+    const quotesWithEvents = await db.select({
+      quoteId: quotes.id,
+      quoteTitle: quotes.title,
+      eventId: events.id,
+      eventTitle: events.title,
+      clientFirstName: clients.firstName,
+      clientLastName: clients.lastName,
+    })
+    .from(quotes)
+    .leftJoin(events, eq(quotes.id, events.quoteId))
+    .leftJoin(clients, eq(quotes.clientId, clients.id))
+    .limit(20);
 
-    // Recupera tutti i preventivi con eventi collegati
-    const preventivi = await db.query.quotes.findMany({
-      columns: {
-        id: true, 
-        title: true
-      },
-      with: {
-        event: {
-          columns: {
-            id: true,
-            title: true
-          }
-        }
+    // Eventi con collaboratori e pagamenti
+    const eventsWithCollaboratorsPayments = await db.execute(sql`
+      SELECT 
+        e.id as event_id,
+        e.title as event_title,
+        q.id as quote_id,
+        q.title as quote_title,
+        c.first_name as client_first_name,
+        c.last_name as client_last_name,
+        COUNT(DISTINCT ec.collaborator_id) as num_collaboratori,
+        SUM(pe.amount) as totale_pagamenti_collaboratori
+      FROM events e
+      LEFT JOIN quotes q ON e.quote_id = q.id
+      LEFT JOIN clients c ON q.client_id = c.id
+      LEFT JOIN event_collaborators ec ON e.id = ec.event_id
+      LEFT JOIN pagamenti_evento pe ON e.id = pe.event_id
+      GROUP BY e.id, e.title, q.id, q.title, c.first_name, c.last_name
+      ORDER BY e.date DESC
+      LIMIT 20
+    `);
+
+    res.json({
+      status: 'success',
+      dati: {
+        quotesWithEvents,
+        eventsWithCollaboratorsPayments
       }
     });
 
-    result.totalePreventivi = preventivi.length;
-
-    // Conta quanti preventivi hanno effettivamente eventi associati
-    result.totalePreventivConAssociazioni = preventivi.filter(q => q.event).length;
-
-    if (result.totalePreventivi > 0 && result.totalePreventivConAssociazioni === 0) {
-      result.errori.push('Nessun preventivo ha eventi associati, verificare il sistema di conversione preventivi->eventi');
-    }
-
-    return res.status(200).json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Errore nella verifica integrazione preventivi:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Errore interno durante la verifica dell\'integrazione preventivi'
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Errore durante la verifica dell\'integrazione con i preventivi',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 }

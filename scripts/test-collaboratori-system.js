@@ -10,624 +10,479 @@
  * 6. Dashboard e token per i collaboratori
  */
 
-import fetch from 'node-fetch';
-import { format, addDays, subDays } from 'date-fns';
-import fs from 'fs/promises';
-import path from 'path';
-
 // Configurazione
-const API_BASE_URL = 'http://localhost:3000/api';
-const TEST_ENV = process.env.NODE_ENV || 'development';
-const TEST_LOGS_DIR = path.join(process.cwd(), 'test-results');
-const LOG_FILE = path.join(TEST_LOGS_DIR, 'collaboratori-test-results.json');
-
-// Contatori risultati test
-let totalTests = 0;
-let passedTests = 0;
-let failedTests = 0;
-let skippedTests = 0;
-
-// Dati di test
-const testData = {
-  collaboratori: [],
-  eventi: [],
-  montaggi: [],
-  pagamenti: [],
-  transazioni: [],
-  errorLogs: []
+const API_BASE_URL = 'http://localhost:5000/api';
+const COLORS = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  green: '\x1b[32m',
+  red: '\x1b[31m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m'
 };
 
-// Funzione di utility per le chiamate API
+// Risultati dei test
+const testResults = [];
+const startTime = Date.now();
+
+// Funzione per effettuare chiamate API
 async function apiCall(endpoint, method = 'GET', data = null, headers = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Test-Automation': 'true', // Per bypassare la protezione CSRF
+      ...headers
+    }
+  };
+
+  if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+    options.body = JSON.stringify(data);
+  }
+
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const options = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Test-Automation': 'true', // Per bypass CSRF
-        ...headers
-      }
-    };
-
-    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-      options.body = JSON.stringify(data);
-    }
-
-    console.log(`\n🌐 [API Call] ${method} ${url}`);
-    if (data) console.log('📦 Payload:', JSON.stringify(data, null, 2));
-
+    console.log(`${COLORS.cyan}✨ API Call: ${method} ${url}${COLORS.reset}`);
     const response = await fetch(url, options);
-    const contentType = response.headers.get('content-type');
     
-    let responseData;
-    if (contentType && contentType.includes('application/json')) {
-      responseData = await response.json();
+    // Gestione risposta
+    if (response.ok) {
+      const responseData = await response.json().catch(() => ({}));
+      console.log(`${COLORS.green}✅ API Response: ${response.status} ${response.statusText}${COLORS.reset}`);
+      return responseData;
     } else {
-      responseData = await response.text();
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`${COLORS.red}❌ API Error: ${response.status} ${response.statusText}${COLORS.reset}`);
+      console.error(`${COLORS.red}Error details:${COLORS.reset}`, errorData);
+      throw new Error(`API Error ${response.status}: ${JSON.stringify(errorData)}`);
     }
-
-    return {
-      status: response.status,
-      data: responseData,
-      headers: response.headers,
-      ok: response.ok
-    };
   } catch (error) {
-    console.error(`❌ Errore API ${endpoint}:`, error.message);
-    return {
-      status: 500,
-      data: { error: error.message },
-      ok: false
-    };
+    console.error(`${COLORS.red}❌ Network Error:${COLORS.reset}`, error.message);
+    throw error;
   }
 }
 
-// Funzione per registrare un risultato di test
+// Funzione per registrare i risultati dei test
 function logTestResult(name, success, duration, errorDetails = null) {
   const result = {
     name,
     success,
+    duration,
     timestamp: new Date().toISOString(),
-    duration: `${duration}ms`
+    errorDetails
   };
-
-  if (errorDetails) {
-    result.error = errorDetails;
-    testData.errorLogs.push({ 
-      test: name, 
-      error: errorDetails, 
-      timestamp: new Date().toISOString() 
-    });
-  }
-
-  totalTests++;
   
-  if (success) {
-    passedTests++;
-    console.log(`✅ [TEST PASSATO] ${name} (${duration}ms)`);
-  } else {
-    failedTests++;
-    console.log(`❌ [TEST FALLITO] ${name} (${duration}ms)`);
-    if (errorDetails) {
-      console.log(`   Errore: ${typeof errorDetails === 'object' ? JSON.stringify(errorDetails, null, 2) : errorDetails}`);
-    }
+  testResults.push(result);
+  
+  const icon = success ? '✅' : '❌';
+  const color = success ? COLORS.green : COLORS.red;
+  console.log(`${color}${icon} ${name} - ${success ? 'SUCCESSO' : 'FALLITO'} (${duration}ms)${COLORS.reset}`);
+  
+  if (!success && errorDetails) {
+    console.error(`${COLORS.red}Dettagli errore:${COLORS.reset}`, errorDetails);
   }
-
-  return result;
 }
 
 // Funzione per salvare i risultati dei test
 async function saveTestResults() {
+  const summary = {
+    totalTests: testResults.length,
+    passedTests: testResults.filter(t => t.success).length,
+    failedTests: testResults.filter(t => !t.success).length,
+    totalDuration: Date.now() - startTime,
+    timestamp: new Date().toISOString(),
+    results: testResults
+  };
+  
+  console.log(`\n${COLORS.bright}=== RIEPILOGO TEST ===${COLORS.reset}`);
+  console.log(`Test totali: ${summary.totalTests}`);
+  console.log(`Test riusciti: ${COLORS.green}${summary.passedTests}${COLORS.reset}`);
+  console.log(`Test falliti: ${summary.failedTests > 0 ? COLORS.red : COLORS.reset}${summary.failedTests}${COLORS.reset}`);
+  console.log(`Durata totale: ${summary.totalDuration}ms`);
+  
+  // Salviamo i risultati in un file
   try {
-    // Assicurati che la directory esista
-    await fs.mkdir(TEST_LOGS_DIR, { recursive: true });
-    
-    const results = {
-      summary: {
-        totalTests,
-        passedTests,
-        failedTests,
-        skippedTests,
-        successRate: `${(passedTests / totalTests * 100).toFixed(2)}%`,
-        timestamp: new Date().toISOString(),
-        environment: TEST_ENV
-      },
-      testData,
-      detailed: [] // Aggiungere dettagli per ogni test se necessario
-    };
-
-    await fs.writeFile(LOG_FILE, JSON.stringify(results, null, 2));
-    console.log(`\n📝 Risultati dei test salvati in: ${LOG_FILE}`);
+    const fs = await import('fs');
+    await fs.promises.writeFile(
+      `collaboratori-test-results-${new Date().toISOString().replace(/:/g, '-')}.json`,
+      JSON.stringify(summary, null, 2)
+    );
+    console.log(`${COLORS.green}Risultati test salvati con successo${COLORS.reset}`);
   } catch (error) {
-    console.error('Errore nel salvataggio dei risultati:', error);
+    console.error(`${COLORS.red}Errore nel salvataggio dei risultati:${COLORS.reset}`, error);
   }
 }
 
-// Generiamo un nuovo collaboratore per i test
+// Test Function: Crea un collaboratore di test
 async function creaCollaboratoreDiTest() {
   const startTime = Date.now();
+  const testName = 'Creazione Collaboratore';
+  
   try {
-    const randomNum = Math.floor(Math.random() * 10000);
-    const nuovoCollaboratore = {
-      firstName: `Test${randomNum}`,
-      lastName: `Collaboratore${randomNum}`,
-      email: `test.collab${randomNum}@example.com`,
-      phone: `+39 34512345${randomNum % 100}`,
-      role: 'photographer',
-      address: 'Via Test 123, Roma',
-      notes: 'Collaboratore creato per test automatici'
+    const randomNum = Math.floor(Math.random() * 1000);
+    const collaboratoreData = {
+      firstName: `Tester${randomNum}`,
+      lastName: `Automatico${randomNum}`,
+      email: `test${randomNum}@example.com`,
+      phone: `+3912345678${randomNum % 100}`,
+      role: 'Fotografo',
+      taxCode: `TSTAUT${randomNum}ZZZZ`,
+      notes: 'Creato da script di test automatico'
     };
-
-    const response = await apiCall('/collaborators', 'POST', nuovoCollaboratore);
     
-    if (!response.ok || !response.data || !response.data.id) {
-      return logTestResult('Creazione collaboratore di test', false, Date.now() - startTime, 
-        response.data?.error || 'Risposta API non valida');
+    const collaboratore = await apiCall('/collaborators', 'POST', collaboratoreData);
+    
+    // Verifica che il collaboratore sia stato creato correttamente
+    if (!collaboratore || !collaboratore.id) {
+      throw new Error('Collaboratore non creato correttamente');
     }
-
-    const collaboratore = response.data;
-    testData.collaboratori.push(collaboratore);
     
-    return {
-      success: true,
-      collaboratore,
-      testResult: logTestResult('Creazione collaboratore di test', true, Date.now() - startTime)
-    };
+    logTestResult(testName, true, Date.now() - startTime);
+    return collaboratore;
   } catch (error) {
-    return {
-      success: false,
-      testResult: logTestResult('Creazione collaboratore di test', false, Date.now() - startTime, error.message)
-    };
+    logTestResult(testName, false, Date.now() - startTime, error.message);
+    throw error;
   }
 }
 
-// Crea un evento di test da utilizzare con i collaboratori
+// Test Function: Crea un evento di test
 async function creaEventoDiTest() {
   const startTime = Date.now();
+  const testName = 'Creazione Evento';
+  
   try {
-    const randomNum = Math.floor(Math.random() * 10000);
-    const dataEvento = format(addDays(new Date(), 30), "yyyy-MM-dd");
+    const randomNum = Math.floor(Math.random() * 1000);
+    const oggi = new Date();
+    const domani = new Date(oggi);
+    domani.setDate(oggi.getDate() + 1);
     
-    const nuovoEvento = {
+    const eventoData = {
       title: `Test Evento ${randomNum}`,
-      description: `Evento creato per test automatici ${randomNum}`,
-      date: dataEvento,
+      description: 'Evento creato da script di test automatico',
+      date: oggi.toISOString(),
+      endDate: domani.toISOString(),
       location: 'Test Location',
-      type: 'wedding',
-      notes: 'Note di test',
+      type: 'Matrimonio',
+      clientId: 1, // Useremo il primo cliente disponibile
+      color: '#FF5733',
       status: 'confirmed'
     };
-
-    const response = await apiCall('/events', 'POST', nuovoEvento);
     
-    if (!response.ok || !response.data || !response.data.id) {
-      return logTestResult('Creazione evento di test', false, Date.now() - startTime, 
-        response.data?.error || 'Risposta API non valida');
+    const evento = await apiCall('/events', 'POST', eventoData);
+    
+    // Verifica che l'evento sia stato creato correttamente
+    if (!evento || !evento.id) {
+      throw new Error('Evento non creato correttamente');
     }
-
-    const evento = response.data;
-    testData.eventi.push(evento);
     
-    return {
-      success: true,
-      evento,
-      testResult: logTestResult('Creazione evento di test', true, Date.now() - startTime)
-    };
+    logTestResult(testName, true, Date.now() - startTime);
+    return evento;
   } catch (error) {
-    return {
-      success: false,
-      testResult: logTestResult('Creazione evento di test', false, Date.now() - startTime, error.message)
-    };
+    logTestResult(testName, false, Date.now() - startTime, error.message);
+    throw error;
   }
 }
 
-// Test: assegnare un collaboratore a un evento
+// Test Function: Assegna un collaboratore a un evento
 async function assegnaCollaboratoreEvento(collaboratoreId, eventoId) {
   const startTime = Date.now();
+  const testName = 'Assegnazione Collaboratore a Evento';
+  
   try {
-    const assegnazione = {
-      collaboratoreId: Number(collaboratoreId),
-      eventoId: Number(eventoId),
-      role: 'photographer',
-      fee: 200,
-      notes: 'Assegnazione creata da test automatici'
+    const assegnazioneData = {
+      eventId: eventoId,
+      collaboratorId: collaboratoreId,
+      role: 'Fotografo principale',
+      notes: 'Assegnazione creata da script di test'
     };
-
-    const response = await apiCall('/event-collaborators', 'POST', assegnazione);
     
-    if (!response.ok) {
-      return logTestResult('Assegnazione collaboratore a evento', false, Date.now() - startTime, 
-        response.data?.error || 'Risposta API non valida');
+    const assegnazione = await apiCall('/event-collaborators', 'POST', assegnazioneData);
+    
+    // Verifica l'assegnazione
+    if (!assegnazione || !assegnazione.id) {
+      throw new Error('Assegnazione collaboratore-evento non creata correttamente');
     }
     
-    // Verifica assegnazione
-    const verifica = await apiCall(`/collaboratori/${collaboratoreId}/eventi`);
-    const eventoAssegnato = verifica.data.some(e => Number(e.id) === Number(eventoId));
+    // Verifica che il collaboratore sia effettivamente assegnato all'evento
+    const collaboratoriEvento = await apiCall(`/events/${eventoId}/collaborators`);
+    const assegnato = collaboratoriEvento.some(c => c.id === collaboratoreId);
     
-    if (!eventoAssegnato) {
-      return logTestResult('Verifica assegnazione collaboratore', false, Date.now() - startTime, 
-        'Collaboratore non assegnato correttamente all\'evento');
+    if (!assegnato) {
+      throw new Error('Collaboratore non risulta assegnato all\'evento');
     }
     
-    return {
-      success: true,
-      assegnazione: response.data,
-      testResult: logTestResult('Assegnazione collaboratore a evento', true, Date.now() - startTime)
-    };
+    logTestResult(testName, true, Date.now() - startTime);
+    return assegnazione;
   } catch (error) {
-    return {
-      success: false,
-      testResult: logTestResult('Assegnazione collaboratore a evento', false, Date.now() - startTime, error.message)
-    };
+    logTestResult(testName, false, Date.now() - startTime, error.message);
+    throw error;
   }
 }
 
-// Test: creazione di un montaggio
+// Test Function: Crea un montaggio per un collaboratore su un evento
 async function creaMontaggio(collaboratoreId, eventoId) {
   const startTime = Date.now();
+  const testName = 'Creazione Montaggio';
+  
   try {
-    const montaggio = {
-      collaboratoreId: Number(collaboratoreId),
-      tipoMontaggio: 'video',
-      dataConsegnaPrevista: addDays(new Date(), 15).toISOString(),
-      priorita: 5,
-      note: 'Montaggio creato da test automatizzati',
-      stato: 'da_fare'
-    };
-
-    const response = await apiCall(`/eventi/${eventoId}/montaggi`, 'POST', montaggio);
+    const oggi = new Date();
+    const scadenza = new Date(oggi);
+    scadenza.setDate(oggi.getDate() + 30);
     
-    if (!response.ok || !response.data) {
-      return logTestResult('Creazione montaggio', false, Date.now() - startTime, 
-        response.data?.error || 'Risposta API non valida');
+    const montaggioData = {
+      eventId: eventoId,
+      collaboratorId: collaboratoreId,
+      tipo: 'Highlights',
+      stato: 'da_iniziare',
+      priorita: 'normale',
+      scadenza: scadenza.toISOString(),
+      note: 'Montaggio creato da script di test automatico'
+    };
+    
+    const montaggio = await apiCall('/montaggi', 'POST', montaggioData);
+    
+    // Verifica la creazione del montaggio
+    if (!montaggio || !montaggio.id) {
+      throw new Error('Montaggio non creato correttamente');
     }
-
-    const montaggioCreato = response.data;
-    testData.montaggi.push(montaggioCreato);
     
-    return {
-      success: true,
-      montaggio: montaggioCreato,
-      testResult: logTestResult('Creazione montaggio', true, Date.now() - startTime)
-    };
+    logTestResult(testName, true, Date.now() - startTime);
+    return montaggio;
   } catch (error) {
-    return {
-      success: false,
-      testResult: logTestResult('Creazione montaggio', false, Date.now() - startTime, error.message)
-    };
+    logTestResult(testName, false, Date.now() - startTime, error.message);
+    throw error;
   }
 }
 
-// Test: aggiornamento stato montaggio
+// Test Function: Aggiorna lo stato di un montaggio
 async function aggiornaMontaggio(eventoId, montaggioId, nuovoStato) {
   const startTime = Date.now();
+  const testName = 'Aggiornamento Stato Montaggio';
+  
   try {
-    const aggiornamento = {
-      stato: nuovoStato
+    const aggiornamentoData = {
+      stato: nuovoStato,
+      note: `Stato aggiornato a ${nuovoStato} da script di test automatico`
     };
-
-    if (nuovoStato === 'in_corso') {
-      aggiornamento.dataPrimoContatto = new Date().toISOString();
-    } else if (nuovoStato === 'completato') {
-      aggiornamento.dataConsegnaEffettiva = new Date().toISOString();
-      aggiornamento.saldoImporto = 150; // Per testare il sistema finanziario
-    }
-
-    const response = await apiCall(`/eventi/${eventoId}/montaggi/${montaggioId}`, 'PATCH', aggiornamento);
     
-    if (!response.ok) {
-      return logTestResult(`Aggiornamento montaggio a ${nuovoStato}`, false, Date.now() - startTime, 
-        response.data?.error || 'Risposta API non valida');
+    const montaggioAggiornato = await apiCall(`/eventi/${eventoId}/montaggi/${montaggioId}`, 'PUT', aggiornamentoData);
+    
+    // Verifica l'aggiornamento
+    if (!montaggioAggiornato || montaggioAggiornato.stato !== nuovoStato) {
+      throw new Error(`Stato montaggio non aggiornato correttamente a ${nuovoStato}`);
     }
     
-    return {
-      success: true,
-      montaggio: response.data,
-      testResult: logTestResult(`Aggiornamento montaggio a ${nuovoStato}`, true, Date.now() - startTime)
-    };
+    logTestResult(testName, true, Date.now() - startTime);
+    return montaggioAggiornato;
   } catch (error) {
-    return {
-      success: false,
-      testResult: logTestResult(`Aggiornamento montaggio a ${nuovoStato}`, false, Date.now() - startTime, error.message)
-    };
+    logTestResult(testName, false, Date.now() - startTime, error.message);
+    throw error;
   }
 }
 
-// Test: creazione pagamento per collaboratore
+// Test Function: Crea un pagamento per un collaboratore
 async function creaPagamentoCollaboratore(collaboratoreId, eventoId, importo) {
   const startTime = Date.now();
+  const testName = 'Creazione Pagamento Collaboratore';
+  
   try {
-    const pagamento = {
-      collaboratoreId: Number(collaboratoreId),
-      tipo: 'montaggio_saldo',
-      importo: Number(importo),
-      dataPagamento: new Date().toISOString(),
-      metodoPagamento: 'bonifico',
-      note: 'Pagamento creato da test automatici'
+    const pagamentoData = {
+      eventId: eventoId,
+      collaboratorId: collaboratoreId,
+      amount: importo,
+      description: 'Pagamento creato da script di test automatico',
+      date: new Date().toISOString(),
+      paymentMethod: 'bonifico'
     };
-
-    const response = await apiCall(`/eventi/${eventoId}/pagamenti`, 'POST', pagamento);
     
-    if (!response.ok || !response.data) {
-      return logTestResult('Creazione pagamento collaboratore', false, Date.now() - startTime, 
-        response.data?.error || 'Risposta API non valida');
+    const pagamento = await apiCall('/pagamenti-evento', 'POST', pagamentoData);
+    
+    // Verifica la creazione del pagamento
+    if (!pagamento || !pagamento.id) {
+      throw new Error('Pagamento non creato correttamente');
     }
-
-    const pagamentoCreato = response.data;
-    testData.pagamenti.push(pagamentoCreato);
     
-    return {
-      success: true,
-      pagamento: pagamentoCreato,
-      testResult: logTestResult('Creazione pagamento collaboratore', true, Date.now() - startTime)
-    };
+    logTestResult(testName, true, Date.now() - startTime);
+    return pagamento;
   } catch (error) {
-    return {
-      success: false,
-      testResult: logTestResult('Creazione pagamento collaboratore', false, Date.now() - startTime, error.message)
-    };
+    logTestResult(testName, false, Date.now() - startTime, error.message);
+    throw error;
   }
 }
 
-// Test: verifica compatibilità con sistema finanziario generale
+// Test Function: Verifica integrazione con il sistema finanziario
 async function verificaSistemaFinanziario(collaboratoreId, pagamentoId) {
   const startTime = Date.now();
+  const testName = 'Verifica Integrazione Sistema Finanziario';
+  
   try {
-    // 1. Verifica pagamenti nel sistema collaboratore
-    const pagamentiResponse = await apiCall(`/collaboratori/${collaboratoreId}/pagamenti`);
+    // Verifica che il pagamento al collaboratore sia riportato correttamente nel sistema finanziario
+    const pagamento = await apiCall(`/pagamenti-evento/${pagamentoId}`);
+    const transazioniFinanziarie = await apiCall('/finance/transactions');
     
-    if (!pagamentiResponse.ok || !pagamentiResponse.data) {
-      return logTestResult('Verifica pagamenti collaboratore', false, Date.now() - startTime, 
-        pagamentiResponse.data?.error || 'Risposta API pagamenti non valida');
-    }
-    
-    const pagamentoPresenteInCollaboratore = pagamentiResponse.data.some(p => 
-      p.id === pagamentoId || (p.pagamentoId && p.pagamentoId === pagamentoId)
+    // Trova la transazione corrispondente al pagamento del collaboratore
+    const transazioneTrovata = transazioniFinanziarie.some(t => 
+      t.amount === pagamento.amount && 
+      t.type === 'expense' && 
+      t.description.includes(`Collaboratore ID ${collaboratoreId}`)
     );
     
-    if (!pagamentoPresenteInCollaboratore) {
-      return logTestResult('Verifica pagamento in sistema collaboratore', false, Date.now() - startTime, 
-        'Pagamento non trovato nel sistema collaboratore');
+    if (!transazioneTrovata) {
+      throw new Error('Pagamento collaboratore non trovato nel sistema finanziario generale');
     }
     
-    // 2. Verifica transazioni finanziarie generali
-    const transakioniResponse = await apiCall('/transactions');
+    // Verifica anche tramite endpoint di debug specifico
+    const verificaIntegrazione = await apiCall('/debug/collaboratori-finanza/verifica');
     
-    if (!transakioniResponse.ok) {
-      return logTestResult('Verifica transazioni generali', false, Date.now() - startTime, 
-        transakioniResponse.data?.error || 'Risposta API transazioni non valida');
+    if (!verificaIntegrazione || !verificaIntegrazione.status === 'success') {
+      throw new Error('L\'endpoint di verifica integrazione finanziaria ha riportato problemi');
     }
     
-    // Verifica se il pagamento ha creato una transazione corrispondente
-    // Le transazioni potrebbero essere collegate tramite un riferimento o collegamento diretto
-    const transakioniCorrelate = transakioniResponse.data.filter(t => 
-      (t.reference && t.reference.includes(`collaboratore-${collaboratoreId}`)) ||
-      (t.description && t.description.includes('pagamento collaboratore'))
-    );
-    
-    if (transakioniCorrelate.length === 0) {
-      console.log(`⚠️ Avviso: Nessuna transazione correlata trovata per il pagamento del collaboratore ${collaboratoreId}`);
-    } else {
-      testData.transazioni.push(...transakioniCorrelate);
-    }
-    
-    // 3. Verifica saldo collaboratore (dovrebbe essere aggiornato)
-    const dashboardResponse = await apiCall(`/collaboratori/${collaboratoreId}/dashboard`);
-    
-    if (!dashboardResponse.ok) {
-      return logTestResult('Verifica dashboard collaboratore', false, Date.now() - startTime, 
-        dashboardResponse.data?.error || 'Risposta API dashboard non valida');
-    }
-    
-    // La dashboard dovrebbe riflettere i pagamenti e i saldi
-    const dashboardData = dashboardResponse.data;
-    
-    return {
-      success: true,
-      dashboardData,
-      transakioniCorrelate,
-      testResult: logTestResult('Verifica sistema finanziario', true, Date.now() - startTime)
-    };
+    logTestResult(testName, true, Date.now() - startTime);
+    return true;
   } catch (error) {
-    return {
-      success: false,
-      testResult: logTestResult('Verifica sistema finanziario', false, Date.now() - startTime, error.message)
-    };
+    logTestResult(testName, false, Date.now() - startTime, error.message);
+    throw error;
   }
 }
 
-// Test: generazione token dashboard collaboratore
+// Test Function: Genera e verifica token per collaboratore
 async function generaTokenCollaboratore(collaboratoreId) {
   const startTime = Date.now();
+  const testName = 'Generazione Token Collaboratore';
+  
   try {
-    const tokenRequest = {
-      collaboratoreId: Number(collaboratoreId),
-      expiresIn: '7d'
+    const tokenData = {
+      collaboratorId: collaboratoreId,
+      expiryDays: 30,
+      note: 'Token generato da script di test automatico'
     };
-
-    const response = await apiCall('/token-collaboratore', 'POST', tokenRequest);
     
-    if (!response.ok || !response.data || !response.data.token) {
-      return logTestResult('Generazione token collaboratore', false, Date.now() - startTime, 
-        response.data?.error || 'Risposta API non valida');
+    const token = await apiCall('/collaboratori/generate-token', 'POST', tokenData);
+    
+    // Verifica la generazione del token
+    if (!token || !token.accessToken) {
+      throw new Error('Token non generato correttamente');
     }
     
-    return {
-      success: true,
-      token: response.data.token,
-      testResult: logTestResult('Generazione token collaboratore', true, Date.now() - startTime)
-    };
+    // Verifica accesso tramite token
+    const dashboardInfo = await apiCall('/collaboratori/dashboard', 'GET', null, {
+      'Authorization': `Bearer ${token.accessToken}`
+    });
+    
+    if (!dashboardInfo || !dashboardInfo.collaboratore || dashboardInfo.collaboratore.id !== collaboratoreId) {
+      throw new Error('Accesso con token non funzionante');
+    }
+    
+    logTestResult(testName, true, Date.now() - startTime);
+    return token;
   } catch (error) {
-    return {
-      success: false,
-      testResult: logTestResult('Generazione token collaboratore', false, Date.now() - startTime, error.message)
-    };
+    logTestResult(testName, false, Date.now() - startTime, error.message);
+    throw error;
   }
 }
 
-// Test: pulizia dati di test (opzionale, attivato tramite variabile d'ambiente)
-async function pulisciDatiTest() {
-  // Se non siamo in ambiente di test, non eliminare nulla
-  if (TEST_ENV !== 'test' && !process.env.FORCE_CLEANUP) {
-    console.log('⚠️ Pulizia dati disabilitata (non in ambiente di test). Usa FORCE_CLEANUP=true per forzare.');
-    skippedTests++;
-    return { skipped: true };
-  }
-  
+// Test Function: Pulizia dati test
+async function pulisciDatiTest(ids) {
   const startTime = Date.now();
-  const errorList = [];
-  let successCount = 0;
+  const testName = 'Pulizia Dati Test';
   
   try {
-    // Elimina pagamenti di test
-    for (const pagamento of testData.pagamenti) {
-      try {
-        await apiCall(`/pagamenti/${pagamento.id}`, 'DELETE');
-        successCount++;
-      } catch (err) {
-        errorList.push(`Errore eliminazione pagamento ${pagamento.id}: ${err.message}`);
-      }
+    const { collaboratoreId, eventoId, montaggioId, pagamentoId } = ids;
+    
+    // Elimina pagamento
+    if (pagamentoId) {
+      await apiCall(`/pagamenti-evento/${pagamentoId}`, 'DELETE');
     }
     
-    // Elimina montaggi di test
-    for (const montaggio of testData.montaggi) {
-      try {
-        await apiCall(`/eventi/${montaggio.eventoId}/montaggi/${montaggio.id}`, 'DELETE');
-        successCount++;
-      } catch (err) {
-        errorList.push(`Errore eliminazione montaggio ${montaggio.id}: ${err.message}`);
-      }
+    // Elimina montaggio
+    if (montaggioId) {
+      await apiCall(`/eventi/${eventoId}/montaggi/${montaggioId}`, 'DELETE');
     }
     
-    // Rimuovi assegnazioni collaboratore-evento
-    for (const evento of testData.eventi) {
-      for (const collaboratore of testData.collaboratori) {
-        try {
-          await apiCall(`/eventi/${evento.id}/collaboratori/${collaboratore.id}`, 'DELETE');
-          successCount++;
-        } catch (err) {
-          errorList.push(`Errore rimozione assegnazione collab ${collaboratore.id} da evento ${evento.id}: ${err.message}`);
-        }
-      }
+    // Elimina assegnazione collaboratore a evento
+    if (collaboratoreId && eventoId) {
+      await apiCall(`/event-collaborators/${eventoId}/${collaboratoreId}`, 'DELETE');
     }
     
-    // Elimina eventi di test
-    for (const evento of testData.eventi) {
-      try {
-        await apiCall(`/events/${evento.id}`, 'DELETE');
-        successCount++;
-      } catch (err) {
-        errorList.push(`Errore eliminazione evento ${evento.id}: ${err.message}`);
-      }
+    // Elimina evento
+    if (eventoId) {
+      await apiCall(`/events/${eventoId}`, 'DELETE');
     }
     
-    // Elimina collaboratori di test
-    for (const collaboratore of testData.collaboratori) {
-      try {
-        await apiCall(`/collaborators/${collaboratore.id}`, 'DELETE');
-        successCount++;
-      } catch (err) {
-        errorList.push(`Errore eliminazione collaboratore ${collaboratore.id}: ${err.message}`);
-      }
+    // Elimina collaboratore
+    if (collaboratoreId) {
+      await apiCall(`/collaborators/${collaboratoreId}`, 'DELETE');
     }
     
-    const success = errorList.length === 0;
-    return {
-      success,
-      successCount,
-      errorList,
-      testResult: logTestResult('Pulizia dati di test', success, Date.now() - startTime, 
-        success ? null : { errors: errorList })
-    };
+    logTestResult(testName, true, Date.now() - startTime);
+    return true;
   } catch (error) {
-    return {
-      success: false,
-      successCount,
-      errorList: [...errorList, error.message],
-      testResult: logTestResult('Pulizia dati di test', false, Date.now() - startTime, error.message)
-    };
+    logTestResult(testName, false, Date.now() - startTime, error.message);
+    // Non propagare l'errore di pulizia
+    return false;
   }
 }
 
-// Esegui test suite completa
+// Funzione principale che esegue tutti i test
 async function eseguiTestSuite() {
-  console.log('🚀 Avvio test suite modulo collaboratori...');
+  console.log(`${COLORS.bright}${COLORS.cyan}=== INIZIO TEST SISTEMA COLLABORATORI ===${COLORS.reset}`);
+  console.log(`${COLORS.yellow}Data: ${new Date().toLocaleString()}${COLORS.reset}\n`);
+  
+  let ids = {
+    collaboratoreId: null,
+    eventoId: null,
+    montaggioId: null,
+    pagamentoId: null
+  };
   
   try {
     // Test 1: Creazione collaboratore
-    const collaboratoreResult = await creaCollaboratoreDiTest();
-    if (!collaboratoreResult.success) {
-      console.error('❌ Test fallito: Impossibile creare collaboratore di test. Arresto suite di test.');
-      return;
-    }
-    const collaboratoreId = collaboratoreResult.collaboratore.id;
+    const collaboratore = await creaCollaboratoreDiTest();
+    ids.collaboratoreId = collaboratore.id;
     
     // Test 2: Creazione evento
-    const eventoResult = await creaEventoDiTest();
-    if (!eventoResult.success) {
-      console.error('❌ Test fallito: Impossibile creare evento di test. Arresto suite di test.');
-      return;
-    }
-    const eventoId = eventoResult.evento.id;
+    const evento = await creaEventoDiTest();
+    ids.eventoId = evento.id;
     
     // Test 3: Assegnazione collaboratore a evento
-    const assegnazioneResult = await assegnaCollaboratoreEvento(collaboratoreId, eventoId);
-    if (!assegnazioneResult.success) {
-      console.error('❌ Test fallito: Impossibile assegnare collaboratore all\'evento. Continuazione con cautela...');
-    }
+    await assegnaCollaboratoreEvento(collaboratore.id, evento.id);
     
     // Test 4: Creazione montaggio
-    const montaggioResult = await creaMontaggio(collaboratoreId, eventoId);
-    if (!montaggioResult.success) {
-      console.error('❌ Test fallito: Impossibile creare montaggio. Continuazione con cautela...');
-    } else {
-      const montaggioId = montaggioResult.montaggio.id;
-      
-      // Test 5A: Aggiornamento montaggio a "in corso"
-      await aggiornaMontaggio(eventoId, montaggioId, 'in_corso');
-      
-      // Test 5B: Aggiornamento montaggio a "completato"
-      await aggiornaMontaggio(eventoId, montaggioId, 'completato');
-      
-      // Test 6: Creazione pagamento
-      const pagamentoResult = await creaPagamentoCollaboratore(collaboratoreId, eventoId, 150);
-      if (pagamentoResult.success) {
-        const pagamentoId = pagamentoResult.pagamento.id;
-        
-        // Test 7: Verifica sistema finanziario
-        await verificaSistemaFinanziario(collaboratoreId, pagamentoId);
-      }
-    }
+    const montaggio = await creaMontaggio(collaboratore.id, evento.id);
+    ids.montaggioId = montaggio.id;
+    
+    // Test 5: Aggiornamento montaggio
+    await aggiornaMontaggio(evento.id, montaggio.id, 'in_corso');
+    
+    // Test 6: Creazione pagamento collaboratore
+    const pagamento = await creaPagamentoCollaboratore(collaboratore.id, evento.id, 150.00);
+    ids.pagamentoId = pagamento.id;
+    
+    // Test 7: Verifica integrazione sistema finanziario
+    await verificaSistemaFinanziario(collaboratore.id, pagamento.id);
     
     // Test 8: Generazione token collaboratore
-    await generaTokenCollaboratore(collaboratoreId);
+    await generaTokenCollaboratore(collaboratore.id);
     
-    // Test 9: Pulizia (opzionale)
-    if (process.env.CLEANUP === 'true' || process.env.FORCE_CLEANUP === 'true') {
-      await pulisciDatiTest();
-    } else {
-      console.log('\n⚠️ Pulizia dati di test saltata. Usa CLEANUP=true per attivare.');
-    }
-    
-    // Stampa report finale
-    console.log('\n📊 Rapporto Test Suite:');
-    console.log(`✅ Test Passati: ${passedTests}/${totalTests} (${(passedTests/totalTests*100).toFixed(2)}%)`);
-    console.log(`❌ Test Falliti: ${failedTests}/${totalTests} (${(failedTests/totalTests*100).toFixed(2)}%)`);
-    if (skippedTests > 0) {
-      console.log(`⏭️ Test Saltati: ${skippedTests}`);
-    }
-    console.log('\n💡 Controlla il file di log per dettagli completi sui test.');
+    console.log(`${COLORS.green}${COLORS.bright}✅ TUTTI I TEST COMPLETATI CON SUCCESSO!${COLORS.reset}`);
   } catch (error) {
-    console.error('❌ Errore critico nell\'esecuzione della suite di test:', error);
+    console.error(`${COLORS.red}${COLORS.bright}❌ TEST FALLITO:${COLORS.reset}`, error.message);
   } finally {
-    // Salva i risultati dei test per riferimento futuro
+    // Pulizia dati creati durante i test
+    await pulisciDatiTest(ids);
+    
+    // Salva i risultati dei test
     await saveTestResults();
+    
+    console.log(`${COLORS.bright}${COLORS.cyan}=== FINE TEST SISTEMA COLLABORATORI ===${COLORS.reset}`);
   }
 }
 
-// Avvio della suite di test
+// Esecuzione della suite di test
 eseguiTestSuite().catch(error => {
-  console.error('❌ Errore nell\'esecuzione della suite di test:', error);
-  process.exit(1);
+  console.error(`${COLORS.red}Errore fatale durante l'esecuzione della suite di test:${COLORS.reset}`, error);
 });

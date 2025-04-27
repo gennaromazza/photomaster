@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import {
   Table,
   TableBody,
@@ -28,7 +29,18 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, RefreshCw, Eye } from 'lucide-react';
+import { Loader2, Search, RefreshCw, Eye, Trash2, AlertCircle } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatDate } from '@/lib/utils';
 
 // Helper per formattare lo stato della richiesta
@@ -52,6 +64,9 @@ const BundleLeadsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<number | null>(null);
+  const { toast } = useToast();
   
   // Query per ottenere l'elenco dei bundle lead
   const { data, isLoading, error, refetch } = useQuery({

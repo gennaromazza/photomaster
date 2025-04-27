@@ -4,7 +4,8 @@ import {
   getBundleLeadByEmail, 
   convertBundleLeadToQuote,
   getAllBundleLeads,
-  getBundleLeadById
+  getBundleLeadById,
+  deleteBundleLead
 } from "../controllers/bundle-leads-controller";
 
 const router = express.Router();
@@ -23,5 +24,8 @@ router.get("/by-email/:email", getBundleLeadByEmail);
 
 // Rotta per convertire una richiesta di preventivo in un preventivo completo
 router.post("/convert-to-quote/:leadId", convertBundleLeadToQuote);
+
+// Rotta per eliminare una richiesta di preventivo
+router.delete("/:id", deleteBundleLead);
 
 export default router;

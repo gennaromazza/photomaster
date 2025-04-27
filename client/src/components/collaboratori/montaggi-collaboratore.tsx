@@ -172,10 +172,10 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
     setIsLoading(true);
     try {
       // Per ogni evento, recupera i montaggi
-      const montaggiPromises = eventi.map(evento => 
+      const montaggiPromises = eventi.map((evento: any) => 
         fetch(`/api/eventi/${evento.id}/montaggi`)
           .then(res => res.json())
-          .then(data => data.map(montaggio => ({
+          .then(data => data.map((montaggio: any) => ({
             ...montaggio,
             eventoTitle: evento.title,
             eventoData: evento.date
@@ -188,7 +188,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
       
       // Filtra solo i montaggi di questo collaboratore
       const montaggiCollaboratore = montaggiFlatList.filter(
-        m => m.collaboratore?.id === Number(collaboratoreId)
+        (m: any) => m.collaboratore?.id === Number(collaboratoreId)
       );
       
       setMontaggi(montaggiCollaboratore);
@@ -720,7 +720,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
               }
 
               // Trova l'evento associato
-              const eventoAssociato = eventi.find(e => e.id === montaggio.eventoId);
+              const eventoAssociato = eventi.find((e: any) => e.id === montaggio.eventoId);
               
               return (
                 <Card 
@@ -996,7 +996,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
             <div className="py-4">
               <div className="p-3 bg-muted/30 rounded-md">
                 <p className="font-medium">
-                  {eventi.find(e => e.id === montaggioSelezionato.eventoId)?.titolo || 
+                  {eventi.find((e: any) => e.id === montaggioSelezionato.eventoId)?.titolo || 
                    montaggioSelezionato.titolo || 
                    `Montaggio #${montaggioSelezionato.id}`}
                 </p>
@@ -1054,7 +1054,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
               <form onSubmit={completaForm.handleSubmit(onSubmitCompletaMontaggio)} className="space-y-6">
                 <div className="p-3 bg-muted/30 rounded-md mb-4">
                   <p className="font-medium">
-                    {eventi.find(e => e.id === montaggioSelezionato.eventoId)?.titolo || 
+                    {eventi.find((e: any) => e.id === montaggioSelezionato.eventoId)?.titolo || 
                      montaggioSelezionato.titolo || 
                      `Montaggio #${montaggioSelezionato.id}`}
                   </p>
@@ -1162,7 +1162,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
                     <Select 
                       onValueChange={(value) => {
                         field.onChange(parseInt(value));
-                        const evento = eventi.find(e => e.id === parseInt(value));
+                        const evento = eventi.find((e: any) => e.id === parseInt(value));
                         setEventoSelezionato(evento);
                       }}
                       defaultValue={field.value?.toString()}
@@ -1247,8 +1247,8 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
+                          onSelect={(date: Date | undefined) => field.onChange(date)}
+                          disabled={(date: Date) =>
                             date < new Date()
                           }
                           initialFocus

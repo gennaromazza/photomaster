@@ -227,7 +227,7 @@ const verifyQuoteCreated = async (quoteData) => {
   
   try {
     // Recupera dettagli completi del preventivo
-    const response = await axios.get(`${BASE_URL}/api/quotes/${quoteData.id}`);
+    const response = await axios.get(`${BASE_URL}/api/quotes/${quoteData.id}`, { headers: defaultHeaders });
     console.log('✅ Dettagli preventivo recuperati con successo!');
     
     // Salva dettagli preventivo per riferimento
@@ -285,7 +285,7 @@ const verifyScheduledPayments = async (quoteData) => {
   
   try {
     // Recupera pagamenti programmati per il preventivo
-    const response = await axios.get(`${BASE_URL}/api/scheduled-payments?quoteId=${quoteData.id}`);
+    const response = await axios.get(`${BASE_URL}/api/scheduled-payments?quoteId=${quoteData.id}`, { headers: defaultHeaders });
     
     // Salva dettagli pagamenti per riferimento
     saveResponse('5-scheduled-payments', response.data);

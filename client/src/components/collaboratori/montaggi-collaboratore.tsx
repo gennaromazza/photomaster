@@ -145,14 +145,14 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
   });
 
   // Query per recuperare il collaboratore
-  const { data: collaboratore, isLoading: isLoadingCollaboratore } = useQuery({
+  const { data: collaboratore, isLoading: isLoadingCollaboratore } = useQuery<any>({
     queryKey: [`/api/collaborators/${collaboratoreId}`],
     staleTime: 5 * 60 * 1000,
     placeholderData: keepPreviousData,
   });
 
   // Query per recuperare gli eventi del collaboratore
-  const { data: eventi = [], isLoading: isLoadingEventi } = useQuery({
+  const { data: eventi = [], isLoading: isLoadingEventi } = useQuery<any[]>({
     queryKey: [`/api/collaboratori/${collaboratoreId}/eventi`],
     staleTime: 5 * 60 * 1000,
     placeholderData: keepPreviousData,
@@ -161,9 +161,9 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
   // Query per recuperare i montaggi - Approccio Event-Centric
   // Primo recuperiamo gli eventi per questo collaboratore
   // Poi per ogni evento recuperiamo i montaggi associati
-  const [montaggi, setMontaggi] = useState([]);
+  const [montaggi, setMontaggi] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
   
   // Recupera i montaggi per ogni evento del collaboratore
   const fetchAllMontaggi = useCallback(async () => {
@@ -603,7 +603,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
               )}
               {stats.inScadenza > 0 && (
                 <div className="flex items-center">
-                  <Badge variant="warning" className="mr-2 bg-amber-500 hover:bg-amber-600" role="status">
+                  <Badge variant="outline" className="mr-2 bg-amber-500 hover:bg-amber-600 text-white" role="status">
                     {stats.inScadenza}
                   </Badge>
                   <span className="text-muted-foreground">In scadenza</span>

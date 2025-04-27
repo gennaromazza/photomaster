@@ -1,0 +1,30 @@
+{
+  "totalTests": 3,
+  "passedTests": 2,
+  "failedTests": 1,
+  "totalDuration": 457,
+  "timestamp": "2025-04-27T19:50:49.704Z",
+  "results": [
+    {
+      "name": "Creazione Collaboratore",
+      "success": true,
+      "duration": 252,
+      "timestamp": "2025-04-27T19:50:49.532Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Creazione Evento",
+      "success": false,
+      "duration": 30,
+      "timestamp": "2025-04-27T19:50:49.562Z",
+      "errorDetails": "API Error 400: {\"message\":\"Validation error: Required at \\\"eventType\\\"\"}"
+    },
+    {
+      "name": "Pulizia Dati Test",
+      "success": true,
+      "duration": 140,
+      "timestamp": "2025-04-27T19:50:49.703Z",
+      "errorDetails": null
+    }
+  ]
+}

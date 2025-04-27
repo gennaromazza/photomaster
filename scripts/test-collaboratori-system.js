@@ -165,7 +165,7 @@ async function creaEventoDiTest() {
       date: oggi.toISOString(),
       endDate: domani.toISOString(),
       location: 'Test Location',
-      type: 'Matrimonio',
+      eventType: 'Matrimonio', // Corretto da 'type' a 'eventType'
       clientId: 1, // Useremo il primo cliente disponibile
       color: '#FF5733',
       status: 'confirmed'

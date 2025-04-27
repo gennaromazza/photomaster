@@ -182,6 +182,66 @@ export const SocialMediaSettings = ({ settings }: { settings: Settings | undefin
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="linkedinUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center">
+                    <Linkedin className="mr-2 h-4 w-4 text-blue-700" />
+                    LinkedIn
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://linkedin.com/in/tuoprofilo" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    URL completo del tuo profilo LinkedIn professionale
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="tiktokUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center">
+                    <FaTiktok className="mr-2 h-4 w-4 text-black" />
+                    TikTok
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://tiktok.com/@tuoprofilo" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    URL completo del tuo account TikTok
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="pinterestUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center">
+                    <FaPinterest className="mr-2 h-4 w-4 text-red-500" />
+                    Pinterest
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://pinterest.com/tuoprofilo" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    URL completo del tuo profilo Pinterest
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="flex justify-end">
               <Button type="submit" className="flex items-center" disabled={mutation.isPending}>
                 {mutation.isPending ? (

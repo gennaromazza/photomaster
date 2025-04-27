@@ -1,34 +1,45 @@
 // Script per risolvere problemi di incongruenza tra i sistemi di galleria e selezioni
-const axios = require('axios');
-const colors = require('colors');
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import pg from 'pg';
+import dotenv from 'dotenv';
+
+// Configurazione dell'ambiente
+dotenv.config();
+
+// Ottieni dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configurazione
-const BASE_URL = 'http://localhost:3000/api';
-const DB_URL = 'http://localhost:3000/api/debug/db'; // Endpoint per diagnostica DB
+const BASE_URL = 'http://localhost:5000/api';
+const DB_URL = 'http://localhost:5000/api/debug/db'; // Endpoint per diagnostica DB
 
 // Utility per i log colorati
 function logInfo(message) {
-  console.log(`[INFO] ${message}`.blue);
+  console.log(`[INFO] ${message}`);
 }
 
 function logSuccess(message) {
-  console.log(`[SUCCESS] ${message}`.green);
+  console.log(`[SUCCESS] ${message}`);
 }
 
 function logWarning(message) {
-  console.log(`[WARNING] ${message}`.yellow);
+  console.log(`[WARNING] ${message}`);
 }
 
 function logError(message, error = null) {
-  console.error(`[ERROR] ${message}`.red);
+  console.error(`[ERROR] ${message}`);
   if (error) {
     if (error.response) {
-      console.error(`Status: ${error.response.status}`.red);
-      console.error(`Data: ${JSON.stringify(error.response.data, null, 2)}`.red);
+      console.error(`Status: ${error.response.status}`);
+      console.error(`Data: ${JSON.stringify(error.response.data, null, 2)}`);
     } else if (error.message) {
-      console.error(`Message: ${error.message}`.red);
+      console.error(`Message: ${error.message}`);
     } else {
-      console.error(`${JSON.stringify(error, null, 2)}`.red);
+      console.error(`${JSON.stringify(error, null, 2)}`);
     }
   }
 }

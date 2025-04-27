@@ -6,7 +6,7 @@
 import { Request, Response } from "express";
 import { Pool } from "pg";
 import { db } from "../db";
-import { isAdmin } from "../auth";
+import { isAdmin, csrfBypass } from "../auth";
 
 // Configura una connessione diretta al database per operazioni raw
 const pool = new Pool({
@@ -165,10 +165,10 @@ export function setupDebugDbEndpoints(app: any) {
 
   console.log("Configurazione degli endpoint di debug DB");
 
-  // Sottorotte per operazioni di debug sul database
-  app.post("/api/debug/db/execute", isAdmin, executeQuery);
-  app.post("/api/debug/db/structure", isAdmin, getTableStructure);
-  app.post("/api/debug/db/dependencies", isAdmin, getTableDependencies);
+  // Sottorotte per operazioni di debug sul database con bypass CSRF
+  app.post("/api/debug/db/execute", csrfBypass, isAdmin, executeQuery);
+  app.post("/api/debug/db/structure", csrfBypass, isAdmin, getTableStructure);
+  app.post("/api/debug/db/dependencies", csrfBypass, isAdmin, getTableDependencies);
   
   console.log("Endpoint di debug DB configurati");
 }

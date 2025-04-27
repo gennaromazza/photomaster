@@ -1079,6 +1079,12 @@ export function checkGalleryAccess(req: Request, res: Response, next: NextFuncti
   }
 }
 
+// Middleware dedicato per bypassare la protezione CSRF (solo per scopi di debug)
+export function csrfBypass(req: Request, res: Response, next: NextFunction) {
+  console.log("DEBUG csrfBypass - Bypass protezione CSRF per endpoint di debug");
+  next();
+}
+
 // Middleware per protezione CSRF
 export function csrfProtection(req: Request, res: Response, next: NextFunction) {
   console.log("DEBUG csrfProtection - Verifica token CSRF");

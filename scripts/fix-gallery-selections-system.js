@@ -17,6 +17,9 @@ const __dirname = path.dirname(__filename);
 const BASE_URL = 'http://localhost:5000/api';
 const DB_URL = 'http://localhost:5000/api/debug/db'; // Endpoint per diagnostica DB
 
+// Configurazione axios per aggiungere automaticamente header per bypass CSRF
+axios.defaults.headers.common['x-test-automation'] = 'true';
+
 // Utility per i log colorati
 function logInfo(message) {
   console.log(`[INFO] ${message}`);

@@ -36,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useMutation } from '@tanstack/react-query';
 import { SocialMediaFooter } from '@/components/shared/social-media-footer';
+import { SocialMediaShowcase } from '@/components/shared/social-media-showcase';
 
 // Formattazione prezzo in Euro
 const formatPrice = (price: number) => {
@@ -264,7 +265,7 @@ const ElegantTemplate: React.FC<{
           </div>
         </div>
         
-        <SocialMediaFooter settings={settings} variant="elegant" />
+        <BundleTemplateSocialFooters templateType="elegant" settings={settings} />
       </footer>
     </div>
   );
@@ -497,23 +498,13 @@ const ModernTemplate: React.FC<{
                 <Heart className="mr-2 h-4 w-4 text-primary" />
                 Seguici
               </h3>
-              <div className="flex space-x-3">
-                <div className="bg-white/10 hover:bg-white/20 transition-colors duration-300 w-10 h-10 rounded-full flex items-center justify-center">
-                  <a href="#" target="_blank" rel="noopener noreferrer">
-                    <Instagram className="h-5 w-5" />
-                  </a>
-                </div>
-                <div className="bg-white/10 hover:bg-white/20 transition-colors duration-300 w-10 h-10 rounded-full flex items-center justify-center">
-                  <a href="#" target="_blank" rel="noopener noreferrer">
-                    <Facebook className="h-5 w-5" />
-                  </a>
-                </div>
-                <div className="bg-white/10 hover:bg-white/20 transition-colors duration-300 w-10 h-10 rounded-full flex items-center justify-center">
-                  <a href="#" target="_blank" rel="noopener noreferrer">
-                    <Twitter className="h-5 w-5" />
-                  </a>
-                </div>
-              </div>
+              {/* Utilizzo del componente SocialMediaShowcase con variante minimal per il template modern */}
+              <SocialMediaShowcase 
+                settings={settings} 
+                variant="minimal" 
+                showFollowText={false}
+                className="mt-2"
+              />
             </div>
             
             <div>
@@ -996,17 +987,13 @@ const BoldTemplate: React.FC<{
             
             <div className="text-center">
               <h3 className="text-xl font-bold mb-6">Seguici</h3>
-              <div className="flex justify-center space-x-6">
-                <a href="#" className="bg-white/10 hover:bg-primary transition-all duration-300 w-12 h-12 rounded-full flex items-center justify-center">
-                  <Instagram className="h-5 w-5" />
-                </a>
-                <a href="#" className="bg-white/10 hover:bg-primary transition-all duration-300 w-12 h-12 rounded-full flex items-center justify-center">
-                  <Facebook className="h-5 w-5" />
-                </a>
-                <a href="#" className="bg-white/10 hover:bg-primary transition-all duration-300 w-12 h-12 rounded-full flex items-center justify-center">
-                  <Twitter className="h-5 w-5" />
-                </a>
-              </div>
+              {/* Utilizzo del componente SocialMediaShowcase con variante minimal per il template bold */}
+              <SocialMediaShowcase 
+                settings={settings} 
+                variant="minimal" 
+                showFollowText={false}
+                className="flex justify-center scale-110" 
+              />
             </div>
           </div>
           

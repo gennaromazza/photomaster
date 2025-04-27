@@ -334,6 +334,42 @@ const createFixedModuleFromBundle = async (bundle: any, quoteId: number) => {
 };
 
 /**
+ * Elimina una richiesta di preventivo
+ */
+export const deleteBundleLead = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  
+  if (!id) {
+    return res.status(400).json({ error: "ID della richiesta mancante" });
+  }
+  
+  try {
+    const bundleLeadId = Number(id);
+    
+    // Verifica che il bundle lead esista
+    const bundleLead = await db.query.bundleLeads.findFirst({
+      where: eq(bundleLeads.id, bundleLeadId)
+    });
+    
+    if (!bundleLead) {
+      return res.status(404).json({ error: "Richiesta di preventivo non trovata" });
+    }
+    
+    // Elimina il bundle lead
+    await db.delete(bundleLeads)
+      .where(eq(bundleLeads.id, bundleLeadId));
+    
+    return res.status(200).json({ 
+      success: true,
+      message: "Richiesta di preventivo eliminata con successo" 
+    });
+  } catch (error) {
+    console.error("Errore nell'eliminazione della richiesta di preventivo:", error);
+    return res.status(500).json({ error: "Errore del server" });
+  }
+};
+
+/**
  * Recupera tutte le richieste di preventivi da bundle
  */
 export const getAllBundleLeads = async (req: Request, res: Response) => {

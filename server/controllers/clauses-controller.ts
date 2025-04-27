@@ -13,7 +13,7 @@ import {
   QuoteClause,
   ServiceCategory
 } from "@shared/schema";
-import { eq, and, isNull, inArray, sql, desc, SQL } from "drizzle-orm";
+import { eq, and, isNull, inArray, sql, desc, SQL, or } from "drizzle-orm";
 import { ZodError } from "zod";
 
 /**
@@ -251,26 +251,38 @@ export class ClausesController {
         
         // Clausole per tutte le categorie e tipi di evento (generiche)
         conditions.push(
-          sql`${isNull(contractClauses.categoryId)} AND ${isNull(contractClauses.eventType)}`
+          and(
+            isNull(contractClauses.categoryId),
+            isNull(contractClauses.eventType)
+          )
         );
         
         // Clausole specifiche per il tipo di evento del preventivo
         if (quote.eventType) {
           conditions.push(
-            sql`${isNull(contractClauses.categoryId)} AND ${eq(contractClauses.eventType, quote.eventType)}`
+            and(
+              isNull(contractClauses.categoryId),
+              eq(contractClauses.eventType, quote.eventType)
+            )
           );
         }
         
         // Clausole specifiche per la categoria del preventivo
         if (quote.categoryId) {
           conditions.push(
-            sql`${eq(contractClauses.categoryId, quote.categoryId)} AND ${isNull(contractClauses.eventType)}`
+            and(
+              eq(contractClauses.categoryId, quote.categoryId),
+              isNull(contractClauses.eventType)
+            )
           );
           
           // Clausole specifiche per categoria E tipo di evento
           if (quote.eventType) {
             conditions.push(
-              sql`${eq(contractClauses.categoryId, quote.categoryId)} AND ${eq(contractClauses.eventType, quote.eventType)}`
+              and(
+                eq(contractClauses.categoryId, quote.categoryId),
+                eq(contractClauses.eventType, quote.eventType)
+              )
             );
           }
         }
@@ -279,10 +291,10 @@ export class ClausesController {
         const availableClauses = await db.query.contractClauses.findMany({
           where: and(
             eq(contractClauses.isActive, true),
-            sql`(${sql.join(conditions, sql` OR `)})`
+            or(...conditions)
           ),
           orderBy: [
-            { order: "asc" }
+            contractClauses.order
           ]
         });
         
@@ -346,26 +358,38 @@ export class ClausesController {
       
       // Clausole per tutte le categorie e tipi di evento (generiche)
       conditions.push(
-        sql`${isNull(contractClauses.categoryId)} AND ${isNull(contractClauses.eventType)}`
+        and(
+          isNull(contractClauses.categoryId),
+          isNull(contractClauses.eventType)
+        )
       );
       
       // Clausole specifiche per il tipo di evento del preventivo
       if (quote.eventType) {
         conditions.push(
-          sql`${isNull(contractClauses.categoryId)} AND ${eq(contractClauses.eventType, quote.eventType)}`
+          and(
+            isNull(contractClauses.categoryId),
+            eq(contractClauses.eventType, quote.eventType)
+          )
         );
       }
       
       // Clausole specifiche per la categoria del preventivo
       if (quote.categoryId) {
         conditions.push(
-          sql`${eq(contractClauses.categoryId, quote.categoryId)} AND ${isNull(contractClauses.eventType)}`
+          and(
+            eq(contractClauses.categoryId, quote.categoryId),
+            isNull(contractClauses.eventType)
+          )
         );
         
         // Clausole specifiche per categoria E tipo di evento
         if (quote.eventType) {
           conditions.push(
-            sql`${eq(contractClauses.categoryId, quote.categoryId)} AND ${eq(contractClauses.eventType, quote.eventType)}`
+            and(
+              eq(contractClauses.categoryId, quote.categoryId),
+              eq(contractClauses.eventType, quote.eventType)
+            )
           );
         }
       }
@@ -413,9 +437,53 @@ export class ClausesController {
       // Clausole da associare (automatiche se non specificate)
       let clauseIds: number[];
       if (!req.body.clauseIds) {
-        // assegna tutte le clausole collegate alla stessa categoria dell'evento
+        // Costruiamo condizioni per trovare clausole appropriate
+        const conditions: SQL[] = [];
+        
+        // Clausole per tutte le categorie e tipi di evento (generiche)
+        conditions.push(
+          and(
+            isNull(contractClauses.categoryId),
+            isNull(contractClauses.eventType)
+          )
+        );
+        
+        // Clausole specifiche per la categoria del preventivo
+        if (quote.categoryId) {
+          conditions.push(
+            and(
+              eq(contractClauses.categoryId, quote.categoryId),
+              isNull(contractClauses.eventType)
+            )
+          );
+          
+          // Clausole specifiche per categoria E tipo di evento
+          if (quote.eventType) {
+            conditions.push(
+              and(
+                eq(contractClauses.categoryId, quote.categoryId),
+                eq(contractClauses.eventType, quote.eventType)
+              )
+            );
+          }
+        }
+        
+        // Clausole specifiche per il tipo di evento del preventivo
+        if (quote.eventType) {
+          conditions.push(
+            and(
+              isNull(contractClauses.categoryId),
+              eq(contractClauses.eventType, quote.eventType)
+            )
+          );
+        }
+        
+        // Recupera clausole attive che corrispondono ai criteri
         const autoClauses = await db.query.contractClauses.findMany({
-          where: eq(contractClauses.categoryId, quote.categoryId)
+          where: and(
+            eq(contractClauses.isActive, true),
+            or(...conditions)
+          )
         });
         clauseIds = autoClauses.map(c => c.id);
       } else {

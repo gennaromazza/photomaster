@@ -380,13 +380,22 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
       // Validazione lato client extra
       if (!eventoId) throw new Error("Evento non selezionato");
       
+      // Trova l'evento corretto dagli eventi disponibili
+      const eventoSelezionato = eventi.find((e: any) => e.eventoId === eventoId || e.id === eventoId);
+      if (!eventoSelezionato) throw new Error("Evento non trovato nei dati disponibili");
+      
+      // Utilizza l'eventoId corretto (quello del sistema, non dell'assegnazione)
+      const eventoIdCorretto = eventoSelezionato.eventoId || eventoSelezionato.id;
+      
+      console.log(`Creazione montaggio per evento ID: ${eventoIdCorretto}`);
+      
       // Prepara i dati per la chiamata API
       const montaggioData = {
         collaboratoreId: Number(collaboratoreId),
         tipoMontaggio,
         dataConsegnaPrevista: dataConsegnaPrevista.toISOString(),
         priorita,
-        accontoImporto,
+        accontoImporto: accontoImporto || 0, // Previene NaN
         note,
         stato: "da_fare",
       };
@@ -394,7 +403,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
       // Invia la richiesta all'API
       const response = await apiRequest(
         "POST",
-        `/api/eventi/${eventoId}/montaggi`,
+        `/api/eventi/${eventoIdCorretto}/montaggi`,
         montaggioData
       );
       
@@ -1162,7 +1171,9 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
                     <Select 
                       onValueChange={(value) => {
                         field.onChange(parseInt(value));
-                        const evento = eventi.find((e: any) => e.id === parseInt(value));
+                        // L'id nell'evento restituito dall'API è l'id dell'assegnazione, non dell'evento
+                        // Dobbiamo usare eventoId per il collegamento corretto
+                        const evento = eventi.find((e: any) => e.eventoId === parseInt(value) || e.id === parseInt(value));
                         setEventoSelezionato(evento);
                       }}
                       defaultValue={field.value?.toString()}
@@ -1174,8 +1185,8 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
                       </FormControl>
                       <SelectContent>
                         {eventi?.map((evento) => (
-                          <SelectItem key={`evento-${evento.id}`} value={evento.id.toString()}>
-                            {evento.title || `Evento #${evento.id}`}
+                          <SelectItem key={`evento-${evento.id}`} value={evento.eventoId?.toString() || evento.id.toString()}>
+                            {evento.titolo || evento.title || `Evento #${evento.eventoId || evento.id}`}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1260,60 +1271,33 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
                 )}
               />
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Priorità */}
-                <FormField
-                  control={aggiungiForm.control}
-                  name="priorita"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priorità (1-10)</FormLabel>
-                      <FormControl>
-                        <div className="flex items-center">
-                          <Input 
-                            type="number" 
-                            min={1} 
-                            max={10}
-                            {...field}
-                            value={field.value ?? 5}
-                            onChange={(e) => field.onChange(parseInt(e.target.value))}
-                          />
-                          <span className="ml-2 text-muted-foreground">{field.value}/10</span>
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        La priorità aiuta a organizzare il lavoro (10 = massima).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Acconto */}
-                <FormField
-                  control={aggiungiForm.control}
-                  name="accontoImporto"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Acconto €</FormLabel>
-                      <FormControl>
+              {/* Priorità */}
+              <FormField
+                control={aggiungiForm.control}
+                name="priorita"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Priorità (1-10)</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center">
                         <Input 
                           type="number" 
-                          min={0} 
-                          step={1}
+                          min={1} 
+                          max={10}
                           {...field}
-                          value={field.value ?? 0}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          value={field.value ?? 5}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
                         />
-                      </FormControl>
-                      <FormDescription>
-                        L'importo dell'acconto per questo montaggio.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                        <span className="ml-2 text-muted-foreground">{field.value}/10</span>
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      La priorità aiuta a organizzare il lavoro (10 = massima).
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               
               {/* Note */}
               <FormField

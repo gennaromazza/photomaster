@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { db } from "../db";
-import { bundleLeads, serviceBundles, serviceBundleItems, services, clients, quotes, quoteModules, quoteModuleItems } from "@shared/schema";
+import { bundleLeads, serviceBundles, serviceBundleItems, services, clients, quotes, quoteModules, quoteModuleItems, scheduledPayments } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { storage } from "../storage";
 import { v4 as uuidv4 } from 'uuid';
+import { addMonths } from 'date-fns';
 
 // Crea una richiesta di preventivo da pacchetto e, se presente, associa un cliente esistente
 export const createBundleQuote = async (req: Request, res: Response) => {
@@ -150,7 +151,12 @@ export const createBundleQuote = async (req: Request, res: Response) => {
             .where(eq(bundleLeads.id, bundleLead.id));
           
           // Crea un modulo fisso con i servizi del bundle
-          await createFixedModuleFromBundle(bundleComplete.bundle, quote.id);
+          const createdModule = await createFixedModuleFromBundle(bundleComplete.bundle, quote.id);
+          
+          // Crea un pagamento programmato per il preventivo
+          if (createdModule && createdModule.total > 0) {
+            await createInitialScheduledPayment(bundleComplete.clientId, quote.id, createdModule.total);
+          }
           
           // Aggiorna l'oggetto bundleLead con il quoteId
           bundleLead.quoteId = quote.id;
@@ -257,7 +263,12 @@ export const convertBundleLeadToQuote = async (req: Request, res: Response) => {
       .where(eq(bundleLeads.id, bundleLead.id));
     
     // Crea un modulo fisso con i servizi del bundle
-    await createFixedModuleFromBundle(bundleLead.bundle, quote.id);
+    const createdModule = await createFixedModuleFromBundle(bundleLead.bundle, quote.id);
+    
+    // Crea un pagamento programmato per il preventivo
+    if (createdModule && createdModule.total > 0 && bundleLead.clientId) {
+      await createInitialScheduledPayment(bundleLead.clientId, quote.id, createdModule.total);
+    }
     
     return res.status(201).json({
       success: true,
@@ -469,5 +480,68 @@ export const getBundleLeadByEmail = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Errore recupero dettagli richiesta preventivo:", error);
     return res.status(500).json({ error: "Errore server" });
+  }
+};
+
+/**
+ * Crea un pagamento programmato iniziale per il preventivo
+ * Divise l'importo totale in due rate: acconto e saldo 
+ * @param clientId ID del cliente
+ * @param quoteId ID del preventivo 
+ * @param totalAmount Importo totale del preventivo
+ */
+const createInitialScheduledPayment = async (clientId: number, quoteId: number, totalAmount: number) => {
+  try {
+    // Calcoliamo acconto (30%) e saldo (70%)
+    const depositAmount = Math.round(totalAmount * 0.3);
+    const balanceAmount = totalAmount - depositAmount;
+    
+    // Data attuale per l'acconto
+    const today = new Date();
+    
+    // Data a 30 giorni per il saldo
+    const balanceDate = addMonths(today, 1);
+    
+    // Creiamo l'acconto con scadenza oggi
+    await db.insert(scheduledPayments)
+      .values({
+        clientId: clientId,
+        quoteId: quoteId,
+        amount: depositAmount,
+        dueDate: today,
+        description: "Acconto iniziale",
+        status: "pending",
+        paymentMethod: null,
+        reminderSent: false,
+        notes: "Acconto generato automaticamente da richiesta preventivo",
+        installmentNumber: 1,
+        totalInstallments: 2,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    
+    // Creiamo il saldo con scadenza tra 30 giorni
+    await db.insert(scheduledPayments)
+      .values({
+        clientId: clientId,
+        quoteId: quoteId,
+        amount: balanceAmount,
+        dueDate: balanceDate,
+        description: "Saldo finale",
+        status: "pending",
+        paymentMethod: null,
+        reminderSent: false,
+        notes: "Saldo generato automaticamente da richiesta preventivo",
+        installmentNumber: 2,
+        totalInstallments: 2,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    
+    console.log(`Pagamenti programmati creati per il preventivo ${quoteId}: acconto di ${depositAmount} e saldo di ${balanceAmount}`);
+    
+  } catch (error) {
+    console.error("Errore nella creazione dei pagamenti programmati:", error);
+    throw error;
   }
 };

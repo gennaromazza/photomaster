@@ -100,7 +100,6 @@ const aggiungiMontaggioSchema = z.object({
     required_error: "La data di consegna è obbligatoria",
   }),
   priorita: z.coerce.number().min(1).max(10).default(5),
-  accontoImporto: z.coerce.number().positive('L\'acconto deve essere maggiore di zero'),
   note: z.string().optional(),
   eventoId: z.coerce.number().positive('Seleziona un evento'),
 });
@@ -138,7 +137,6 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
       tipoMontaggio: "video",
       dataConsegnaPrevista: addDays(new Date(), 14),
       priorita: 5,
-      accontoImporto: 100,
       note: "",
       eventoId: undefined,
     },
@@ -355,7 +353,6 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
       tipoMontaggio: "video",
       dataConsegnaPrevista: addDays(new Date(), 14),
       priorita: 5,
-      accontoImporto: 100,
       note: "",
       eventoId: undefined,
     });
@@ -375,7 +372,7 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
   // Mutation per aggiungere un nuovo montaggio
   const aggiungiMutation = useMutation({
     mutationFn: async (values: AggiungiMontaggioFormValues) => {
-      const { eventoId, tipoMontaggio, dataConsegnaPrevista, priorita, accontoImporto, note } = values;
+      const { eventoId, tipoMontaggio, dataConsegnaPrevista, priorita, note } = values;
       
       // Validazione lato client extra
       if (!eventoId) throw new Error("Evento non selezionato");
@@ -395,7 +392,6 @@ export function MontaggioCollaboratoreList({ collaboratoreId }: MontaggioCollabo
         tipoMontaggio,
         dataConsegnaPrevista: dataConsegnaPrevista.toISOString(),
         priorita,
-        accontoImporto: accontoImporto || 0, // Previene NaN
         note,
         stato: "da_fare",
       };

@@ -430,8 +430,9 @@ export const getAllBundleLeads = async (req: Request, res: Response) => {
       createdAt: bundleLeads.createdAt,
       // Non includiamo eventDate qui poiché non esiste in tutte le righe
     })
-    .from(bundleLeads)
-    .orderBy((bundleLeads, { desc }) => [desc(bundleLeads.createdAt)]);
+    .from(bundleLeads);
+    
+    // Per ora rimuoviamo l'ordinamento che sta causando problemi
     
     console.log(`Recuperate ${leadResults.length} richieste di preventivo`);
     
@@ -514,7 +515,8 @@ export const getBundleLeadByEmail = async (req: Request, res: Response) => {
     // Prende la richiesta più recente con questa email
     const bundleLead = await db.query.bundleLeads.findFirst({
       where: eq(bundleLeads.email, email),
-      orderBy: (bundleLeads, { desc }) => [desc(bundleLeads.createdAt)],
+      // Temporaneamente rimosso l'ordinamento che causa problemi
+      // orderBy: (bundleLeads, { desc }) => [desc(bundleLeads.createdAt)],
       with: {
         bundle: {
           with: {

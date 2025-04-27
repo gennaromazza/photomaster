@@ -555,7 +555,6 @@ const createInitialScheduledPayment = async (clientId: number, quoteId: number, 
     // Creiamo l'acconto con scadenza oggi
     await db.insert(scheduledPayments)
       .values({
-        clientId: clientId,
         quoteId: quoteId,
         amount: depositAmount,
         dueDate: today,
@@ -563,17 +562,12 @@ const createInitialScheduledPayment = async (clientId: number, quoteId: number, 
         status: "pending",
         paymentMethod: null,
         reminderSent: false,
-        notes: "Acconto generato automaticamente da richiesta preventivo",
-        installmentNumber: 1,
-        totalInstallments: 2,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        notes: "Acconto generato automaticamente da richiesta preventivo"
       });
     
     // Creiamo il saldo con scadenza tra 30 giorni
     await db.insert(scheduledPayments)
       .values({
-        clientId: clientId,
         quoteId: quoteId,
         amount: balanceAmount,
         dueDate: balanceDate,
@@ -581,11 +575,7 @@ const createInitialScheduledPayment = async (clientId: number, quoteId: number, 
         status: "pending",
         paymentMethod: null,
         reminderSent: false,
-        notes: "Saldo generato automaticamente da richiesta preventivo",
-        installmentNumber: 2,
-        totalInstallments: 2,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        notes: "Saldo generato automaticamente da richiesta preventivo"
       });
     
     // Riconverti in euro per i log

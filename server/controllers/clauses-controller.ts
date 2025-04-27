@@ -247,9 +247,9 @@ export class ClausesController {
         console.log(`Nessuna clausola trovata per il preventivo ${quoteId}, procedendo con associazione automatica`);
         
         // Costruiamo condizioni per trovare clausole appropriate
-        const conditions: SQL[] = [];
+        let conditions: SQL[] = [];
         
-        // Clausole per tutte le categorie e tipi di evento (generiche)
+        // Condizione 1: clausole generiche (senza categoria e senza tipo evento)
         conditions.push(
           and(
             isNull(contractClauses.categoryId),
@@ -257,35 +257,8 @@ export class ClausesController {
           )
         );
         
-        // Clausole specifiche per il tipo di evento del preventivo
-        if (quote.eventType) {
-          conditions.push(
-            and(
-              isNull(contractClauses.categoryId),
-              eq(contractClauses.eventType, quote.eventType)
-            )
-          );
-        }
-        
-        // Clausole specifiche per la categoria del preventivo
-        if (quote.categoryId) {
-          conditions.push(
-            and(
-              eq(contractClauses.categoryId, quote.categoryId),
-              isNull(contractClauses.eventType)
-            )
-          );
-          
-          // Clausole specifiche per categoria E tipo di evento
-          if (quote.eventType) {
-            conditions.push(
-              and(
-                eq(contractClauses.categoryId, quote.categoryId),
-                eq(contractClauses.eventType, quote.eventType)
-              )
-            );
-          }
-        }
+        // Filtriamo le condizioni rimuovendo quelle undefined
+        conditions = conditions.filter(Boolean) as SQL[];
         
         // Recupera clausole attive che corrispondono ai criteri
         const availableClauses = await db.query.contractClauses.findMany({
@@ -354,38 +327,29 @@ export class ClausesController {
       }
       
       // Costruisci condizione per filtrare clausole per categoria e tipo di evento
-      const conditions: SQL[] = [];
+      let validConditions: SQL[] = [];
       
       // Clausole per tutte le categorie e tipi di evento (generiche)
-      conditions.push(
+      validConditions.push(
         and(
           isNull(contractClauses.categoryId),
           isNull(contractClauses.eventType)
         )
       );
       
-      // Clausole specifiche per il tipo di evento del preventivo
+      // Aggiungiamo altre condizioni solo se abbiamo i valori necessari
       if (quote.eventType) {
-        conditions.push(
+        // Clausole specifiche per il tipo di evento
+        validConditions.push(
           and(
             isNull(contractClauses.categoryId),
             eq(contractClauses.eventType, quote.eventType)
           )
         );
-      }
-      
-      // Clausole specifiche per la categoria del preventivo
-      if (quote.categoryId) {
-        conditions.push(
-          and(
-            eq(contractClauses.categoryId, quote.categoryId),
-            isNull(contractClauses.eventType)
-          )
-        );
         
-        // Clausole specifiche per categoria E tipo di evento
-        if (quote.eventType) {
-          conditions.push(
+        if (quote.categoryId) {
+          // Clausole specifiche per categoria E tipo evento
+          validConditions.push(
             and(
               eq(contractClauses.categoryId, quote.categoryId),
               eq(contractClauses.eventType, quote.eventType)
@@ -394,17 +358,27 @@ export class ClausesController {
         }
       }
       
+      if (quote.categoryId) {
+        // Clausole specifiche per categoria
+        validConditions.push(
+          and(
+            eq(contractClauses.categoryId, quote.categoryId),
+            isNull(contractClauses.eventType)
+          )
+        );
+      }
+      
       // Recupera clausole attive che corrispondono ai criteri
       const availableClauses = await db.query.contractClauses.findMany({
         where: and(
           eq(contractClauses.isActive, true),
-          sql`(${sql.join(conditions, sql` OR `)})`
+          or(...validConditions)
         ),
         with: {
           category: true
         },
         orderBy: [
-          { order: "asc" }
+          contractClauses.order
         ]
       });
       
@@ -438,28 +412,29 @@ export class ClausesController {
       let clauseIds: number[];
       if (!req.body.clauseIds) {
         // Costruiamo condizioni per trovare clausole appropriate
-        const conditions: SQL[] = [];
+        let validConditions: SQL[] = [];
         
         // Clausole per tutte le categorie e tipi di evento (generiche)
-        conditions.push(
+        validConditions.push(
           and(
             isNull(contractClauses.categoryId),
             isNull(contractClauses.eventType)
           )
         );
         
-        // Clausole specifiche per la categoria del preventivo
-        if (quote.categoryId) {
-          conditions.push(
+        // Aggiungiamo altre condizioni solo se abbiamo i valori necessari
+        if (quote.eventType) {
+          // Clausole specifiche per il tipo di evento
+          validConditions.push(
             and(
-              eq(contractClauses.categoryId, quote.categoryId),
-              isNull(contractClauses.eventType)
+              isNull(contractClauses.categoryId),
+              eq(contractClauses.eventType, quote.eventType)
             )
           );
           
-          // Clausole specifiche per categoria E tipo di evento
-          if (quote.eventType) {
-            conditions.push(
+          if (quote.categoryId) {
+            // Clausole specifiche per categoria E tipo evento
+            validConditions.push(
               and(
                 eq(contractClauses.categoryId, quote.categoryId),
                 eq(contractClauses.eventType, quote.eventType)
@@ -468,21 +443,24 @@ export class ClausesController {
           }
         }
         
-        // Clausole specifiche per il tipo di evento del preventivo
-        if (quote.eventType) {
-          conditions.push(
+        if (quote.categoryId) {
+          // Clausole specifiche per categoria
+          validConditions.push(
             and(
-              isNull(contractClauses.categoryId),
-              eq(contractClauses.eventType, quote.eventType)
+              eq(contractClauses.categoryId, quote.categoryId),
+              isNull(contractClauses.eventType)
             )
           );
         }
+        
+        // Filtriamo le condizioni rimuovendo quelle undefined
+        validConditions = validConditions.filter(Boolean) as SQL[];
         
         // Recupera clausole attive che corrispondono ai criteri
         const autoClauses = await db.query.contractClauses.findMany({
           where: and(
             eq(contractClauses.isActive, true),
-            or(...conditions)
+            or(...validConditions)
           )
         });
         clauseIds = autoClauses.map(c => c.id);

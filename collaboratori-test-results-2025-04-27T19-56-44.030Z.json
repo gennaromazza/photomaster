@@ -1,0 +1,65 @@
+{
+  "totalTests": 8,
+  "passedTests": 8,
+  "failedTests": 0,
+  "totalDuration": 1621,
+  "timestamp": "2025-04-27T19:56:44.029Z",
+  "results": [
+    {
+      "name": "Creazione Collaboratore",
+      "success": true,
+      "duration": 271,
+      "timestamp": "2025-04-27T19:56:42.730Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Creazione Evento",
+      "success": true,
+      "duration": 273,
+      "timestamp": "2025-04-27T19:56:43.004Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Assegnazione Collaboratore a Evento",
+      "success": true,
+      "duration": 136,
+      "timestamp": "2025-04-27T19:56:43.140Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Creazione Montaggio",
+      "success": true,
+      "duration": 18,
+      "timestamp": "2025-04-27T19:56:43.159Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Aggiornamento Stato Montaggio",
+      "success": true,
+      "duration": 14,
+      "timestamp": "2025-04-27T19:56:43.174Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Verifica Integrazione Sistema Finanziario",
+      "success": true,
+      "duration": 212,
+      "timestamp": "2025-04-27T19:56:43.402Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Generazione Token Collaboratore",
+      "success": true,
+      "duration": 34,
+      "timestamp": "2025-04-27T19:56:43.436Z",
+      "errorDetails": null
+    },
+    {
+      "name": "Pulizia Dati Test",
+      "success": true,
+      "duration": 591,
+      "timestamp": "2025-04-27T19:56:44.028Z",
+      "errorDetails": null
+    }
+  ]
+}

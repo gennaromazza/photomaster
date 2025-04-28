@@ -52,7 +52,13 @@ export function FinancialSummaryWrapper(props: FinancialSummaryWrapperProps) {
 
   // Determina il totale corretto da passare al componente
   const determineTotalAmount = () => {
-    // Prima verifica se abbiamo dati dalla query API
+    // Prima verifica se abbiamo un modulesTotal dalla query API (ha precedenza in quanto più preciso)
+    if (data?.modulesTotal && data.modulesTotal > 0) {
+      console.log(`Using data.modulesTotal: ${data.modulesTotal}`);
+      return data.modulesTotal;
+    }
+    
+    // Poi verifica se abbiamo totalAmount dalla query API
     if (data?.totalAmount) {
       console.log(`Using data.totalAmount: ${data.totalAmount}`);
       return data.totalAmount;

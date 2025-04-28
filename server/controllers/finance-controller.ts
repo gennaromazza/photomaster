@@ -452,8 +452,31 @@ export const financeController = {
     const modulesTotal = quoteModulesResult[0]?.totalModules || 0;
     
     // Calcola il prezzo totale del preventivo considerando tutte le possibili fonti
-    // Priorità: totalAmount (se esiste) -> quoteTotal -> modulesSum -> calcolo diretto -> 0
-    let totalAmount = quote.totalAmount || quote.quoteTotal || quote.modulesSum || modulesTotal || 0;
+    // Nuova Priorità: calcolo diretto dai moduli -> totalAmount -> quoteTotal -> modulesSum -> 0
+    let totalAmount = 0;
+    
+    // Se abbiamo moduli con somma valida (calcolo più accurato)
+    if (modulesTotal > 0) {
+      console.log(`Usando totale moduli: ${modulesTotal} per preventivo ${quoteId}`);
+      totalAmount = modulesTotal;
+    } 
+    // Altrimenti prova con gli altri campi
+    else if (quote.totalAmount) {
+      console.log(`Usando totalAmount: ${quote.totalAmount} per preventivo ${quoteId}`);
+      totalAmount = quote.totalAmount;
+    } 
+    else if (quote.quoteTotal) {
+      console.log(`Usando quoteTotal: ${quote.quoteTotal} per preventivo ${quoteId}`);
+      totalAmount = quote.quoteTotal;
+    }
+    else if (quote.modulesSum) {
+      console.log(`Usando modulesSum: ${quote.modulesSum} per preventivo ${quoteId}`);
+      totalAmount = quote.modulesSum;
+    }
+    else {
+      console.log(`Nessun totale valido trovato per preventivo ${quoteId}, uso 0`);
+      totalAmount = 0;
+    }
     
     console.log("Finance controller - Quote financial data:", {
       quoteId,

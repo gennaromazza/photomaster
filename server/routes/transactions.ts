@@ -23,7 +23,7 @@ router.get("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ error: "ID non valido" });
+      return res.status(400).json({ error: "ID transazione non valido" });
     }
     
     const transaction = await financeController.getTransactionById(id);
@@ -61,10 +61,31 @@ router.get("/by-quote/:quoteId", async (req, res) => {
  */
 router.post("/", async (req, res) => {
   try {
-    const transaction = await financeController.createTransaction({
-      ...req.body,
-      createdBy: req.user?.id
-    });
+    // Verifica se il pagamento programmato esiste, se specificato
+    if (req.body.scheduledPaymentId) {
+      const paymentId = parseInt(req.body.scheduledPaymentId);
+      const [payment] = await financeController.db.select()
+        .from(financeController.scheduledPayments)
+        .where(financeController.eq(financeController.scheduledPayments.id, paymentId));
+
+      if (!payment) {
+        return res.status(400).json({ error: "Pagamento programmato non trovato" });
+      }
+      
+      // Aggiorna automaticamente lo stato del pagamento programmato a 'paid'
+      await financeController.updateScheduledPayment(paymentId, { status: 'paid' });
+    }
+    
+    // Crea la transazione
+    const transaction = await financeController.createTransaction(req.body);
+    
+    // Se la transazione è associata a un pagamento programmato, aggiorna la referenza
+    if (req.body.scheduledPaymentId && transaction) {
+      await financeController.db.update(financeController.scheduledPayments)
+        .set({ transactionId: transaction.id })
+        .where(financeController.eq(financeController.scheduledPayments.id, req.body.scheduledPaymentId));
+    }
+    
     res.status(201).json(transaction);
   } catch (error) {
     console.error("Errore nella creazione della transazione:", error);
@@ -79,10 +100,14 @@ router.put("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ error: "ID non valido" });
+      return res.status(400).json({ error: "ID transazione non valido" });
     }
     
     const transaction = await financeController.updateTransaction(id, req.body);
+    if (!transaction) {
+      return res.status(404).json({ error: "Transazione non trovata" });
+    }
+    
     res.json(transaction);
   } catch (error) {
     console.error(`Errore nell'aggiornamento della transazione ${req.params.id}:`, error);
@@ -97,10 +122,26 @@ router.delete("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
-      return res.status(400).json({ error: "ID non valido" });
+      return res.status(400).json({ error: "ID transazione non valido" });
+    }
+    
+    // Verifica se questa transazione è associata a un pagamento programmato
+    const [payment] = await financeController.db.select()
+      .from(financeController.scheduledPayments)
+      .where(financeController.eq(financeController.scheduledPayments.transactionId, id));
+    
+    if (payment) {
+      // Aggiorna lo stato del pagamento programmato a 'pending'
+      await financeController.db.update(financeController.scheduledPayments)
+        .set({ status: 'pending', transactionId: null })
+        .where(financeController.eq(financeController.scheduledPayments.id, payment.id));
     }
     
     const transaction = await financeController.deleteTransaction(id);
+    if (!transaction) {
+      return res.status(404).json({ error: "Transazione non trovata" });
+    }
+    
     res.json(transaction);
   } catch (error) {
     console.error(`Errore nell'eliminazione della transazione ${req.params.id}:`, error);

@@ -709,7 +709,7 @@ export const serviceBundleItemsRelations = relations(serviceBundleItems, ({ one 
 // Modello per le transazioni finanziarie
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
-  type: text("type").notNull(), // income, expense
+  transactionType: text("type").notNull(), // income, expense
   amount: numeric("amount").notNull(),
   date: date("date").notNull(),
   description: text("description"),
@@ -723,11 +723,11 @@ export const transactions = pgTable("transactions", {
   category: text("category"),
   attachmentPath: text("attachment_path"),
   notificationSent: boolean("notification_sent").default(false),
-  // Nota: scheduled_payment_id non esiste nella tabella del database
+  scheduledPaymentId: integer("scheduled_payment_id"), // FK verso scheduled_payments
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).pick({
-  type: true,
+  transactionType: true,
   amount: true,
   date: true,
   description: true,
@@ -740,7 +740,7 @@ export const insertTransactionSchema = createInsertSchema(transactions).pick({
   category: true,
   attachmentPath: true,
   notificationSent: true,
-  // scheduledPaymentId rimosso perché non esiste nella tabella
+  scheduledPaymentId: true
 });
 
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
@@ -756,8 +756,11 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
     fields: [transactions.createdBy],
     references: [users.id],
   }),
-  // La relazione scheduledPayment è rimossa perché la tabella transactions non ha scheduledPaymentId
-  // La relazione esiste solo all'inverso: scheduledPayments ha transactionId
+  scheduledPayment: one(scheduledPayments, {
+    fields: [transactions.scheduledPaymentId],
+    references: [scheduledPayments.id],
+    relationName: "paymentTransaction"
+  })
 }));
 
 // Modello per i pagamenti programmati (scadenze)

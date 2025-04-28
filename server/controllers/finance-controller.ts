@@ -8,6 +8,8 @@ export const financeController = {
   db,
   eq,
   quotes,
+  transactions,
+  scheduledPayments,
   
   // TRANSAZIONI
   
@@ -50,9 +52,7 @@ export const financeController = {
       await db.update(scheduledPayments)
         .set({ 
           status: 'paid',
-          transactionId: transaction.id,
-          paidAmount: data.amount,
-          paidDate: new Date()
+          transactionId: transaction.id
         })
         .where(eq(scheduledPayments.id, data.scheduledPaymentId));
     }
@@ -73,12 +73,11 @@ export const financeController = {
       .where(eq(transactions.id, id))
       .returning();
     
-    // Se c'è un pagamento programmato associato, aggiorniamo i suoi dati
+    // Se c'è un pagamento programmato associato, aggiorniamo lo stato
     if (transaction.scheduledPaymentId) {
       await db.update(scheduledPayments)
         .set({ 
-          paidAmount: transaction.amount,
-          paidDate: transaction.date
+          status: 'paid'
         })
         .where(eq(scheduledPayments.id, transaction.scheduledPaymentId));
     }
@@ -97,9 +96,7 @@ export const financeController = {
       await db.update(scheduledPayments)
         .set({ 
           status: 'pending',
-          transactionId: null,
-          paidAmount: null,
-          paidDate: null
+          transactionId: null
         })
         .where(eq(scheduledPayments.id, transaction.scheduledPaymentId));
     }

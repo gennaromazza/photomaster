@@ -34,6 +34,7 @@ import collaboratoriRouter from "./routes/collaboratori-routes"; // Manteniamo t
 import eventiRouter from "./routes/eventi-routes";
 import eventsRouter from "./routes/events-routes"; // English standardized version
 import dashboardPublicRouter from "./routes/dashboard-public-routes";
+import contractClausesRouter from "./routes/contract-clauses";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
 import { checkExistingClient, searchClients } from "./controllers/client-validation-controller";
 import multer from "multer";
@@ -3612,6 +3613,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/selection", selectionRouter);
   app.use("/api/unified-selections", unifiedGallerySelectionsRouter); // Nuovo router unificato per selezioni
   app.use("/api/clauses", clausesRouter);
+  app.use("/api/contract-clauses", contractClausesRouter);
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/eventi", eventiRouter); // Italian endpoint (legacy)
   app.use("/api/events", eventsRouter); // English standardized endpoint
@@ -3675,6 +3677,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/search", isAuthenticated, searchRouter);
   app.use("/api/selection", selectionRouter);
   app.use("/api/clauses", isAuthenticated, clausesRouter);
+  app.use("/api/contract-clauses", isAuthenticated, contractClausesRouter);
   app.use("/api/notifications", isAuthenticated, notificationsRouter);
   
   // Rotta per la validazione dei clienti (pubblica, non richiede autenticazione)

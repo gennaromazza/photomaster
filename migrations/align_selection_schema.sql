@@ -1,4 +1,3 @@
-
 BEGIN;
 -- Aggiunta dei campi mancanti in selection_sessions
 ALTER TABLE selection_sessions

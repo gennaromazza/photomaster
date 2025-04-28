@@ -32,6 +32,7 @@ import collaboratoriRouter from "./routes/collaboratori-routes"; // Manteniamo t
 import eventiRouter from "./routes/eventi-routes";
 import eventsRouter from "./routes/events-routes"; // English standardized version
 import scheduledPaymentsRouter from "./routes/scheduled-payments"; // Router dei pagamenti programmati
+import transactionsRouter from "./routes/transactions"; // Router delle transazioni
 import dashboardPublicRouter from "./routes/dashboard-public-routes";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
 import { checkExistingClient, searchClients } from "./controllers/client-validation-controller";
@@ -3478,7 +3479,8 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/eventi", eventiRouter); // Italian endpoint (legacy)
   app.use("/api/events", eventsRouter); // English standardized endpoint
-  app.use("/api/scheduled-payments", scheduledPaymentsRouter);
+  app.use("/api/scheduled-payments", isAuthenticated, scheduledPaymentsRouter);
+  app.use("/api/transactions", isAuthenticated, transactionsRouter);
   app.use("/api", collaboratoriRouter);
   app.use("/api/collaborators", collaboratorsRouter);
   app.use("/api/collaboratori", dashboardPublicRouter);

@@ -24,8 +24,12 @@ export function ContractClauses({ quoteId, onClausesAccepted, readOnly = false }
   const { data: quoteClauses, isLoading, isError } = useQuery({
     queryKey: ['/api/clauses/quote', quoteId],
     queryFn: async () => {
+      console.log(`Recupero clausole per il preventivo ${quoteId}`);
       const res = await fetch(`/api/clauses/quote/${quoteId}`);
-      if (!res.ok) throw new Error('Errore nel caricamento delle clausole');
+      if (!res.ok) {
+        console.error(`Errore nel caricamento delle clausole: ${res.status}`);
+        throw new Error('Errore nel caricamento delle clausole');
+      }
       return res.json();
     }
   });

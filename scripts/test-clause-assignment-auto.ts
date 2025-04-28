@@ -249,8 +249,8 @@ runAllTests()
   .catch(err => {
     console.error("Errore durante l'esecuzione dei test:", err);
   })
-  .finally(async () => {
-    // Chiudi la connessione al database
-    await db.pool.end();
-    console.log("Test completati e connessione chiusa.");
+  .finally(() => {
+    // Nelle versioni recenti di Drizzle con Postgres non è più necessario chiudere esplicitamente il pool
+    // perché viene gestito internamente quando l'applicazione termina
+    console.log("Test completati. La connessione verrà chiusa automaticamente.");
   });

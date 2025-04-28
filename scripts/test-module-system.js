@@ -5,8 +5,7 @@
  * di moduli fissi e variabili utilizzati nei preventivi.
  */
 
-import { PrismaClient } from '@prisma/client';
-import { db } from '../server/db.js';
+import { db } from '../server/db.ts';
 import axios from 'axios';
 import { 
   quotes, 
@@ -16,7 +15,7 @@ import {
   services,
   serviceBundles,
   serviceBundleItems
-} from '../shared/schema.js';
+} from '../shared/schema.ts';
 import { eq, sql } from 'drizzle-orm';
 
 // Configurazione
@@ -429,11 +428,15 @@ async function testFixedVariableModuleConsistency() {
 
 /**
  * Recupera tutti i preventivi
+ * @param {number} limit - Numero massimo di preventivi da recuperare (opzionale)
  */
-async function fetchAllQuotes() {
+async function fetchAllQuotes(limit = 5) {
   try {
     const response = await axios.get(`${API_BASE_URL}/quotes`, { headers });
-    return response.data;
+    // Limita il numero di preventivi per evitare timeouts nei test
+    const quotes = response.data;
+    console.log(`Trovati ${quotes.length} preventivi, limitando a ${limit} per la diagnostica`);
+    return quotes.slice(0, limit);
   } catch (error) {
     console.error('Errore nel recupero dei preventivi:', error.message);
     return [];

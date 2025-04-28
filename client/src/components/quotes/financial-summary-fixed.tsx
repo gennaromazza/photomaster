@@ -88,6 +88,7 @@ interface FinancialSummaryProps {
   readOnly?: boolean;
   clientName?: string;
   quoteStatus?: string; // Lo stato del preventivo per verificare se è firmato
+  isLoading?: boolean; // Indicatore di caricamento dati
 }
 
 export function FinancialSummary({
@@ -97,6 +98,7 @@ export function FinancialSummary({
   readOnly = false,
   clientName = "",
   quoteStatus = "",
+  isLoading = false,
 }: FinancialSummaryProps) {
   // Usa totalAmount se fornito, altrimenti usa quoteTotal
   const totalPreventivo = totalAmount !== undefined ? totalAmount : quoteTotal;
@@ -893,6 +895,17 @@ export function FinancialSummary({
 
   // Nota: L'avviso di preventivo non firmato è stato spostato nel componente FinancialSummaryWrapper
 
+  // Combina gli stati di caricamento
+  const isLoadingData = isLoading || transactionsLoading || scheduledLoading;
+
+  console.log("Financial summary data:", {
+    quoteId,
+    totalPreventivo,
+    isLoading,
+    transactionsLoading,
+    scheduledLoading
+  });
+
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-3">
@@ -904,9 +917,13 @@ export function FinancialSummary({
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatAmount(totalPreventivo)}
-            </div>
+            {isLoadingData ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <div className="text-2xl font-bold">
+                {formatAmount(totalPreventivo)}
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -356,8 +356,20 @@ export const financeController = {
       throw new Error("Preventivo non trovato");
     }
     
-    // Calcola il prezzo totale del preventivo
-    let totalAmount = quote.totalAmount || 0;
+    // Calcola il prezzo totale del preventivo considerando tutte le possibili fonti
+    // Priorità: totalAmount (se esiste) -> quoteTotal -> modulesSum -> 0
+    // Nota: Queste potrebbero essere proprietà virtuali calcolate al volo o memorizzate nel DB
+    let totalAmount = quote.totalAmount || quote.quoteTotal || quote.modulesSum || 0;
+    
+    console.log("Finance controller - Quote financial data:", {
+      quoteId,
+      totalAmount,
+      quoteData: {
+        totalAmount: quote.totalAmount,
+        quoteTotal: quote.quoteTotal,
+        modulesSum: quote.modulesSum
+      }
+    });
     
     // Ottieni tutte le transazioni legate al preventivo
     const transactionsList = await db.select()
@@ -388,7 +400,8 @@ export const financeController = {
       .filter(p => p.status === 'pending' && !isBefore(p.dueDate, now))
       .reduce((sum, p) => sum + p.amount, 0);
     
-    return {
+    // Prepara il risultato includendo anche la proprietà summary per retrocompatibilità
+    const result = {
       quoteId,
       quoteTitle: quote.title,
       totalAmount,
@@ -399,8 +412,24 @@ export const financeController = {
       paidPercentage: totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0,
       transactions: transactionsList,
       scheduledPayments: scheduledPaymentsList,
-      status: quote.status
+      status: quote.status,
+      // Aggiungiamo una struttura summary per la retrocompatibilità
+      summary: {
+        quoteTotal: totalAmount,
+        totalPaid,
+        remainingBalance: totalAmount - totalPaid,
+        pendingPayments,
+        upcomingPayments
+      }
     };
+    
+    console.log("Finance controller - Returning quote financial data:", {
+      quoteId, 
+      totalAmount, 
+      summaryTotal: result.summary.quoteTotal
+    });
+    
+    return result;
   }
 };
 

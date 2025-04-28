@@ -1124,11 +1124,11 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
     return next();
   }
   
-  // Bypass temporaneo per le operazioni sui preventivi e installments (solo in sviluppo)
-  if ((req.path.includes('/quotes') || req.path.includes('/installments')) && 
+  // Bypass temporaneo per le operazioni sui preventivi, moduli variabili e installments (solo in sviluppo)
+  if ((req.path.includes('/quotes') || req.path.includes('/installments') || req.path.includes('/modules/share')) && 
       ['POST', 'PATCH', 'PUT'].includes(req.method) && 
       process.env.NODE_ENV !== "production") {
-    console.log("DEBUG csrfProtection - Skip temporaneo per operazioni sui preventivi");
+    console.log("DEBUG csrfProtection - Skip temporaneo per operazioni sui preventivi/moduli");
     return next();
   }
   

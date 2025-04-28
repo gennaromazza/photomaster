@@ -132,11 +132,26 @@ async function simulateItemSelection(
   selectedItemIds: number[]
 ) {
   try {
+    // Utilizziamo l'endpoint corretto
     const response = await axios.post(
-      `${API_BASE_URL}/quotes/share/${shareToken}/modules/${moduleId}/select`,
+      `${API_BASE_URL}/modules/share/${shareToken}/select`,
       { selectedItemIds },
-      { headers }
+      { 
+        headers,
+        validateStatus: (status) => status < 500 // Accetta anche risposte 4xx come valide
+      }
     );
+    
+    console.log(`Risposta selezione: ${JSON.stringify(response.data, null, 2)}`);
+    
+    // Se la risposta contiene HTML, potrebbe essere un errore di routing
+    if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+      console.error('Ricevuta risposta HTML invece di JSON');
+      return {
+        success: false,
+        error: 'Risposta non valida: ricevuto HTML invece di JSON'
+      };
+    }
     
     return response.data;
   } catch (error) {

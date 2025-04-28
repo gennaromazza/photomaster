@@ -38,4 +38,22 @@ router.get("/:id/montaggi", getMontaggiEvento);
 router.post("/:id/montaggi", csrfProtection, addMontaggioEvento);
 router.patch("/:id/montaggi/:montaggioId", csrfProtection, updateMontaggioEvento);
 
+// GET: Lista di tutti gli eventi con paginazione
+router.get("/api/eventi", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    const [list, total] = await Promise.all([
+      db.select().from(eventi).limit(limit).offset((page - 1) * limit),
+      db.select({ count: sql`count(*)` }).from(eventi)
+    ]);
+
+    return res.json({ data: list, page, total: Number(total[0].count) });
+  } catch (error) {
+    console.error("Errore nel recupero eventi:", error);
+    return res.status(500).json({ error: "Errore nel recupero degli eventi" });
+  }
+});
+
 export default router;

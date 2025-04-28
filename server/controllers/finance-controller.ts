@@ -462,7 +462,21 @@ export const financeController = {
           modulesTotal = quoteModulesList.reduce((sum: number, module: any) => sum + (module.amount || 0), 0);
         } else if ('value' in sampleModule) {
           modulesTotal = quoteModulesList.reduce((sum: number, module: any) => sum + (module.value || 0), 0);
+        } else if ('total' in sampleModule) {
+          modulesTotal = quoteModulesList.reduce((sum: number, module: any) => sum + (module.total || 0), 0);
+        } else if ('subtotal' in sampleModule) {
+          modulesTotal = quoteModulesList.reduce((sum: number, module: any) => sum + (module.subtotal || 0), 0);
         }
+        
+        console.log("Moduli esaminati:", quoteModulesList.map(m => ({ 
+          id: m.id, 
+          name: m.name, 
+          total: m.total, 
+          subtotal: m.subtotal,
+          price: m.price,
+          amount: m.amount,
+          value: m.value
+        })));
       }
       
       console.log(`Moduli trovati: ${quoteModulesList.length}, totale calcolato: ${modulesTotal}`);

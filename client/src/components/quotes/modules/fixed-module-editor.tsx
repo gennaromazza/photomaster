@@ -113,7 +113,7 @@ export default function FixedModuleEditor({
     discountType: z.enum(["percentage", "amount"]).default("percentage"),
   });
   
-  // Inizializzo il form
+  // Inizializzo il form con i valori del modulo esistente
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -121,6 +121,11 @@ export default function FixedModuleEditor({
       description: module?.description || "",
       discount: module?.discount || 0,
       discountType: module?.discountType || "percentage",
+      subtotal: module?.subtotal || 0,
+      total: module?.total || 0,
+      status: module?.status || "active",
+      expiryDate: module?.expiryDate ? new Date(module.expiryDate) : null,
+      position: module?.position || 0,
     },
   });
   

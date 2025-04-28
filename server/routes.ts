@@ -3339,11 +3339,17 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       const itemsToUse = selectedItemIds || selectedItems;
 
       if (!token) {
-        return res.status(400).json({ message: "Token non valido" });
+        return res.status(400).json({ 
+          success: false,
+          message: "Token non valido" 
+        });
       }
 
       if (!itemsToUse || !Array.isArray(itemsToUse)) {
-        return res.status(400).json({ message: "Dati di selezione non validi" });
+        return res.status(400).json({ 
+          success: false,
+          message: "Dati di selezione non validi" 
+        });
       }
 
       // Recupera il modulo

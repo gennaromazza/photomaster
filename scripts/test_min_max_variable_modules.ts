@@ -16,7 +16,8 @@ const API_BASE_URL = 'http://localhost:5000/api';
 const RESULTS_DIR = path.join(process.cwd(), 'diagnostics-results');
 const headers = {
   'Content-Type': 'application/json',
-  'X-CSRF-Test': 'true'
+  'X-CSRF-Test': 'true',
+  'X-Test-Automation': 'true'
 };
 
 // Interfacce
@@ -99,6 +100,19 @@ async function getQuoteShareToken(quoteId: number) {
     return quote?.shareToken;
   } catch (error) {
     console.error(`Errore nel recupero del token di condivisione per il preventivo ${quoteId}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Ottieni la token di condivisione di un modulo
+ */
+async function getModuleShareToken(moduleId: number) {
+  try {
+    const [module] = await db.select().from(quoteModules).where(eq(quoteModules.id, moduleId));
+    return module?.shareToken;
+  } catch (error) {
+    console.error(`Errore nel recupero del token di condivisione per il modulo ${moduleId}:`, error.message);
     return null;
   }
 }
@@ -641,26 +655,35 @@ async function testMinMaxConstraints() {
         tests: moduleTests
       });
       
-      // Ottieni il token di condivisione del preventivo
-      const shareToken = await getQuoteShareToken(module.quoteId);
+      // Ottieni il token di condivisione del preventivo per il frontend
+      const quoteShareToken = await getQuoteShareToken(module.quoteId);
       
-      if (!shareToken) {
+      // Ottieni il token di condivisione specifico del modulo per le operazioni
+      const moduleShareToken = await getModuleShareToken(module.id);
+      
+      if (!quoteShareToken) {
         console.log(`⚠️ Impossibile recuperare il token di condivisione per il preventivo ${module.quoteId}, saltando test frontend`);
         continue;
       }
       
-      console.log(`📋 Token di condivisione: ${shareToken}`);
+      if (!moduleShareToken) {
+        console.log(`⚠️ Impossibile recuperare il token di condivisione per il modulo ${module.id}, saltando test selezioni`);
+        continue;
+      }
       
-      // Recupera la pagina pubblica
-      const publicQuote = await getPublicQuotePage(shareToken);
+      console.log(`📋 Token di condivisione preventivo: ${quoteShareToken}`);
+      console.log(`📋 Token di condivisione modulo: ${moduleShareToken}`);
+      
+      // Recupera la pagina pubblica usando il token del preventivo
+      const publicQuote = await getPublicQuotePage(quoteShareToken);
       
       // Verifica i vincoli min/max nel frontend
       const frontendTests = await verifyFrontendConstraints(module, items, publicQuote);
       moduleTestResults[moduleTestResults.length - 1].tests.push(...frontendTests);
       
-      // Simula diverse selezioni e verifica il rispetto dei vincoli
+      // Simula diverse selezioni e verifica il rispetto dei vincoli - usando il token del MODULO
       console.log(`🔍 Simulazione selezioni per il modulo "${module.name}" (ID: ${module.id})...`);
-      const simulationResults = await simulateSelections(module, items, shareToken);
+      const simulationResults = await simulateSelections(module, items, moduleShareToken);
       simulationTestResults.push(...simulationResults);
     }
     

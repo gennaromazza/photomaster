@@ -354,7 +354,7 @@ export default function QuoteDetailPage() {
         title: "Clausole rigenerate",
         description: "Le clausole contrattuali sono state rigenerate con successo.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/clauses/quote/${id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clauses/quote', id] });
     },
     onError: (error: Error) => {
       toast({

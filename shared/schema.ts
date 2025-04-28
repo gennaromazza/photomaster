@@ -313,7 +313,7 @@ export const services = pgTable("services", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  price: integer("price").notNull(),
+  price: numeric("price", { precision: 12, scale: 2 }).notNull(),
   type: text("type").notNull(), // 'product' o 'service'
   categoryId: integer("category_id"),
   isActive: boolean("is_active").default(true).notNull(),
@@ -444,14 +444,14 @@ export const quoteItems = pgTable("quote_items", {
   serviceId: integer("service_id").notNull(),
   bundleId: integer("bundle_id"), // Se questo elemento fa parte di un pacchetto
   quantity: integer("quantity").default(1).notNull(),
-  unitPrice: integer("unit_price").notNull(),
+  unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
   // Sconto specifico per l'elemento nel preventivo
   hasDiscount: boolean("has_discount").default(false).notNull(),
   discountType: text("discount_type"), // 'percentage' o 'fixed'
   discountValue: integer("discount_value"), // Valore dello sconto (percentuale o fisso)
   discountedPrice: integer("discounted_price"), // Prezzo unitario scontato
   // Totale calcolato (quantity * unitPrice o quantity * discountedPrice se scontato)
-  total: integer("total").notNull(),
+  total: numeric("total", { precision: 12, scale: 2 }).notNull(),
   // Note specifiche per l'elemento
   notes: text("notes"),
 });
@@ -503,8 +503,8 @@ export const quoteModules = pgTable("quote_modules", {
   clientNotes: text("client_notes"), // Note per il cliente
   internalNotes: text("internal_notes"), // Note interne
   // Campi per la gestione del prezzo totale
-  subtotal: integer("subtotal").default(0), // Subtotale (somma degli elementi)
-  total: integer("total").default(0), // Totale finale
+  subtotal: numeric("subtotal", { precision: 12, scale: 2 }).default(0), // Subtotale (somma degli elementi)
+  total: numeric("total", { precision: 12, scale: 2 }).default(0), // Totale finale
   minSelectCount: integer("min_select_count"), // Numero minimo di selezioni per moduli variabili
   maxSelectCount: integer("max_select_count"), // Numero massimo di selezioni per moduli variabili
   clauses: jsonb("clauses"), // Clausole contrattuali associate al modulobili
@@ -537,7 +537,7 @@ export const quoteModuleItems = pgTable("quote_module_items", {
   serviceId: integer("service_id"), // Se elemento è un servizio/prodotto
   bundleId: integer("bundle_id"), // Se elemento è un pacchetto
   quantity: integer("quantity").default(1).notNull(),
-  unitPrice: integer("unit_price").notNull(),
+  unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
   isRequired: boolean("is_required").default(false), // Indica se questo elemento è obbligatorio (per moduli variabili)
   isSelected: boolean("is_selected").default(false), // Indica se questo elemento è stato selezionato dal cliente
   position: integer("position").default(0), // Posizione nell'elenco
@@ -545,9 +545,9 @@ export const quoteModuleItems = pgTable("quote_module_items", {
   hasDiscount: boolean("has_discount").default(false).notNull(),
   discountType: text("discount_type"), // 'percentage' o 'fixed'
   discountValue: integer("discount_value"), // Valore dello sconto (percentuale o fisso)
-  discountedPrice: integer("discounted_price"), // Prezzo unitario scontato
+  discountedPrice: numeric("discounted_price", { precision: 12, scale: 2 }), // Prezzo unitario scontato
   // Totale calcolato (quantity * unitPrice o quantity * discountedPrice se scontato)
-  total: integer("total").notNull(),
+  total: numeric("total", { precision: 12, scale: 2 }).notNull(),
   // Quantità selezionata dal cliente (per moduli variabili)
   selectedQuantity: integer("selected_quantity"),
   // Note specifiche per l'elemento
@@ -606,8 +606,8 @@ export const serviceBundles = pgTable("service_bundles", {
   description: text("description"),
   image: text("image"),
   imagePath: text("image_path"), // Percorso dell'immagine ottimizzata
-  totalPrice: integer("total_price").notNull(), // Prezzo totale reale
-  discountedPrice: integer("discounted_price").notNull(), // Prezzo scontato del pacchetto
+  totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(), // Prezzo totale reale
+  discountedPrice: numeric("discounted_price", { precision: 12, scale: 2 }).notNull(), // Prezzo scontato del pacchetto
   discountType: text("discount_type").notNull(), // 'percentage' o 'fixed'
   discountValue: integer("discount_value").notNull(), // Valore dello sconto
   isActive: boolean("is_active").default(true).notNull(),
@@ -675,7 +675,7 @@ export const serviceBundleItemsRelations = relations(serviceBundleItems, ({ one 
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   transactionType: text("type").notNull(), // income, expense
-  amount: numeric("amount").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   date: date("date").notNull(),
   description: text("description"),
   quoteId: integer("quote_id"), // FK verso quotes 
@@ -732,7 +732,7 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 export const scheduledPayments = pgTable("scheduled_payments", {
   id: serial("id").primaryKey(),
   quoteId: integer("quote_id").notNull(),
-  amount: numeric("amount").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   dueDate: date("due_date").notNull(),
   description: text("description"),
   status: text("status").notNull().default("pending"), // pending, paid, overdue
@@ -852,7 +852,7 @@ export const quoteClausesRelations = relations(quoteClauses, ({ one }) => ({
   }),
 }));
 
-// Lead Source Schema (Provenienze)
+//// Lead Source Schema (Provenienze)
 export const leadSources = pgTable("lead_sources", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
@@ -905,7 +905,7 @@ export const settings = pgTable("settings", {
   linkedinUrl: text("linkedin_url"),
   companyDescription: text("company_description"),
   // Altre impostazioni
-  taxRate: integer("tax_rate").default(0).notNull(),
+  taxRate: numeric("tax_rate", { precision: 12, scale: 2 }).default(0).notNull(),
   defaultCurrency: text("default_currency").default("EUR").notNull(),
   colorTheme: text("color_theme").default("default").notNull(),
   additionalSettings: jsonb("additional_settings"),

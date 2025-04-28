@@ -39,17 +39,17 @@ router.get("/by-quote/:quoteId", async (req, res) => {
  */
 router.post("/", async (req, res) => {
   try {
-    // Validare i dati in ingresso
-    if (!req.body.quoteId || !req.body.amount || !req.body.dueDate) {
-      return res.status(400).json({ error: "Mancano dati obbligatori: quoteId, amount, dueDate" });
+    // Validazione dei dati in ingresso
+    if (!req.body.amount || !req.body.dueDate || !req.body.quoteId) {
+      return res.status(400).json({ error: "Mancano dati obbligatori: amount, dueDate, quoteId" });
     }
-
-    // Verifica se il preventivo esiste
+    
+    // Verifica che il preventivo esista
     const quoteId = parseInt(req.body.quoteId);
     const [quote] = await financeController.db.select()
       .from(financeController.quotes)
       .where(financeController.eq(financeController.quotes.id, quoteId));
-
+    
     if (!quote) {
       return res.status(400).json({ error: "Preventivo non trovato" });
     }
@@ -72,24 +72,13 @@ router.put("/:id", async (req, res) => {
       return res.status(400).json({ error: "ID pagamento non valido" });
     }
     
-    // Verifica che il pagamento esista
-    const [existingPayment] = await financeController.db.select()
-      .from(financeController.scheduledPayments)
-      .where(financeController.eq(financeController.scheduledPayments.id, id));
-    
-    if (!existingPayment) {
-      return res.status(404).json({ error: "Pagamento programmato non trovato" });
-    }
-    
-    // Se il pagamento è già stato effettuato, non permettere modifiche
-    if (existingPayment.status === 'paid') {
-      return res.status(400).json({ error: "Impossibile modificare un pagamento già effettuato" });
-    }
-    
-    const payment = await financeController.updateScheduledPayment(id, req.body);
-    res.json(payment);
+    const updatedPayment = await financeController.updateScheduledPayment(id, req.body);
+    res.json(updatedPayment);
   } catch (error) {
     console.error(`Errore nell'aggiornamento del pagamento programmato ${req.params.id}:`, error);
+    if (error.message === "Impossibile modificare un pagamento già effettuato") {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: "Errore nell'aggiornamento del pagamento programmato" });
   }
 });
@@ -104,18 +93,17 @@ router.delete("/:id", async (req, res) => {
       return res.status(400).json({ error: "ID pagamento non valido" });
     }
     
-    const payment = await financeController.deleteScheduledPayment(id);
-    if (!payment) {
+    const deleted = await financeController.deleteScheduledPayment(id);
+    if (!deleted) {
       return res.status(404).json({ error: "Pagamento programmato non trovato" });
     }
     
-    res.json(payment);
+    res.json(deleted);
   } catch (error) {
+    console.error(`Errore nell'eliminazione del pagamento programmato ${req.params.id}:`, error);
     if (error.message === "Impossibile eliminare un pagamento già effettuato") {
       return res.status(400).json({ error: error.message });
     }
-    
-    console.error(`Errore nell'eliminazione del pagamento programmato ${req.params.id}:`, error);
     res.status(500).json({ error: "Errore nell'eliminazione del pagamento programmato" });
   }
 });

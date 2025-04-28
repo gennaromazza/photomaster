@@ -424,54 +424,17 @@ export const quotes = pgTable("quotes", {
   shareTokenExpiry: timestamp("share_token_expiry"), // Data di scadenza del token di condivisione
   clausesConfirmed: boolean("clauses_confirmed").default(false), // Indica se le clausole sono state confermate
   signedAt: timestamp("signed_at"), // Data di firma del preventivo
-  // Questi campi non esistono nella tabella reale
-  // subtotal: integer("subtotal").default(0), // Subtotale (somma dei servizi/prodotti prima degli sconti)
-  // total: integer("total").default(0), // Totale (subtotale - sconti)
-  // discount: integer("discount").default(0), // Sconto applicato al preventivo
 });
 
-// Creiamo lo schema solo con i campi che esistono nella tabella reale
-export const insertQuoteSchema = createInsertSchema(quotes);
-
-export type InsertQuote = z.infer<typeof insertQuoteSchema>;
-
-// Estendiamo Quote con i campi virtuali per l'applicazione frontend
-export type Quote = typeof quotes.$inferSelect & {
-  // Campi virtuali per il frontend - non esistono nel database
-  subtotal?: number;
-  total?: number;
-  discount?: number;
-  shareExpiry?: Date | null;
-};
-
-export const quotesRelations = relations(quotes, ({ one, many }) => ({
-  client: one(clients, {
-    fields: [quotes.clientId],
-    references: [clients.id],
+export const quotesRelations = relations(quotes, ({ many }) => ({
+  items: many(quoteItems, {
+    fields: [quotes.id],
+    references: [quoteItems.quoteId],
   }),
-  secondClient: one(clients, {
-    fields: [quotes.secondClientId],
-    references: [clients.id],
-    relationName: "secondClientQuotes",
+  clauses: many(quoteClauses, {
+    fields: [quotes.id],
+    references: [quoteClauses.quoteId],
   }),
-  event: one(events, {
-    fields: [quotes.eventId],
-    references: [events.id],
-    relationName: "eventQuotes",
-  }),
-  category: one(serviceCategories, {
-    fields: [quotes.categoryId],
-    references: [serviceCategories.id],
-  }),
-  leadSource: one(leadSources, {
-    fields: [quotes.leadSourceId],
-    references: [leadSources.id],
-  }),
-  quoteItems: many(quoteItems),
-  modules: many(quoteModules),
-  transactions: many(transactions),
-  scheduledPayments: many(scheduledPayments),
-  quoteClauses: many(quoteClauses),
 }));
 
 // Quote Items Schema
@@ -909,7 +872,7 @@ export const insertLeadSourceSchema = createInsertSchema(leadSources).pick({
 });
 
 export type InsertLeadSource = z.infer<typeof insertLeadSourceSchema>;
-export type LeadSource = typeof leadSources.$inferSelect;
+export type LeadSource = typeof leadSources.$Select;
 
 export const leadSourcesRelations = relations(leadSources, ({ many }) => ({
   events: many(events),
@@ -1062,4 +1025,3 @@ export const bundleLeadsRelations = relations(bundleLeads, ({ one }) => ({
 // Queste definizioni sono state spostate in un file separato per maggiore chiarezza
 // Importiamo ed esportiamo tutto dal file schema_gallery.ts
 export * from "../schema_gallery";
-

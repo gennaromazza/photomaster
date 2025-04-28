@@ -261,12 +261,18 @@ export function FinancialSummary({
       queryClient.invalidateQueries({
         queryKey: ["quoteScheduledPayments", quoteId],
       });
+      
+      // Invalida anche la query dei dati finanziari
+      queryClient.invalidateQueries({
+        queryKey: ["quoteFinancialData", quoteId],
+      });
 
       // Forza il refetch immediato dei dati
       refetchScheduled();
 
       // Invalida anche altre queries che potrebbero dipendere da questi dati
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+      queryClient.invalidateQueries({ queryKey: ["quotes", quoteId] });
 
       toast({
         title: "Rata programmata",
@@ -365,12 +371,18 @@ export function FinancialSummary({
       queryClient.invalidateQueries({
         queryKey: ["quoteScheduledPayments", quoteId],
       });
+      
+      // Invalida anche la query dei dati finanziari
+      queryClient.invalidateQueries({
+        queryKey: ["quoteFinancialData", quoteId],
+      });
 
       // Forza il refetch immediato dei dati
       refetchScheduled();
 
       // Invalida anche altre queries che potrebbero dipendere da questi dati
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+      queryClient.invalidateQueries({ queryKey: ["quotes", quoteId] });
 
       toast({
         title: "Rata aggiornata",

@@ -3639,7 +3639,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/selection", selectionRouter);
   app.use("/api/unified-selections", unifiedGallerySelectionsRouter); // Nuovo router unificato per selezioni
   app.use("/api/clauses", clausesRouter);
-  app.use("/api/contract-clauses", contractClausesRouter);
+  // L'endpoint contract-clauses è gestito più avanti con autenticazione
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/eventi", eventiRouter); // Italian endpoint (legacy)
   app.use("/api/events", eventsRouter); // English standardized endpoint

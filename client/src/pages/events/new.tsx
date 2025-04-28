@@ -106,20 +106,7 @@ const NewEventPage = () => {
         description: error.message,
         variant: "destructive"
       });
-    } });
-      toast({
-        title: "Evento creato",
-        description: "Il nuovo evento è stato aggiunto con successo.",
-      });
-      navigate("/events");
-    },
-    onError: () => {
-      toast({
-        title: "Errore",
-        description: "Si è verificato un errore durante la creazione dell'evento.",
-        variant: "destructive",
-      });
-    },
+    }
   });
   
   const onSubmit = (data: z.infer<typeof formSchema>) => {

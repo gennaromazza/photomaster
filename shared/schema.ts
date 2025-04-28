@@ -426,6 +426,21 @@ export const quotes = pgTable("quotes", {
   signedAt: timestamp("signed_at"), // Data di firma del preventivo
 });
 
+// Schema per l'inserimento dei preventivi
+export const insertQuoteSchema = createInsertSchema(quotes);
+
+// Tipo generato dal schema di inserimento
+export type InsertQuote = z.infer<typeof insertQuoteSchema>;
+
+// Tipo del preventivo come selezione dalla tabella
+export type Quote = typeof quotes.$inferSelect & {
+  // Campi virtuali per il frontend - non esistono nel database
+  subtotal?: number;
+  total?: number;
+  discount?: number;
+  shareExpiry?: Date | null;
+};
+
 export const quotesRelations = relations(quotes, ({ many }) => ({
   items: many(quoteItems, {
     fields: [quotes.id],

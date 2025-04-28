@@ -5,10 +5,10 @@
  * di moduli fissi e variabili utilizzati nei preventivi.
  */
 
-const { PrismaClient } = require('@prisma/client');
-const { db } = require('../server/db');
-const axios = require('axios');
-const { 
+import { PrismaClient } from '@prisma/client';
+import { db } from '../server/db.js';
+import axios from 'axios';
+import { 
   quotes, 
   quoteModules,
   quoteModuleItems,
@@ -16,8 +16,8 @@ const {
   services,
   serviceBundles,
   serviceBundleItems
-} = require('../shared/schema');
-const { eq, sql } = require('drizzle-orm');
+} from '../shared/schema.js';
+import { eq, sql } from 'drizzle-orm';
 
 // Configurazione
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -458,3 +458,13 @@ runDiagnostics().catch(err => {
   console.error('Errore fatale durante l\'esecuzione della diagnostica:', err);
   process.exit(1);
 });
+
+// Esportiamo le funzioni per test
+export {
+  fetchAllQuotes,
+  fetchQuoteDetails,
+  testModuleDataConsistency,
+  testModuleQuoteRelations,
+  testModulePriceCalculations,
+  testFixedVariableModuleConsistency
+};

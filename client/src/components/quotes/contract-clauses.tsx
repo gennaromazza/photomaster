@@ -22,7 +22,7 @@ export function ContractClauses({ quoteId, onClausesAccepted, readOnly = false }
   
   // Recupera le clausole associate al preventivo
   const { data: quoteClauses, isLoading, isError } = useQuery({
-    queryKey: [`/api/clauses/quote/${quoteId}`],
+    queryKey: ['/api/clauses/quote', quoteId],
     queryFn: async () => {
       const res = await fetch(`/api/clauses/quote/${quoteId}`);
       if (!res.ok) throw new Error('Errore nel caricamento delle clausole');

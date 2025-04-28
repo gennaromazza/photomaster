@@ -86,10 +86,27 @@ const NewEventPage = () => {
   const createEventMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       const response = await apiRequest("POST", "/api/events", data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Errore durante la creazione dell'evento");
+      }
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({
+        title: "Evento creato",
+        description: "L'evento è stato creato con successo"
+      });
+      navigate("/events");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive"
+      });
+    } });
       toast({
         title: "Evento creato",
         description: "Il nuovo evento è stato aggiunto con successo.",

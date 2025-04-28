@@ -34,18 +34,35 @@ export const financeController = {
   
   async createTransaction(data: any) {
     try {
-      // Assicuriamoci che la data sia una stringa in formato ISO se è un oggetto Date
+      console.log("Creazione transazione con dati:", {
+        amount: data.amount,
+        transactionType: data.transactionType,
+        paymentMethod: data.paymentMethod,
+        quoteId: data.quoteId,
+        date: data.date,
+        description: data.description
+      });
+      
+      // Assicuriamoci che la data sia formattata correttamente per Postgres
       let dateValue;
       if (data.date) {
         if (data.date instanceof Date) {
-          dateValue = data.date.toISOString();
+          // Convertiamo Date in stringa ISO
+          dateValue = format(data.date, 'yyyy-MM-dd');
         } else {
-          // Se è già una stringa o altro formato, lasciamo che new Date() lo converta
-          dateValue = new Date(data.date);
+          // Se è già una stringa, la formatiamo in un formato che Postgres accetta sicuramente
+          try {
+            dateValue = format(new Date(data.date), 'yyyy-MM-dd');
+          } catch (e) {
+            console.error("Errore nel formato data:", e);
+            dateValue = format(new Date(), 'yyyy-MM-dd');
+          }
         }
       } else {
-        dateValue = new Date();
+        dateValue = format(new Date(), 'yyyy-MM-dd');
       }
+      
+      console.log(`Data formattata per transazione: ${dateValue}`);
       
       const [transaction] = await db.insert(transactions)
         .values({
@@ -61,6 +78,8 @@ export const financeController = {
         })
         .returning();
       
+      console.log("Transazione creata con successo:", transaction);
+      
       // Se questa transazione è collegata a un pagamento programmato, aggiorniamo lo stato
       if (data.scheduledPaymentId) {
         await db.update(scheduledPayments)
@@ -69,6 +88,8 @@ export const financeController = {
             transactionId: transaction.id
           })
           .where(eq(scheduledPayments.id, data.scheduledPaymentId));
+          
+        console.log(`Aggiornato stato pagamento programmato ID: ${data.scheduledPaymentId} a 'paid'`);
       }
       
       return transaction;
@@ -80,17 +101,35 @@ export const financeController = {
   
   async updateTransaction(id: number, data: any) {
     try {
-      // Gestiamo la data in modo simile a createTransaction
+      console.log(`Aggiornamento transazione ${id} con dati:`, {
+        amount: data.amount,
+        transactionType: data.transactionType,
+        paymentMethod: data.paymentMethod,
+        status: data.status,
+        date: data.date,
+        description: data.description
+      });
+      
+      // Gestiamo la data in modo simile a createTransaction, con lo stesso formato
       let dateValue;
       if (data.date) {
         if (data.date instanceof Date) {
-          dateValue = data.date.toISOString();
+          // Convertiamo Date in stringa formato YYYY-MM-DD
+          dateValue = format(data.date, 'yyyy-MM-dd');
         } else {
-          dateValue = new Date(data.date);
+          // Se è già una stringa, la formatiamo in un formato che Postgres accetta sicuramente
+          try {
+            dateValue = format(new Date(data.date), 'yyyy-MM-dd');
+          } catch (e) {
+            console.error("Errore nel formato data:", e);
+            dateValue = format(new Date(), 'yyyy-MM-dd');
+          }
         }
       } else {
         dateValue = undefined;
       }
+      
+      console.log(`Data formattata per aggiornamento transazione: ${dateValue}`);
       
       const [transaction] = await db.update(transactions)
         .set({
@@ -158,17 +197,32 @@ export const financeController = {
   
   async createScheduledPayment(data: any) {
     try {
-      // Gestione sicura della data
+      console.log("Creazione pagamento programmato con dati:", {
+        quoteId: data.quoteId,
+        amount: data.amount,
+        dueDate: data.dueDate,
+        description: data.description,
+        paymentMethod: data.paymentMethod
+      });
+      
+      // Gestione sicura della data nel formato corretto per Postgres
       let dueDateValue;
       if (data.dueDate) {
         if (data.dueDate instanceof Date) {
-          dueDateValue = data.dueDate.toISOString();
+          dueDateValue = format(data.dueDate, 'yyyy-MM-dd');
         } else {
-          dueDateValue = new Date(data.dueDate);
+          try {
+            dueDateValue = format(new Date(data.dueDate), 'yyyy-MM-dd');
+          } catch (e) {
+            console.error("Errore nel formato data:", e);
+            throw new Error("Formato data non valido");
+          }
         }
       } else {
         throw new Error("Data di scadenza obbligatoria");
       }
+      
+      console.log(`Data formattata per pagamento programmato: ${dueDateValue}`);
       
       const [payment] = await db.insert(scheduledPayments)
         .values({
@@ -176,6 +230,7 @@ export const financeController = {
           amount: data.amount,
           dueDate: dueDateValue,
           description: data.description,
+          paymentMethod: data.paymentMethod,
           status: 'pending'
         })
         .returning();

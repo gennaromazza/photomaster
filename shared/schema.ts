@@ -850,10 +850,6 @@ export const quoteClausesRelations = relations(quoteClauses, ({ one }) => ({
     fields: [quoteClauses.quoteId],
     references: [quotes.id],
   }),
-  clause: one(contractClauses, {
-    fields: [quoteClauses.clauseId],
-    references: [contractClauses.id],
-  }),
 }));
 
 // Lead Source Schema (Provenienze)

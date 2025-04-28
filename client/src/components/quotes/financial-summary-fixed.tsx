@@ -757,7 +757,9 @@ export function FinancialSummary({
     }
 
     const transactionData = {
-      transactionType: "income", // Usa transactionType invece di type per compatibilità con il backend
+      // Includi sia transactionType che type per massima compatibilità
+      transactionType: "income",
+      type: "income", 
       amount: parseFloat(payment.amount), // Gli importi sono già in euro, non moltiplicare per 100
       date: format(new Date(), "yyyy-MM-dd"), // Inviamo la data come stringa formattata
       description:
@@ -810,6 +812,18 @@ export function FinancialSummary({
   
   // Funzione per calcolare l'importo residuo da pagare (in euro)
   const calculateRemainingAmount = (): number => {
+    // Controllo di sicurezza: se il totalPreventivo non è definito, mostra un avviso
+    if (totalPreventivo === undefined || totalPreventivo === null) {
+      console.warn('ATTENZIONE: totalPreventivo non definito in calculateRemainingAmount', {
+        totalPreventivo,
+        quoteId,
+        quoteTotal,
+        readOnly,
+        transactions
+      });
+      return 0; // Valore di fallback per prevenire NaN
+    }
+    
     // Calcola l'importo totale già pagato nei pagamenti registrati (in euro)
     const totalPaid = transactions
       .filter((t: any) => 
@@ -817,8 +831,24 @@ export function FinancialSummary({
         t.transactionType === "income" || t.transactionType === "entrata"
       )
       .reduce((sum: number, transaction: any) => {
-        return sum + parseFloat(transaction.amount); // Assicuriamoci che l'importo sia convertito in numero
+        // Assicuriamoci che l'importo sia un numero valido
+        const amount = parseFloat(transaction.amount);
+        if (isNaN(amount)) {
+          console.warn('Transazione con importo non valido:', transaction);
+          return sum;
+        }
+        return sum + amount;
       }, 0);
+    
+    console.log('Calcolo importo residuo:', {
+      totalPreventivo,
+      totalPaid,
+      remainingAmount: totalPreventivo - totalPaid,
+      transazioniEntrata: transactions.filter((t: any) => 
+        t.type === "income" || t.type === "entrata" || 
+        t.transactionType === "income" || t.transactionType === "entrata"
+      ).length
+    });
     
     // Calcola l'importo residuo (in euro)
     return Math.max(0, totalPreventivo - totalPaid);
@@ -838,8 +868,37 @@ export function FinancialSummary({
     
     const { numberOfRates, firstRateDate, interval } = rateGenerationData;
     
+    // Verifica che il numero di rate sia valido
+    if (!numberOfRates || numberOfRates <= 0 || isNaN(numberOfRates)) {
+      toast({
+        title: "Numero rate non valido",
+        description: "Inserisci un numero di rate valido maggiore di zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Verifica che la data della prima rata sia valida
+    if (!firstRateDate) {
+      toast({
+        title: "Data non valida",
+        description: "Inserisci una data valida per la prima rata.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Calcolo dell'importo rimanente da rateizzare (in euro)
     const remainingAmount = calculateRemainingAmount();
+    
+    console.log('Generazione rate - dati input:', {
+      quoteId, 
+      totalPreventivo, 
+      remainingAmount,
+      numberOfRates, 
+      firstRateDate, 
+      interval
+    });
     
     if (remainingAmount <= 0) {
       toast({
@@ -875,6 +934,8 @@ export function FinancialSummary({
       // Aggiorna la data per la prossima rata
       currentDate = addDays(currentDate, interval);
     }
+    
+    console.log('Rate generate:', installments);
     
     // Crea le rate una per una
     installments.forEach(installment => {

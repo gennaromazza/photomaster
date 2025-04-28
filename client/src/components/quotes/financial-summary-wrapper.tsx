@@ -66,9 +66,21 @@ export function FinancialSummaryWrapper(props: FinancialSummaryWrapperProps) {
       return props.totalAmount;
     }
     
-    // Infine ricadi su quoteTotal dai props o su 0
-    console.log(`Using props.quoteTotal or default: ${props.quoteTotal || 0}`);
-    return props.quoteTotal || 0;
+    // Se disponibile, usa quoteTotal dai props
+    if (props.quoteTotal !== undefined) {
+      console.log(`Using props.quoteTotal: ${props.quoteTotal}`);
+      return props.quoteTotal;
+    }
+    
+    // Se ancora non abbiamo un totale valido, cerca i dati dal preventivo
+    // (Se sei in questa situazione, è possibile che ci sia un problema nell'API)
+    console.warn('Non è stato possibile determinare il totale del preventivo, utilizzo 0 come fallback');
+    console.warn('QuoteID:', props.quoteId);
+    console.warn('Props disponibili:', props);
+    console.warn('Dati API:', data);
+    
+    // Infine usa 0 come ultima risorsa
+    return 0;
   };
 
   return (

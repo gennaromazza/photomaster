@@ -450,10 +450,16 @@ export const financeController = {
         eq(transactions.status, 'completed')
       ));
     
-    // Calcola l'importo incassato
+    // Calcola l'importo incassato - controlla sia transactionType che type per retrocompatibilità
     const totalPaid = transactionsList
-      .filter(t => t.transactionType === 'income')
+      .filter(t => t.transactionType === 'income' || t.transactionType === 'entrata' || t.type === 'income' || t.type === 'entrata')
       .reduce((sum, t) => sum + t.amount, 0);
+    
+    console.log(`Calcolo totalPaid per preventivo ${quoteId}:`, {
+      transactionsList,
+      totalPaid,
+      transazioniContate: transactionsList.filter(t => t.transactionType === 'income' || t.transactionType === 'entrata' || t.type === 'income' || t.type === 'entrata').length
+    });
     
     // Ottieni i pagamenti programmati
     const scheduledPaymentsList = await db.select()

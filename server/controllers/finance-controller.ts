@@ -443,11 +443,33 @@ export const financeController = {
     console.log("Quote raw data:", quote);
     
     // Calcolo dell'importo totale dai moduli - query al DB per ottenere la somma effettiva
-    const quoteModulesResult = await db.select({
-      totalModules: sql<number>`SUM(amount)`.mapWith(Number)
-    })
-    .from(quoteModules)
-    .where(eq(quoteModules.quoteId, quoteId));
+    // Verifichiamo se la colonna "amount" esiste nella tabella prima di usarla
+    let modulesTotal = 0;
+    try {
+      const quoteModulesList = await db.select()
+        .from(quoteModules)
+        .where(eq(quoteModules.quoteId, quoteId));
+      
+      // Verifica quale campo contiene l'importo
+      if (quoteModulesList.length > 0) {
+        // Controlliamo quali campi sono disponibili nello schema
+        const sampleModule = quoteModulesList[0];
+        console.log("Sample module structure:", Object.keys(sampleModule));
+        
+        if ('price' in sampleModule) {
+          modulesTotal = quoteModulesList.reduce((sum, module) => sum + (module.price || 0), 0);
+        } else if ('amount' in sampleModule) {
+          modulesTotal = quoteModulesList.reduce((sum, module) => sum + (module.amount || 0), 0);
+        } else if ('value' in sampleModule) {
+          modulesTotal = quoteModulesList.reduce((sum, module) => sum + (module.value || 0), 0);
+        }
+      }
+      
+      console.log(`Moduli trovati: ${quoteModulesList.length}, totale calcolato: ${modulesTotal}`);
+    } catch (error) {
+      console.error("Errore nel calcolo dei moduli:", error);
+      modulesTotal = 0;
+    }
     
     const modulesTotal = quoteModulesResult[0]?.totalModules || 0;
     
@@ -517,11 +539,11 @@ export const financeController = {
     // Calcola importi pendenti e futuri
     const now = new Date();
     const pendingPayments = scheduledPaymentsList
-      .filter(p => p.status === 'pending' && isBefore(p.dueDate, now))
+      .filter(p => p.status === 'pending' && isBefore(new Date(p.dueDate), now))
       .reduce((sum, p) => sum + p.amount, 0);
     
     const upcomingPayments = scheduledPaymentsList
-      .filter(p => p.status === 'pending' && !isBefore(p.dueDate, now))
+      .filter(p => p.status === 'pending' && !isBefore(new Date(p.dueDate), now))
       .reduce((sum, p) => sum + p.amount, 0);
     
     // Prepara il risultato includendo anche la proprietà summary per retrocompatibilità

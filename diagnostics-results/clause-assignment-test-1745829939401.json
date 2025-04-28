@@ -1,0 +1,63 @@
+{
+  "timestamp": "2025-04-28T08:45:39.400Z",
+  "contractId": 999,
+  "quoteId": 54,
+  "modulesTestResults": [
+    {
+      "moduleId": 77,
+      "moduleName": "1",
+      "tests": [
+        {
+          "test": "Presenza clausole",
+          "status": "fail",
+          "details": "Il modulo non ha un array 'clauses' definito nell'API"
+        }
+      ]
+    },
+    {
+      "moduleId": 93,
+      "moduleName": "Test Module 1745828862890",
+      "tests": [
+        {
+          "test": "Presenza clausole",
+          "status": "fail",
+          "details": "Il modulo non ha un array 'clauses' definito nell'API"
+        }
+      ]
+    }
+  ],
+  "frontendTestResults": [
+    {
+      "quoteId": 54,
+      "shareToken": "a360a981052b4bc4f1517df4c4b5364d",
+      "tests": [
+        {
+          "test": "Recupero pagina pubblica",
+          "status": "pass",
+          "details": "Pagina pubblica del preventivo recuperata con successo"
+        },
+        {
+          "test": "Presenza moduli in frontend",
+          "status": "pass",
+          "details": "La pagina pubblica ha 2 moduli"
+        },
+        {
+          "test": "Presenza clausole in frontend",
+          "status": "fail",
+          "details": "La pagina pubblica non ha l'oggetto 'contractClauses'"
+        },
+        {
+          "test": "Associazione clausole ai moduli in frontend",
+          "status": "fail",
+          "details": "Nessun modulo nella pagina pubblica ha clausole associate"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 2,
+    "failed": 4,
+    "warnings": 0
+  }
+}

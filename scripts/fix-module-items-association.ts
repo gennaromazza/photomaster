@@ -214,5 +214,10 @@ function generateMarkdownReport(report) {
   return markdown;
 }
 
-// Esegui la funzione di correzione
-fixModuleItemsAssociation().catch(console.error);
+// Esporta la funzione per l'uso in altri script
+export { fixModuleItemsAssociation };
+
+// Se il file viene eseguito direttamente, esegui la funzione principale
+if (require.main === module) {
+  fixModuleItemsAssociation().catch(console.error);
+}

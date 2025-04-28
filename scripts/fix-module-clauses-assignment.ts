@@ -282,5 +282,10 @@ function generateMarkdownReport(report) {
   return markdown;
 }
 
-// Esegui la funzione di correzione
-fixModuleClausesAssignment().catch(console.error);
+// Esporta la funzione per l'uso in altri script
+export { fixModuleClausesAssignment };
+
+// Se il file viene eseguito direttamente, esegui la funzione principale
+if (require.main === module) {
+  fixModuleClausesAssignment().catch(console.error);
+}

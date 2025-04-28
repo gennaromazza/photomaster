@@ -1,0 +1,64 @@
+Inizializzazione form con dati esistenti: 
+Object {name: "1", description: "", discount: undefined, discountType: undefined}
+Selezioni originali: 
+Array [{…}]
+Selezioni formattate dopo deduplicazione: 
+Array [{…}]
+Dati completi caricati: 
+Object {id: 98, quoteId: 76, name: "1", description: "", type: "variable", …}
+Inizializzazione modulo con: 
+Object {id: 98, quoteId: 76, name: "1", description: "", type: "variable", …}
+Inizializzazione form con dati esistenti: 
+Object {name: "1", description: "", discount: undefined, discountType: undefined}
+Selezioni originali: 
+Array [{…}]
+Selezioni formattate dopo deduplicazione: 
+Array [{…}]
+Salvando modulo con metodo PUT all'URL /api/modules/98 
+Object {id: 98, quoteId: 76, name: "1", description: "", type: "variable", …}
+Salvando modulo con metodo PUT all'URL /api/modules/98 
+Object {id: 98, quoteId: 76, name: "1", description: "", type: "variable", …}
+Modulo salvato con successo: 
+Object {id: 98, quoteId: 76, name: "1", description: "", type: "variable", …}
+Richiesta annullata: /api/quotes/76/modules
+Richiesta annullata: /api/quotes/76
+Richiesta annullata: /api/services
+Richiesta annullata: /api/products
+DOMException {}
+
+DOMException {}
+
+DOMException {}
+
+DOMException {}
+
+Errore durante la richiesta GET a /api/finance/quotes/76: 
+Error {}
+
+Errore durante la richiesta GET a /api/finance/quotes/76/transactions: 
+Error {}
+
+Errore durante la richiesta GET a /api/finance/quotes/76: 
+Error {}
+
+Modulo salvato con successo: 
+Object {id: 98, quoteId: 76, name: "1", description: "", type: "variable", …}
+Richiesta annullata: /api/quotes/76
+Richiesta annullata: /api/quotes/76/modules
+Richiesta annullata: /api/quotes/76
+DOMException {}
+
+DOMException {}
+
+DOMException {}
+
+DOMException {}
+
+Errore durante la richiesta GET a /api/finance/quotes/76: 
+Error {}
+
+Errore durante la richiesta GET a /api/finance/quotes/76/transactions: 
+Error {}
+
+Errore durante la richiesta GET a /api/finance/quotes/76: 
+Error {}

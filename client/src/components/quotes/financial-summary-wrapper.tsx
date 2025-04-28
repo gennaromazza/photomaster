@@ -17,19 +17,23 @@ interface FinancialSummaryWrapperProps {
 
 export function FinancialSummaryWrapper(props: FinancialSummaryWrapperProps) {
   // Utilizziamo un array per la chiave della query per una migliore invalidazione della cache
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['/api/finance/quotes', props.quoteId],
-    queryFn: () => apiRequest('GET', `/api/finance/quotes/${props.quoteId}`)
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Errore nel caricamento dei dati finanziari: ${res.status}`);
-        }
-        return res.json();
-      }),
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['quoteFinancialData', props.quoteId], // Chiave più specifica per miglior gestione della cache
+    queryFn: async () => {
+      console.log(`Fetching financial data for quote ${props.quoteId}`);
+      const res = await apiRequest('GET', `/api/finance/quotes/${props.quoteId}`);
+      if (!res.ok) {
+        throw new Error(`Errore nel caricamento dei dati finanziari: ${res.status}`);
+      }
+      const data = await res.json();
+      console.log(`Received financial data for quote ${props.quoteId}:`, data);
+      return data;
+    },
     enabled: !!props.quoteId,
-    staleTime: 10000, // 10 secondi
-    retry: 2,
-    refetchOnWindowFocus: false,
+    staleTime: 5000, // 5 secondi
+    retry: 3,
+    refetchOnWindowFocus: true, // Aggiorniamo i dati quando la finestra è in focus
+    refetchInterval: 30000, // Aggiorniamo ogni 30 secondi
   });
 
   const isQuoteSigned = (): boolean => {

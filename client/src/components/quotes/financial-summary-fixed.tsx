@@ -206,12 +206,18 @@ export function FinancialSummary({
       queryClient.invalidateQueries({
         queryKey: ["quoteTransactions", quoteId],
       });
+      
+      // Invalida anche la query dei dati finanziari
+      queryClient.invalidateQueries({
+        queryKey: ["quoteFinancialData", quoteId],
+      });
 
       // Forza il refetch per aggiornare immediatamente i dati visualizzati
       refetchTransactions();
 
       // Invalida anche altre queries che potrebbero dipendere da questi dati
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
+      queryClient.invalidateQueries({ queryKey: ["quotes", quoteId] });
 
       toast({
         title: "Pagamento registrato",

@@ -28,7 +28,7 @@ export interface SelectionSession {
 }
 
 export interface PhotoSelection {
-  id: number;
+  selectionId: number; //Renamed here, assuming this is the correct location based on the user request.
   photoId: number;
   sessionId: number;
   createdAt: Date;

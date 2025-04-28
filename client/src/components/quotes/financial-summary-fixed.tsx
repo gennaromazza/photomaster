@@ -581,7 +581,7 @@ export function FinancialSummary({
 
     // Prepara l'oggetto transazione
     const newTransaction = {
-      type: "income",
+      transactionType: "income", // Usa transactionType invece di type per compatibilità con il backend
       amount: parseFloat(transactionData.amount),
       date: transactionData.date, // Inviamo la data come stringa, sarà formattata lato server
       description:
@@ -592,6 +592,9 @@ export function FinancialSummary({
       reference: transactionData.reference || null,
       notes: transactionData.notes || null,
     };
+    
+    // Log dettagliato della transazione prima dell'invio
+    console.log("Dettagli esatti della transazione inviata:", JSON.stringify(newTransaction, null, 2));
 
     // Invia la richiesta per creare la transazione
     createTransactionMutation.mutate(newTransaction);
@@ -635,7 +638,7 @@ export function FinancialSummary({
     // Prepara l'oggetto transazione da aggiornare
     const updatedTransaction = {
       id: selectedPaymentId,
-      type: "income",
+      transactionType: "income", // Usa transactionType invece di type per compatibilità con il backend
       amount: parseFloat(transactionData.amount),
       date: transactionData.date,
       description:
@@ -646,6 +649,9 @@ export function FinancialSummary({
       reference: transactionData.reference || null,
       notes: transactionData.notes || null,
     };
+    
+    // Log dettagliato della transazione prima dell'invio
+    console.log("Dettagli transazione aggiornata:", JSON.stringify(updatedTransaction, null, 2));
 
     // Invia la richiesta per aggiornare la transazione
     updateTransactionMutation.mutate(updatedTransaction);
@@ -751,8 +757,8 @@ export function FinancialSummary({
     }
 
     const transactionData = {
-      type: "income",
-      amount: parseFloat(payment.amount) * 100,
+      transactionType: "income", // Usa transactionType invece di type per compatibilità con il backend
+      amount: parseFloat(payment.amount), // Gli importi sono già in euro, non moltiplicare per 100
       date: format(new Date(), "yyyy-MM-dd"), // Inviamo la data come stringa formattata
       description:
         payment.description || `Pagamento per preventivo #${quoteId}`,
@@ -762,6 +768,9 @@ export function FinancialSummary({
       notes: payment.notes || null,
       scheduledPaymentId: payment.id, // Collegamento alla rata programmata
     };
+    
+    // Log dettagliato della transazione prima dell'invio
+    console.log("Dettagli transazione da pagamento programmato:", JSON.stringify(transactionData, null, 2));
 
     markAsPaidMutation.mutate(transactionData);
   };
@@ -774,9 +783,12 @@ export function FinancialSummary({
     return formatCurrency(amount);
   };
 
-  // Calcola il totale pagato
+  // Calcola il totale pagato - considera sia il campo type che transactionType per retrocompatibilità
   const totalPaid = transactions
-    .filter((t: any) => t.type === "income" || t.type === "entrata")
+    .filter((t: any) => 
+      t.type === "income" || t.type === "entrata" || 
+      t.transactionType === "income" || t.transactionType === "entrata"
+    )
     .reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0);
 
   // Calcola il saldo da pagare
@@ -800,9 +812,12 @@ export function FinancialSummary({
   const calculateRemainingAmount = (): number => {
     // Calcola l'importo totale già pagato nei pagamenti registrati (in euro)
     const totalPaid = transactions
-      .filter((t: any) => t.type === "income" || t.type === "entrata")
+      .filter((t: any) => 
+        t.type === "income" || t.type === "entrata" || 
+        t.transactionType === "income" || t.transactionType === "entrata"
+      )
       .reduce((sum: number, transaction: any) => {
-        return sum + transaction.amount; // Gli importi sono già in euro dopo la standardizzazione
+        return sum + parseFloat(transaction.amount); // Assicuriamoci che l'importo sia convertito in numero
       }, 0);
     
     // Calcola l'importo residuo (in euro)
@@ -946,21 +961,29 @@ export function FinancialSummary({
             {!transactionsLoading && (
               <p className="text-xs text-muted-foreground mt-1">
                 {transactions.filter(
-                  (t: any) => t.type === "income" || t.type === "entrata",
+                  (t: any) => 
+                    t.type === "income" || t.type === "entrata" || 
+                    t.transactionType === "income" || t.transactionType === "entrata"
                 ).length > 0
                   ? `${
                       transactions.filter(
-                        (t: any) => t.type === "income" || t.type === "entrata",
+                        (t: any) => 
+                          t.type === "income" || t.type === "entrata" || 
+                          t.transactionType === "income" || t.transactionType === "entrata"
                       ).length
                     } pagament${
                       transactions.filter(
-                        (t: any) => t.type === "income" || t.type === "entrata",
+                        (t: any) => 
+                          t.type === "income" || t.type === "entrata" || 
+                          t.transactionType === "income" || t.transactionType === "entrata"
                       ).length === 1
                         ? "o"
                         : "i"
                     } registrat${
                       transactions.filter(
-                        (t: any) => t.type === "income" || t.type === "entrata",
+                        (t: any) => 
+                          t.type === "income" || t.type === "entrata" || 
+                          t.transactionType === "income" || t.transactionType === "entrata"
                       ).length === 1
                         ? "o"
                         : "i"
@@ -1040,7 +1063,9 @@ export function FinancialSummary({
                 <TableBody>
                   {transactions
                     .filter(
-                      (t: any) => t.type === "income" || t.type === "entrata",
+                      (t: any) => 
+                        t.type === "income" || t.type === "entrata" || 
+                        t.transactionType === "income" || t.transactionType === "entrata"
                     )
                     .map((transaction: any) => (
                       <TableRow key={transaction.id}>

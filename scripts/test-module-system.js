@@ -60,9 +60,13 @@ async function runDiagnostics() {
 async function testModuleDataConsistency() {
   console.log('\n🔍 Test 1: Verifica consistenza dati moduli tra DB e API...');
   
+  diagnosticsResults.testsRun.push('testModuleDataConsistency');
+  
   // 1.1 Recupera i moduli dal database
   const dbModules = await db.select().from(quoteModules);
   console.log(`Trovati ${dbModules.length} moduli nel database`);
+  
+  diagnosticsResults.stats.modulesTotal = dbModules.length;
   
   // 1.2 Recupera i moduli dall'API (tramite i preventivi)
   const quotes = await fetchAllQuotes();
@@ -81,6 +85,11 @@ async function testModuleDataConsistency() {
       }
     } catch (err) {
       console.error(`- Errore nel recupero dettagli preventivo ${quote.id}:`, err.message);
+      diagnosticsResults.issues.warnings.push({
+        test: 'testModuleDataConsistency',
+        message: `Errore nel recupero dettagli preventivo ${quote.id}: ${err.message}`,
+        itemId: quote.id
+      });
     }
   }
   
@@ -93,18 +102,40 @@ async function testModuleDataConsistency() {
   
   // Moduli presenti nel DB ma non nell'API
   const missingInApi = dbModules.filter(m => !apiModuleIds.has(m.id));
+  diagnosticsResults.stats.modulesMissingInApi = missingInApi.length;
+  
   if (missingInApi.length > 0) {
     console.warn(`⚠️ Trovati ${missingInApi.length} moduli nel DB che non sono accessibili tramite API:`);
-    missingInApi.forEach(m => console.warn(`   - ID: ${m.id}, Nome: ${m.name}, Tipo: ${m.type}`));
+    missingInApi.forEach(m => {
+      console.warn(`   - ID: ${m.id}, Nome: ${m.name}, Tipo: ${m.type}`);
+      diagnosticsResults.issues.warnings.push({
+        test: 'testModuleDataConsistency',
+        message: `Modulo nel DB non accessibile tramite API: ID: ${m.id}, Nome: ${m.name}, Tipo: ${m.type}`,
+        itemId: m.id,
+        itemType: 'module',
+        details: m
+      });
+    });
   } else {
     console.log('✅ Tutti i moduli del DB sono accessibili tramite API');
   }
   
   // Moduli presenti nell'API ma non nel DB (non dovrebbe mai accadere)
   const missingInDb = apiModules.filter(m => !dbModuleIds.has(m.id));
+  diagnosticsResults.stats.modulesMissingInDb = missingInDb.length;
+  
   if (missingInDb.length > 0) {
     console.error(`❌ Trovati ${missingInDb.length} moduli nell'API che non esistono nel DB (errore critico):`);
-    missingInDb.forEach(m => console.error(`   - ID: ${m.id}, Nome: ${m.name}, Tipo: ${m.type}`));
+    missingInDb.forEach(m => {
+      console.error(`   - ID: ${m.id}, Nome: ${m.name}, Tipo: ${m.type}`);
+      diagnosticsResults.issues.critical.push({
+        test: 'testModuleDataConsistency',
+        message: `Modulo nell'API non trovato nel DB: ID: ${m.id}, Nome: ${m.name}, Tipo: ${m.type}`,
+        itemId: m.id,
+        itemType: 'module',
+        details: m
+      });
+    });
   } else {
     console.log('✅ Tutti i moduli dell\'API esistono nel DB');
   }
@@ -129,11 +160,27 @@ async function testModuleDataConsistency() {
       
       if (discrepancies.length > 0) {
         console.warn(`⚠️ Discrepanze nel modulo ID ${dbModule.id}:`);
-        discrepancies.forEach(d => console.warn(`   - ${d}`));
         fieldMismatches++;
+        
+        const discrepancyDetails = {
+          test: 'testModuleDataConsistency',
+          message: `Discrepanze nel modulo ID ${dbModule.id}: ${discrepancies.join(', ')}`,
+          itemId: dbModule.id,
+          itemType: 'module',
+          details: {
+            db: dbModule,
+            api: apiModule,
+            discrepancies
+          }
+        };
+        
+        discrepancies.forEach(d => console.warn(`   - ${d}`));
+        diagnosticsResults.issues.warnings.push(discrepancyDetails);
       }
     }
   }
+  
+  diagnosticsResults.stats.modulesWithFieldDiscrepancies = fieldMismatches;
   
   if (fieldMismatches === 0) {
     console.log('✅ Campi dei moduli consistenti tra DB e API');
@@ -148,6 +195,8 @@ async function testModuleDataConsistency() {
 async function testModuleQuoteRelations() {
   console.log('\n🔍 Test 2: Verifica relazioni tra moduli e preventivi...');
   
+  diagnosticsResults.testsRun.push('testModuleQuoteRelations');
+  
   // 2.1 Recupera tutti i preventivi e i moduli dal DB
   const dbQuotes = await db.select().from(quotes);
   const dbModules = await db.select().from(quoteModules);
@@ -160,10 +209,20 @@ async function testModuleQuoteRelations() {
   
   // Moduli che fanno riferimento a preventivi inesistenti
   const orphanModules = dbModules.filter(m => !quoteIds.has(m.quoteId));
+  diagnosticsResults.stats.orphanModules = orphanModules.length;
   
   if (orphanModules.length > 0) {
     console.error(`❌ Trovati ${orphanModules.length} moduli orfani (riferimento a preventivi inesistenti):`);
-    orphanModules.forEach(m => console.error(`   - Modulo ID: ${m.id}, si riferisce al preventivo ID: ${m.quoteId} (inesistente)`));
+    orphanModules.forEach(m => {
+      console.error(`   - Modulo ID: ${m.id}, si riferisce al preventivo ID: ${m.quoteId} (inesistente)`);
+      diagnosticsResults.issues.critical.push({
+        test: 'testModuleQuoteRelations',
+        message: `Modulo orfano: ID ${m.id} si riferisce al preventivo ID ${m.quoteId} (inesistente)`,
+        itemId: m.id,
+        itemType: 'module',
+        details: m
+      });
+    });
   } else {
     console.log('✅ Tutti i moduli si riferiscono a preventivi esistenti');
   }
@@ -176,6 +235,8 @@ async function testModuleQuoteRelations() {
   }, {});
   
   let duplicateNameIssues = 0;
+  let quotesWithDuplicates = 0;
+  
   Object.entries(modulesByQuote).forEach(([quoteId, modules]) => {
     // Cerca moduli con lo stesso nome all'interno dello stesso preventivo
     const names = modules.map(m => m.name);
@@ -183,6 +244,7 @@ async function testModuleQuoteRelations() {
     
     if (names.length !== uniqueNames.size) {
       console.warn(`⚠️ Preventivo ID ${quoteId} ha moduli con nomi duplicati:`);
+      quotesWithDuplicates++;
       
       // Trova i nomi duplicati
       const nameCounts = names.reduce((acc, name) => {
@@ -190,20 +252,40 @@ async function testModuleQuoteRelations() {
         return acc;
       }, {});
       
-      Object.entries(nameCounts)
-        .filter(([_, count]) => count > 1)
-        .forEach(([name, count]) => {
-          console.warn(`   - "${name}" appare ${count} volte`);
-          duplicateNameIssues++;
+      const duplicateNames = Object.entries(nameCounts)
+        .filter(([_, count]) => count > 1);
+      
+      duplicateNames.forEach(([name, count]) => {
+        console.warn(`   - "${name}" appare ${count} volte`);
+        duplicateNameIssues++;
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testModuleQuoteRelations',
+          message: `Preventivo ID ${quoteId} ha il nome modulo "${name}" duplicato (appare ${count} volte)`,
+          itemId: parseInt(quoteId),
+          itemType: 'quote',
+          details: {
+            quoteId: parseInt(quoteId),
+            moduleName: name,
+            count,
+            modules: modules.filter(m => m.name === name)
+          }
         });
+      });
     }
   });
   
+  diagnosticsResults.stats.modulesWithDuplicateNames = duplicateNameIssues;
+  
   if (duplicateNameIssues === 0) {
     console.log('✅ Nessun modulo con nome duplicato trovato negli stessi preventivi');
+  } else {
+    console.warn(`⚠️ Trovati ${duplicateNameIssues} nomi di modulo duplicati in ${quotesWithDuplicates} preventivi`);
   }
   
   // 2.4 Verifica consistenza API per le relazioni
+  let apiRelationDiscrepancies = 0;
+  
   for (const quoteId of quoteIdsWithModules) {
     try {
       // Verifica che il preventivo esista
@@ -222,9 +304,30 @@ async function testModuleQuoteRelations() {
         console.warn(`⚠️ Discrepanza nel numero di moduli per il preventivo ID ${quoteId}:`);
         console.warn(`   - DB: ${dbModulesForQuote.length} moduli`);
         console.warn(`   - API: ${apiModulesForQuote.length} moduli`);
+        apiRelationDiscrepancies++;
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testModuleQuoteRelations',
+          message: `Discrepanza nel numero di moduli per il preventivo ID ${quoteId}: DB: ${dbModulesForQuote.length}, API: ${apiModulesForQuote.length}`,
+          itemId: quoteId,
+          itemType: 'quote',
+          details: {
+            quoteId,
+            dbModulesCount: dbModulesForQuote.length,
+            apiModulesCount: apiModulesForQuote.length,
+            dbModules: dbModulesForQuote,
+            apiModules: apiModulesForQuote
+          }
+        });
       }
     } catch (err) {
       console.error(`- Errore nella verifica delle relazioni per il preventivo ${quoteId}:`, err.message);
+      diagnosticsResults.issues.warnings.push({
+        test: 'testModuleQuoteRelations',
+        message: `Errore nella verifica delle relazioni per il preventivo ${quoteId}: ${err.message}`,
+        itemId: quoteId,
+        itemType: 'quote'
+      });
     }
   }
 }
@@ -234,6 +337,8 @@ async function testModuleQuoteRelations() {
  */
 async function testModulePriceCalculations() {
   console.log('\n🔍 Test 3: Verifica calcolo prezzi e sconti dei moduli...');
+  
+  diagnosticsResults.testsRun.push('testModulePriceCalculations');
   
   // 3.1 Recupera i moduli, gli elementi dei moduli e i servizi dal DB
   const dbModules = await db.select().from(quoteModules);
@@ -266,6 +371,18 @@ async function testModulePriceCalculations() {
       const apiModule = quoteDetails.modules.find(m => m.id === module.id);
       if (!apiModule) {
         console.warn(`⚠️ Modulo ID ${module.id} non trovato nell'API per il preventivo ${module.quoteId}`);
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testModulePriceCalculations',
+          message: `Modulo ID ${module.id} non trovato nell'API per il preventivo ${module.quoteId}`,
+          itemId: module.id,
+          itemType: 'module',
+          details: {
+            module,
+            quoteId: module.quoteId
+          }
+        });
+        
         continue;
       }
       
@@ -307,11 +424,34 @@ async function testModulePriceCalculations() {
         console.warn(`   - Riportato dall'API: ${apiTotalPrice.toFixed(2)} €`);
         console.warn(`   - Differenza: ${Math.abs(dbTotalPrice - apiTotalPrice).toFixed(2)} €`);
         priceDiscrepancies++;
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testModulePriceCalculations',
+          message: `Discrepanza nel prezzo del modulo ID ${module.id} (${module.name}): DB: ${dbTotalPrice.toFixed(2)} €, API: ${apiTotalPrice.toFixed(2)} €, Differenza: ${Math.abs(dbTotalPrice - apiTotalPrice).toFixed(2)} €`,
+          itemId: module.id,
+          itemType: 'module',
+          details: {
+            module,
+            moduleItems,
+            dbTotalPrice,
+            apiTotalPrice,
+            difference: Math.abs(dbTotalPrice - apiTotalPrice)
+          }
+        });
       }
     } catch (err) {
       console.error(`- Errore nel calcolo dei prezzi per il modulo ${module.id}:`, err.message);
+      
+      diagnosticsResults.issues.warnings.push({
+        test: 'testModulePriceCalculations',
+        message: `Errore nel calcolo dei prezzi per il modulo ${module.id}: ${err.message}`,
+        itemId: module.id,
+        itemType: 'module'
+      });
     }
   }
+  
+  diagnosticsResults.stats.modulesWithPriceDiscrepancies = priceDiscrepancies;
   
   if (priceDiscrepancies === 0) {
     console.log('✅ Calcoli dei prezzi dei moduli coerenti tra DB e API');
@@ -325,6 +465,8 @@ async function testModulePriceCalculations() {
  */
 async function testFixedVariableModuleConsistency() {
   console.log('\n🔍 Test 4: Verifica consistenza tra moduli fissi e variabili...');
+  
+  diagnosticsResults.testsRun.push('testFixedVariableModuleConsistency');
   
   // 4.1 Recupera tutti i moduli dal DB
   const dbModules = await db.select().from(quoteModules);
@@ -350,6 +492,15 @@ async function testFixedVariableModuleConsistency() {
       if (moduleItems.length === 0) {
         console.warn(`⚠️ Modulo fisso ID ${module.id} (${module.name}) non ha elementi`);
         fixedModuleIssues++;
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testFixedVariableModuleConsistency',
+          message: `Modulo fisso ID ${module.id} (${module.name}) non ha elementi`,
+          itemId: module.id,
+          itemType: 'module',
+          moduleType: 'fixed',
+          details: { module }
+        });
       }
       
       if (module.minSelectCount !== null || module.maxSelectCount !== null) {
@@ -357,9 +508,29 @@ async function testFixedVariableModuleConsistency() {
         console.warn(`   - minSelectCount: ${module.minSelectCount}`);
         console.warn(`   - maxSelectCount: ${module.maxSelectCount}`);
         fixedModuleIssues++;
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testFixedVariableModuleConsistency',
+          message: `Modulo fisso ID ${module.id} (${module.name}) ha limiti di selezione impostati: minSelectCount: ${module.minSelectCount}, maxSelectCount: ${module.maxSelectCount}`,
+          itemId: module.id,
+          itemType: 'module',
+          moduleType: 'fixed',
+          details: { 
+            module,
+            expectedBehavior: "I moduli fissi non dovrebbero avere limiti di selezione (minSelectCount e maxSelectCount dovrebbero essere null)"
+          }
+        });
       }
     } catch (err) {
       console.error(`- Errore nella verifica del modulo fisso ${module.id}:`, err.message);
+      
+      diagnosticsResults.issues.warnings.push({
+        test: 'testFixedVariableModuleConsistency',
+        message: `Errore nella verifica del modulo fisso ${module.id}: ${err.message}`,
+        itemId: module.id,
+        itemType: 'module',
+        moduleType: 'fixed'
+      });
     }
   }
   
@@ -372,6 +543,18 @@ async function testFixedVariableModuleConsistency() {
       if (module.minSelectCount === null && module.maxSelectCount === null) {
         console.warn(`⚠️ Modulo variabile ID ${module.id} (${module.name}) non ha limiti di selezione impostati`);
         variableModuleIssues++;
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testFixedVariableModuleConsistency',
+          message: `Modulo variabile ID ${module.id} (${module.name}) non ha limiti di selezione impostati`,
+          itemId: module.id,
+          itemType: 'module',
+          moduleType: 'variable',
+          details: { 
+            module,
+            expectedBehavior: "I moduli variabili dovrebbero avere almeno uno dei limiti di selezione impostati (minSelectCount o maxSelectCount)"
+          }
+        });
       }
       
       // Verifica che min < max (se entrambi impostati)
@@ -381,6 +564,18 @@ async function testFixedVariableModuleConsistency() {
         console.error(`   - minSelectCount: ${module.minSelectCount}`);
         console.error(`   - maxSelectCount: ${module.maxSelectCount}`);
         variableModuleIssues++;
+        
+        diagnosticsResults.issues.critical.push({
+          test: 'testFixedVariableModuleConsistency',
+          message: `Modulo variabile ID ${module.id} (${module.name}) ha minSelectCount (${module.minSelectCount}) > maxSelectCount (${module.maxSelectCount})`,
+          itemId: module.id,
+          itemType: 'module',
+          moduleType: 'variable',
+          details: { 
+            module,
+            expectedBehavior: "Il valore minimo di selezione (minSelectCount) deve essere minore o uguale al valore massimo (maxSelectCount)"
+          }
+        });
       }
       
       // Recupera gli elementi del modulo per verificare le quantità selezionate
@@ -391,6 +586,15 @@ async function testFixedVariableModuleConsistency() {
       if (moduleItems.length === 0) {
         console.warn(`⚠️ Modulo variabile ID ${module.id} (${module.name}) non ha elementi`);
         variableModuleIssues++;
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testFixedVariableModuleConsistency',
+          message: `Modulo variabile ID ${module.id} (${module.name}) non ha elementi`,
+          itemId: module.id,
+          itemType: 'module',
+          moduleType: 'variable',
+          details: { module }
+        });
       }
       
       // Verifica le quantità selezionate negli elementi
@@ -401,17 +605,56 @@ async function testFixedVariableModuleConsistency() {
       if (module.minSelectCount !== null && totalSelected < module.minSelectCount) {
         console.warn(`⚠️ Modulo variabile ID ${module.id} (${module.name}) ha ${totalSelected} elementi selezionati, meno del minimo richiesto (${module.minSelectCount})`);
         variableModuleIssues++;
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testFixedVariableModuleConsistency',
+          message: `Modulo variabile ID ${module.id} (${module.name}) ha ${totalSelected} elementi selezionati, meno del minimo richiesto (${module.minSelectCount})`,
+          itemId: module.id,
+          itemType: 'module',
+          moduleType: 'variable',
+          details: { 
+            module,
+            selectedItems,
+            totalSelected,
+            minSelectCount: module.minSelectCount
+          }
+        });
       }
       
       // Verifica la coerenza con i limiti massimi
       if (module.maxSelectCount !== null && totalSelected > module.maxSelectCount) {
         console.warn(`⚠️ Modulo variabile ID ${module.id} (${module.name}) ha ${totalSelected} elementi selezionati, più del massimo consentito (${module.maxSelectCount})`);
         variableModuleIssues++;
+        
+        diagnosticsResults.issues.warnings.push({
+          test: 'testFixedVariableModuleConsistency',
+          message: `Modulo variabile ID ${module.id} (${module.name}) ha ${totalSelected} elementi selezionati, più del massimo consentito (${module.maxSelectCount})`,
+          itemId: module.id,
+          itemType: 'module',
+          moduleType: 'variable',
+          details: { 
+            module,
+            selectedItems,
+            totalSelected,
+            maxSelectCount: module.maxSelectCount
+          }
+        });
       }
     } catch (err) {
       console.error(`- Errore nella verifica del modulo variabile ${module.id}:`, err.message);
+      
+      diagnosticsResults.issues.warnings.push({
+        test: 'testFixedVariableModuleConsistency',
+        message: `Errore nella verifica del modulo variabile ${module.id}: ${err.message}`,
+        itemId: module.id,
+        itemType: 'module',
+        moduleType: 'variable'
+      });
     }
   }
+  
+  diagnosticsResults.stats.fixedModuleIssues = fixedModuleIssues;
+  diagnosticsResults.stats.variableModuleIssues = variableModuleIssues;
   
   if (fixedModuleIssues === 0) {
     console.log('✅ Tutti i moduli fissi sono configurati correttamente');
@@ -456,11 +699,51 @@ async function fetchQuoteDetails(quoteId) {
   }
 }
 
+// Funzione per salvare i risultati della diagnostica in un file JSON
+import fs from 'fs';
+
+async function saveResults(results) {
+  try {
+    fs.writeFileSync('module-diagnostics-results.json', JSON.stringify(results, null, 2));
+    console.log('✅ Risultati salvati in module-diagnostics-results.json');
+  } catch (error) {
+    console.error('Errore nel salvataggio dei risultati:', error);
+  }
+}
+
+// Oggetto per memorizzare i risultati della diagnostica
+const diagnosticsResults = {
+  timestamp: new Date().toISOString(),
+  testsRun: [],
+  issues: {
+    critical: [],
+    warnings: []
+  },
+  stats: {
+    modulesTotal: 0,
+    modulesMissingInApi: 0,
+    modulesMissingInDb: 0,
+    modulesWithFieldDiscrepancies: 0,
+    orphanModules: 0,
+    modulesWithDuplicateNames: 0,
+    modulesWithPriceDiscrepancies: 0,
+    fixedModuleIssues: 0,
+    variableModuleIssues: 0
+  }
+};
+
 // Esecuzione del programma
-runDiagnostics().catch(err => {
-  console.error('Errore fatale durante l\'esecuzione della diagnostica:', err);
-  process.exit(1);
-});
+runDiagnostics()
+  .then(async () => {
+    await saveResults(diagnosticsResults);
+  })
+  .catch(err => {
+    console.error('Errore fatale durante l\'esecuzione della diagnostica:', err);
+    diagnosticsResults.fatalError = err.message;
+    saveResults(diagnosticsResults).finally(() => {
+      process.exit(1);
+    });
+  });
 
 // Esportiamo le funzioni per test
 export {
@@ -469,5 +752,6 @@ export {
   testModuleDataConsistency,
   testModuleQuoteRelations,
   testModulePriceCalculations,
-  testFixedVariableModuleConsistency
+  testFixedVariableModuleConsistency,
+  diagnosticsResults
 };

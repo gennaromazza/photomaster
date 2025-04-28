@@ -18,6 +18,7 @@ import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { z } from "zod";
 import * as schema from "@shared/schema";
 import { events, collaborators, eventCollaborators } from "@shared/schema";
+import { format, parseISO } from "date-fns"; // Added import for parseISO
 
 // Crea un'istanza locale del db che conosce lo schema più recente
 const db = drizzle({ client: pool, schema });
@@ -34,16 +35,16 @@ const db = drizzle({ client: pool, schema });
 // GET: Retrieve event details with collaborators, payments and editing tasks
 export const getEventDetails = async (req: Request, res: Response) => {
   const { id } = req.params;
-  
+
   try {
     // Get event details
     const [event] = await db.select().from(events)
       .where(eq(events.id, Number(id)));
-    
+
     if (!event) {
       return res.status(404).json({ error: "Event not found" });
     }
-    
+
     // Get assigned collaborators
     const eventCollaborators = await db.select({
       id: eventiCollaboratori.id,
@@ -61,7 +62,7 @@ export const getEventDetails = async (req: Request, res: Response) => {
     .from(eventiCollaboratori)
     .innerJoin(collaborators, eq(eventiCollaboratori.collaboratoreId, collaborators.id))
     .where(eq(eventiCollaboratori.eventoId, Number(id)));
-    
+
     // Get payments related to the event
     const eventPayments = await db.select({
       id: pagamentiEvento.id,
@@ -83,7 +84,7 @@ export const getEventDetails = async (req: Request, res: Response) => {
     .leftJoin(collaborators, eq(pagamentiEvento.collaboratoreId, collaborators.id))
     .where(eq(pagamentiEvento.eventoId, Number(id)))
     .orderBy(desc(pagamentiEvento.dataPagamento));
-    
+
     // Get editing tasks related to the event
     const eventEditingTasks = await db.select({
       id: montaggiEvento.id,
@@ -112,7 +113,7 @@ export const getEventDetails = async (req: Request, res: Response) => {
     .innerJoin(collaborators, eq(montaggiEvento.collaboratoreId, collaborators.id))
     .where(eq(montaggiEvento.eventoId, Number(id)))
     .orderBy(asc(montaggiEvento.dataConsegnaPrevista));
-    
+
     // Calculate payment statistics
     // Client income
     const clientPayments = eventPayments.filter(p => 
@@ -121,31 +122,31 @@ export const getEventDetails = async (req: Request, res: Response) => {
       p.type === TipoPagamentoEvento.CLIENTE_EXTRA
     );
     const totalIncome = clientPayments.reduce((acc, p) => acc + Number(p.amount), 0);
-    
+
     // Collaborator payments
     const collaboratorPayments = eventPayments.filter(p => 
       p.type === TipoPagamentoEvento.COLLABORATORE_ACCONTO || 
       p.type === TipoPagamentoEvento.COLLABORATORE_SALDO
     );
     const totalCollaboratorPayments = collaboratorPayments.reduce((acc, p) => acc + Number(p.amount), 0);
-    
+
     // Editing payments
     const editingPayments = eventPayments.filter(p => 
       p.type === TipoPagamentoEvento.MONTAGGIO_ACCONTO || 
       p.type === TipoPagamentoEvento.MONTAGGIO_SALDO
     );
     const totalEditingPayments = editingPayments.reduce((acc, p) => acc + Number(p.amount), 0);
-    
+
     // Vendor and other payments
     const otherPayments = eventPayments.filter(p => 
       p.type === TipoPagamentoEvento.FORNITORE || 
       p.type === TipoPagamentoEvento.ALTRO
     );
     const totalOtherPayments = otherPayments.reduce((acc, p) => acc + Number(p.amount), 0);
-    
+
     // Calculate margin
     const grossMargin = totalIncome - totalCollaboratorPayments - totalEditingPayments - totalOtherPayments;
-    
+
     // Prepare complete data
     const completeEvent = {
       ...event,
@@ -160,7 +161,7 @@ export const getEventDetails = async (req: Request, res: Response) => {
         grossMargin
       }
     };
-    
+
     return res.status(200).json(completeEvent);
   } catch (error) {
     console.error(`Error retrieving event details ${id}:`, error);
@@ -174,7 +175,7 @@ export const getEventDetails = async (req: Request, res: Response) => {
 // GET: Retrieve all payments for an event
 export const getEventPayments = async (req: Request, res: Response) => {
   const { id } = req.params;
-  
+
   try {
     const paymentsList = await db.select({
       id: pagamentiEvento.id,
@@ -196,7 +197,7 @@ export const getEventPayments = async (req: Request, res: Response) => {
     .leftJoin(collaborators, eq(pagamentiEvento.collaboratoreId, collaborators.id))
     .where(eq(pagamentiEvento.eventoId, Number(id)))
     .orderBy(desc(pagamentiEvento.dataPagamento));
-    
+
     return res.status(200).json(paymentsList);
   } catch (error) {
     console.error(`Error retrieving event payments ${id}:`, error);
@@ -207,27 +208,27 @@ export const getEventPayments = async (req: Request, res: Response) => {
 // POST: Register a new payment for an event
 export const addEventPayment = async (req: Request, res: Response) => {
   const { id } = req.params;
-  
+
   try {
     // Verify that the event exists
     const [event] = await db.select().from(events)
       .where(eq(events.id, Number(id)));
-    
+
     if (!event) {
       return res.status(404).json({ error: "Event not found" });
     }
-    
+
     // Validate input
     const data = insertPagamentoEventoSchema.parse({
       ...req.body,
       eventoId: Number(id)
     });
-    
+
     // Insert the payment
     const [newPayment] = await db.insert(pagamentiEvento)
       .values(data)
       .returning();
-    
+
     // If the payment is related to an editing task, update the editing task status
     if (
       data.tipo === TipoPagamentoEvento.MONTAGGIO_ACCONTO || 
@@ -241,27 +242,27 @@ export const addEventPayment = async (req: Request, res: Response) => {
             eq(montaggiEvento.collaboratoreId, data.collaboratoreId)
           )
         );
-      
+
       if (editingTask) {
         // Update the payment status of the editing task
         if (data.tipo === TipoPagamentoEvento.MONTAGGIO_ACCONTO) {
           await db.update(montaggiEvento)
             .set({ 
               accontoPagato: true,
-              accontoDataPagamento: data.dataPagamento
+              accontoDataPagamento: parseISO(data.dataPagamento) // Updated date parsing
             })
             .where(eq(montaggiEvento.id, editingTask.id));
         } else if (data.tipo === TipoPagamentoEvento.MONTAGGIO_SALDO) {
           await db.update(montaggiEvento)
             .set({ 
               saldoPagato: true,
-              saldoDataPagamento: data.dataPagamento
+              saldoDataPagamento: parseISO(data.dataPagamento) // Updated date parsing
             })
             .where(eq(montaggiEvento.id, editingTask.id));
         }
       }
     }
-    
+
     // Retrieve the complete payment details with collaborator data
     let completePayment;
     if (data.collaboratoreId) {
@@ -284,18 +285,18 @@ export const addEventPayment = async (req: Request, res: Response) => {
       .from(pagamentiEvento)
       .leftJoin(collaborators, eq(pagamentiEvento.collaboratoreId, collaborators.id))
       .where(eq(pagamentiEvento.id, newPayment.id));
-      
+
       completePayment = result;
     } else {
       completePayment = newPayment;
     }
-    
+
     return res.status(201).json(completePayment);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    
+
     console.error(`Error adding payment to event ${id}:`, error);
     return res.status(500).json({ error: "Error registering payment" });
   }
@@ -307,7 +308,7 @@ export const addEventPayment = async (req: Request, res: Response) => {
 // GET: Retrieve all editing tasks for an event
 export const getEventEditingTasks = async (req: Request, res: Response) => {
   const { id } = req.params;
-  
+
   try {
     const editingTasksList = await db.select({
       id: montaggiEvento.id,
@@ -338,7 +339,7 @@ export const getEventEditingTasks = async (req: Request, res: Response) => {
     .innerJoin(collaborators, eq(montaggiEvento.collaboratoreId, collaborators.id))
     .where(eq(montaggiEvento.eventoId, Number(id)))
     .orderBy(asc(montaggiEvento.dataConsegnaPrevista));
-    
+
     return res.status(200).json(editingTasksList);
   } catch (error) {
     console.error(`Error retrieving event editing tasks ${id}:`, error);
@@ -349,22 +350,22 @@ export const getEventEditingTasks = async (req: Request, res: Response) => {
 // POST: Register a new editing task for an event
 export const addEventEditingTask = async (req: Request, res: Response) => {
   const { id } = req.params;
-  
+
   try {
     // Verify that the event exists
     const [event] = await db.select().from(events)
       .where(eq(events.id, Number(id)));
-    
+
     if (!event) {
       return res.status(404).json({ error: "Event not found" });
     }
-    
+
     // Input validation
     const data = insertMontaggioEventoSchema.parse({
       ...req.body,
       eventoId: Number(id)
     });
-    
+
     // Verify that there isn't already an editing task of the same type for this collaborator and event
     const [existingTask] = await db.select().from(montaggiEvento)
       .where(
@@ -374,21 +375,21 @@ export const addEventEditingTask = async (req: Request, res: Response) => {
           eq(montaggiEvento.tipoMontaggio, data.tipoMontaggio)
         )
       );
-    
+
     if (existingTask) {
       return res.status(400).json({ 
         error: `An editing task of type ${data.tipoMontaggio} already exists for this collaborator and event` 
       });
     }
-    
+
     // Insert the editing task
     let taskData = { ...data };
-    
+
     // Handle any associated payment with the editing task
     let advancePayment = null;
     if (req.body.advancePayment && data.accontoImporto && data.accontoImporto > 0) {
-      const paymentDate = new Date();
-      
+      const paymentDate = new Date(); // Keep this as is since it's current date
+
       // Create a new payment record for the advance
       [advancePayment] = await db.insert(pagamentiEvento)
         .values({
@@ -402,7 +403,7 @@ export const addEventEditingTask = async (req: Request, res: Response) => {
           riferimentoEsterno: req.body.externalReference
         })
         .returning();
-      
+
       // Update the editing task fields to reflect the advance payment
       taskData = {
         ...taskData,
@@ -410,12 +411,12 @@ export const addEventEditingTask = async (req: Request, res: Response) => {
         accontoDataPagamento: paymentDate
       };
     }
-    
+
     // Insert the editing task
     const [newEditingTask] = await db.insert(montaggiEvento)
       .values(taskData)
       .returning();
-    
+
     // Retrieve the complete editing task details with collaborator data
     const [completeEditingTask] = await db.select({
       id: montaggiEvento.id,
@@ -443,19 +444,19 @@ export const addEventEditingTask = async (req: Request, res: Response) => {
     .from(montaggiEvento)
     .innerJoin(collaborators, eq(montaggiEvento.collaboratoreId, collaborators.id))
     .where(eq(montaggiEvento.id, newEditingTask.id));
-    
+
     // Add the payment if present
     const result = {
       ...completeEditingTask,
       payment: advancePayment
     };
-    
+
     return res.status(201).json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    
+
     console.error(`Error adding editing task to event ${id}:`, error);
     return res.status(500).json({ error: "Error registering editing task" });
   }
@@ -464,16 +465,16 @@ export const addEventEditingTask = async (req: Request, res: Response) => {
 // PATCH: Update an editing task
 export const updateEventEditingTask = async (req: Request, res: Response) => {
   const { id, taskId } = req.params;
-  
+
   try {
     // Verify that the event exists
     const [event] = await db.select().from(events)
       .where(eq(events.id, Number(id)));
-    
+
     if (!event) {
       return res.status(404).json({ error: "Event not found" });
     }
-    
+
     // Verify that the editing task exists and belongs to this event
     const [editingTask] = await db.select().from(montaggiEvento)
       .where(
@@ -482,14 +483,14 @@ export const updateEventEditingTask = async (req: Request, res: Response) => {
           eq(montaggiEvento.eventoId, Number(id))
         )
       );
-    
+
     if (!editingTask) {
       return res.status(404).json({ error: "Editing task not found or does not belong to this event" });
     }
-    
+
     // Input validation
     const data = updateMontaggioEventoSchema.parse(req.body);
-    
+
     // Handle balance payment if requested
     let balancePayment = null;
     if (
@@ -498,8 +499,8 @@ export const updateEventEditingTask = async (req: Request, res: Response) => {
       data.saldoImporto > 0 && 
       !editingTask.saldoPagato
     ) {
-      const paymentDate = new Date();
-      
+      const paymentDate = new Date(); // Keep this as is since it's current date
+
       // Create a new payment record for the balance
       [balancePayment] = await db.insert(pagamentiEvento)
         .values({
@@ -513,17 +514,17 @@ export const updateEventEditingTask = async (req: Request, res: Response) => {
           riferimentoEsterno: req.body.externalReference
         })
         .returning();
-      
+
       // Update the fields to reflect the balance payment
       data.saldoPagato = true;
       data.saldoDataPagamento = paymentDate;
     }
-    
+
     // Update the editing task
     await db.update(montaggiEvento)
       .set(data)
       .where(eq(montaggiEvento.id, Number(taskId)));
-    
+
     // Retrieve the updated editing task with collaborator data
     const [updatedTask] = await db.select({
       id: montaggiEvento.id,
@@ -551,19 +552,19 @@ export const updateEventEditingTask = async (req: Request, res: Response) => {
     .from(montaggiEvento)
     .innerJoin(collaborators, eq(montaggiEvento.collaboratoreId, collaborators.id))
     .where(eq(montaggiEvento.id, Number(taskId)));
-    
+
     // Add the payment if present
     const result = {
       ...updatedTask,
       payment: balancePayment
     };
-    
+
     return res.status(200).json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    
+
     console.error(`Error updating editing task ${taskId} for event ${id}:`, error);
     return res.status(500).json({ error: "Error updating editing task" });
   }
@@ -588,7 +589,7 @@ export const getEventsWithoutCollaborators = async (req: Request, res: Response)
     .from(events)
     .where(eq(events.status, "confirmed")) // Only confirmed events
     .orderBy(desc(events.date));
-    
+
     // Get event IDs that have collaborators
     const eventsWithCollaborators = await db.select({
       eventId: eventiCollaboratori.eventoId,
@@ -596,17 +597,17 @@ export const getEventsWithoutCollaborators = async (req: Request, res: Response)
     })
     .from(eventiCollaboratori)
     .groupBy(eventiCollaboratori.eventoId);
-    
+
     // Create a Set of event IDs with collaborators for faster lookup
     const eventsWithCollaboratorsSet = new Set(
       eventsWithCollaborators.map(row => row.eventId)
     );
-    
+
     // Filter events that don't have collaborators
     const eventsWithoutCollaborators = confirmedEvents.filter(
       event => !eventsWithCollaboratorsSet.has(event.id)
     );
-    
+
     return res.status(200).json(eventsWithoutCollaborators);
   } catch (error) {
     console.error("Error retrieving events without collaborators:", error);

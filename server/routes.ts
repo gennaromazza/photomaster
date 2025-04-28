@@ -2319,6 +2319,27 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     }
   });
 
+  apiRouter.delete("/quotes/:quoteId/modules/:moduleId", async (req, res) => {
+    try {
+      const moduleId = parseInt(req.params.moduleId);
+      const quoteId = parseInt(req.params.quoteId);
+      
+      if (isNaN(moduleId) || isNaN(quoteId)) {
+        return res.status(400).json({ message: "ID non valido" });
+      }
+
+      const result = await storage.deleteQuoteModule(moduleId);
+      if (!result) {
+        return res.status(404).json({ message: "Modulo non trovato" });
+      }
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error deleting quote module:", err);
+      res.status(500).json({ message: "Errore durante l'eliminazione del modulo" });
+    }
+  });
+
   apiRouter.delete("/quotes/:quoteId/items/:itemId", async (req, res) => {
     try {
       const itemId = parseInt(req.params.itemId);

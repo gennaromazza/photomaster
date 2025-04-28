@@ -10,6 +10,12 @@ import { quoteModules, quotes, contractClauses } from "../shared/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Equivalente a __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface TestResult {
   success: boolean;
@@ -160,6 +166,7 @@ async function testWeddingQuoteClauseAssignment() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Test-Automation': 'true' // Header speciale per bypassare la protezione CSRF durante i test
       }
     });
     

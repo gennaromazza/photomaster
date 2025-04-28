@@ -1285,10 +1285,15 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.get("/quotes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID preventivo non valido" });
+      }
+      
       const quote = await storage.getQuote(id);
 
       if (!quote) {
-        return res.status(404).json({ message: "Quote not found" });
+        return res.status(404).json({ message: "Preventivo non trovato" });
       }
 
       // Recupera il client

@@ -389,6 +389,11 @@ export class ClausesController {
         )
       );
       
+      console.log(`Ricerca clausole disponibili per preventivo ${quoteId}`, {
+        eventType: quote.eventType || 'non specificato',
+        categoryId: quote.categoryId || 'non specificata'
+      });
+      
       // Aggiungiamo altre condizioni solo se abbiamo i valori necessari
       if (quote.eventType) {
         // Clausole specifiche per il tipo di evento
@@ -421,18 +426,37 @@ export class ClausesController {
       }
       
       // Recupera clausole attive che corrispondono ai criteri
-      const availableClauses = await db.query.contractClauses.findMany({
-        where: and(
-          eq(contractClauses.isActive, true),
-          or(...validConditions)
-        ),
-        with: {
-          category: true
-        },
-        orderBy: [
-          contractClauses.order
-        ]
-      });
+      let availableClauses: any[] = [];
+      
+      if (validConditions.length > 0) {
+        availableClauses = await db.query.contractClauses.findMany({
+          where: and(
+            eq(contractClauses.isActive, true),
+            or(...validConditions)
+          ),
+          with: {
+            category: true
+          },
+          orderBy: [
+            contractClauses.order
+          ]
+        });
+      } else {
+        // Recupera solo clausole generiche se non ci sono condizioni specifiche
+        availableClauses = await db.query.contractClauses.findMany({
+          where: and(
+            eq(contractClauses.isActive, true),
+            isNull(contractClauses.categoryId),
+            isNull(contractClauses.eventType)
+          ),
+          with: {
+            category: true
+          },
+          orderBy: [
+            contractClauses.order
+          ]
+        });
+      }
       
       return res.json(availableClauses);
     } catch (error) {

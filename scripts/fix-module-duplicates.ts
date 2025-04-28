@@ -95,6 +95,19 @@ async function fixModuleDuplicates() {
   }
 }
 
-fixModuleDuplicates().then(() => {
-  console.log('\n🎉 Processo di correzione completato!');
-});
+// Esporta la funzione per l'uso in altri script
+export { fixModuleDuplicates };
+
+// Se il file viene eseguito direttamente, esegui la funzione principale
+// In ES modules, we can check if this is the main file by comparing import.meta.url
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+if (process.argv[1] === __filename) {
+  fixModuleDuplicates().then(() => {
+    console.log('\n🎉 Processo di correzione completato!');
+  }).catch(console.error);
+}

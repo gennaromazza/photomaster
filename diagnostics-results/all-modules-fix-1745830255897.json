@@ -1,0 +1,114 @@
+{
+  "timestamp": "2025-04-28T08:50:53.796Z",
+  "steps": [
+    {
+      "name": "Correzione moduli duplicati",
+      "status": "success"
+    },
+    {
+      "name": "Correzione associazione elementi",
+      "status": "success",
+      "details": {
+        "timestamp": "2025-04-28T08:50:55.802Z",
+        "totalModules": 10,
+        "modulesFixed": 0,
+        "totalItemsCreated": 0,
+        "details": [
+          {
+            "moduleId": 94,
+            "moduleName": "Test Sconto percentage 1745829264174",
+            "initialCount": 0,
+            "createdItems": [],
+            "currentCount": 0,
+            "minRequired": null
+          },
+          {
+            "moduleId": 95,
+            "moduleName": "Test Sconto percentage 1745829266274",
+            "initialCount": 0,
+            "createdItems": [],
+            "currentCount": 0,
+            "minRequired": null
+          },
+          {
+            "moduleId": 96,
+            "moduleName": "Test Sconto percentage 1745829268180",
+            "initialCount": 0,
+            "createdItems": [],
+            "currentCount": 0,
+            "minRequired": null
+          },
+          {
+            "moduleId": 97,
+            "moduleName": "Test Sconto percentage 1745829270067",
+            "initialCount": 0,
+            "createdItems": [],
+            "currentCount": 0,
+            "minRequired": null
+          },
+          {
+            "moduleId": 80,
+            "moduleName": "a",
+            "initialCount": 3,
+            "createdItems": [],
+            "currentCount": 3,
+            "minRequired": null
+          },
+          {
+            "moduleId": 77,
+            "moduleName": "1",
+            "initialCount": 5,
+            "createdItems": [],
+            "currentCount": 5,
+            "minRequired": null
+          },
+          {
+            "moduleId": 78,
+            "moduleName": "d",
+            "initialCount": 5,
+            "createdItems": [],
+            "currentCount": 5,
+            "minRequired": null
+          },
+          {
+            "moduleId": 79,
+            "moduleName": "d_1",
+            "initialCount": 5,
+            "createdItems": [],
+            "currentCount": 5,
+            "minRequired": null
+          },
+          {
+            "moduleId": 92,
+            "moduleName": "fisso",
+            "initialCount": 3,
+            "createdItems": [],
+            "currentCount": 3,
+            "minRequired": null
+          },
+          {
+            "moduleId": 93,
+            "moduleName": "Test Module 1745828862890",
+            "initialCount": 2,
+            "createdItems": [],
+            "currentCount": 2,
+            "minRequired": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "Correzione assegnazione clausole",
+      "status": "success",
+      "details": {
+        "timestamp": "2025-04-28T08:50:55.892Z",
+        "contractsProcessed": 0,
+        "modulesUpdated": 0,
+        "details": []
+      }
+    }
+  ],
+  "executionTime": 2.101,
+  "successSteps": 3,
+  "failedSteps": 0
+}

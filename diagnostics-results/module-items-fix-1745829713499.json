@@ -1,0 +1,88 @@
+{
+  "timestamp": "2025-04-28T08:41:53.499Z",
+  "totalModules": 10,
+  "modulesFixed": 0,
+  "totalItemsCreated": 0,
+  "details": [
+    {
+      "moduleId": 94,
+      "moduleName": "Test Sconto percentage 1745829264174",
+      "initialCount": 0,
+      "createdItems": [],
+      "currentCount": 0,
+      "minRequired": null
+    },
+    {
+      "moduleId": 95,
+      "moduleName": "Test Sconto percentage 1745829266274",
+      "initialCount": 0,
+      "createdItems": [],
+      "currentCount": 0,
+      "minRequired": null
+    },
+    {
+      "moduleId": 96,
+      "moduleName": "Test Sconto percentage 1745829268180",
+      "initialCount": 0,
+      "createdItems": [],
+      "currentCount": 0,
+      "minRequired": null
+    },
+    {
+      "moduleId": 97,
+      "moduleName": "Test Sconto percentage 1745829270067",
+      "initialCount": 0,
+      "createdItems": [],
+      "currentCount": 0,
+      "minRequired": null
+    },
+    {
+      "moduleId": 80,
+      "moduleName": "a",
+      "initialCount": 3,
+      "createdItems": [],
+      "currentCount": 3,
+      "minRequired": null
+    },
+    {
+      "moduleId": 77,
+      "moduleName": "1",
+      "initialCount": 5,
+      "createdItems": [],
+      "currentCount": 5,
+      "minRequired": null
+    },
+    {
+      "moduleId": 78,
+      "moduleName": "d",
+      "initialCount": 5,
+      "createdItems": [],
+      "currentCount": 5,
+      "minRequired": null
+    },
+    {
+      "moduleId": 79,
+      "moduleName": "d_1",
+      "initialCount": 5,
+      "createdItems": [],
+      "currentCount": 5,
+      "minRequired": null
+    },
+    {
+      "moduleId": 92,
+      "moduleName": "fisso",
+      "initialCount": 3,
+      "createdItems": [],
+      "currentCount": 3,
+      "minRequired": null
+    },
+    {
+      "moduleId": 93,
+      "moduleName": "Test Module 1745828862890",
+      "initialCount": 0,
+      "createdItems": [],
+      "currentCount": 0,
+      "minRequired": 2
+    }
+  ]
+}

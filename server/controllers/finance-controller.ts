@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { transactions, scheduledPayments, quotes } from '@shared/schema';
+import { transactions, scheduledPayments, quotes, quoteModules } from '@shared/schema';
 import { eq, and, desc, gte, lte, sql } from 'drizzle-orm';
 import { isAfter, isBefore, isEqual, format, subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
@@ -26,10 +26,17 @@ export const financeController = {
   },
   
   async getTransactionsByQuoteId(quoteId: number) {
-    return db.select()
+    console.log(`Recupero transazioni per preventivo ID: ${quoteId}`);
+    
+    // Ottieni tutte le transazioni
+    const result = await db.select()
       .from(transactions)
       .where(eq(transactions.quoteId, quoteId))
       .orderBy(desc(transactions.date));
+    
+    console.log(`Trovate ${result.length} transazioni per preventivo ID: ${quoteId}`, result);
+    
+    return result;
   },
   
   async createTransaction(data: any) {
@@ -433,14 +440,25 @@ export const financeController = {
       throw new Error("Preventivo non trovato");
     }
     
+    console.log("Quote raw data:", quote);
+    
+    // Calcolo dell'importo totale dai moduli - query al DB per ottenere la somma effettiva
+    const quoteModulesResult = await db.select({
+      totalModules: sql<number>`SUM(amount)`.mapWith(Number)
+    })
+    .from(quoteModules)
+    .where(eq(quoteModules.quoteId, quoteId));
+    
+    const modulesTotal = quoteModulesResult[0]?.totalModules || 0;
+    
     // Calcola il prezzo totale del preventivo considerando tutte le possibili fonti
-    // Priorità: totalAmount (se esiste) -> quoteTotal -> modulesSum -> 0
-    // Nota: Queste potrebbero essere proprietà virtuali calcolate al volo o memorizzate nel DB
-    let totalAmount = quote.totalAmount || quote.quoteTotal || quote.modulesSum || 0;
+    // Priorità: totalAmount (se esiste) -> quoteTotal -> modulesSum -> calcolo diretto -> 0
+    let totalAmount = quote.totalAmount || quote.quoteTotal || quote.modulesSum || modulesTotal || 0;
     
     console.log("Finance controller - Quote financial data:", {
       quoteId,
       totalAmount,
+      modulesTotal,
       quoteData: {
         totalAmount: quote.totalAmount,
         quoteTotal: quote.quoteTotal,

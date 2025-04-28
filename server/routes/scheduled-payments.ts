@@ -74,9 +74,9 @@ router.put("/:id", async (req, res) => {
     
     const updatedPayment = await financeController.updateScheduledPayment(id, req.body);
     res.json(updatedPayment);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Errore nell'aggiornamento del pagamento programmato ${req.params.id}:`, error);
-    if (error.message === "Impossibile modificare un pagamento già effettuato") {
+    if (error?.message === "Impossibile modificare un pagamento già effettuato") {
       return res.status(400).json({ error: error.message });
     }
     res.status(500).json({ error: "Errore nell'aggiornamento del pagamento programmato" });
@@ -99,9 +99,9 @@ router.delete("/:id", async (req, res) => {
     }
     
     res.json(deleted);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Errore nell'eliminazione del pagamento programmato ${req.params.id}:`, error);
-    if (error.message === "Impossibile eliminare un pagamento già effettuato") {
+    if (error?.message === "Impossibile eliminare un pagamento già effettuato") {
       return res.status(400).json({ error: error.message });
     }
     res.status(500).json({ error: "Errore nell'eliminazione del pagamento programmato" });
@@ -120,7 +120,7 @@ router.post("/:id/send-reminder", async (req, res) => {
     
     const result = await financeController.sendPaymentReminder(id);
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Errore nell'invio del promemoria per il pagamento ${req.params.id}:`, error);
     res.status(500).json({ error: "Errore nell'invio del promemoria" });
   }

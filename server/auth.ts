@@ -1099,8 +1099,12 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
   
   // Bypass per test automatici - verifica lo special header 'x-test-automation'
   const isTestAutomation = req.headers["x-test-automation"] === "true";
-  if (isTestAutomation && process.env.NODE_ENV !== "production") {
-    console.log("DEBUG csrfProtection - Skip per test automatico");
+  
+  // Supporto per la modalità test CSRF
+  const isTestMode = process.env.CSRF_TEST_MODE === "true";
+  
+  if ((isTestAutomation || isTestMode) && process.env.NODE_ENV !== "production") {
+    console.log("DEBUG csrfProtection - Skip per " + (isTestMode ? "modalità test" : "test automatico"));
     return next();
   }
   

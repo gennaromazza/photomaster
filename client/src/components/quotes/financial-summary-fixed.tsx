@@ -514,9 +514,14 @@ export function FinancialSummary({
       return response.json();
     },
     onSuccess: () => {
-      // Invalida le query per aggiornare i dati
+      // Invalida tutte le query correlate per garantire la sincronizzazione totale
       queryClient.invalidateQueries({
         queryKey: ["quoteTransactions", quoteId],
+      });
+      
+      // Invalida le query per i pagamenti programmati che potrebbero essere stati influenzati
+      queryClient.invalidateQueries({
+        queryKey: ["quoteScheduledPayments", quoteId],
       });
       
       // Invalida anche la query dei dati finanziari
@@ -524,12 +529,16 @@ export function FinancialSummary({
         queryKey: ["quoteFinancialData", quoteId],
       });
 
-      // Forza il refetch immediato
+      // Forza il refetch immediato di tutte le tabelle
       refetchTransactions();
+      refetchScheduled(); // Aggiunto refetch delle rate programmate
 
       // Invalida anche altre queries che potrebbero dipendere da questi dati
       queryClient.invalidateQueries({ queryKey: ["/api/quotes", quoteId] });
       queryClient.invalidateQueries({ queryKey: ["quotes", quoteId] });
+      
+      // Invalidazione completa di tutte le query relative alla finanza
+      queryClient.invalidateQueries({ queryKey: ["/api/finance"] });
 
       toast({
         title: "Pagamento eliminato",

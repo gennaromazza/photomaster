@@ -50,16 +50,25 @@ export function FinancialSummaryWrapper(props: FinancialSummaryWrapperProps) {
   const determineTotalAmount = () => {
     // Prima verifica se abbiamo dati dalla query API
     if (data?.totalAmount) {
+      console.log(`Using data.totalAmount: ${data.totalAmount}`);
       return data.totalAmount;
     }
     
     // Altrimenti usa il totale dal sommario se disponibile
     if (data?.summary?.quoteTotal) {
+      console.log(`Using data.summary.quoteTotal: ${data.summary.quoteTotal}`);
       return data.summary.quoteTotal;
     }
     
-    // Infine ricadi sui props passati
-    return props.totalAmount || props.quoteTotal || 0;
+    // Se disponibile, usa totalAmount dai props
+    if (props.totalAmount !== undefined) {
+      console.log(`Using props.totalAmount: ${props.totalAmount}`);
+      return props.totalAmount;
+    }
+    
+    // Infine ricadi su quoteTotal dai props o su 0
+    console.log(`Using props.quoteTotal or default: ${props.quoteTotal || 0}`);
+    return props.quoteTotal || 0;
   };
 
   return (

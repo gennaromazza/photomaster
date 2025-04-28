@@ -903,7 +903,10 @@ export function FinancialSummary({
     totalPreventivo,
     isLoading,
     transactionsLoading,
-    scheduledLoading
+    scheduledLoading,
+    isLoadingData,
+    transactionCount: transactions?.length || 0,
+    scheduledCount: scheduledPayments?.length || 0
   });
 
   return (

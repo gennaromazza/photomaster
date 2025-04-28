@@ -244,6 +244,14 @@ export const financeController = {
   
   async updateScheduledPayment(id: number, data: any) {
     try {
+      console.log(`Aggiornamento pagamento programmato ${id} con dati:`, {
+        amount: data.amount,
+        dueDate: data.dueDate,
+        description: data.description,
+        status: data.status,
+        paymentMethod: data.paymentMethod
+      });
+      
       // Verifica se il pagamento è già stato effettuato
       const [existingPayment] = await db.select()
         .from(scheduledPayments)
@@ -253,24 +261,32 @@ export const financeController = {
         throw new Error("Impossibile modificare un pagamento già effettuato");
       }
       
-      // Gestione sicura della data
+      // Gestione sicura della data nel formato corretto per Postgres
       let dueDateValue;
       if (data.dueDate) {
         if (data.dueDate instanceof Date) {
-          dueDateValue = data.dueDate.toISOString();
+          dueDateValue = format(data.dueDate, 'yyyy-MM-dd');
         } else {
-          dueDateValue = new Date(data.dueDate);
+          try {
+            dueDateValue = format(new Date(data.dueDate), 'yyyy-MM-dd');
+          } catch (e) {
+            console.error("Errore nel formato data:", e);
+            throw new Error("Formato data non valido");
+          }
         }
       } else {
         dueDateValue = undefined;
       }
+      
+      console.log(`Data formattata per aggiornamento pagamento programmato: ${dueDateValue}`);
       
       const [payment] = await db.update(scheduledPayments)
         .set({
           amount: data.amount,
           dueDate: dueDateValue,
           description: data.description,
-          status: data.status
+          status: data.status,
+          paymentMethod: data.paymentMethod
         })
         .where(eq(scheduledPayments.id, id))
         .returning();

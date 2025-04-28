@@ -257,19 +257,67 @@ export class ClausesController {
           )
         );
         
+        // Aggiungiamo altre condizioni se il preventivo ha tipo evento o categoria
+        if (quote.eventType) {
+          // Clausole specifiche per il tipo di evento (senza categoria)
+          conditions.push(
+            and(
+              isNull(contractClauses.categoryId),
+              eq(contractClauses.eventType, quote.eventType)
+            )
+          );
+          
+          if (quote.categoryId) {
+            // Clausole specifiche per categoria E tipo evento
+            conditions.push(
+              and(
+                eq(contractClauses.categoryId, quote.categoryId),
+                eq(contractClauses.eventType, quote.eventType)
+              )
+            );
+          }
+        }
+        
+        if (quote.categoryId) {
+          // Clausole specifiche per categoria (senza tipo evento)
+          conditions.push(
+            and(
+              eq(contractClauses.categoryId, quote.categoryId),
+              isNull(contractClauses.eventType)
+            )
+          );
+        }
+        
         // Filtriamo le condizioni rimuovendo quelle undefined
         conditions = conditions.filter(Boolean) as SQL[];
         
         // Recupera clausole attive che corrispondono ai criteri
-        const availableClauses = await db.query.contractClauses.findMany({
-          where: and(
-            eq(contractClauses.isActive, true),
-            or(...conditions)
-          ),
-          orderBy: [
-            contractClauses.order
-          ]
-        });
+        let availableClauses: any[] = [];
+        
+        if (conditions.length > 0) {
+          availableClauses = await db.query.contractClauses.findMany({
+            where: and(
+              eq(contractClauses.isActive, true),
+              or(...conditions)
+            ),
+            orderBy: [
+              contractClauses.order
+            ]
+          });
+        } else {
+          console.log('Nessuna condizione valida per cercare clausole appropriate');
+          // Troviamo almeno le clausole generiche (non categorizzate)
+          availableClauses = await db.query.contractClauses.findMany({
+            where: and(
+              eq(contractClauses.isActive, true),
+              isNull(contractClauses.categoryId),
+              isNull(contractClauses.eventType)
+            ),
+            orderBy: [
+              contractClauses.order
+            ]
+          });
+        }
         
         console.log(`Trovate ${availableClauses.length} clausole appropriate per associazione automatica`);
         
@@ -303,7 +351,11 @@ export class ClausesController {
       return res.json(quoteClausesList);
     } catch (error) {
       console.error("Errore nel recupero delle clausole del preventivo:", error);
-      return res.status(500).json({ error: "Errore nel recupero delle clausole del preventivo" });
+      return res.status(500).json({ 
+        error: "Errore nel recupero delle clausole del preventivo", 
+        details: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   }
   

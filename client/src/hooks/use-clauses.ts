@@ -24,7 +24,7 @@ export function useClauses() {
 
   // Query per recuperare i tipi di evento
   const eventTypesQuery = useQuery<string[]>({
-    queryKey: ['/api/event-types'],
+    queryKey: ['/api/clauses/event-types'],
     staleTime: 30 * 60 * 1000, // 30 minuti
   });
 

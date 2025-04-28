@@ -1200,7 +1200,7 @@ export default function QuoteDetailPage() {
               <CardContent className="p-0">
                 <FinancialSummaryWrapper 
                   quoteId={parseInt(id as string)} 
-                  quoteTotal={finData?.summary.quoteTotal ?? 0} 
+                  quoteTotal={finData?.totalAmount ?? 0} 
                   clientName={clientFullName}
                   quoteStatus={quote.status || ''}
                 />

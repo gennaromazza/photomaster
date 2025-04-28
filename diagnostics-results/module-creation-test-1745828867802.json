@@ -1,0 +1,80 @@
+{
+  "timestamp": "2025-04-28T08:27:47.801Z",
+  "quoteId": 54,
+  "module": {
+    "id": 93,
+    "quoteId": 54,
+    "name": "Test Module 1745828862890",
+    "description": "Modulo di test creato automaticamente",
+    "type": "variable",
+    "status": "draft",
+    "createdAt": "2025-04-28T08:27:44.915Z",
+    "updatedAt": "2025-04-28T08:27:44.883Z",
+    "expiryDate": "2025-05-05T08:27:44.883Z",
+    "shareToken": "ba982a6bd746f58e0a02f39688fe2380",
+    "clientNotes": null,
+    "internalNotes": null,
+    "subtotal": 0,
+    "total": 0,
+    "minSelectCount": 2,
+    "maxSelectCount": 5,
+    "items": []
+  },
+  "tests": [
+    {
+      "test": "Esistenza modulo nel database",
+      "status": "pass",
+      "details": "Il modulo con ID 93 esiste nel database"
+    },
+    {
+      "test": "Nome modulo",
+      "status": "pass",
+      "details": "Il nome del modulo è corretto: \"Test Module 1745828862890\""
+    },
+    {
+      "test": "Tipo modulo",
+      "status": "pass",
+      "details": "Il tipo del modulo è corretto: \"variable\""
+    },
+    {
+      "test": "Descrizione modulo",
+      "status": "pass",
+      "details": "La descrizione del modulo è corretta: \"Modulo di test creato automaticamente\""
+    },
+    {
+      "test": "Minimo selezioni",
+      "status": "pass",
+      "details": "Il minimo di selezioni è corretto: 2"
+    },
+    {
+      "test": "Massimo selezioni",
+      "status": "pass",
+      "details": "Il massimo di selezioni è corretto: 5"
+    },
+    {
+      "test": "Elementi modulo",
+      "status": "fail",
+      "details": "Il modulo non ha elementi associati nel database"
+    },
+    {
+      "test": "Recupero preventivo via API",
+      "status": "pass",
+      "details": "Il preventivo con ID 54 è stato recuperato con successo via API"
+    },
+    {
+      "test": "Presenza modulo nel preventivo via API",
+      "status": "pass",
+      "details": "Il modulo con ID 93 è presente nel preventivo recuperato via API"
+    },
+    {
+      "test": "Elementi del modulo via API",
+      "status": "fail",
+      "details": "Il modulo non ha elementi o gli elementi non sono stati recuperati via API"
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "passed": 8,
+    "failed": 2
+  }
+}

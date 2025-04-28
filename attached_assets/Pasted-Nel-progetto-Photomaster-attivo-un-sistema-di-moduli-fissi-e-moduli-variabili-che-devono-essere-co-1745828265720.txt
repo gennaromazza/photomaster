@@ -1,0 +1,95 @@
+Nel progetto Photomaster è attivo un sistema di moduli fissi e moduli variabili che devono essere correttamente compilati sia lato Backend (Bekhand) che lato Frontend (FrontHand) (pagina di firma del cliente).
+
+Sono presenti i seguenti problemi che vanno diagnosticati e risolti:
+
+Assegnazione Clausole: non vengono più assegnate correttamente nei moduli.
+
+Sconti Backend: gli sconti configurati nel backend non si applicano o non si calcolano correttamente.
+
+Condizioni Moduli Variabili Frontend: obbligatorietà, minimo/massimo prodotti selezionabili non rispettati nella pagina firma.
+
+Obiettivo dello Script di Diagnostica
+Testare automaticamente ogni campo, bottone e regola dei moduli.
+
+Generare e simulare link di firma come se fosse il cliente.
+
+Eseguire una diagnosi di congruenza tra il backend e il frontend, comparando:
+
+Clausole assegnate.
+
+Sconti visibili.
+
+Minimo e massimo prodotti selezionabili.
+
+Stato obbligatorietà delle scelte.
+
+Bypassare le eventuali regole di CRF Token (Cross Request Forgery) per poter inviare dati test in automatico senza vincoli.
+
+Loggare eventuali errori, incongruenze, mancate applicazioni di condizioni.
+
+Riportare un rapporto di diagnostica dettagliato al termine dei test.
+
+Struttura Tecnica Richiesta
+Analisi iniziale dei file backend e frontend coinvolti:
+
+ModuliController.php o equivalente (backend gestione moduli).
+
+FirmaController.php o equivalente (frontend firma cliente).
+
+Modelli di Clausole e Sconti.
+
+Logica Javascript frontend per validazione moduli variabili.
+
+Strumenti consigliati:
+
+Python 3.x o Node.js per lo script.
+
+Librerie:
+
+requests (Python) o axios (Node.js) per API call.
+
+selenium o playwright per simulare azioni browser.
+
+BeautifulSoup (Python) o cheerio (Node.js) per parsing HTML.
+
+Modalità di test:
+
+Creazione automatica di un modulo di prova.
+
+Invio simulato al Frontend (firma cliente).
+
+Parsing della pagina di firma per verifiche.
+
+Flow dello Script:
+
+ Setup configurazione ambiente e bypass CRF.
+
+ Creazione modulo di test con clausole e sconti definiti.
+
+ Recupero dati del modulo dal backend.
+
+ Apertura pagina firma cliente simulata.
+
+ Controlli:
+
+ Clausole assegnate presenti.
+
+ Sconti applicati visibili e corretti.
+
+ Condizioni minimo/massimo rispettate.
+
+ Obbligatorietà dei campi rispettata.
+
+ Generazione report errori e anomalie.
+
+Checklist di Espansione Diagnostica
+
+Area	Test	Cosa Controllare
+Backend	Creazione Modulo	Clausole assegnate, applicazione sconti
+Frontend	Pagina Firma	Presenza clausole, condizioni minimo/massimo, obbligatorietà
+API	Integrazione Dati	Corretta esposizione dati per il frontend
+Sicurezza	CRF Token	Bypass o gestione sicura nei test
+Note Finali
+Importante: Dopo aver individuato bug specifici, sarà utile creare anche uno script di fix temporaneo per consentire la compilazione e firma corretta fino alla patch definitiva.
+
+Suggerimento: Includere dei flag (es: testMode: true) nel backend per permettere l'esecuzione dei test senza influire su dati reali.

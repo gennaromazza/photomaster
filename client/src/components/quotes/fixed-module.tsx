@@ -715,3 +715,12 @@ export function FixedModule({ quoteId, module, onSave, onCancel, onDelete }: Fix
     </Card>
   );
 }
+  // Ricalcola i totali quando cambiano i dati del modulo
+  useEffect(() => {
+    const { subtotal, total } = handleCalculateTotals(moduleData.items || []);
+    setModuleData(prev => ({
+      ...prev,
+      subtotal,
+      total
+    }));
+  }, [moduleData.items]);

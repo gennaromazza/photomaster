@@ -804,3 +804,12 @@ export function VariableModule({ quoteId, module, onSave, onCancel, onDelete }: 
     </Card>
   );
 }
+  // Ricalcola i totali quando cambiano le selezioni
+  useEffect(() => {
+    const { subtotal, total } = calculateModuleTotals(moduleData.selections || []);
+    setModuleData(prev => ({
+      ...prev,
+      subtotal,
+      total
+    }));
+  }, [moduleData.selections]);

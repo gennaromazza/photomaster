@@ -33,56 +33,91 @@ export const financeController = {
   },
   
   async createTransaction(data: any) {
-    const [transaction] = await db.insert(transactions)
-      .values({
-        amount: data.amount,
-        transactionType: data.transactionType,
-        paymentMethod: data.paymentMethod,
-        quoteId: data.quoteId,
-        status: data.status || 'completed',
-        date: data.date ? new Date(data.date) : new Date(),
-        scheduledPaymentId: data.scheduledPaymentId,
-        description: data.description,
-        createdBy: data.createdBy
-      })
-      .returning();
-    
-    // Se questa transazione è collegata a un pagamento programmato, aggiorniamo lo stato
-    if (data.scheduledPaymentId) {
-      await db.update(scheduledPayments)
-        .set({ 
-          status: 'paid',
-          transactionId: transaction.id
+    try {
+      // Assicuriamoci che la data sia una stringa in formato ISO se è un oggetto Date
+      let dateValue;
+      if (data.date) {
+        if (data.date instanceof Date) {
+          dateValue = data.date.toISOString();
+        } else {
+          // Se è già una stringa o altro formato, lasciamo che new Date() lo converta
+          dateValue = new Date(data.date);
+        }
+      } else {
+        dateValue = new Date();
+      }
+      
+      const [transaction] = await db.insert(transactions)
+        .values({
+          amount: data.amount,
+          transactionType: data.transactionType,
+          paymentMethod: data.paymentMethod,
+          quoteId: data.quoteId,
+          status: data.status || 'completed',
+          date: dateValue,
+          scheduledPaymentId: data.scheduledPaymentId,
+          description: data.description,
+          createdBy: data.createdBy
         })
-        .where(eq(scheduledPayments.id, data.scheduledPaymentId));
+        .returning();
+      
+      // Se questa transazione è collegata a un pagamento programmato, aggiorniamo lo stato
+      if (data.scheduledPaymentId) {
+        await db.update(scheduledPayments)
+          .set({ 
+            status: 'paid',
+            transactionId: transaction.id
+          })
+          .where(eq(scheduledPayments.id, data.scheduledPaymentId));
+      }
+      
+      return transaction;
+    } catch (error) {
+      console.error("Errore dettagliato nella creazione della transazione:", error);
+      throw error;
     }
-    
-    return transaction;
   },
   
   async updateTransaction(id: number, data: any) {
-    const [transaction] = await db.update(transactions)
-      .set({
-        amount: data.amount,
-        transactionType: data.transactionType,
-        paymentMethod: data.paymentMethod,
-        status: data.status,
-        date: data.date ? new Date(data.date) : undefined,
-        description: data.description
-      })
-      .where(eq(transactions.id, id))
-      .returning();
-    
-    // Se c'è un pagamento programmato associato, aggiorniamo lo stato
-    if (transaction.scheduledPaymentId) {
-      await db.update(scheduledPayments)
-        .set({ 
-          status: 'paid'
+    try {
+      // Gestiamo la data in modo simile a createTransaction
+      let dateValue;
+      if (data.date) {
+        if (data.date instanceof Date) {
+          dateValue = data.date.toISOString();
+        } else {
+          dateValue = new Date(data.date);
+        }
+      } else {
+        dateValue = undefined;
+      }
+      
+      const [transaction] = await db.update(transactions)
+        .set({
+          amount: data.amount,
+          transactionType: data.transactionType,
+          paymentMethod: data.paymentMethod,
+          status: data.status,
+          date: dateValue,
+          description: data.description
         })
-        .where(eq(scheduledPayments.id, transaction.scheduledPaymentId));
+        .where(eq(transactions.id, id))
+        .returning();
+      
+      // Se c'è un pagamento programmato associato, aggiorniamo lo stato
+      if (transaction.scheduledPaymentId) {
+        await db.update(scheduledPayments)
+          .set({ 
+            status: 'paid'
+          })
+          .where(eq(scheduledPayments.id, transaction.scheduledPaymentId));
+      }
+      
+      return transaction;
+    } catch (error) {
+      console.error(`Errore dettagliato nell'aggiornamento della transazione ${id}:`, error);
+      throw error;
     }
-    
-    return transaction;
   },
   
   async deleteTransaction(id: number) {
@@ -122,40 +157,74 @@ export const financeController = {
   },
   
   async createScheduledPayment(data: any) {
-    const [payment] = await db.insert(scheduledPayments)
-      .values({
-        quoteId: data.quoteId,
-        amount: data.amount,
-        dueDate: new Date(data.dueDate),
-        description: data.description,
-        status: 'pending'
-      })
-      .returning();
-    
-    return payment;
+    try {
+      // Gestione sicura della data
+      let dueDateValue;
+      if (data.dueDate) {
+        if (data.dueDate instanceof Date) {
+          dueDateValue = data.dueDate.toISOString();
+        } else {
+          dueDateValue = new Date(data.dueDate);
+        }
+      } else {
+        throw new Error("Data di scadenza obbligatoria");
+      }
+      
+      const [payment] = await db.insert(scheduledPayments)
+        .values({
+          quoteId: data.quoteId,
+          amount: data.amount,
+          dueDate: dueDateValue,
+          description: data.description,
+          status: 'pending'
+        })
+        .returning();
+      
+      return payment;
+    } catch (error) {
+      console.error("Errore dettagliato nella creazione del pagamento programmato:", error);
+      throw error;
+    }
   },
   
   async updateScheduledPayment(id: number, data: any) {
-    // Verifica se il pagamento è già stato effettuato
-    const [existingPayment] = await db.select()
-      .from(scheduledPayments)
-      .where(eq(scheduledPayments.id, id));
-    
-    if (existingPayment && existingPayment.status === 'paid') {
-      throw new Error("Impossibile modificare un pagamento già effettuato");
+    try {
+      // Verifica se il pagamento è già stato effettuato
+      const [existingPayment] = await db.select()
+        .from(scheduledPayments)
+        .where(eq(scheduledPayments.id, id));
+      
+      if (existingPayment && existingPayment.status === 'paid') {
+        throw new Error("Impossibile modificare un pagamento già effettuato");
+      }
+      
+      // Gestione sicura della data
+      let dueDateValue;
+      if (data.dueDate) {
+        if (data.dueDate instanceof Date) {
+          dueDateValue = data.dueDate.toISOString();
+        } else {
+          dueDateValue = new Date(data.dueDate);
+        }
+      } else {
+        dueDateValue = undefined;
+      }
+      
+      const [payment] = await db.update(scheduledPayments)
+        .set({
+          amount: data.amount,
+          dueDate: dueDateValue,
+          description: data.description,
+          status: data.status
+        })
+        .where(eq(scheduledPayments.id, id))
+        .returning();
+      
+      return payment;
+    } catch (error) {
+      console.error(`Errore dettagliato nell'aggiornamento del pagamento programmato ${id}:`, error);
+      throw error;
     }
-    
-    const [payment] = await db.update(scheduledPayments)
-      .set({
-        amount: data.amount,
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-        description: data.description,
-        status: data.status
-      })
-      .where(eq(scheduledPayments.id, id))
-      .returning();
-    
-    return payment;
   },
   
   async deleteScheduledPayment(id: number) {

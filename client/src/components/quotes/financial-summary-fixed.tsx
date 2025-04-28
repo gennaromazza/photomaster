@@ -581,7 +581,9 @@ export function FinancialSummary({
 
     // Prepara l'oggetto transazione
     const newTransaction = {
-      transactionType: "income", // Usa transactionType invece di type per compatibilità con il backend
+      // Includi sia transactionType che type per massima compatibilità
+      transactionType: "income",
+      type: "income",
       amount: parseFloat(transactionData.amount),
       date: transactionData.date, // Inviamo la data come stringa, sarà formattata lato server
       description:
@@ -638,7 +640,9 @@ export function FinancialSummary({
     // Prepara l'oggetto transazione da aggiornare
     const updatedTransaction = {
       id: selectedPaymentId,
-      transactionType: "income", // Usa transactionType invece di type per compatibilità con il backend
+      // Includi sia transactionType che type per massima compatibilità
+      transactionType: "income",
+      type: "income",
       amount: parseFloat(transactionData.amount),
       date: transactionData.date,
       description:

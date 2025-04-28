@@ -64,10 +64,12 @@ export const financeController = {
       
       console.log(`Data formattata per transazione: ${dateValue}`);
       
+      // Salva sia transactionType che type per retrocompatibilità
       const [transaction] = await db.insert(transactions)
         .values({
           amount: data.amount,
-          transactionType: data.transactionType,
+          transactionType: data.transactionType || data.type, // Usa transactionType se disponibile, altrimenti type
+          type: data.type || data.transactionType, // Salva anche nel campo type per retrocompatibilità
           paymentMethod: data.paymentMethod,
           quoteId: data.quoteId,
           status: data.status || 'completed',
@@ -131,10 +133,12 @@ export const financeController = {
       
       console.log(`Data formattata per aggiornamento transazione: ${dateValue}`);
       
+      // Aggiorna sia transactionType che type per retrocompatibilità
       const [transaction] = await db.update(transactions)
         .set({
           amount: data.amount,
-          transactionType: data.transactionType,
+          transactionType: data.transactionType || data.type, // Usa transactionType se disponibile, altrimenti type
+          type: data.type || data.transactionType, // Aggiorna anche il campo type per retrocompatibilità
           paymentMethod: data.paymentMethod,
           status: data.status,
           date: dateValue,
@@ -359,25 +363,27 @@ export const financeController = {
       endDate = now;
     }
     
-    // Calcolo delle entrate totali
+    // Calcolo delle entrate totali - usando una query SQL più complessa per gestire entrambi i campi
     const incomeResult = await db.select({
       total: sql<number>`sum(${transactions.amount})`.mapWith(Number)
     })
     .from(transactions)
     .where(and(
-      eq(transactions.transactionType, 'income'),
+      // Usa OR per controllare sia transactionType che type
+      sql`(${transactions.transactionType} = 'income' OR ${transactions.type} = 'income')`,
       eq(transactions.status, 'completed'),
       gte(transactions.date, startDate),
       lte(transactions.date, endDate)
     ));
     
-    // Calcolo delle uscite totali
+    // Calcolo delle uscite totali - usando una query SQL più complessa per gestire entrambi i campi
     const expenseResult = await db.select({
       total: sql<number>`sum(${transactions.amount})`.mapWith(Number)
     })
     .from(transactions)
     .where(and(
-      eq(transactions.transactionType, 'expense'),
+      // Usa OR per controllare sia transactionType che type
+      sql`(${transactions.transactionType} = 'expense' OR ${transactions.type} = 'expense')`,
       eq(transactions.status, 'completed'),
       gte(transactions.date, startDate),
       lte(transactions.date, endDate)

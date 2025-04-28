@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-04-28T07:58:58.046Z",
+  "module77": {
+    "exists": true,
+    "details": {
+      "id": 77,
+      "quoteId": 54,
+      "name": "1",
+      "description": "aaaa",
+      "type": "variable",
+      "status": "active",
+      "createdAt": "2025-04-24T08:49:02.071Z",
+      "updatedAt": "2025-04-24T08:49:02.040Z",
+      "expiryDate": "2025-05-01T08:49:02.040Z",
+      "shareToken": "ef34642a307fd13a2b91495f5fb93da4",
+      "clientNotes": null,
+      "internalNotes": null,
+      "subtotal": 5000,
+      "total": 5000,
+      "minSelectCount": null,
+      "maxSelectCount": null
+    }
+  }
+}

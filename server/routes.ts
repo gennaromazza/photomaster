@@ -2946,7 +2946,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
     try {
       const quoteId = parseInt(req.params.quoteId);
       if (isNaN(quoteId)) {
-        return res.status(400).json({ message: "ID preventivo non valido" });
+        return res.status(400).json({ message: "ID preventivo non valido" }));
       }
 
       // Verifica che il preventivo esista

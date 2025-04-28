@@ -20,6 +20,8 @@ import { setupUploadRoutes } from "./upload";
 import bundleLeadsRouter from "./routes/bundle-leads";
 import settingsRouter from "./routes/settings";
 import financeRouter from "./routes/finance";
+import transactionsRouter from "./routes/transactions";
+import scheduledPaymentsRouter from "./routes/scheduled-payments";
 import galleryRouter from "./routes/gallery";
 import searchRouter from "./routes/search";
 import selectionRouter from "./routes/selection";
@@ -31,8 +33,6 @@ import clientValidationRouter from "./routes/client-validation";
 import collaboratoriRouter from "./routes/collaboratori-routes"; // Manteniamo temporaneamente fino alla migrazione completa
 import eventiRouter from "./routes/eventi-routes";
 import eventsRouter from "./routes/events-routes"; // English standardized version
-import scheduledPaymentsRouter from "./routes/scheduled-payments"; // Router dei pagamenti programmati
-import transactionsRouter from "./routes/transactions"; // Router delle transazioni
 import dashboardPublicRouter from "./routes/dashboard-public-routes";
 import { handleFileUpload, importClients, importDirectClients, exportClientsCSV } from "./import-export";
 import { checkExistingClient, searchClients } from "./controllers/client-validation-controller";

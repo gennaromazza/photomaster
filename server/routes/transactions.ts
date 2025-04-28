@@ -61,31 +61,41 @@ router.get("/by-quote/:quoteId", async (req, res) => {
  */
 router.post("/", async (req, res) => {
   try {
-    // Verifica se il pagamento programmato esiste, se specificato
+    // Validazione dei dati in ingresso
+    if (!req.body.amount || !req.body.transactionType) {
+      return res.status(400).json({ error: "Mancano dati obbligatori: amount, transactionType" });
+    }
+    
+    // Se la transazione è associata a un preventivo, verifica che esista
+    if (req.body.quoteId) {
+      const quoteId = parseInt(req.body.quoteId);
+      const [quote] = await financeController.db.select()
+        .from(financeController.quotes)
+        .where(financeController.eq(financeController.quotes.id, quoteId));
+        
+      if (!quote) {
+        return res.status(400).json({ error: "Preventivo non trovato" });
+      }
+    }
+    
+    // Se la transazione è associata a un pagamento programmato, verifica che esista
     if (req.body.scheduledPaymentId) {
-      const paymentId = parseInt(req.body.scheduledPaymentId);
+      const scheduledPaymentId = parseInt(req.body.scheduledPaymentId);
       const [payment] = await financeController.db.select()
         .from(financeController.scheduledPayments)
-        .where(financeController.eq(financeController.scheduledPayments.id, paymentId));
-
+        .where(financeController.eq(financeController.scheduledPayments.id, scheduledPaymentId));
+        
       if (!payment) {
         return res.status(400).json({ error: "Pagamento programmato non trovato" });
       }
       
-      // Aggiorna automaticamente lo stato del pagamento programmato a 'paid'
-      await financeController.updateScheduledPayment(paymentId, { status: 'paid' });
+      // Verifica che il pagamento non sia già stato pagato
+      if (payment.status === 'paid') {
+        return res.status(400).json({ error: "Questo pagamento programmato è già stato pagato" });
+      }
     }
     
-    // Crea la transazione
     const transaction = await financeController.createTransaction(req.body);
-    
-    // Se la transazione è associata a un pagamento programmato, aggiorna la referenza
-    if (req.body.scheduledPaymentId && transaction) {
-      await financeController.db.update(financeController.scheduledPayments)
-        .set({ transactionId: transaction.id })
-        .where(financeController.eq(financeController.scheduledPayments.id, req.body.scheduledPaymentId));
-    }
-    
     res.status(201).json(transaction);
   } catch (error) {
     console.error("Errore nella creazione della transazione:", error);
@@ -103,12 +113,14 @@ router.put("/:id", async (req, res) => {
       return res.status(400).json({ error: "ID transazione non valido" });
     }
     
-    const transaction = await financeController.updateTransaction(id, req.body);
+    // Verifica che la transazione esista
+    const transaction = await financeController.getTransactionById(id);
     if (!transaction) {
       return res.status(404).json({ error: "Transazione non trovata" });
     }
     
-    res.json(transaction);
+    const updatedTransaction = await financeController.updateTransaction(id, req.body);
+    res.json(updatedTransaction);
   } catch (error) {
     console.error(`Errore nell'aggiornamento della transazione ${req.params.id}:`, error);
     res.status(500).json({ error: "Errore nell'aggiornamento della transazione" });
@@ -125,24 +137,12 @@ router.delete("/:id", async (req, res) => {
       return res.status(400).json({ error: "ID transazione non valido" });
     }
     
-    // Verifica se questa transazione è associata a un pagamento programmato
-    const [payment] = await financeController.db.select()
-      .from(financeController.scheduledPayments)
-      .where(financeController.eq(financeController.scheduledPayments.transactionId, id));
-    
-    if (payment) {
-      // Aggiorna lo stato del pagamento programmato a 'pending'
-      await financeController.db.update(financeController.scheduledPayments)
-        .set({ status: 'pending', transactionId: null })
-        .where(financeController.eq(financeController.scheduledPayments.id, payment.id));
-    }
-    
-    const transaction = await financeController.deleteTransaction(id);
-    if (!transaction) {
+    const deleted = await financeController.deleteTransaction(id);
+    if (!deleted) {
       return res.status(404).json({ error: "Transazione non trovata" });
     }
     
-    res.json(transaction);
+    res.json(deleted);
   } catch (error) {
     console.error(`Errore nell'eliminazione della transazione ${req.params.id}:`, error);
     res.status(500).json({ error: "Errore nell'eliminazione della transazione" });

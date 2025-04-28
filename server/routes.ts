@@ -3333,13 +3333,16 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   apiRouter.post("/modules/share/:token/select", async (req, res) => {
     try {
       const { token } = req.params;
-      const { selectedItems } = req.body;
+      const { selectedItems, selectedItemIds } = req.body;
+      
+      // Supporta sia selectedItems (formato attuale) che selectedItemIds (formato usato nei test)
+      const itemsToUse = selectedItemIds || selectedItems;
 
       if (!token) {
         return res.status(400).json({ message: "Token non valido" });
       }
 
-      if (!selectedItems || !Array.isArray(selectedItems)) {
+      if (!itemsToUse || !Array.isArray(itemsToUse)) {
         return res.status(400).json({ message: "Dati di selezione non validi" });
       }
 
@@ -3416,24 +3419,26 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
       );
 
       // Conta quanti elementi sono stati selezionati
-      const totalSelected = selectedItems.length;
+      const totalSelected = itemsToUse.length;
 
       // Verifica vincoli di minimo e massimo numero di selezioni
       if (module.minSelectCount !== undefined && module.minSelectCount > 0 && totalSelected < module.minSelectCount) {
         return res.status(400).json({
+          success: false,
           message: `È necessario selezionare almeno ${module.minSelectCount} opzioni`
         });
       }
 
       if (module.maxSelectCount !== undefined && module.maxSelectCount !== null && totalSelected > module.maxSelectCount) {
         return res.status(400).json({
+          success: false,
           message: `È possibile selezionare al massimo ${module.maxSelectCount} opzioni`
         });
       }
 
       // Aggiorna lo stato di ciascun elemento
       for (const item of moduleItems) {
-        const isSelected = selectedItems.includes(item.id);
+        const isSelected = itemsToUse.includes(item.id);
 
         // Verifica se un elemento obbligatorio non è stato selezionato
         if (item.isRequired && !isSelected) {
@@ -3442,6 +3447,7 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
           const itemName = enrichedItem?.serviceName || enrichedItem?.productName || enrichedItem?.bundleName || 'Opzione';
 
           return res.status(400).json({ 
+            success: false,
             message: `È necessario selezionare l'opzione obbligatoria: ${itemName}`
           });
         }
@@ -3456,10 +3462,134 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
         status: 'active' // Cambia da 'pending_selection' ad 'active' se necessario
       });
 
-      res.json({ message: "Selezioni salvate con successo" });
+      res.json({ 
+        success: true,
+        message: "Selezioni salvate con successo" 
+      });
     } catch (err) {
       console.error("Error updating module selections:", err);
-      res.status(500).json({ message: "Errore nel salvataggio delle selezioni" });
+      res.status(500).json({ 
+        success: false,
+        message: "Errore nel salvataggio delle selezioni" 
+      });
+    }
+  });
+  
+  // Aggiungi un nuovo endpoint che gestisce il formato alternativo dell'URL
+  // Questo endpoint è usato dagli script di test
+  apiRouter.post("/quotes/share/:token/modules/:moduleId/select", async (req, res) => {
+    try {
+      const { token, moduleId } = req.params;
+      const { selectedItemIds } = req.body;
+
+      if (!token || !moduleId) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Token o ID modulo non validi" 
+        });
+      }
+
+      if (!selectedItemIds || !Array.isArray(selectedItemIds)) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Dati di selezione non validi" 
+        });
+      }
+
+      // Recupera il modulo
+      const module = await storage.getQuoteModuleByShareToken(token);
+      if (!module) {
+        return res.status(404).json({ 
+          success: false,
+          message: "Modulo non trovato o link scaduto" 
+        });
+      }
+      
+      // Verifica che l'ID del modulo corrisponda a quello nel percorso
+      if (module.id !== parseInt(moduleId)) {
+        return res.status(400).json({ 
+          success: false,
+          message: "ID modulo non corrisponde al token" 
+        });
+      }
+
+      // Verifica che il modulo sia di tipo variabile
+      if (module.type !== 'variable') {
+        return res.status(400).json({ 
+          success: false,
+          message: "Questo modulo non supporta le selezioni" 
+        });
+      }
+
+      // Verifica che il modulo sia attivo
+      if (module.status !== 'active' && module.status !== 'pending_selection') {
+        return res.status(400).json({ 
+          success: false,
+          message: "Questo modulo non è più attivo" 
+        });
+      }
+
+      // Verifica la data di scadenza
+      if (module.expiryDate && new Date(module.expiryDate) < new Date()) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Il link di configurazione è scaduto" 
+        });
+      }
+
+      // Recupera tutti gli elementi del modulo
+      const moduleItems = await storage.getQuoteModuleItemsByModule(module.id);
+
+      // Conta quanti elementi sono stati selezionati
+      const totalSelected = selectedItemIds.length;
+
+      // Verifica vincoli di minimo e massimo numero di selezioni
+      if (module.minSelectCount !== undefined && module.minSelectCount > 0 && totalSelected < module.minSelectCount) {
+        return res.status(400).json({
+          success: false,
+          message: `È necessario selezionare almeno ${module.minSelectCount} opzioni`
+        });
+      }
+
+      if (module.maxSelectCount !== undefined && module.maxSelectCount !== null && totalSelected > module.maxSelectCount) {
+        return res.status(400).json({
+          success: false,
+          message: `È possibile selezionare al massimo ${module.maxSelectCount} opzioni`
+        });
+      }
+
+      // Aggiorna lo stato di ciascun elemento
+      for (const item of moduleItems) {
+        const isSelected = selectedItemIds.includes(item.id);
+
+        // Verifica se un elemento obbligatorio non è stato selezionato
+        if (item.isRequired && !isSelected) {
+          return res.status(400).json({ 
+            success: false,
+            message: `È necessario selezionare l'opzione obbligatoria` 
+          });
+        }
+
+        await storage.updateQuoteModuleItem(item.id, {
+          isSelected
+        });
+      }
+
+      // Aggiorna lo stato del modulo
+      await storage.updateQuoteModule(module.id, {
+        status: 'active' // Cambia da 'pending_selection' ad 'active' se necessario
+      });
+
+      res.json({ 
+        success: true,
+        message: "Selezioni salvate con successo" 
+      });
+    } catch (err) {
+      console.error("Error updating module selections:", err);
+      res.status(500).json({ 
+        success: false,
+        message: "Errore nel salvataggio delle selezioni" 
+      });
     }
   });
 

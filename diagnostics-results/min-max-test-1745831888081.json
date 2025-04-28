@@ -1,0 +1,114 @@
+{
+  "timestamp": "2025-04-28T09:18:08.077Z",
+  "moduleTests": [
+    {
+      "moduleId": 93,
+      "moduleName": "Test Module 1745828862890",
+      "quoteId": 54,
+      "minSelectCount": 2,
+      "maxSelectCount": 5,
+      "itemCount": 2,
+      "tests": [
+        {
+          "test": "Tipo modulo",
+          "status": "pass",
+          "details": "Il modulo è di tipo 'variable'"
+        },
+        {
+          "test": "Presenza vincoli",
+          "status": "pass",
+          "details": "Il modulo ha vincoli definiti: min=2 max=5"
+        },
+        {
+          "test": "Elementi sufficienti per min",
+          "status": "pass",
+          "details": "Il modulo ha abbastanza elementi (2) per soddisfare il minimo richiesto (2)"
+        },
+        {
+          "test": "Validità vincoli",
+          "status": "pass",
+          "details": "I vincoli min (2) e max (5) sono validi"
+        },
+        {
+          "test": "Recupero pagina pubblica",
+          "status": "pass",
+          "details": "Pagina pubblica recuperata con successo"
+        },
+        {
+          "test": "Presenza modulo in frontend",
+          "status": "pass",
+          "details": "Il modulo (ID: 93) è presente nella pagina pubblica"
+        },
+        {
+          "test": "Corrispondenza vincolo minimo",
+          "status": "pass",
+          "details": "Il vincolo minimo nel frontend (2) corrisponde al backend"
+        },
+        {
+          "test": "Corrispondenza vincolo massimo",
+          "status": "pass",
+          "details": "Il vincolo massimo nel frontend (5) corrisponde al backend"
+        },
+        {
+          "test": "Numero elementi in frontend",
+          "status": "pass",
+          "details": "Il numero di elementi nel frontend (2) corrisponde al backend"
+        }
+      ]
+    }
+  ],
+  "simulationTests": [
+    {
+      "moduleId": 93,
+      "moduleName": "Test Module 1745828862890",
+      "shareToken": "a360a981052b4bc4f1517df4c4b5364d",
+      "selectedItems": [],
+      "tests": [
+        {
+          "test": "Validazione minimo",
+          "status": "pass",
+          "details": "Il sistema ha correttamente rifiutato una selezione vuota (minSelectCount=2)"
+        }
+      ]
+    },
+    {
+      "moduleId": 93,
+      "moduleName": "Test Module 1745828862890",
+      "shareToken": "a360a981052b4bc4f1517df4c4b5364d",
+      "selectedItems": [
+        653
+      ],
+      "tests": [
+        {
+          "test": "Validazione sotto il minimo",
+          "status": "pass",
+          "details": "Il sistema ha correttamente rifiutato 1 selezioni (minSelectCount=2)"
+        }
+      ]
+    },
+    {
+      "moduleId": 93,
+      "moduleName": "Test Module 1745828862890",
+      "shareToken": "a360a981052b4bc4f1517df4c4b5364d",
+      "selectedItems": [
+        653,
+        654
+      ],
+      "tests": [
+        {
+          "test": "Validazione minimo esatto",
+          "status": "fail",
+          "details": "Il sistema ha rifiutato 2 selezioni nonostante sia esattamente il minimo richiesto",
+          "expected": true,
+          "actual": false
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "passed": 11,
+    "failed": 1,
+    "warnings": 0
+  }
+}

@@ -228,13 +228,22 @@ async function syncContractClausesToModules(contract, apiQuote) {
     
     for (const modulo of moduliDaSincronizzare) {
       try {
-        // Aggiorna il modulo nel database con le clausole aggiornate
-        await db.update(quoteModules)
-          .set({ 
-            clauses: contract.clauses 
-          })
-          .where(eq(quoteModules.id, modulo.id))
-          .returning();
+        try {
+        // Aggiorna il modulo utilizzando l'API di Drizzle in modo corretto
+        // Usiamo sql per la query diretta
+        const { sql } = await import('drizzle-orm');
+        
+        await db.execute(sql`
+          UPDATE quote_modules 
+          SET clauses = ${JSON.stringify(contract.clauses)} 
+          WHERE id = ${modulo.id}
+        `);
+        
+        logMessage(`✅ Modulo ${modulo.id} aggiornato con successo`, 'success');
+      } catch (error) {
+        logMessage(`❌ Errore aggiornamento modulo ${modulo.id}: ${error.message}`, 'error');
+        throw error;
+      }
         
         moduliSincronizzati++;
       } catch (error) {
@@ -749,7 +758,7 @@ async function testClauseAssignment() {
     
     // Recupera il preventivo completo tramite API
     logMessage(`🔍 Recupero preventivo ${contract.quoteId} tramite API...`, 'info');
-    const apiQuote = await getQuoteWithModules(contract.quoteId);
+    let apiQuote = await getQuoteWithModules(contract.quoteId);
     
     if (!apiQuote) {
       throw new Error(`Impossibile recuperare il preventivo ${contract.quoteId} tramite API`);

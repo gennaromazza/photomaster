@@ -446,7 +446,11 @@ export default function ModuleManager({ quoteId, refreshQuote }: ModuleManagerPr
           </CardTitle>
 
           {moduleManagerState === ModuleManagerState.LIST && !isQuoteSigned && (
-            <Button size="sm" onClick={handleAddModule}>
+            <Button 
+              size="sm" 
+              onClick={handleAddModule}
+              disabled={modules.length >= 10} // Maximum number of modules allowed
+            >
               <Plus className="mr-1 h-4 w-4" />
               Aggiungi Modulo
             </Button>

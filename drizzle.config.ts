@@ -11,4 +11,7 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL,
   },
+  naming: {
+    transform: { from: 'snake', to: 'camel' },
+  },
 });

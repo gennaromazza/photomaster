@@ -544,6 +544,7 @@ export const quoteModules = pgTable("quote_modules", {
   total: integer("total").default(0), // Totale finale
   minSelectCount: integer("min_select_count"), // Numero minimo di selezioni per moduli variabili
   maxSelectCount: integer("max_select_count"), // Numero massimo di selezioni per moduli variabili
+  clauses: jsonb("clauses"), // Clausole contrattuali associate al modulobili
 });
 
 export const insertQuoteModuleSchema = createInsertSchema(quoteModules).pick({
@@ -560,6 +561,7 @@ export const insertQuoteModuleSchema = createInsertSchema(quoteModules).pick({
   total: true,
   minSelectCount: true,
   maxSelectCount: true,
+  clauses: true,
 });
 
 export type InsertQuoteModule = z.infer<typeof insertQuoteModuleSchema>;

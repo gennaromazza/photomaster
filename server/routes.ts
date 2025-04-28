@@ -3534,6 +3534,8 @@ apiRouter.get("/events/client/:clientId", async (req, res) => {
   app.use("/api/settings", isAuthenticated, settingsRouter);
   app.use("/api/gallery", isAuthenticated, galleryRouter);
   app.use("/api/finance", isAuthenticated, financeRouter);
+  app.use("/api/finance/transactions", isAuthenticated, transactionsRouter);
+  app.use("/api/finance/scheduled-payments", isAuthenticated, scheduledPaymentsRouter);
   app.use("/api/search", isAuthenticated, searchRouter);
   app.use("/api/selection", selectionRouter);
   app.use("/api/clauses", isAuthenticated, clausesRouter);

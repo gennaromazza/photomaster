@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -15,6 +16,7 @@ import {
   Church,
   FileSignature,
   CheckCircle,
+  FileCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
   CardFooter,
+  CardDescription,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ClientAddressDetails } from "@/components/quotes/client-address-details";
@@ -39,6 +42,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SocialMediaShowcase } from "@/components/shared/social-media-showcase";
+import { Separator } from "@/components/ui/separator";
+import { formatCurrency, formatDate } from "@/lib/utils";
+
 
 // Layout specifico per la visualizzazione pubblica
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
@@ -136,6 +142,7 @@ export default function PublicQuotePage() {
   const [signature, setSignature] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [allClausesAccepted, setAllClausesAccepted] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   // Utilizziamo useMemo per ottenere una reference stabile nel tempo del token
   // Questo evita query inutili causate dal token che cambia reference
@@ -176,6 +183,39 @@ export default function PublicQuotePage() {
     // Disabilitiamo il refetch in background per risparmiare risorse
     refetchIntervalInBackground: false,
   });
+
+  const clientQuery = useQuery({
+    queryKey: ["/api/clients", quoteQuery.data?.clientId],
+    queryFn: async () => {
+      const clientId = quoteQuery.data?.clientId;
+      if (!clientId) return {};
+      const res = await fetch(`/api/clients/${clientId}`);
+      if (!res.ok) {
+        throw new Error("Errore nel caricamento del cliente");
+      }
+      return res.json();
+    },
+    enabled: !!quoteQuery.data?.clientId,
+  });
+
+
+  const quoteItemsQuery = useQuery({
+    queryKey: ["/api/quotes/items", quoteQuery.data?.id],
+    queryFn: async () => {
+      const quoteId = quoteQuery.data?.id;
+      if (!quoteId) return [];
+      const res = await fetch(`/api/quotes/${quoteId}/items`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!quoteQuery.data?.id,
+  });
+
+  const { data: companyProfile, isLoading: isLoadingCompanyProfile } = useCompanyProfile();
+  const companyName = companyProfile?.companyName || "ImageStudio";
+  const companyLogo = companyProfile?.logo;
+  const companyInfoString = companyProfile?.companyInfoString || "ImageStudio";
+
 
   // Carica i moduli del preventivo
   const { data: modules = [], isLoading: isLoadingModules } = useQuery({
@@ -407,6 +447,19 @@ export default function PublicQuotePage() {
     }
   };
 
+  const handleSign = () => {
+    if (!agreed) {
+      toast({ title: "Errore", description: "Devi accettare i termini e le condizioni", variant: "destructive" });
+      return;
+    }
+    handleSignQuote(signature);
+  };
+
+  const signQuoteMutation = useMutation({
+    mutationFn: () => handleSignQuote(signature),
+  });
+
+
   useEffect(() => {
     if (quoteQuery.error) {
       toast({
@@ -417,453 +470,270 @@ export default function PublicQuotePage() {
     }
   }, [quoteQuery.error, toast]);
 
-  if (quoteQuery.isLoading) {
+  const id = quoteQuery.data?.id;
+  const client = clientQuery?.data;
+  const quoteItems = quoteItemsQuery?.data || [];
+  const isApproved = quoteQuery.data?.status === "approved";
+
+
+  // Loading state
+  if (quoteQuery.isLoading || clientQuery.isLoading || isLoadingCompanyProfile || quoteItemsQuery.isLoading) {
     return (
-      <PublicLayout>
-        <div className="flex justify-center items-center min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Caricamento preventivo...</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-[#8B7355]" />
+          <p className="mt-4 text-[#6B5C4D] font-serif">Caricamento preventivo...</p>
         </div>
-      </PublicLayout>
+      </div>
     );
   }
 
-  if (isExpired || !quoteQuery.data) {
+  // Error state
+  if (quoteQuery.isError || !quoteQuery.data) {
     return (
-      <PublicLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <div className="text-center max-w-md">
-            <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-2xl font-bold mb-2">
-              Preventivo non disponibile
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              Il preventivo richiesto non esiste o il link di condivisione è
-              scaduto.
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
+        <Card className="w-full max-w-2xl text-center border-[#D2B48C] bg-white/90">
+          <CardHeader>
+            <CardTitle className="text-2xl font-serif text-[#6B5C4D]">Preventivo non disponibile</CardTitle>
+            <CardDescription className="text-[#8B7355]">
+              Il preventivo richiesto non esiste o non è più disponibile.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="justify-center">
+            <a href="/" className="inline-flex items-center justify-center rounded-md bg-[#8B7355] hover:bg-[#6B5C4D] px-6 py-3 text-sm font-medium text-white transition-colors">
+              Torna alla Home
+            </a>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  const quote = quoteQuery.data;
+  
+  // Se il preventivo è già stato approvato
+  if (isApproved) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2] p-6">
+        <Card className="w-full max-w-2xl border-[#D2B48C] bg-white/90 shadow-lg">
+          <CardHeader className="text-center border-b border-[#D2B48C]/30">
+            <CardTitle className="text-2xl font-serif text-[#6B5C4D]">Preventivo già approvato</CardTitle>
+            <CardDescription className="text-[#8B7355]">
+              Grazie! Questo preventivo è stato approvato il {formatDate(new Date(quote.updatedAt || quote.createdAt))}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center text-[#4A7F3F] my-8">
+              <div className="rounded-full bg-[#E8F5E9] p-4">
+                <FileCheck className="h-10 w-10" />
+              </div>
+            </div>
+            <div className="text-center space-y-3">
+              <p className="text-[#6B5C4D] font-serif">Un nostro rappresentante ti contatterà presto per organizzare i dettagli.</p>
+              <p className="text-sm text-[#8B7355]">Riferimento preventivo: #{quote.id}</p>
+            </div>
+          </CardContent>
+          <CardFooter className="justify-center border-t border-[#D2B48C]/30 pt-6">
+            <p className="text-sm text-[#8B7355] font-serif">
+              {companyInfoString}
             </p>
-          </div>
-        </div>
-      </PublicLayout>
+          </CardFooter>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <PublicLayout>
-      <div className="max-w-4xl mx-auto">
-        {/* Intestazione preventivo */}
-        <div className="text-center mb-10 bg-primary/5 py-8 px-4 rounded-lg shadow-sm border border-primary/10">
-          <h1 className="text-3xl md:text-4xl font-playfair font-bold mb-3">
-            {quoteQuery.data.title}
-          </h1>
-          <Badge
-            variant={
-              quoteQuery.data.status === "confermato" ||
-              quoteQuery.data.status === "approved"
-                ? "success"
-                : quoteQuery.data.status === "in attesa" ||
-                    quoteQuery.data.status === "pending"
-                  ? "warning"
-                  : "default"
-            }
-            className="mb-2 px-3 py-1 text-sm"
-          >
-            {quoteQuery.data.status === "draft"
-              ? "Bozza"
-              : quoteQuery.data.status === "pending" ||
-                  quoteQuery.data.status === "in attesa"
-                ? "In attesa"
-                : quoteQuery.data.status === "approved" ||
-                    quoteQuery.data.status === "confermato"
-                  ? "Confermato"
-                  : quoteQuery.data.status === "rejected" ||
-                      quoteQuery.data.status === "rifiutato"
-                    ? "Rifiutato"
-                    : quoteQuery.data.status || "Preventivo"}
-          </Badge>
-          <p className="text-muted-foreground mt-2">
-            Creato il{" "}
-            {quoteQuery.data.createdAt
-              ? format(new Date(quoteQuery.data.createdAt), "dd/MM/yyyy", {
-                  locale: it,
-                })
-              : ""}
-          </p>
-        </div>
-
-        {/* Dettagli cliente */}
-        <ClientAddressDetails
-          client={quoteQuery.data.client}
-          secondClient={quoteQuery.data.secondClient}
-          className="mb-6"
-          showAddresses={true}
-        />
-
-        {/* Dettagli evento */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Dettagli Evento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                  Tipo Evento
-                </h4>
-                <p className="font-medium">
-                  {quoteQuery.data.category?.name || "Non specificato"}
-                </p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                  Data
-                </h4>
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                  <p className="font-medium">
-                    {quoteQuery.data.eventDate
-                      ? format(
-                          new Date(quoteQuery.data.eventDate),
-                          "dd/MM/yyyy",
-                          {
-                            locale: it,
-                          },
-                        )
-                      : "Non specificata"}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                  Orario
-                </h4>
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                  <p className="font-medium">
-                    {quoteQuery.data.isFullDay
-                      ? "Giornata intera"
-                      : (quoteQuery.data.eventTime
-                          ? quoteQuery.data.eventTime
-                          : "Non specificato") +
-                        (quoteQuery.data.eventEndTime
-                          ? ` - ${quoteQuery.data.eventEndTime}`
-                          : "")}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">
-                  Location
-                </h4>
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                  <p className="font-medium">
-                    {quoteQuery.data.location || "Non specificata"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Utilizziamo il componente CeremonyDetails per una visualizzazione più elegante */}
-              {(quoteQuery.data.ceremonyLocation ||
-                quoteQuery.data.ceremonyTime) && (
-                <div className="col-span-1 md:col-span-2">
-                  <CeremonyDetails
-                    readOnly={true}
-                    ceremony={{
-                      location: quoteQuery.data.ceremonyLocation,
-                      time: quoteQuery.data.ceremonyTime,
-                    }}
-                    className="bg-muted/30 p-3 rounded-md border border-muted mt-2"
-                  />
-                </div>
+    <div className="min-h-screen bg-[#FAF7F2] py-10 px-4">
+      <div className="container mx-auto">
+        <Card className="w-full max-w-4xl mx-auto border-[#D2B48C] bg-white/90 shadow-lg">
+          <CardHeader className="text-center border-b border-[#D2B48C]/30 bg-[#F5EDE3]">
+            <div className="mb-6">
+              {companyLogo ? (
+                <img src={companyLogo} alt={companyName} className="h-20 mx-auto" />
+              ) : (
+                <h1 className="text-3xl font-serif font-bold text-[#6B5C4D]">{companyName}</h1>
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Sezione Pagamenti - visibile solo se il preventivo è stato firmato */}
-        {(quoteQuery.data.status === "approved" ||
-          quoteQuery.data.status === "confermato") && (
-          <Card className="mb-8 border-primary/20">
-            <CardHeader className="bg-primary/5 border-b">
-              <CardTitle className="flex items-center">
-                <Euro className="h-5 w-5 mr-2 text-primary" />
-                Pagamenti
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <FinancialSummaryWrapper
-                quoteId={quoteQuery.data.id}
-                quoteTotal={quoteQuery.data.total || 0}
-                readOnly={true}
-                clientName={
-                  quoteQuery.data.client?.firstName &&
-                  quoteQuery.data.client?.lastName
-                    ? `${quoteQuery.data.client.firstName} ${quoteQuery.data.client.lastName}`
-                    : undefined
-                }
-                quoteStatus={quoteQuery.data.status || ""}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Moduli del preventivo */}
-        {modules && modules.length > 0 && (
-          <Card className="mb-8 border-primary/20">
-            <CardHeader className="bg-primary/5 border-b">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <FileText className="h-5 w-5 mr-2 text-primary" />
-                  {modules.length > 1 ? "Moduli" : "Modulo"}
-                </div>
-                {quoteQuery.data.modulesSum > 0 && (
-                  <Badge
-                    variant="outline"
-                    className="ml-2 bg-green-50 text-green-700 font-medium border-green-200"
-                  >
-                    Totale Moduli:{" "}
-                    {(quoteQuery.data.modulesSum / 100).toLocaleString(
-                      "it-IT",
-                      { style: "currency", currency: "EUR" },
-                    )}
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-5">
-              <div className="mb-4 text-sm">
-                <h3 className="font-semibold text-base mb-2">
-                  Guida al preventivo
-                </h3>
-                <p className="text-muted-foreground mb-2">
-                  Qui puoi visualizzare i{" "}
-                  {modules.length > 1 ? "moduli" : "modulo"} inclusi nel
-                  preventivo.
-                </p>
-
-                {modules.some((m) => m.type === "fixed") && (
-                  <div className="flex items-start gap-2 mb-2 p-2 bg-primary/5 rounded-md">
-                    <div className="mt-1 text-primary">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 16v-4"></path>
-                        <path d="M12 8h.01"></path>
-                      </svg>
-                    </div>
-                    <div>
-                      <span className="font-medium">Moduli fissi:</span>{" "}
-                      Rappresentano i servizi inclusi di base nel pacchetto
-                      scelto. Questi elementi sono sempre inclusi nel
-                      preventivo.
-                    </div>
-                  </div>
-                )}
-
-                {modules.some((m) => m.type === "variable") && (
-                  <div className="flex items-start gap-2 p-2 bg-primary/5 rounded-md">
-                    <div className="mt-1 text-primary">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 16v-4"></path>
-                        <path d="M12 8h.01"></path>
-                      </svg>
-                    </div>
-                    <div>
-                      <span className="font-medium">Moduli variabili:</span> Ti
-                      permettono di personalizzare il pacchetto selezionando le
-                      opzioni che preferisci.
-                      <ul className="list-disc list-inside mt-1 ml-2 text-xs">
-                        <li>
-                          Le opzioni contrassegnate come{" "}
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                            Obbligatorio
-                          </span>{" "}
-                          non possono essere deselezionate.
-                        </li>
-                        <li>
-                          Ogni modulo variabile può richiedere un numero minimo
-                          e massimo di selezioni.
-                        </li>
-                        <li>
-                          Leggi attentamente le istruzioni all'interno di ogni
-                          modulo per comprendere i requisiti di selezione.
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-6 mt-4">
-                {/* Moduli fissi */}
-                {modules
-                  .filter((m) => m.type === "fixed")
-                  .map((module) => (
-                    <PublicFixedModule key={module.id} module={module} />
-                  ))}
-
-                {/* Moduli variabili */}
-                {modules
-                  .filter((m) => m.type === "variable")
-                  .map((module) => (
-                    <PublicVariableModule
-                      key={module.id}
-                      module={module}
-                      onSelectionChange={
-                        quoteQuery.data &&
-                        (quoteQuery.data.status === "approved" ||
-                          quoteQuery.data.status === "confermato")
-                          ? undefined
-                          : handleModuleItemSelection
-                      }
-                      disabled={
-                        quoteQuery.data &&
-                        (quoteQuery.data.status === "approved" ||
-                          quoteQuery.data.status === "confermato")
-                      }
-                    />
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Clausole contrattuali - Aggiunto prima della firma */}
-        <Card className="mb-8 border-primary/20">
-          <CardHeader className="bg-primary/5 border-b">
-            <CardTitle className="flex items-center">
-              <FileText className="h-5 w-5 mr-2 text-primary" />
-              Termini e Clausole Contrattuali
-            </CardTitle>
+            <CardTitle className="text-2xl font-serif text-[#6B5C4D]">Preventivo: {quote.title}</CardTitle>
+            <CardDescription className="text-[#8B7355] mt-2">
+              Creato il {formatDate(new Date(quote.createdAt))}
+              {quote.expiryDate && ` · Valido fino al ${formatDate(new Date(quote.expiryDate))}`}
+            </CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
-            <ContractClauses
-              quoteId={quoteQuery.data.id}
-              readOnly={
-                quoteQuery.data.status === "approved" ||
-                quoteQuery.data.status === "confermato"
-              }
-              onClausesAccepted={(accepted) => {
-                setAllClausesAccepted(accepted);
-              }}
-            />
-          </CardContent>
-        </Card>
 
-        {/* Note */}
-        {quoteQuery.data.notes && (
-          <Card className="mt-10 mb-6 overflow-hidden shadow-md">
-            <CardHeader className="bg-primary text-primary-foreground border-b">
-              <CardTitle className="text-center font-playfair">
-                Per qualsiasi informazione
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-center mb-6 text-muted-foreground">
-                Contattaci direttamente per confermare il tuo preventivo o per
-                richieste personalizzate.
-              </p>
-              <div className="bg-muted/20 p-5 rounded-lg border">
-                <StudioInfo className="mx-auto max-w-md" />
+          <CardContent className="space-y-8 pt-8">
+            {/* Dettagli cliente */}
+            <div className="bg-[#F9F6F0] p-6 rounded-lg border border-[#D2B48C]/30">
+              <h3 className="font-serif text-lg text-[#6B5C4D] mb-4">Informazioni Cliente</h3>
+              <div className="space-y-2 text-[#8B7355]">
+                <p><span className="font-medium">Nome:</span> {client.firstName} {client.lastName}</p>
+                <p><span className="font-medium">Email:</span> {client.email}</p>
+                {client.phone && <p><span className="font-medium">Telefono:</span> {client.phone}</p>}
+                {client.address && <p><span className="font-medium">Indirizzo:</span> {client.address}</p>}
               </div>
-            </CardContent>
-          </Card>
-        )}
-        {/* Sezione Firma Digitale */}
-        <Card className="mb-8 border-primary/20">
-          <CardHeader className="bg-primary/5 border-b">
-            <CardTitle className="flex items-center">
-              <FileSignature className="h-5 w-5 mr-2 text-primary" />
-              Firma Digitale
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            {quoteQuery.data.status === "approved" ||
-            quoteQuery.data.status === "confermato" ? (
-              <div className="text-center space-y-4">
-                <div className="max-w-sm mx-auto">
-                  <div className="p-4 rounded-lg bg-green-50 border border-green-200 mb-4">
-                    <div className="flex items-center justify-center text-sm text-green-700">
-                      <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                      Preventivo confermato e firmato
-                    </div>
-                  </div>
+            </div>
 
-                  <div className="border-2 border-dashed border-primary/30 rounded-lg p-6 bg-primary/5">
-                    <p className="text-sm text-muted-foreground mb-3 text-center">
-                      Firmato da:
-                    </p>
-                    <p className="text-center text-3xl text-primary font-handwriting-great-vibes">
-                      {quoteQuery.data.signature ||
-                        (quoteQuery.data.client
-                          ? `${quoteQuery.data.client.firstName} ${quoteQuery.data.client.lastName}`.trim()
-                          : "Nome non disponibile")}
-                    </p>
-                    {quoteQuery.data.signedAt && (
-                      <p className="text-xs text-muted-foreground mt-3 text-center">
-                        in data{" "}
-                        {format(
-                          new Date(quoteQuery.data.signedAt),
-                          "d MMMM yyyy",
-                          { locale: it },
-                        )}
-                      </p>
+            {/* Elementi del preventivo */}
+            <div>
+              <h3 className="font-serif text-lg text-[#6B5C4D] mb-4">Servizi e Prodotti</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[#D2B48C]/30">
+                      <th className="text-left py-4 px-4 font-serif text-[#6B5C4D]">Descrizione</th>
+                      <th className="text-right py-4 px-4 font-serif text-[#6B5C4D]">Quantità</th>
+                      <th className="text-right py-4 px-4 font-serif text-[#6B5C4D]">Prezzo</th>
+                      <th className="text-right py-4 px-4 font-serif text-[#6B5C4D]">Totale</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {quoteItemsQuery.isLoading ? (
+                      <tr>
+                        <td colSpan={4} className="text-center py-6 text-[#8B7355]">Caricamento...</td>
+                      </tr>
+                    ) : quoteItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="text-center py-6 text-[#8B7355]">Nessun prodotto o servizio</td>
+                      </tr>
+                    ) : (
+                      quoteItems.map((item: any) => (
+                        <tr key={item.id} className="border-b border-[#D2B48C]/30">
+                          <td className="py-4 px-4">
+                            <div className="font-medium text-[#6B5C4D]">{item.serviceName || "Servizio"}</div>
+                            {item.notes && (
+                              <div className="text-sm text-[#8B7355] mt-1">{item.notes}</div>
+                            )}
+                          </td>
+                          <td className="text-right py-4 px-4 text-[#8B7355]">{item.quantity}</td>
+                          <td className="text-right py-4 px-4">
+                            {item.hasDiscount && item.discountValue ? (
+                              <div>
+                                <span className="line-through text-[#B8A99A] mr-2">
+                                  {formatCurrency(item.unitPrice)}
+                                </span>
+                                <span className="text-[#8B7355]">{formatCurrency(item.discountedPrice || item.unitPrice)}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[#8B7355]">{formatCurrency(item.unitPrice)}</span>
+                            )}
+                          </td>
+                          <td className="text-right py-4 px-4 font-medium text-[#6B5C4D]">{formatCurrency(item.total)}</td>
+                        </tr>
+                      ))
                     )}
-                  </div>
-
-                  <div className="mt-8 p-4 rounded-md bg-muted text-center">
-                    <p className="text-sm">
-                      Questo preventivo è stato approvato e non può essere
-                      modificato.
-                      <br />
-                      <span className="text-primary font-medium">
-                        Grazie per la vostra fiducia!
-                      </span>
-                    </p>
-                  </div>
-                </div>
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <div className="text-center space-y-4">
-                <p className="text-muted-foreground">
-                  Firmando questo documento, confermi di accettare il preventivo
-                  e tutti i servizi/prodotti inclusi, insieme a tutte le
-                  clausole contrattuali.
-                </p>
+            </div>
 
-                <div className="max-w-sm mx-auto">
-                  <SignaturePad
-                    onSignatureSubmit={handleSignQuote}
-                    isSubmitting={isSubmitting}
-                  />
+            {/* Riepilogo totali */}
+            <div className="pt-6 space-y-3 border-t border-[#D2B48C]/30">
+              <div className="flex justify-between text-[#8B7355]">
+                <span>Subtotale</span>
+                <span>{formatCurrency(quote.subtotal)}</span>
+              </div>
+              {quote.discount > 0 && (
+                <div className="flex justify-between text-[#4A7F3F]">
+                  <span>Sconto</span>
+                  <span>-{formatCurrency(quote.discount)}</span>
+                </div>
+              )}
+              {quote.tax > 0 && (
+                <div className="flex justify-between text-[#8B7355]">
+                  <span>IVA ({(quote.tax / quote.subtotal * 100).toFixed(0)}%)</span>
+                  <span>{formatCurrency(quote.tax)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-serif text-xl pt-3 text-[#6B5C4D] border-t border-[#D2B48C]/30">
+                <span>Totale</span>
+                <span>{formatCurrency(quote.total)}</span>
+              </div>
+            </div>
+
+            {/* Note */}
+            {quote.notes && (
+              <div className="pt-6">
+                <h3 className="font-serif text-lg text-[#6B5C4D] mb-3">Note</h3>
+                <div className="bg-[#F9F6F0] p-6 rounded-lg border border-[#D2B48C]/30 whitespace-pre-wrap text-[#8B7355]">
+                  {quote.notes}
                 </div>
               </div>
             )}
+
+            <Separator className="my-8 bg-[#D2B48C]/30" />
+
+            {/* Clausole contrattuali */}
+            <ContractClauses 
+              quoteId={id as string} 
+              onClausesAccepted={setAllClausesAccepted}
+            />
+
+            <Separator className="my-8 bg-[#D2B48C]/30" />
+
+            {/* Sezione firma */}
+            <div className="pt-6">
+              <h3 className="font-serif text-lg text-[#6B5C4D] mb-4">Approva Preventivo</h3>
+              <p className="text-sm text-[#8B7355] mb-6">
+                Per approvare il preventivo, inserisci il tuo nome e cognome nel campo sottostante. 
+                Questa firma digitale conferma la tua accettazione dei termini e dei costi indicati.
+              </p>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="signature" className="text-[#6B5C4D]">La tua firma</Label>
+                  <Input
+                    id="signature"
+                    value={signature}
+                    onChange={(e) => setSignature(e.target.value)}
+                    placeholder="Inserisci il tuo nome e cognome"
+                    className="max-w-md border-[#D2B48C] focus:ring-[#8B7355]"
+                  />
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="mt-1 border-[#D2B48C] text-[#8B7355] focus:ring-[#8B7355]"
+                  />
+                  <Label htmlFor="terms" className="text-sm font-normal text-[#8B7355]">
+                    Accetto i termini e le condizioni e autorizzo il trattamento dei miei dati personali 
+                    in conformità con la normativa sulla privacy. Confermo di aver letto e compreso il 
+                    preventivo e approvo i servizi e i relativi costi indicati.
+                  </Label>
+                </div>
+              </div>
+            </div>
           </CardContent>
+
+          <CardFooter className="flex-col items-start space-y-6 pt-8 bg-[#F5EDE3] rounded-b-lg border-t border-[#D2B48C]/30">
+            <Button 
+              onClick={handleSign} 
+              disabled={signQuoteMutation.isPending}
+              className="w-full sm:w-auto bg-[#8B7355] hover:bg-[#6B5C4D] text-white"
+            >
+              {signQuoteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Elaborazione...
+                </>
+              ) : (
+                <>
+                  <FileCheck className="mr-2 h-4 w-4" />
+                  Approva e Firma
+                </>
+              )}
+            </Button>
+
+            <div className="text-xs text-[#8B7355] mt-6 w-full text-center font-serif">
+              <p>{companyInfoString}</p>
+            </div>
+          </CardFooter>
         </Card>
       </div>
-    </PublicLayout>
+    </div>
   );
 }

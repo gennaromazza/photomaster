@@ -149,16 +149,16 @@ export default function ScheduledPaymentsPage() {
 
   // Calcola i totali
   const totals = {
-    all: filteredPayments.reduce(
-      (sum: number, p: any) => sum + parseFloat(p.amount),
+    all: Number(filteredPayments.reduce(
+      (sum: number, p: any) => sum + Number(p.amount),
       0,
-    ),
-    pending: filteredPayments
+    ).toFixed(2)),
+    pending: Number(filteredPayments
       .filter((p: any) => p.status === "pending")
-      .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
-    overdue: filteredPayments
+      .reduce((sum: number, p: any) => sum + Number(p.amount), 0).toFixed(2)),
+    overdue: Number(filteredPayments
       .filter((p: any) => p.status === "overdue")
-      .reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0),
+      .reduce((sum: number, p: any) => sum + Number(p.amount), 0).toFixed(2)),
   };
 
   return (

@@ -1007,7 +1007,7 @@ export function FinancialSummary({
                 </DialogContent>
               </Dialog>
             )}
-          </</CardHeader>
+          </CardHeader>
           <CardContent>
             {scheduledLoading ? (
               <div className="space-y-3">

@@ -443,7 +443,7 @@ export const financeController = {
     console.log("Quote raw data:", quote);
     
     // Calcolo dell'importo totale dai moduli - query al DB per ottenere la somma effettiva
-    // Verifichiamo se la colonna "amount" esiste nella tabella prima di usarla
+    // Verifichiamo quale campo contiene l'importo nella tabella dei moduli
     let modulesTotal = 0;
     try {
       const quoteModulesList = await db.select()
@@ -457,11 +457,11 @@ export const financeController = {
         console.log("Sample module structure:", Object.keys(sampleModule));
         
         if ('price' in sampleModule) {
-          modulesTotal = quoteModulesList.reduce((sum, module) => sum + (module.price || 0), 0);
+          modulesTotal = quoteModulesList.reduce((sum: number, module: any) => sum + (module.price || 0), 0);
         } else if ('amount' in sampleModule) {
-          modulesTotal = quoteModulesList.reduce((sum, module) => sum + (module.amount || 0), 0);
+          modulesTotal = quoteModulesList.reduce((sum: number, module: any) => sum + (module.amount || 0), 0);
         } else if ('value' in sampleModule) {
-          modulesTotal = quoteModulesList.reduce((sum, module) => sum + (module.value || 0), 0);
+          modulesTotal = quoteModulesList.reduce((sum: number, module: any) => sum + (module.value || 0), 0);
         }
       }
       
@@ -470,8 +470,6 @@ export const financeController = {
       console.error("Errore nel calcolo dei moduli:", error);
       modulesTotal = 0;
     }
-    
-    const modulesTotal = quoteModulesResult[0]?.totalModules || 0;
     
     // Calcola il prezzo totale del preventivo considerando tutte le possibili fonti
     // Nuova Priorità: calcolo diretto dai moduli -> totalAmount -> quoteTotal -> modulesSum -> 0
@@ -521,13 +519,13 @@ export const financeController = {
     
     // Calcola l'importo incassato - controlla sia transactionType che type per retrocompatibilità
     const totalPaid = transactionsList
-      .filter(t => t.transactionType === 'income' || t.transactionType === 'entrata' || t.type === 'income' || t.type === 'entrata')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter((t: any) => t.transactionType === 'income' || t.transactionType === 'entrata' || t.type === 'income' || t.type === 'entrata')
+      .reduce((sum: number, t: any) => sum + t.amount, 0);
     
     console.log(`Calcolo totalPaid per preventivo ${quoteId}:`, {
       transactionsList,
       totalPaid,
-      transazioniContate: transactionsList.filter(t => t.transactionType === 'income' || t.transactionType === 'entrata' || t.type === 'income' || t.type === 'entrata').length
+      transazioniContate: transactionsList.filter((t: any) => t.transactionType === 'income' || t.transactionType === 'entrata' || t.type === 'income' || t.type === 'entrata').length
     });
     
     // Ottieni i pagamenti programmati
@@ -539,12 +537,12 @@ export const financeController = {
     // Calcola importi pendenti e futuri
     const now = new Date();
     const pendingPayments = scheduledPaymentsList
-      .filter(p => p.status === 'pending' && isBefore(new Date(p.dueDate), now))
-      .reduce((sum, p) => sum + p.amount, 0);
+      .filter((p: any) => p.status === 'pending' && isBefore(new Date(p.dueDate), now))
+      .reduce((sum: number, p: any) => sum + p.amount, 0);
     
     const upcomingPayments = scheduledPaymentsList
-      .filter(p => p.status === 'pending' && !isBefore(new Date(p.dueDate), now))
-      .reduce((sum, p) => sum + p.amount, 0);
+      .filter((p: any) => p.status === 'pending' && !isBefore(new Date(p.dueDate), now))
+      .reduce((sum: number, p: any) => sum + p.amount, 0);
     
     // Prepara il risultato includendo anche la proprietà summary per retrocompatibilità
     const result = {

@@ -106,7 +106,7 @@
     "html2canvas": "^1.4.1",
     "input-otp": "^1.2.4",
     "jsonwebtoken": "^9.0.2",
-    "jspdf": "^3.0.1",
+    "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.453.0",
     "memorystore": "^1.6.7",
